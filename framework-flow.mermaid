@@ -1,0 +1,117 @@
+flowchart TD
+
+%% ═══════════════════════════════════════════════════════════════════
+%%  FRAMEWORK DOCUMENTAZIONE PROGETTI DATA & AI — v1.0
+%%  Build prima dell'evaluation · RG e ICG ricorrenti · MOR una volta
+%%  Reshaping prima del piano di ciclo
+%% ═══════════════════════════════════════════════════════════════════
+
+  subgraph A["BLOCCO A · DISCOVERY — per iniziativa, si percorre una volta"]
+    direction TB
+
+    F1["F1 · SEGNALE E FRAMING<br/>―――――――――――<br/>PRB · Formulazione problema<br/>HYP · Ipotesi soluzione"]
+    G1{"G1<br/>Il segnale merita<br/>tempo di indagine?"}
+    X1["ARCHIVIO<br/>DEC di non perseguimento"]
+
+    F2["F2 · PROBLEM DISCOVERY<br/>―――――――――――<br/>WF §corrente<br/>EVD · Problem evidence brief"]
+    G2{"G2<br/>Problema reale,<br/>ricorrente, costoso?"}
+    X2["STOP o RIFORMULA<br/>DEC + nuova HYP"]
+
+    F3["F3 · SOLUTION DISCOVERY<br/>―――――――――――<br/>WF §target<br/>CMP · Comparativa competitor<br/>DFB · Data feasibility brief"]
+    G3{"G3<br/>Desiderabile, sostenibile,<br/>fattibile, responsabile?"}
+    X3["STOP o PIVOT<br/>DEC di rinuncia +<br/>gap dati registrato"]
+
+    F1 --> G1
+    G1 -- "no" --> X1
+    G1 -- "sì" --> F2
+    F2 --> G2
+    G2 -- "no" --> X2
+    G2 -- "sì" --> F3
+    F3 --> G3
+    G3 -- "no" --> X3
+  end
+
+  subgraph B["BLOCCO B · COSTRUZIONE — per prodotto"]
+    direction TB
+
+    F4["F4 · SHAPING MVP E MVA<br/>―――――――――――<br/>PBR · Product brief<br/>SD · Solution design + MVA<br/>EVP · Evaluation plan<br/>DC · Data contract<br/>RMP · Roadmap progressiva<br/>DEC · Decisioni"]
+    G4{"G4 · READY TO BUILD<br/>Prodotto, architettura e piano<br/>sono definiti abbastanza<br/>per iniziare la build?"}
+
+    F4 --> G4
+    G4 -- "no · completa lo shaping" --> F4
+  end
+
+  subgraph C["BLOCCO C · ESERCIZIO ED EVOLUZIONE — loop continuo, per prodotto"]
+    direction TB
+
+    BUILD["BUILD · RELEASE CANDIDATE<br/>―――――――――――<br/>ARC · Architettura, vive da qui<br/>codice"]
+
+    RG{"RG · RELEASE GATE — ricorrente<br/>Soglie dell'EVP congelato<br/>superate?"}
+
+    DEPLOY["DEPLOY<br/>―――――――――――<br/>EVR · Evaluation report<br/>REL · Release note<br/>RLM · Release manifest<br/>al primo giro anche RB · Runbook + SLO"]
+
+    RUN["RUN &amp; OBSERVE<br/>―――――――――――<br/>LOG · Registro segnali append-only<br/>incident · drift · feedback · request"]
+
+    MOR{"MOR · MVP OUTCOME REVIEW<br/>una volta, dopo il primo<br/>periodo di uso reale<br/>Quali ipotesi ha confermato<br/>o smentito l'uso?"}
+
+    INTAKE["CHANGE INTAKE<br/>―――――――――――<br/>segnali da LOG +<br/>incrementi da RMP"]
+
+    TRIAGE["TRIAGE E IMPACT ASSESSMENT"]
+
+    ICG{"ICG · IMPACT CLASSIFICATION — ricorrente<br/>Modifica prodotto, architettura,<br/>dati, evaluation o rischio?"}
+
+    RESHAPE["PRODUCT &amp; ARCHITECTURE RESHAPING<br/>―――――――――――<br/>PBR · WF · ARC · EVP<br/>DC · RSK · RMP · DEC"]
+
+    CHG["CHANGE CONTRACT<br/>―――――――――――<br/>CHG · cosa cambia,<br/>cosa non deve cambiare,<br/>come sappiamo che ha funzionato"]
+
+    IMP["CYCLE IMPLEMENTATION PLAN<br/>―――――――――――<br/>IMP · esecuzione dei CHG<br/>approvati in questo ciclo"]
+
+    BUILD --> RG
+    RG -- "no · REWORK<br/>non è un rollback:<br/>non è ancora in produzione" --> BUILD
+    RG -- "sì" --> DEPLOY
+    DEPLOY --> RUN
+    RUN --> INTAKE
+    INTAKE --> TRIAGE
+    TRIAGE --> ICG
+    ICG -- "nessun impatto strutturale" --> CHG
+    ICG -- "impatto prodotto / architettura / entrambi" --> RESHAPE
+    RESHAPE --> CHG
+    CHG --> IMP
+    IMP --> BUILD
+  end
+
+  G3 -- "sì" --> F4
+  G4 -- "sì" --> BUILD
+
+  RUN -.-> |"una volta"| MOR
+  MOR -.-> |"prosegue"| INTAKE
+  MOR -.-> |"ipotesi di soluzione<br/>invalidata"| F3
+  MOR -.-> |"problema invalidato"| F2
+  ICG -.-> |"ipotesi di soluzione<br/>invalidata"| F3
+  ICG -.-> |"problema o segmento<br/>invalidato"| F2
+  RUN -.-> |"regressione in produzione:<br/>rollback, poi rientro da LOG"| INTAKE
+  RUN -.-> |"segnale che apre<br/>una nuova iniziativa"| F1
+
+  subgraph T["CONTROL PLANE E ARTEFATTI DI PIATTAFORMA — sempre vivi"]
+    direction LR
+    T1["AGENTS.md<br/>regole per gli agenti"]
+    T2["OPEN.md<br/>decisioni aperte<br/>e problemi noti"]
+    T3["COMMITMENTS.md<br/>impegni commerciali"]
+    T4["GLOSSARY.md<br/>termini e metriche<br/>unico per i 3 prodotti"]
+    T5["decisions/<br/>registro DEC unico<br/>scope: product | architecture"]
+    T6["PLATFORM.md<br/>substrato condiviso"]
+    T7["product.yaml<br/>manifest per prodotto"]
+    T8["RSK.md<br/>§stato §accettazioni §eventi"]
+  end
+
+  classDef fase fill:#ffffff,stroke:#333333,stroke-width:2px,color:#111111
+  classDef gate fill:#fff8e1,stroke:#f9a825,stroke-width:2px,color:#4a3a00
+  classDef ric fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#4a148c
+  classDef fine fill:#ffebee,stroke:#c62828,stroke-width:1.5px,color:#5a1010
+  classDef trasv fill:#e3f2fd,stroke:#1565c0,stroke-width:1.5px,color:#0d3a6b
+
+  class F1,F2,F3,F4,BUILD,DEPLOY,RUN,INTAKE,TRIAGE,RESHAPE,CHG,IMP fase
+  class G1,G2,G3,G4,MOR gate
+  class RG,ICG ric
+  class X1,X2,X3 fine
+  class T1,T2,T3,T4,T5,T6,T7,T8 trasv

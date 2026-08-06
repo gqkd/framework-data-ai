@@ -1,0 +1,15 @@
+# Validatore del framework
+pyyaml
+
+# Estrazione del corpus business.
+# Senza queste, il formato corrispondente produce zero blocchi senza errore:
+# l'estrazione riesce e non contiene niente.
+markitdown[pptx,docx,pdf]
+python-docx
+
+# Test
+pytest
+
+# Non installabili da pip, da avere sul PATH:
+#   poppler        pdftotext/pdfinfo/pdffonts/pdftoppm — necessario per i .pdf
+#   LibreOffice    facoltativo: .ppt/.doc legacy, e rasterizzazione dei .pptx

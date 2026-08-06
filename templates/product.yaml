@@ -1,0 +1,67 @@
+# Manifest del prodotto — machine-readable.
+# Le sezioni marcate GENERATO vanno rigenerate, non scritte a mano: vedi in fondo.
+
+schema: framework/product-manifest/v1
+artifact_type: product-manifest
+lifecycle: living                # la classe dell'artefatto, come in ogni altro file
+status: active
+product: prodotto-a
+name: Nome commerciale
+one_liner: Cosa fa, per chi, in una riga.
+owners: [NOME]
+created: AAAA-MM-GG
+last_review: AAAA-MM-GG HH:MM
+
+# Dove sta il PRODOTTO nel ciclo di vita. Si chiama stage e non lifecycle perché
+# quest'ultimo è già la classe dell'artefatto, e lo stesso nome per due cose diverse
+# è esattamente ciò che il framework esiste per impedire.
+stage:
+  block: A | B | C            # discovery | costruzione | esercizio
+  phase: F1 | F2 | F3 | F4 | BUILD | DEPLOY | RUN
+  last_gate_passed: G3
+  last_gate_decision: DEC-007
+  next_gate: G4
+  mor_completed: false
+
+release:                       # GENERATO
+  current: REL-004
+  manifest: RLM-004
+  deployed_at: null
+  rollback_target: RLM-003
+
+platform:
+  shares: [identity, data-access, deploy, observability]
+  arc_delta: products/prodotto-a/ARC.md
+
+artifacts:                     # GENERATO
+  living:
+    - path: products/prodotto-a/PBR.md
+      last_review: AAAA-MM-GG HH:MM
+      stale: false
+  immutable_count: 0
+  append_only:
+    - products/prodotto-a/LOG.md
+
+open_decisions: [OD-001, OD-003]   # GENERATO da OPEN.md
+open_risks: []                     # GENERATO da RSK.md §stato
+active_changes: []                 # GENERATO: CHG con status approved
+
+entry_points:                      # dove comincia un agente, per tipo di attività
+  understand: [README.md, products/prodotto-a/PBR.md, products/prodotto-a/ARC.md]
+  implement: [products/prodotto-a/IMP.md, products/prodotto-a/changes/]
+  operate: [products/prodotto-a/RB.md]
+  evaluate: [products/prodotto-a/EVP.md]
+  data: [products/prodotto-a/contracts/]
+
+roles:
+  product: NOME
+  tech: NOME
+
+# Sulle sezioni GENERATO: oggi nessuno strumento le rigenera — validate.py --emit-index
+# produce decisions/INDEX.md e TRACEABILITY.md, non questo file. Finché la generazione
+# non esiste, quei campi li compili tu e vanno trattati come tali: una sezione marcata
+# "generato" che in realtà scrivi a mano è una sezione che nessuno ricontrolla, perché
+# tutti presumono che qualcosa la tenga vera.
+#
+# Come dovrà funzionare, quali campi sono derivabili e quali no, e perché non serve una
+# skill dedicata: SKILLS.md §7, "Da costruire: --emit-manifest".

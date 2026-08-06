@@ -1,0 +1,66 @@
+# RLM-NNN · Release manifest — machine-readable, immutabile.
+# Generato da framework-release. Non modificare a mano.
+# Esiste perché una release note di dieci righe non basta a un agente né a un rollback.
+
+schema: framework/release-manifest/v1
+artifact_type: release-manifest
+id: RLM-NNN
+lifecycle: immutable
+product: prodotto-a
+release_note: REL-NNN
+created: AAAA-MM-GGTHH:MM:SSZ
+
+code:
+  commit: ""
+  tag: ""
+  branch: ""
+
+build:
+  image_digest: ""
+  built_at: ""
+
+config:
+  hash: ""
+  changed_keys: []
+
+infrastructure:
+  version: ""
+  target: ""            # ambiente di deploy
+
+ai:
+  model: ""
+  model_version: ""
+  prompt_hash: ""
+  retrieval_index_version: ""
+
+data:
+  eval_dataset_version: ""
+  schema_migrations: []
+  data_contracts_touched: []   # DC-NNN con versione
+
+evaluation:
+  report: EVR-NNN
+  evp_version: ""
+  evp_hash: ""
+  verdict: go
+
+changes:
+  contracts: []          # CHG-NNN inclusi
+  decisions: []          # DEC-NNN inclusi
+
+approvals:
+  - who: ""
+    role: ""
+    at: ""
+
+rollback:
+  target: RLM-NNN        # il manifest precedente considerato buono
+  procedure: RB.md#rollback
+  tested: false          # una procedura di rollback non testata non è una procedura
+
+# ── Anti-pattern ─────────────────────────────────────────────────
+# · Compilarlo a mano: si sbaglia e non si aggiorna. Va generato.
+# · rollback.target vuoto: rende il manifest inutile nel solo momento in cui serve.
+# · rollback.tested sempre false: allora non hai un piano di rollback, ne hai l'intenzione.
+# · Omettere prompt_hash o model_version nei sistemi AI: sono le due cose che cambiano
+#   il comportamento senza cambiare una riga di codice.
