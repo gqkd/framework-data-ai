@@ -96,7 +96,7 @@ maintained: `PRB` `HYP` `EVD` `CMP` `DFB` `SD`
 **Product artifacts.** They live as long as the system and accumulate contributions from
 different initiatives: `PBR` `WF` `ARC` `EVP` `DC` `RB` `RMP` `RSK` `LOG`
 
-**Platform artifacts.** Shared across the three products: `PLATFORM.md` `GLOSSARY.md`
+**Platform artifacts.** Shared across every product: `PLATFORM.md` `GLOSSARY.md`
 `DEC-ADR` (single register) `OPEN.md`
 
 The folder structure follows from this:
@@ -106,7 +106,7 @@ repo/
 ├── AGENTS.md                    control plane for agents
 ├── OPEN.md                      open decisions and known issues
 ├── COMMITMENTS.md               what has been promised commercially
-├── GLOSSARY.md                  single, shared by the three products
+├── GLOSSARY.md                  single, shared by every product
 ├── PLATFORM.md                  architecture of the shared substrate
 ├── corpus/                      business documents covering more than one product
 ├── decisions/                   single DEC-NNN register (product + architecture)
@@ -284,7 +284,7 @@ the nature of the decision:
 |---|---|---|
 | `product` | what we build, for whom, with what priority | gate outcome · pivot · stop · MVP scope · acceptance of a commercial risk |
 | `architecture` | how the system is built, the classic ADR | datastore · integration style · boundaries between components |
-| `platform` | what constrains all three products | tenancy · identity · shared substrate |
+| `platform` | what constrains every product | tenancy · identity · shared substrate |
 
 Dropping a product or accepting a commercial risk are decisions just as worth recording as
 the choice of a database, and often more expensive. Separate registers would mean that
@@ -367,29 +367,37 @@ It is not maintained by hand: it is generated from the front matter. See `SKILLS
 
 ---
 
-## 9. Managing the three products
+## 9. Managing more than one product
 
-The three products are complementary and they are built by one single person. That changes
-the calculation compared with three independent teams: the binding constraint is not the
-quality of the abstraction, it is the **maintenance surface**. Three diverging codebases
-are a permanent cost.
+**If you have one product, skip this section.** Nothing in it applies, and applying it
+anyway produces a `PLATFORM.md` that describes a substrate shared with nobody.
+
+It applies when two conditions hold together: the products are meant to be complementary,
+and the team is small relative to their number. Both matter, and the second is the one
+people forget. With one team per product the binding constraint is the quality of the
+abstraction, because a bad boundary costs coordination between groups. With fewer people
+than products it is the **maintenance surface**: divergent codebases are a permanent cost
+paid by the same people, every week, forever.
 
 Four rules:
 
-1. **One `GLOSSARY.md` only.** It is the file where the complementarity of the three
-   products is either defined or lost. If the same concept has two names in two products,
-   the complementarity is already broken and nobody has noticed.
+1. **One `GLOSSARY.md` only.** It is the file where complementarity is either defined or
+   lost. If the same concept has two names in two products, the complementarity is already
+   broken and nobody has noticed.
 2. **One `decisions/` register only**, with a `products` field. Cross-product decisions are
    the most expensive ones and in separate registers they would end up in the register of
    whichever product you were working on that day.
-3. **`PLATFORM.md` + one short `ARC` per product.** Not three architectures: one shared
-   substrate (identity, data access, deploy, observability, conventions) plus the domain
-   delta of each product.
-4. **The data contracts *between* your three products come before the ones facing
-   outward.** They are contracts with yourself six months from now, and they are the ones
-   you will break in silence.
+3. **`PLATFORM.md` + one short `ARC` per product.** Not one architecture per product: one
+   shared substrate (identity, data access, deploy, observability, conventions) plus the
+   domain delta of each.
+4. **The data contracts *between* your own products come before the ones facing outward.**
+   They are contracts with yourself six months from now, and they are the ones you will
+   break in silence.
 
-The exact scope of the shared substrate is an open decision: `OPEN.md`, entry `OD-002`.
+The exact scope of the shared substrate is a decision, not a given. Until it is taken it
+belongs in `OPEN.md` as an open entry, with the default currently in force written next to
+it: absent a decision, the default tends to become "whatever ended up in the shared folder",
+which is a scope defined by accumulation rather than by choice.
 
 ---
 
@@ -425,14 +433,17 @@ Before writing a line of code, in this order:
    done, and the tooling for them is still to be built.
 2. `OPEN.md`: the decisions you have to take before you can write code, with the cost to
    reverse each one.
-3. `GLOSSARY.md`: even just ten entries. The first ones are the entities shared between
-   the three products.
+3. `GLOSSARY.md`: even just ten entries. If you have more than one product, the first ones
+   are the entities they share.
 4. `decisions/`: empty, with the numbering started.
 5. `AGENTS.md`: operating rules for the agents.
-6. `product.yaml` × 3: minimum manifest per product.
-7. `PBR.md` × 3: today the definition of the three products exists only inside sales
-   pitches. Writing it is the first act, not a maintenance artifact.
-8. `PLATFORM.md`: even just with empty sections and the decisions deferred to `OPEN.md`.
+6. `product.yaml`, one per product: minimum manifest.
+7. `PBR.md`, one per product. When you enter through "already sold", the definition of the
+   product exists only inside sales pitches. Writing it down is the first act, not a
+   maintenance artifact.
+8. `PLATFORM.md`, only if there is more than one product: even just with empty sections and
+   the decisions deferred to `OPEN.md`. With a single product the substrate is the product,
+   and the file would describe a boundary that does not exist.
 
 Then, **when the thing to document exists** and not before:
 

@@ -60,17 +60,22 @@ on purpose.
 
 ## Provenance
 
-Extracted on 2026-08-06 from a repository where it was mixed with its first instance. The
-history stayed with that instance, which holds nearly all of its content; here it starts
-from a snapshot.
+Extracted on 2026-08-06 from a repository where it was mixed with its first instance, a
+suite of three complementary products built by one person. The history stayed with that
+instance, which holds nearly all of its content; here it starts from a snapshot.
 
-**One thing to know:** several documents refer to `OD-NNN` entries, `OD-002` in
-`FRAMEWORK.md §9` and `SKILLS.md §7`, `OD-005` in `SKILLS.md §2`. Those live in that
-project's open register and cannot be resolved here. Read them as "an open
-decision of that kind", not as links to a file in this repository.
+The text no longer carries that shape. Product names, decision slugs and identifiers in
+the examples are placeholders, and the sections that used to assume exactly three products
+now state the condition instead of the number. `FRAMEWORK.md §9` is the one place where
+the multi-product case is discussed, and it opens by telling you to skip it if you have a
+single product.
 
-Otherwise the text is neutral: product names and decision slugs in the examples are
-placeholders. A second project can adopt it as it stands.
+**What survives from the first instance, and is worth knowing:** the framework is shaped by
+having been written for a project that was **sold before it was built**. That is why
+`COMMITMENTS.md` is in the day one set, why `ING.md` exists at all, and why `FRAMEWORK.md
+§10` treats "the idea is already sold" as a first class entry point with its own reverse
+discovery path. If you are starting from an unsold idea, those parts will feel
+disproportionate. They are: use the entry assessment and skip them.
 
 ## License
 

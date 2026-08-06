@@ -13,7 +13,7 @@ classification: internal
 # Glossary and metrics dictionary
 
 **One single file for all products.** It is the file where the complementarity of the
-three products is either defined or lost: if the same concept has two names in two
+the products is either defined or lost: if the same concept has two names in two
 products, or the same name means two things, the complementarity is already broken and
 nobody has noticed.
 

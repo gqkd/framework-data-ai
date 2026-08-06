@@ -90,5 +90,5 @@ Reference to `REL` and `RLM`. Generated field.
   future belongs in `RMP`.
 - **An empty out of scope.** It means you have not decided anything yet, or that the
   decisions are verbal.
-- **Complementarity declared in words without a `DC`.** It is how three products become one
+- **Complementarity declared in words without a `DC`.** It is how several products become one
   inseparable product without anyone having decided it.

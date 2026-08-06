@@ -38,7 +38,7 @@ nature of the decision:
 |---|---|---|
 | `product` | Decisions about what we build, for whom, at what priority | outcome of a gate · pivot · stop · segment choice · MVP scope · acceptance of a commercial risk |
 | `architecture` | Decisions about how the system is built | choice of a datastore · integration style · boundary between components · deployment model |
-| `platform` | Decisions that constrain all three products | tenancy · identity · shared substrate · conventions |
+| `platform` | Decisions that constrain every product | tenancy · identity · shared substrate · conventions |
 
 `scope: architecture` is the classic ADR: a specialization, not a different document. A
 `DEC` with `scope: platform` must list all the products in `products`.

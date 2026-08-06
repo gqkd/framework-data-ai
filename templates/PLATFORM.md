@@ -16,8 +16,8 @@ classification: internal
 **Question:** what is common to the products, and with what guarantees can each of them
 rely on it?
 
-**Why it exists.** Several products built by one person do not have the problem three
-teams have. They have the problem of maintenance surface. This document is the answer: one
+**Why it exists.** Several products built by a team smaller than their number do not have
+the problem one team per product has. They have the problem of maintenance surface. This document is the answer: one
 substrate described once, plus a short `ARC` per product that declares only the **delta**.
 Without it, every `ARC` redescribes identity, deployment and observability, the
 descriptions drift apart, and the drift surfaces at the first refactor.
@@ -26,8 +26,8 @@ descriptions drift apart, and the drift surfaces at the first refactor.
 `OPEN.md`. This is unlike `ARC`, which is born in F5 with the first line of code: here the
 empty sections are information, because they say what has not been decided yet.
 
-> The exact scope is the open decision `OD-002`. While it is open, this document lists the
-> candidates and does not treat them as assigned.
+> The exact scope is an open decision. While it is open, name the `OD-NNN` entry here, and
+> let this document list the candidates rather than treat them as assigned.
 
 ## Scope
 
@@ -66,8 +66,8 @@ every product at once, and that is why internal data contracts come before exter
 
 The most expensive decision in the whole project to reverse: it touches schema,
 authorization, billing and data migration. If it is still open, write the pointer to
-`OD-003` here along with **the default in force**, not a description of how it might turn
-out.
+the `OD-NNN` entry here along with **the default in force**, not a description of how it
+might turn out.
 
 ## Constraints the platform imposes
 
@@ -83,9 +83,9 @@ alone, and what prevents that today.
 |---|---|---|
 | | yes / no | |
 
-This section is the guard against `OD-004`. Absent a decision, the de facto default
-becomes the shared database, which makes the products inseparable without anyone having
-decided it.
+This section is the guard against deciding separability by accident. Absent a decision,
+the de facto default becomes the shared database, which makes the products inseparable
+without anyone having chosen that.
 
 ## Decisions that bind every product
 

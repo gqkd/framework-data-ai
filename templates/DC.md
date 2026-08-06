@@ -17,7 +17,7 @@ classification: internal
 
 **Question:** what can whoever consumes this data expect, and who answers if it breaks?
 
-**Priority.** The contracts *between the three products* come before the ones facing
+**Priority.** The contracts *between your own products* come before the ones facing
 outward. They are contracts with yourself six months from now, and they are the ones you
 will break silently.
 

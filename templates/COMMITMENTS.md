@@ -14,7 +14,7 @@ classification: confidential
 
 **What it is for.** In a company that sold the idea before building it, these are not
 requirements to be gathered: they are constraints that are already in place. They are also
-architectural requirements in disguise. "a single experience across the three products" is
+architectural requirements in disguise. "a single experience across the whole suite" is
 a tenancy decision, not a marketing line.
 
 **Why it is the first document to write.** You will discover these constraints anyway. The
