@@ -4,78 +4,78 @@ artifact_type: runbook
 lifecycle: living
 status: active
 version: 1.0.0
-products: [prodotto-a]
-owners: [NOME]
-created: AAAA-MM-GG
-last_review: AAAA-MM-GG HH:MM
+products: [product-a]
+owners: [NAME]
+created: YYYY-MM-DD
+last_review: YYYY-MM-DD HH:MM
 classification: internal
 ---
 
-# Runbook, SLO e monitoring — Nome prodotto
+# Runbook, SLO and monitoring: Product name
 
-**Domanda:** come si tiene in vita, e come sappiamo che sta andando male prima che ce lo
-dicano?
+**Question:** how do we keep it alive, and how do we know it is going badly before someone
+tells us?
 
-**Prova del nove:** una persona nuova riesce a ri-eseguire una pipeline fallita leggendo
-solo questo documento, alle tre di notte, senza chiedere niente a nessuno.
+**Acid test:** a new person can re-run a failed pipeline reading only this document, at
+three in the morning, without asking anyone anything.
 
-## Operazioni
+## Operations
 
-Comandi **reali e copiabili**, non descrizioni.
+**Real, copy-pasteable** commands, not descriptions.
 
 ```bash
-# avvio
-# arresto
-# ri-esecuzione di un job fallito
-# rollback all'ultima release buona (vedi RLM per il target)
+# start
+# stop
+# re-run of a failed job
+# rollback to the last good release (see RLM for the target)
 ```
 
-## Dipendenze
+## Dependencies
 
-| Dipendenza | Cosa succede se cade | Degradazione accettabile |
+| Dependency | What happens if it goes down | Acceptable degradation |
 |---|---|---|
 
 ## SLO
 
-| SLO | Target | Finestra | Error budget |
+| SLO | Target | Window | Error budget |
 |---|---|---|---|
-| Freschezza del dato | | | |
-| Disponibilità | | | |
-| Qualità del dato | | | |
-| Accuratezza in produzione | | | |
+| Data freshness | | | |
+| Availability | | | |
+| Data quality | | | |
+| Accuracy in production | | | |
 
 ## Monitoring
 
-| Cosa monitoriamo | Soglia di allerta | Dove | Chi riceve |
+| What we monitor | Alert threshold | Where | Who receives it |
 |---|---|---|---|
-| Output: metriche di qualità | | | |
-| **Input: qualità e volume dei dati in ingresso** | | | |
-| Drift della distribuzione | | | |
-| Costo per unità | | | |
+| Output: quality metrics | | | |
+| **Input: quality and volume of incoming data** | | | |
+| Distribution drift | | | |
+| Cost per unit | | | |
 
-**Nei sistemi data e AI monitorare l'output non basta: va monitorato l'input.** La maggior
-parte dei fallimenti silenziosi entra dai dati, non dal codice, e non solleva nessuna
-eccezione.
+**In data and AI systems monitoring the output is not enough: the input has to be
+monitored.** Most silent failures come in through the data, not the code, and they raise no
+exception at all.
 
-## Failure mode noti
+## Known failure modes
 
-| Sintomo osservabile | Causa probabile | Azione |
+| Observable symptom | Likely cause | Action |
 |---|---|---|
 
 ## Escalation
 
-Chi si sveglia, in che ordine, entro quanto.
+Who gets woken up, in what order, within what time.
 
 ---
 
-## Anti-pattern
+## Anti-patterns
 
-- **Descrivere l'architettura invece dei comandi.** L'architettura sta in `ARC`. Qui serve
-  cosa digitare.
-- **Comandi non testati.** Un comando nel runbook che non funziona è peggio di nessun
-  comando: consuma i minuti in cui servirebbe pensare.
-- **Monitorare solo l'output.** Vedi sopra.
-- **Nessun costo per unità nel monitoring.** Nei sistemi AI il costo è il modo più comune
-  in cui un sistema funzionante diventa insostenibile.
-- **SLO senza error budget.** Un target che non si può sforare non è un obiettivo, è un
-  desiderio, e verrà ignorato al primo incidente.
+- **Describing the architecture instead of the commands.** The architecture belongs in
+  `ARC`. What is needed here is what to type.
+- **Untested commands.** A command in the runbook that does not work is worse than no
+  command: it burns the minutes you should be spending thinking.
+- **Monitoring only the output.** See above.
+- **No cost per unit in the monitoring.** In AI systems cost is the most common way a
+  working system becomes unsustainable.
+- **SLO with no error budget.** A target that cannot be breached is not an objective, it is
+  a wish, and it will be ignored at the first incident.

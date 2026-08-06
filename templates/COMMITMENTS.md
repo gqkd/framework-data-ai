@@ -3,66 +3,66 @@ schema: framework/commitments/v1
 artifact_type: commitments
 lifecycle: living
 status: active
-products: [prodotto-a, prodotto-b, prodotto-c]
-owners: [NOME]
-created: AAAA-MM-GG
-last_review: AAAA-MM-GG HH:MM
+products: [product-a, product-b, product-c]
+owners: [NAME]
+created: YYYY-MM-DD
+last_review: YYYY-MM-DD HH:MM
 classification: confidential
 ---
 
-# Impegni commerciali presi
+# Commercial commitments made
 
-**A cosa serve.** In un'azienda che ha venduto l'idea prima di costruirla, questi non
-sono requisiti da raccogliere: sono vincoli già in essere. Sono anche requisiti
-architetturali travestiti — "un'unica esperienza fra i tre prodotti" è una decisione di
-tenancy, non una frase di marketing.
+**What it is for.** In a company that sold the idea before building it, these are not
+requirements to be gathered: they are constraints that are already in place. They are also
+architectural requirements in disguise. "a single experience across the three products" is
+a tenancy decision, not a marketing line.
 
-**Perché è il primo documento da scrivere.** Questi vincoli li scoprirai comunque. La
-scelta è se scoprirli adesso o nel momento peggiore, cioè quando saranno costosi da
-soddisfare.
+**Why it is the first document to write.** You will discover these constraints anyway. The
+choice is whether to discover them now or at the worst possible moment, which is when they
+are expensive to satisfy.
 
-## Registro
+## Register
 
-Una voce per impegno. `CMT-NNN`.
+One entry per commitment. `CMT-NNN`.
 
-### CMT-001 · Titolo dell'impegno
+### CMT-001 · Commitment title
 
-| Campo | Contenuto |
+| Field | Content |
 |---|---|
-| **Cosa è stato promesso** | Le parole usate, il più fedelmente possibile |
-| **A chi** | Cliente, prospect, investitore, partner |
-| **Da chi e quando** | Chi l'ha detto e in quale contesto |
-| **Prodotti coinvolti** | |
-| **Scadenza implicita o esplicita** | Anche "entro l'anno" è una scadenza |
-| **Margine di interpretazione** | Quanto è vincolante la formulazione letterale |
-| **Traduzione tecnica** | Cosa comporta realmente costruire |
-| **Fattibilità** | fattibile · fattibile con riserva · **fuori portata** |
-| **Vincolo architetturale che ne deriva** | link a `DEC` o voce di `OPEN.md` |
-| **Stato** | **non uscito** · aperto · soddisfatto · rinegoziato · non soddisfacibile |
+| **What was promised** | The words used, as faithfully as possible |
+| **To whom** | Customer, prospect, investor, partner |
+| **By whom and when** | Who said it and in what context |
+| **Products involved** | |
+| **Implicit or explicit deadline** | "by the end of the year" is a deadline too |
+| **Room for interpretation** | How binding the literal wording is |
+| **Technical translation** | What it actually takes to build |
+| **Feasibility** | feasible · feasible with reservations · **out of reach** |
+| **Architectural constraint that follows from it** | link to a `DEC` or an `OPEN.md` entry |
+| **Status** | **not yet issued** · open · met · renegotiated · unsatisfiable |
 
-`non uscito` è la promessa che esiste in un documento e che nessuno ha ancora ricevuto. Va
-per prima perché è **il solo stato in cui il rimedio costa un pomeriggio invece della
-credibilità**: correggere un deck interno è gratis, rinegoziare con un cliente no. Se una
-riga passa da `non uscito` ad `aperto` senza che la fattibilità sia stata verificata, quella
-è la transizione che questo documento esiste per intercettare.
+`not yet issued` is the promise that exists in a document and that nobody has received yet.
+It comes first because it is **the only state in which the remedy costs an afternoon
+instead of your credibility**: fixing an internal deck is free, renegotiating with a
+customer is not. If a row moves from `not yet issued` to `open` without feasibility having
+been verified, that is the transition this document exists to intercept.
 
-## §Fuori portata
+## §Out of reach
 
-Sezione separata e obbligatoria. Gli impegni con `Fattibilità: fuori portata` vanno qui,
-in evidenza, con la data in cui è stato comunicato a chi ha promesso — o la data in cui
-va comunicato.
+A separate and mandatory section. Commitments with `Feasibility: out of reach` go here, in
+plain sight, with the date on which it was communicated to whoever made the promise, or the
+date by which it must be communicated.
 
-Un impegno impossibile che nessuno ha ancora rinegoziato è il rischio più grande del
-progetto e non appartiene a nessun altro documento.
+An impossible commitment that nobody has renegotiated yet is the biggest risk in the
+project, and it belongs to no other document.
 
 ---
 
-## Anti-pattern
+## Anti-patterns
 
-- **Riformulare la promessa in linguaggio da requisito.** Perdi l'ambiguità originale, che
-  è precisamente l'informazione che ti serve per negoziare. Conserva le parole dette.
-- **Omettere gli impegni imbarazzanti.** Sono quelli per cui il documento esiste.
-- **Trattarlo come documento commerciale.** Ogni voce genera un vincolo tecnico: se la
-  colonna "vincolo architetturale" è vuota per tutte le righe, non hai finito di leggerlo.
-- **Non datarlo.** Un impegno preso otto mesi fa a un prospect che non ha comprato non
-  vincola come uno preso a un cliente pagante la settimana scorsa.
+- **Rewriting the promise in requirements language.** You lose the original ambiguity, which
+  is precisely the information you need in order to negotiate. Keep the words that were said.
+- **Leaving out the embarrassing commitments.** They are the ones this document exists for.
+- **Treating it as a sales document.** Every entry generates a technical constraint: if the
+  "architectural constraint" column is empty on every row, you have not finished reading it.
+- **Not dating it.** A commitment made eight months ago to a prospect who never bought does
+  not bind you the way one made last week to a paying customer does.

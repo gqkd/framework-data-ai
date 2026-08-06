@@ -4,59 +4,59 @@ artifact_type: evidence-brief
 lifecycle: immutable
 status: active
 id: EVD-NNN
-products: [prodotto-a]
-owners: [NOME]
-created: AAAA-MM-GG
+products: [product-a]
+owners: [NAME]
+created: YYYY-MM-DD
 derives_from: [PRB-NNN, HYP-NNN]
 classification: internal
 ---
 
 # EVD-NNN · Problem evidence brief
 
-**Domanda:** che prove abbiamo che il problema esiste, e quanto è grande?
+**Question:** what proof do we have that the problem exists, and how big is it?
 
-**Nota sulla classe:** immutabile e datato. Il valore delle evidenze è probatorio, non
-descrittivo: non si aggiornano, si datano. Un brief ritoccato in silenzio ti fa perdere la
-capacità di capire perché una decisione sembrava sensata allora.
+**Note on the class:** immutable and dated. The value of evidence is probative, not
+descriptive: it is not updated, it is dated. A brief quietly touched up costs you the
+ability to understand why a decision looked sensible back then.
 
-## Metodo
+## Method
 
-Con chi abbiamo parlato o quali dati abbiamo interrogato, quando, quanti, come sono stati
-selezionati. Se il campione è distorto, dirlo qui.
+Who we spoke to or which data we queried, when, how many, how they were selected. If the
+sample is biased, say so here.
 
-## Evidenze
+## Evidence
 
-| # | Evidenza | Fonte | Forza |
+| # | Evidence | Source | Strength |
 |---|---|---|---|
-| 1 | | intervista / query / documento | debole · media · forte |
+| 1 | | interview / query / document | weak · medium · strong |
 
-## Quantificazione
+## Quantification
 
-Frequenza, volume, costo. Se non quantificabile, dirlo e spiegare perché.
+Frequency, volume, cost. If it cannot be quantified, say so and explain why.
 
-## §Evidenze contrarie
+## §Contrary evidence
 
-**Sezione obbligatoria.** Cosa abbiamo trovato che va nella direzione opposta, cosa non
-torna, chi ha detto che il problema non esiste.
+**Mandatory section.** What we found that points the other way, what does not add up, who
+said the problem does not exist.
 
-È il singolo campo che alza di più l'affidabilità del documento. Un brief che ammette cosa
-non torna viene creduto; uno che va tutto nella stessa direzione viene giustamente
-scontato da qualsiasi lettore esperto — e da un buon agente.
+It is the single field that raises the document's credibility the most. A brief that
+admits what does not add up gets believed; one that points all in the same direction is
+rightly discounted by any experienced reader, and by a good agent.
 
-## Assunzioni di `HYP`
+## `HYP` assumptions
 
-| Assunzione | Esito | Evidenza |
+| Assumption | Outcome | Evidence |
 |---|---|---|
-| HYP-NNN #1 | confermata / smentita / non testata | #3, #7 |
+| HYP-NNN #1 | confirmed / refuted / not tested | #3, #7 |
 
 ---
 
-## Anti-pattern
+## Anti-patterns
 
-- **Solo citazioni qualitative senza volumi.** "Tutti si lamentano" non è un'evidenza.
-- **Sezione contraria vuota.** Non significa che non ci siano evidenze contrarie:
-  significa che non le hai cercate.
-- **Confondere forza e quantità.** Dieci interviste allo stesso team sono un'evidenza,
-  non dieci.
-- **Non collegare le evidenze alle assunzioni.** Senza quella tabella hai raccolto
-  materiale, non testato un'ipotesi.
+- **Only qualitative quotes with no volumes.** "Everyone complains" is not evidence.
+- **An empty contrary section.** It does not mean there is no contrary evidence: it
+  means you did not look for it.
+- **Confusing strength with quantity.** Ten interviews with the same team are one piece
+  of evidence, not ten.
+- **Not linking the evidence to the assumptions.** Without that table you have collected
+  material, not tested a hypothesis.

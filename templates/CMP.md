@@ -4,52 +4,53 @@ artifact_type: competitor-comparison
 lifecycle: immutable
 status: active
 id: CMP-NNN
-products: [prodotto-a]
-owners: [NOME]
-created: AAAA-MM-GG
+products: [product-a]
+owners: [NAME]
+created: YYYY-MM-DD
 derives_from: [HYP-NNN]
 classification: internal
 ---
 
-# CMP-NNN · Comparativa · build, buy o adatta
+# CMP-NNN · Comparison · build, buy or adapt
 
-**Domanda:** costruiamo, compriamo o adattiamo?
+**Question:** do we build, buy or adapt?
 
-**Nota sulla classe:** immutabile e datato. Il mercato cambia: una comparativa di due anni
-fa si rifà, non si ritocca.
+**Note on the class:** immutable and dated. The market changes: a comparison from two years
+ago gets redone, not touched up.
 
-## Criteri, definiti prima di guardare le opzioni
+## Criteria, defined before looking at the options
 
-| # | Criterio | Peso | Soglia minima accettabile |
+| # | Criterion | Weight | Minimum acceptable threshold |
 |---|---|---|---|
 | 1 | | | |
 
-**Definirli prima è l'intero valore del documento.** Criteri scelti dopo aver visto le
-opzioni sono razionalizzazione, e si riconoscono perché combaciano sospettosamente con i
-punti di forza del vincitore.
+**Defining them first is the entire value of the document.** Criteria chosen after seeing
+the options are rationalization, and you can recognize them because they line up
+suspiciously well with the winner's strengths.
 
-## Opzioni
+## Options
 
-| Opzione | Copertura | Costo ingresso | Costo a regime | Lock-in | Dove stanno i dati | Effort integrazione | Maturità |
+| Option | Coverage | Entry cost | Steady-state cost | Lock-in | Where the data lives | Integration effort | Maturity |
 |---|---|---|---|---|---|---|---|
-| Non fare nulla | | | | | | | |
-| Build interno | | | | | | | |
-| Fornitore A | | | | | | | |
+| Do nothing | | | | | | | |
+| In-house build | | | | | | | |
+| Vendor A | | | | | | | |
 
-Le righe **"non fare nulla"** e **"build interno"** sono obbligatorie: sono ciò che
-trasforma la tabella da lista della spesa in decisione.
+The **"do nothing"** and **"in-house build"** rows are mandatory: they are what turns the
+table from a shopping list into a decision.
 
-## Verdetto
+## Verdict
 
-Una riga, con il criterio che ha deciso. Rimando al `DEC`.
+One line, with the criterion that decided it. Pointer to the `DEC`.
 
 ---
 
-## Anti-pattern
+## Anti-patterns
 
-- **Criteri definiti dopo le opzioni.** Vedi sopra.
-- **Assenza della riga "build".** Senza, non hai confrontato: hai scelto un fornitore.
-- **Assenza della riga "non fare nulla".** È l'opzione con cui competi davvero.
-- **Copertura funzionale come unico criterio.** Il costo a regime e il lock-in decidono
-  più spesso, e più tardi.
-- **Non datarlo.** Una comparativa senza data verrà riusata quando non vale più.
+- **Criteria defined after the options.** See above.
+- **No "build" row.** Without it you have not compared anything: you have picked a vendor.
+- **No "do nothing" row.** That is the option you are really competing against.
+- **Functional coverage as the only criterion.** Steady-state cost and lock-in decide more
+  often, and later.
+- **Not dating it.** A comparison with no date will be reused when it is no longer worth
+  anything.

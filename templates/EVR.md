@@ -4,77 +4,78 @@ artifact_type: evaluation-report
 lifecycle: immutable
 status: active
 id: EVR-NNN
-products: [prodotto-a]
-owners: [NOME]
-created: AAAA-MM-GG
+products: [product-a]
+owners: [NAME]
+created: YYYY-MM-DD
 derives_from: [EVP]
 evp_version: 1.2.0
-evp_hash: SHA_DEL_FILE_EVP
+evp_hash: SHA_OF_THE_EVP_FILE
 verified_against: COMMIT_HASH
 classification: internal
 ---
 
 # EVR-NNN · Evaluation report
 
-**Domanda:** cosa ha prodotto la valutazione, confrontata con le soglie **dichiarate
-prima**?
+**Question:** what did the evaluation produce, compared with the thresholds **declared
+beforehand**?
 
-**Serve al gate `RG`.** Uno per release candidate, compresa la prima. Immutabile: mai
-riscritto.
+**It serves the `RG` gate.** One per release candidate, including the first. Immutable:
+never rewritten.
 
-## Versione valutata
+## Version evaluated
 
-| Elemento | Versione o hash |
+| Element | Version or hash |
 |---|---|
-| Codice | commit |
-| Modello | nome e versione |
-| Prompt | hash o tag |
-| Configurazione | |
-| Dataset di valutazione | versione |
-| **`EVP` di riferimento** | versione + hash |
+| Code | commit |
+| Model | name and version |
+| Prompt | hash or tag |
+| Configuration | |
+| Evaluation dataset | version |
+| **Reference `EVP`** | version + hash |
 
-**Senza questi campi il report non è un eval, è un numero.** Il riferimento all'`EVP`
-congelato è ciò che rende verificabile che le soglie non siano state ritoccate dopo.
+**Without these fields the report is not an eval, it is a number.** The reference to the
+frozen `EVP` is what makes it verifiable that the thresholds were not touched up
+afterwards.
 
-## Risultati
+## Results
 
-| Metrica | Soglia `EVP` | Baseline | Risultato | Esito |
+| Metric | `EVP` threshold | Baseline | Result | Outcome |
 |---|---|---|---|---|
 | | | | | pass / fail |
 
-## Risultati per slice
+## Results by slice
 
-| Slice | Soglia | Risultato | Esito |
+| Slice | Threshold | Result | Outcome |
 |---|---|---|---|
 
-## Fallimenti osservati
+## Observed failures
 
-Non solo quanti: **di che natura**. Un errore sistematico su una categoria è un problema
-diverso da un rumore distribuito, anche a parità di metrica.
+Not just how many: **of what nature**. A systematic error on one category is a different
+problem from distributed noise, even at the same metric value.
 
-## Confronto con l'`EVR` precedente
+## Comparison with the previous `EVR`
 
-| Metrica | Precedente | Attuale | Δ |
+| Metric | Previous | Current | Δ |
 |---|---|---|---|
 
-La serie storica di questi report è la memoria della qualità del sistema, ed è l'unico
-strumento che permette di accorgersi di un peggioramento lento — il modo in cui i sistemi
-AI si degradano nella pratica.
+The historical series of these reports is the memory of the system's quality, and it is
+the only instrument that lets you notice a slow degradation. That is how AI systems decay
+in practice.
 
-## Verdetto
+## Verdict
 
-`go` · `no-go` → **rework**, non rollback: non è ancora in produzione.
+`go` · `no-go` → **rework**, not rollback: it is not in production yet.
 
-Rimando ai `CHG` valutati.
+Cross-reference to the `CHG` items evaluated.
 
 ---
 
-## Anti-pattern
+## Anti-patterns
 
-- **Nessun riferimento alla versione esatta.** Il difetto più grave: rende il report
-  inutilizzabile per qualsiasi confronto.
-- **Nessun riferimento all'`EVP` congelato.** Non si può verificare che le soglie fossero
-  quelle di prima.
-- **Solo metriche aggregate.** Le slice sono la parte che scopre i problemi.
-- **Verdetto `go` con una slice sotto soglia, senza un `DEC` che lo motivi.** È il modo in
-  cui un gate diventa un rituale.
+- **No reference to the exact version.** The most serious defect: it makes the report
+  unusable for any comparison.
+- **No reference to the frozen `EVP`.** There is no way to verify that the thresholds
+  were the ones set before.
+- **Aggregate metrics only.** The slices are the part that uncovers the problems.
+- **A `go` verdict with a slice below threshold, and no `DEC` giving the reason.** That
+  is how a gate turns into a ritual.

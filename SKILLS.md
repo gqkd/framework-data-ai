@@ -1,338 +1,340 @@
-# Skill per la gestione del framework
+# Skills for managing the framework
 
-Cinque skill. Due sono costruite e funzionanti (`framework-capture`, `framework-audit`), tre
-sono specificate abbastanza per essere implementate quando servono.
+Five skills. Two are to be rebuilt (`framework-capture`, `framework-audit`), three are
+specified well enough to be implemented when they are needed.
 
 ---
 
-## 1 · Una precisazione necessaria sull'automazione
+## 1 · A necessary clarification about automation
 
-L'obiettivo — «non aggiornare a mano tutto», e sostituire i «controlli automatici da
-aggiungere alla CI» — si raggiunge, ma non tutto con lo stesso strumento.
+The goal, "not updating everything by hand" and replacing the "automated checks to add to
+CI", is reachable, but not all of it with the same tool.
 
-**Una skill non è un demone.** Gira quando gira Claude: non si attiva su un push, non
-controlla niente di notte, non ha stato fra un'invocazione e l'altra. Se i controlli
-vivessero solo nelle skill, verrebbero eseguiti quando ti ricordi di chiederlo, cioè
-raramente e non nei momenti che contano.
+**A skill is not a daemon.** It runs when Claude runs: it does not fire on a push, it
+checks nothing overnight, it has no state between one invocation and the next. If the
+checks lived only in the skills, they would run when you remember to ask, which is to say
+rarely and not at the moments that count.
 
-| Natura del compito | Strumento | Quando gira |
+| Nature of the task | Tool | When it runs |
 |---|---|---|
-| Deterministico: schema, ID, riferimenti, obsolescenza, indici | **Script Python** | in CI su ogni push, e a mano quando serve |
-| Estrazione da formati: pptx, pdf, docx con provenienza | **Script Python** | quando ingesti |
-| Richiede giudizio: classificare un'affermazione, propagare una cascata, scrivere un `CHG` | **Skill** | quando la invochi |
-| Richiede la tua conoscenza: cosa è stato osservato, cosa è stato promesso | **Tu** | — |
+| Deterministic: schema, IDs, references, staleness, indexes | **Python script** | in CI on every push, and by hand when needed |
+| Extraction from formats: pptx, pdf, docx with provenance | **Python script** | when you ingest |
+| Requires judgment: classifying a claim, propagating a cascade, writing a `CHG` | **Skill** | when you invoke it |
+| Requires your knowledge: what was observed, what was promised | **You** | |
 
-**Le skill portano gli script.** `framework-audit` contiene `validate.py`: la skill lo esegue
-in interattivo e interpreta i risultati, la CI esegue lo stesso file e blocca il merge. Una
-sola implementazione, due punti di ingresso. Se la logica fosse duplicata nelle istruzioni
-della skill divergerebbe dalla versione che gira in CI, cioè da quella che conta.
+**The skills carry the scripts.** `framework-audit` contains `validate.py`: the skill runs
+it interactively and interprets the results, CI runs the same file and blocks the merge.
+One implementation, two entry points. If the logic were duplicated in the skill's
+instructions it would diverge from the version that runs in CI, that is, from the one that
+counts.
 
-**Le skill stanno nel repository**, in `skills/`, versionate col codice. Sono le stesse per i
-tre prodotti: `product.yaml` dice a quale si stanno applicando. È il meccanismo concreto della
-gestione condivisa dei tre progetti — non serve una skill per prodotto.
+**The skills live in the repository**, under `skills/`, versioned with the code. They are
+the same for the three products: `product.yaml` says which one they are being applied to.
+It is the concrete mechanism for managing the three projects together. You do not need one
+skill per product.
 
 ---
 
-## 2 · Perché cinque
+## 2 · Why five
 
-Una skill viene selezionata in base alla sua descrizione, e una descrizione vaga si attiva in
-modo inaffidabile: scatta quando non serve e non scatta quando servirebbe. Cinque confini
-corrispondono ai cinque momenti in cui cambi davvero modalità di lavoro:
+A skill is selected on the basis of its description, and a vague description triggers
+unreliably: it fires when it is not needed and does not fire when it would be. Five
+boundaries correspond to the five moments where you genuinely change working mode:
 
-**imposto** · **registro** · **cambio** · **rilascio** · **verifico**
+**set up** · **record** · **change** · **release** · **verify**
 
-### Perché corpus e conversazione sono una skill sola
+### Why corpus and conversation are a single skill
 
-Sembrano due cose diverse: caricare duecento slide, e dire «abbiamo deciso Postgres». Ma
-l'operazione sottostante è identica — *informazione esterna → classificata → instradata →
-propagata* — e la logica che la governa (tassonomia, cascata, gestione dei conflitti) è la
-stessa.
+They look like two different things: loading two hundred slides, and saying "we decided on
+Postgres". But the underlying operation is identical, *external information → classified →
+routed → propagated*, and the logic that governs it (taxonomy, cascade, conflict handling)
+is the same.
 
-Se stessero in due skill quella logica sarebbe duplicata, e divergerebbe: dopo tre mesi il
-corpus e le note conversazionali finirebbero in posti diversi, e non te ne accorgeresti finché
-un agente non trova due risposte in conflitto. È la stessa ragione per cui `validate.py` è un
-file unico.
+If they sat in two skills that logic would be duplicated, and it would diverge: after three
+months the corpus and the conversational notes would end up in different places, and you
+would not notice until an agent found two conflicting answers. It is the same reason
+`validate.py` is a single file.
 
-Quindi: **una skill, due modalità di ingresso, un riferimento condiviso.**
+So: **one skill, two input modes, one shared reference.**
 
 ```
 framework-capture/
-├── SKILL.md                    selezione della modalità + procedura conversazionale
+├── SKILL.md                    mode selection + conversational procedure
 ├── references/
-│   ├── routing-table.md        ⟵ il nucleo: tassonomia, cascata, conflitti
-│   └── ingest-bulk.md          procedura per il corpus business
+│   ├── routing-table.md        ⟵ the core: taxonomy, cascade, conflicts
+│   └── ingest-bulk.md          procedure for the business corpus
 └── scripts/
-    └── extract.py              pptx · pdf · docx → blocchi con provenienza
+    └── extract.py              pptx · pdf · docx → blocks with provenance
 ```
 
-### Perché non una sesta skill per i tre prodotti
+### Why not a sixth skill for the three products
 
-La gestione cross-prodotto non è un momento di lavoro separato: è un vincolo che attraversa
-gli altri cinque. Vive dentro ciascuno — nella cascata di `capture` (una metrica di glossario
-usata da due prodotti), nei controlli di `audit` (glossario unico, consumatori dei `DC`), nella
-classificazione di `change` (un `DEC` con `scope: platform`). Una skill dedicata duplicherebbe
-tutto questo.
+Cross-product management is not a separate moment of work: it is a constraint that runs
+through the other five. It lives inside each of them: in the cascade of `capture` (a
+glossary metric used by two products), in the checks of `audit` (single glossary, consumers
+of the `DC`), in the classification of `change` (a `DEC` with `scope: platform`). A
+dedicated skill would duplicate all of this.
 
 ---
 
-## 3 · `framework-capture` — registrare *(costruita)*
+## 3 · `framework-capture`: recording *(to be rebuilt)*
 
-La skill che userai più di tutte. È la risposta a «voglio aggiungere informazioni in modo
-conversazionale e voglio che i file vengano cambiati coerentemente».
+The skill you will use most of all. It is the answer to "I want to add information
+conversationally and I want the files to be changed consistently".
 
-### Modalità A — corpus business
+### Mode A: business corpus
 
-Presentazioni, PDF, analisi dei requisiti prodotti dal business prima che esistesse il
-progetto tecnico.
+Presentations, PDFs, requirements analyses produced by the business before the technical
+project existed.
 
-Il punto di partenza che cambia tutto: **questi documenti non sono una specifica.** Sono la
-registrazione di ciò che è stato promesso, prodotta da chi doveva vendere. La destinazione
-principale è `COMMITMENTS.md`, non un documento di prodotto. Ma contengono anche cinque cose
-di valore diverso — vocabolario di dominio, promesse numeriche, vincoli travestiti da claim,
-descrizioni del processo attuale, concorrenti citati — e vanno separate perché finiscono in
-cinque posti.
+The starting point that changes everything: **these documents are not a specification.**
+They are the record of what was promised, produced by the people whose job was to sell. The
+main destination is `COMMITMENTS.md`, not a product document. But they also contain five
+things of different value (domain vocabulary, numeric promises, constraints disguised as
+claims, descriptions of the current process, competitors mentioned) and they have to be
+separated because they end up in five places.
 
-`extract.py` normalizza pptx, pdf, docx e testo in blocchi etichettati con documento e
-posizione (slide N, pagina N). Due comportamenti che valgono più del resto:
+`extract.py` normalizes pptx, pdf, docx and text into blocks labeled with document and
+position (slide N, page N). Two behaviors that are worth more than the rest:
 
-- **Segnala e rasterizza le pagine povere di testo.** Su un deck commerciale la promessa
-  architetturale è spesso *disegnata*: tre box con delle frecce e la scritta «piattaforma
-  unica» non producono nessun testo estraibile e sono un vincolo di tenancy.
-- **Riconosce i deck esportati in PDF** e avvisa che il testo estratto ha perso il layout,
-  perché in un deck il layout porta significato.
+- **It flags and rasterizes text-poor pages.** On a sales deck the architectural promise is
+  often *drawn*: three boxes with arrows and the words "single platform" produce no
+  extractable text and are a tenancy constraint.
+- **It recognizes decks exported to PDF** and warns that the extracted text has lost the
+  layout, because in a deck the layout carries meaning.
 
-Poi la classificazione passa per **`ING.md`**, non diretto negli artefatti: conserva la
-provenienza, fa da coda di revisione interrompibile, e permette di respingere un'affermazione
-conservando il fatto che il business l'ha detta — che è esattamente ciò che serve quando fra
-otto mesi qualcuno chiede perché quella funzionalità non c'è.
+Then classification goes through **`ING.md`**, not straight into the artifacts: it preserves
+provenance, it acts as an interruptible review queue, and it lets you reject a claim while
+keeping the fact that the business made it. That is exactly what you need when, eight months
+later, someone asks why that feature is not there.
 
-**L'output di maggior valore sono le contraddizioni.** Tre documenti scritti da persone
-diverse in otto mesi si contraddicono, e nessuno lo sa perché nessuno li ha letti tutti di
-fila. Sul corpus di prova usato per testare l'estrattore è emersa immediatamente: il deck
-promette «dati in tempo reale», l'analisi dei requisiti dice «aggiornamento ogni ora, batch
-notturno esistente». Se le due versioni sono state dette a due clienti diversi non è un
-problema tecnico ma un impegno da rinegoziare, e prima è meglio.
+**The highest-value output is the contradictions.** Three documents written by different
+people over eight months contradict each other, and nobody knows because nobody has read
+them all in one go. On the trial corpus one surfaces immediately: the deck promises
+"real-time data", the requirements analysis says "hourly refresh, existing nightly batch".
+If the two versions were told to two different customers this is not a technical problem but
+a commitment to renegotiate, and sooner is better.
 
-### Modalità B — conversazionale
+### Mode B: conversational
 
-**Non registra frase per frase.** Una conversazione è in gran parte ragionamento ad alta voce,
-e archiviare ogni affermazione produce un registro di rumore in cui i fatti veri diventano
-irreperibili — e siccome quel registro è la fonte da cui lavorerà un agente, il danno si
-propaga.
+**It does not record sentence by sentence.** A conversation is largely reasoning out loud,
+and filing every claim produces a log of noise in which the real facts become impossible to
+find. And since that log is the source an agent will work from, the damage propagates.
 
-Il modello è la **raccolta a fine sessione**:
+The model is the **end-of-session sweep**:
 
-> Da questa conversazione mi sembrano registrabili quattro cose:
-> 1. *decisione* — Postgres come datastore → `DEC` nuovo + `ARC` + chiude `OD-005`
-> 2. *definizione* — «cliente attivo» = login negli ultimi 30 giorni → `GLOSSARY`, **in
->    conflitto** con la formula già presente per prodotto-b
-> 3. *richiesta* — export Excel chiesto dal cliente → `SIG` in `LOG`
-> 4. *ragionamento* — valutare se separare il reporting → parcheggio
+> From this conversation four things look recordable to me:
+> 1. *decision*: Postgres as the datastore → new `DEC` + `ARC` + closes `OD-005`
+> 2. *definition*: "active customer" = login in the last 30 days → `GLOSSARY`, **in
+>    conflict** with the formula already present for product-b
+> 3. *request*: Excel export asked for by the customer → `SIG` in `LOG`
+> 4. *reasoning*: consider separating reporting → parking lot
 >
-> Quali registro?
+> Which ones do I record?
 
-Eccezioni scritte subito: un **incidente** (il valore dipende dall'ora esatta) e un **impegno
-fuori portata** appena emerso.
+Exceptions written immediately: an **incident** (the value depends on the exact time) and an
+**out-of-reach commitment** that has just surfaced.
 
-### Le tre idee che fanno funzionare la coerenza
+### The three ideas that make consistency work
 
-**La classificazione va sulla forza epistemica, non sull'argomento.** «Il sistema processa 10M
-di righe al giorno» può significare *lo abbiamo promesso*, *crediamo che servirà* o *l'abbiamo
-misurato*: tre cose con la stessa forma testuale che vanno in tre posti diversi. Se non è
-distinguibile dal contesto la skill chiede — è la domanda che paga di più.
+**Classification goes on epistemic strength, not on the topic.** "The system processes 10M
+rows a day" can mean *we promised it*, *we believe it will be needed* or *we measured it*:
+three things with the same textual shape that go to three different places. If the context
+does not tell them apart, the skill asks. It is the question that pays best.
 
-**La cascata è obbligatoria e tabellata.** Un `DEC` con `scope: architecture` obbliga ad
-aggiornare `ARC` nello stesso passaggio; una voce di glossario per un termine che è anche un
-campo di un `DC` obbliga a bumpare quel contratto; un impegno fuori portata apre una riga in
-`RSK` e una in `OPEN`. Scrivere in un file solo è facile: scrivere nei quattro giusti è il
-motivo per cui la skill esiste.
+**The cascade is mandatory and tabulated.** A `DEC` with `scope: architecture` forces you to
+update `ARC` in the same pass; a glossary entry for a term that is also a field of a `DC`
+forces you to bump that contract; an out-of-reach commitment opens a row in `RSK` and one in
+`OPEN`. Writing to a single file is easy: writing to the right four is why the skill exists.
 
-**L'automaticità è inversamente proporzionale all'ampiezza della cascata.** Una destinazione
-sola, append-only, nessuna ambiguità, nessun conflitto → applica direttamente. Cascata su più
-file, immutabile coinvolto, conflitto rilevato, classificazione ambigua → proponi il diff e
-attendi. La cascata è il punto in cui la fiducia di un agente supera la sua accuratezza:
-chiedere costa dieci secondi, questo errore costa una decisione.
-
----
-
-## 4 · `framework-init` — impostare
-
-**Si attiva:** «imposta il framework», «nuovo prodotto», «ho del codice senza documentazione»,
-«da dove comincio».
-
-1. **Entry assessment.** Idea · idea già venduta · codice senza documentazione · prodotto in
-   produzione. Non è una formalità: l'ingresso determina quali documenti hanno senso e quali
-   sarebbero finzione.
-2. **Scaffolding.** Albero delle cartelle, template pertinenti con il front-matter compilato.
-   Non il corpo.
-3. **Delega a `framework-capture`** l'ingestione del corpus business, quando l'ingresso è «già
-   venduto». Non riimplementa l'estrazione: la richiama.
-4. **Ricostruzione da codice**, quando l'ingresso è «codice esistente»: propone un `ARC` di
-   partenza e — la parte utile — elenca le **decisioni già implicite nel codice** che non hanno
-   un `DEC`. Un datastore scelto, un modello di tenancy: sono decisioni prese, solo non
-   registrate.
-5. **Semina `OPEN.md`** con le decisioni da prendere, ciascuna con il costo di ritorno.
-
-**Frequenza:** tre volte in tutto. Ed è giusto così: una skill usata tre volte che ti fa
-partire con la struttura corretta vale più di dieci esecuzioni di qualcosa di marginale.
+**Automaticity is inversely proportional to the breadth of the cascade.** A single
+destination, append-only, no ambiguity, no conflict → apply directly. Cascade over several
+files, an immutable involved, a conflict detected, ambiguous classification → propose the
+diff and wait. The cascade is the point where an agent's confidence exceeds its accuracy:
+asking costs ten seconds, this mistake costs a decision.
 
 ---
 
-## 5 · `framework-change` — cambiare
+## 4 · `framework-init`: setting up
 
-**Si attiva:** «devo aggiungere», «cosa faccio in questo ciclo», «apri una change».
+**Triggers on:** "set up the framework", "new product", "I have code with no
+documentation", "where do I start".
 
-Implementa il tratto del ciclo che era nell'ordine sbagliato: intake → triage → `ICG` →
-reshaping → `CHG` → `IMP`.
+1. **Entry assessment.** Idea · idea already sold · code without documentation · product in
+   production. It is not a formality: the entry point determines which documents make sense
+   and which would be fiction.
+2. **Scaffolding.** Folder tree, relevant templates with the front matter filled in. Not the
+   body.
+3. **Delegates to `framework-capture`** the ingestion of the business corpus, when the entry
+   point is "already sold". It does not reimplement extraction: it calls it.
+4. **Reconstruction from code**, when the entry point is "existing code": it proposes a
+   starting `ARC` and, the useful part, lists the **decisions already implicit in the code**
+   that have no `DEC`. A datastore chosen, a tenancy model: these are decisions taken, just
+   not recorded.
+5. **Seeds `OPEN.md`** with the decisions still to take, each with its cost to reverse.
 
-1. **Triage e impact assessment.** Legge `PBR`, `ARC`, i `DC`, `EVP`, `RSK` e **propone** la
-   classificazione `ICG`. Un `ICG` deciso automaticamente è un gate che non esiste.
-2. **Instrada.** Se serve reshaping, elenca quali artefatti aggiornare **prima** di scrivere il
-   piano. Se il routing è «ipotesi invalidata» si ferma: il rientro è in F3 o F2, non in un
-   `CHG`.
-3. **Scrive il `CHG`** con i tre campi obbligatori. Il valore aggiunto è **Cosa NON deve
-   cambiare**: la skill lo compila meglio di te, perché può leggere `ARC` e i `DC` e trovare i
-   contratti che il cambiamento rischia di rompere senza che nessuno l'abbia notato.
-4. **Aggiorna `IMP`** e la sezione `§escluse`.
-5. **Verifica** con `validate.py` prima di portare il `CHG` a `verified`.
-
-**Confine con `capture`:** `capture` registra il segnale in `LOG`; `change` lo trasforma in
-mandato. Un segnale registrato non è autorizzato a essere implementato — è la separazione che
-impedisce a un prodotto di diventare la somma delle ultime cose chieste.
-
----
-
-## 6 · `framework-release` — rilasciare
-
-**Si attiva:** «rilascio», «prepara la release», «posso rilasciare?».
-
-1. **Verifica il gate `RG`:** esiste un `EVR` per il candidato, cita l'`EVP` nella versione
-   congelata, tutte le metriche e le slice sono sopra soglia. Se no: **rework**, e lo dice con
-   questa parola, perché non è un rollback — non è ancora in produzione.
-2. **Genera `RLM.yaml`** da git, build e configurazione: commit, digest, versioni di modello e
-   prompt, dataset, `DC` toccati, `CHG` inclusi, target di rollback. Compilarlo a mano
-   significa sbagliarlo.
-3. **Genera `REL.md`** dai `CHG`, tradotti in effetti. Dieci righe.
-4. **Aggiorna** `product.yaml` e apre un `SIG` type `metric` per le prime 48 ore.
-5. **Non esegue il deploy.** Prepara l'evidenza; il comando lo dai tu.
-
-È la skill con la quota di giudizio più bassa, quindi quella che risparmia più tempo a parità
-di rischio.
+**Frequency:** three times in total. And that is right: a skill used three times that gets
+you started with the correct structure is worth more than ten runs of something marginal.
 
 ---
 
-## 7 · `framework-audit` — verificare *(costruita)*
+## 5 · `framework-change`: changing
 
-`skills/framework-audit/` con `scripts/validate.py`, verificato su un repository di prova.
+**Triggers on:** "I need to add", "what do I do in this cycle", "open a change".
 
-Controlla: front-matter e schema per tipo · coerenza fra `lifecycle` e tipo · `status`
-nell'enumerazione del tipo · unicità degli ID · riferimenti pendenti · cicli nella catena di
-supersedenza · sezioni obbligatorie (`Cosa NON deve cambiare` di un `CHG`, `§delta` di un `WF`,
-le tre di `RSK`, le tre di `ING`) · obsolescenza dei viventi · `CHG` che dichiarano un impatto
-senza l'artefatto che ne deriva · rollback non definito o non testato · decisioni chiuse ancora
-elencate come aperte.
+It implements the stretch of the cycle that was in the wrong order: intake → triage → `ICG`
+→ reshaping → `CHG` → `IMP`.
 
-**Cross-prodotto:** glossario unico · consumatori dei `DC` che corrispondono a prodotti
-esistenti · prodotti senza `PBR`.
+1. **Triage and impact assessment.** It reads `PBR`, `ARC`, the `DC`, `EVP`, `RSK` and
+   **proposes** the `ICG` classification. An `ICG` decided automatically is a gate that does
+   not exist.
+2. **Routes.** If reshaping is needed, it lists which artifacts to update **before** writing
+   the plan. If the routing is "hypothesis invalidated" it stops: the re-entry is in F3 or
+   F2, not in a `CHG`.
+3. **Writes the `CHG`** with the three mandatory fields. The added value is **What must NOT
+   change**: the skill fills it in better than you do, because it can read `ARC` and the `DC`
+   and find the contracts the change risks breaking without anyone having noticed.
+4. **Updates `IMP`** and the `§excluded` section.
+5. **Verifies** with `validate.py` before taking the `CHG` to `verified`.
 
-**Genera:** `decisions/INDEX.md` e `TRACEABILITY.md`.
+**Boundary with `capture`:** `capture` records the signal in `LOG`; `change` turns it into a
+mandate. A recorded signal is not authorized to be implemented. That is the separation that
+stops a product from becoming the sum of the last things anyone asked for.
 
-Una regola di igiene che vale la pena ripetere: **non aggiornare `last_review` senza aver letto
-il documento.** È l'azione più veloce per far tornare verde il validatore e l'unica che rende
-inutile l'intero framework.
+---
 
-### Da costruire: `--emit-manifest`, per le sezioni `GENERATO` di `product.yaml`
+## 6 · `framework-release`: releasing
 
-Oggi quelle sezioni sono marcate «generato» e le scrive una persona. Una sezione che si
-dichiara generata e non lo è, è **peggio di una scritta a mano**: nessuno la rilegge, perché
-tutti presumono che qualcosa la tenga vera.
+**Triggers on:** "release", "prepare the release", "can I release?".
 
-Prima di scrivere il generatore, separa i campi del manifest in due gruppi. La riga di
-confine è: *serve giudizio per compilarlo?*
+1. **Checks the `RG` gate:** an `EVR` exists for the candidate, it cites the `EVP` in its
+   frozen version, all metrics and slices are above threshold. If not: **rework**, and it
+   says so with that word, because this is not a rollback. It is not in production yet.
+2. **Generates `RLM.yaml`** from git, the build and the configuration: commit, digest, model
+   and prompt versions, dataset, `DC` touched, `CHG` included, rollback target. Filling it
+   in by hand means getting it wrong.
+3. **Generates `REL.md`** from the `CHG`, translated into effects. Ten lines.
+4. **Updates** `product.yaml` and opens a `SIG` of type `metric` for the first 48 hours.
+5. **It does not run the deploy.** It prepares the evidence; you give the command.
 
-| Derivabile — lo fa lo script | Da cosa |
+It is the skill with the lowest share of judgment, and therefore the one that saves the most
+time at equal risk.
+
+---
+
+## 7 · `framework-audit`: verifying *(to be rebuilt)*
+
+`skills/framework-audit/` with `scripts/validate.py`, to be verified on a trial repository.
+
+It checks: front matter and schema by type · consistency between `lifecycle` and type ·
+`status` within the type's enumeration · uniqueness of IDs · dangling references · cycles in
+the supersedence chain · mandatory sections (`What must NOT change` of a `CHG`, `§delta` of a
+`WF`, the three of `RSK`, the three of `ING`) · staleness of the living artifacts · `CHG`
+that declare an impact without the artifact that derives from it · rollback undefined or
+untested · closed decisions still listed as open.
+
+**Cross-product:** single glossary · consumers of the `DC` that match existing products ·
+products without a `PBR`.
+
+**Generates:** `decisions/INDEX.md` and `TRACEABILITY.md`.
+
+A hygiene rule worth repeating: **do not update `last_review` without having read the
+document.** It is the fastest action for turning the validator green again and the only one
+that makes the entire framework useless.
+
+### To be built: `--emit-manifest`, for the `GENERATED` sections of `product.yaml`
+
+Today those sections are marked "generated" and a person writes them. A section that
+declares itself generated and is not, is **worse than one written by hand**: nobody rereads
+it, because everyone assumes something keeps it true.
+
+Before writing the generator, split the manifest fields into two groups. The dividing line
+is: *does filling it in require judgment?*
+
+| Derivable, the script does it | From what |
 |---|---|
-| `artifacts.living[].last_review`, `.stale` | la stessa scansione che fa già il validatore |
-| `artifacts.immutable_count`, `.append_only` | idem |
-| `open_decisions` | i titoli `### OD-NNN` di `OPEN.md §1` |
-| `open_risks` | `RSK.md §stato` |
-| `active_changes` | i `CHG` con `status: approved` |
-| `release.*` | l'ultimo `REL`/`RLM`, e `rollback_target` dal penultimo |
+| `artifacts.living[].last_review`, `.stale` | the same scan the validator already does |
+| `artifacts.immutable_count`, `.append_only` | same |
+| `open_decisions` | the `### OD-NNN` headings of `OPEN.md §1` |
+| `open_risks` | `RSK.md §state` |
+| `active_changes` | the `CHG` with `status: approved` |
+| `release.*` | the last `REL`/`RLM`, and `rollback_target` from the one before it |
 
-| Non derivabile — resta conversazionale | Perché |
+| Not derivable, stays conversational | Why |
 |---|---|
-| `stage.block`, `.phase`, `.next_gate`, `.mor_completed` | un gate lo passa una persona; nessun file lo registra prima del `DEC` |
-| `one_liner`, `name` | è una decisione di posizionamento |
-| `platform.shares` | è `OD-002`, cioè una decisione aperta |
-| `entry_points`, `roles` | convenzioni, non fatti osservabili |
+| `stage.block`, `.phase`, `.next_gate`, `.mor_completed` | a gate is cleared by a person; no file records it before the `DEC` |
+| `one_liner`, `name` | it is a positioning decision |
+| `platform.shares` | it is `OD-002`, that is, an open decision |
+| `entry_points`, `roles` | conventions, not observable facts |
 
-Poi: **il primo gruppo lo genera `validate.py --emit-manifest`**, accanto a `--emit-index`,
-perché deriva dalla stessa scansione ed è lo stesso tipo di oggetto — un indice. Il secondo
-gruppo lo mantiene `framework-capture` in modalità conversazionale: «abbiamo passato G3» è
-un'affermazione con una destinazione, e `routing-table.md` è già il posto dove si decide
-quale.
+Then: **the first group is generated by `validate.py --emit-manifest`**, alongside
+`--emit-index`, because it derives from the same scan and is the same kind of object, an
+index. The second group is maintained by `framework-capture` in conversational mode: "we
+cleared G3" is a claim with a destination, and `routing-table.md` is already the place where
+you decide which one.
 
-Non serve una skill nuova per questo, e la ragione è la stessa di
-[§2 · Perché non una sesta skill per i tre prodotti](#perché-non-una-sesta-skill-per-i-tre-prodotti):
-una skill che «gestisce il manifest» duplicherebbe la scansione di `audit` e la tassonomia di
-`capture` per tenere insieme un file che è solo la proiezione di entrambe.
+You do not need a new skill for this, and the reason is the same as in
+[§2 · Why not a sixth skill for the three products](#why-not-a-sixth-skill-for-the-three-products):
+a skill that "manages the manifest" would duplicate the scan of `audit` and the taxonomy of
+`capture` in order to hold together a file that is only the projection of both.
 
-Tre vincoli sul generatore, che sono il motivo per cui va scritto e non improvvisato:
+Three constraints on the generator, which are the reason it has to be written and not
+improvised:
 
-1. **Rigenerare non deve poter cancellare il secondo gruppo.** Riscrive i campi che possiede,
-   lascia intatti gli altri. Un generatore che riscrive il file intero perde `stage` alla
-   prima esecuzione, e nessuno se ne accorge finché non serve.
-2. **Deve essere idempotente e verificabile in CI.** `--emit-manifest --check` esce diverso da
-   zero se il file su disco diverge da ciò che verrebbe generato: è l'unico modo per accorgersi
-   che qualcuno ha scritto a mano in un campo generato.
-3. **Finché non esiste, i campi restano marcati per quello che sono.** Il commento in fondo a
-   `templates/product.yaml` dice che oggi li compili tu. Quel commento sparisce insieme al
-   problema, non prima.
+1. **Regenerating must not be able to erase the second group.** It rewrites the fields it
+   owns, it leaves the others intact. A generator that rewrites the whole file loses `stage`
+   on the first run, and nobody notices until it matters.
+2. **It must be idempotent and checkable in CI.** `--emit-manifest --check` exits non-zero if
+   the file on disk diverges from what would be generated: it is the only way to notice that
+   someone has hand-written into a generated field.
+3. **Until it exists, the fields stay marked for what they are.** The comment at the bottom
+   of `templates/product.yaml` says that today you fill them in yourself. That comment
+   disappears together with the problem, not before.
 
-**Quando costruirlo:** quando esistono abbastanza artefatti perché rileggerli a mano costi più
-di scrivere lo script — realisticamente al primo `CHG`, non prima. Con tre `PBR` e zero `CHG`
-il manifest si aggiorna in trenta secondi e il generatore è la fabbrica costruita prima del
-prodotto.
-
----
-
-## 8 · Cosa non automatizzare
-
-**Non far generare a una skill il contenuto di `PRB`, `HYP`, `EVD`, `DFB`.**
-
-Un agente produce un problem statement plausibile, un'ipotesi ben formulata e un evidence
-brief ordinato senza aver parlato con nessuno e senza aver interrogato un dato. Il risultato
-passa qualsiasi validatore e non contiene informazione. È esattamente il fallimento che il
-framework esiste per prevenire — documentazione che *sembra* vera — e ha una proprietà
-sgradevole: è indistinguibile dalla versione buona a un'ispezione rapida, quindi non te ne
-accorgi finché una decisione presa su quella base non si rivela sbagliata.
-
-Il rischio è più alto proprio nell'ingestione, dove la tentazione è forte: il corpus business
-contiene affermazioni con la forma di requisiti, e trasformarle in un `EVD` richiede un
-passaggio che sembra piccolo. Non lo è: nessuno ha osservato niente.
-
-**La regola:** una skill può strutturare, classificare, collegare, propagare e generare da
-fonti esistenti. **Non può produrre evidenza.** Se un documento risponde a «cosa abbiamo
-osservato», lo scrivi tu.
+**When to build it:** when there are enough artifacts that rereading them by hand costs more
+than writing the script. Realistically at the first `CHG`, not before. With three `PBR` and
+zero `CHG` the manifest updates in thirty seconds and the generator is the factory built
+before the product.
 
 ---
 
-## 9 · Ordine di costruzione
+## 8 · What not to automate
 
-| Quando | Cosa | Perché ora |
+**Do not let a skill generate the content of `PRB`, `HYP`, `EVD`, `DFB`.**
+
+An agent produces a plausible problem statement, a well-formed hypothesis and a tidy evidence
+brief without having talked to anyone and without having queried a single piece of data. The
+result passes any validator and contains no information. It is exactly the failure the
+framework exists to prevent, documentation that *looks* true, and it has an unpleasant
+property: it is indistinguishable from the good version under a quick inspection, so you do
+not notice until a decision taken on that basis turns out to be wrong.
+
+The risk is highest precisely in ingestion, where the temptation is strong: the business
+corpus contains claims shaped like requirements, and turning them into an `EVD` takes a step
+that looks small. It is not: nobody observed anything.
+
+**The rule:** a skill can structure, classify, link, propagate and generate from existing
+sources. **It cannot produce evidence.** If a document answers "what did we observe", you
+write it.
+
+---
+
+## 9 · Build order
+
+| When | What | Why now |
 |---|---|---|
-| Adesso | `framework-capture` | Hai il corpus business da ingestare e non hai ancora niente. È il primo lavoro reale |
-| Adesso | `framework-audit` | Attivala in CI con **un solo** controllo: front-matter valido. Il resto dopo |
-| Prima del primo commit | `framework-init` | La usi tre volte e ti evita tre strutture divergenti |
-| Al primo ciclo di change reale | `framework-change` | Prima non hai abbastanza segnali perché serva |
-| Al primo `CHG` | `validate.py --emit-manifest` | Prima il manifest si aggiorna a mano in trenta secondi. Vedi §7 |
-| Al primo rilascio | `framework-release` | Prima non c'è niente da rilasciare |
+| Now | `framework-capture` | You have the business corpus to ingest and you have nothing yet. It is the first real job |
+| Now | `framework-audit` | Turn it on in CI with **one** check only: valid front matter. The rest later |
+| Before the first commit | `framework-init` | You use it three times and it saves you three divergent structures |
+| At the first real change cycle | `framework-change` | Before that you do not have enough signals for it to be needed |
+| At the first `CHG` | `validate.py --emit-manifest` | Before that the manifest updates by hand in thirty seconds. See §7 |
+| At the first release | `framework-release` | Before that there is nothing to release |
 
-Sui controlli in CI: **aggiungili uno per volta, quando il fallimento che prevengono è già
-accaduto una volta.** Dodici controlli attivati prima che esista il codice sono una fabbrica
-costruita prima del prodotto: rallentano senza aver ancora prevenuto niente, e la reazione
-prevedibile è disattivarli tutti.
+On CI checks: **add them one at a time, when the failure they prevent has already happened
+once.** Twelve checks turned on before the code exists are a factory built before the
+product: they slow you down without having prevented anything yet, and the predictable
+reaction is to turn them all off.
 
-Vale anche per le skill la regola che protegge il framework: **ogni skill deve risparmiare più
-tempo di quanto costa mantenerla, questa settimana.** Una skill è codice, e come tutto il
-codice invecchia e va tenuta allineata a un framework che nel frattempo cambia.
+The rule that protects the framework applies to the skills too: **every skill must save more
+time than it costs to maintain, this week.** A skill is code, and like all code it ages and
+has to be kept aligned with a framework that changes in the meantime.

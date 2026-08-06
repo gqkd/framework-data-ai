@@ -5,83 +5,84 @@ lifecycle: immutable
 status: proposed
 id: DEC-NNN
 scope: architecture
-products: [prodotto-a, prodotto-b]
-owners: [NOME]
-approvers: [NOME]
-created: AAAA-MM-GG
+products: [product-a, product-b]
+owners: [NAME]
+approvers: [NAME]
+created: YYYY-MM-DD
 derives_from: [HYP-NNN, EVD-NNN, SIG-NNN]
 supersedes: null
 classification: internal
 ---
 
-# DEC-NNN · Titolo della decisione, all'attivo
+# DEC-NNN · Decision title, in the active voice
 
-**Domanda:** quale decisione è stata presa, perché, in quel momento, e quali alternative
-sono state scartate?
+**Question:** which decision was made, why, at that moment, and which alternatives were
+discarded?
 
 `status`: `proposed | accepted | superseded`
 
-## Perché un solo tipo di documento per prodotto e architettura
+## Why a single document type for product and architecture
 
-Storicamente l'ADR registra decisioni architetturali. Ma rinunciare a un prodotto,
-scegliere un segmento, accettare un rischio commerciale o fissare una priorità sono
-decisioni tanto da registrare quanto la scelta di un database — e sono spesso più costose.
+Historically the ADR records architectural decisions. But giving up on a product, choosing a
+segment, accepting a commercial risk or setting a priority are decisions just as worth
+recording as the choice of a database, and they are often more expensive.
 
-Un registro separato per le decisioni di prodotto significa che quelle **cross-prodotto**,
-cioè le più care, non hanno casa e finiscono nel registro del prodotto su cui stavi
-lavorando quel giorno.
+A separate register for product decisions means that the **cross-product** ones, the most
+expensive ones, have no home and end up in the register of whichever product you happened to
+be working on that day.
 
-Quindi: **un tipo di documento, una numerazione, una cartella.** Il campo `scope`
-determina la natura della decisione:
+So: **one document type, one numbering, one folder.** The `scope` field determines the
+nature of the decision:
 
-| `scope` | Cosa registra | Esempi |
+| `scope` | What it records | Examples |
 |---|---|---|
-| `product` | Decisioni su cosa costruiamo, per chi, con quale priorità | esito di un gate · pivot · stop · scelta di segmento · scope dell'MVP · accettazione di un rischio commerciale |
-| `architecture` | Decisioni su come è fatto il sistema | scelta di un datastore · stile di integrazione · confine fra componenti · modello di deploy |
-| `platform` | Decisioni che vincolano tutti e tre i prodotti | tenancy · identità · substrato condiviso · convenzioni |
+| `product` | Decisions about what we build, for whom, at what priority | outcome of a gate · pivot · stop · segment choice · MVP scope · acceptance of a commercial risk |
+| `architecture` | Decisions about how the system is built | choice of a datastore · integration style · boundary between components · deployment model |
+| `platform` | Decisions that constrain all three products | tenancy · identity · shared substrate · conventions |
 
-`scope: architecture` è l'ADR classico: una specializzazione, non un documento diverso.
-Un `DEC` con `scope: platform` deve elencare tutti i prodotti in `products`.
+`scope: architecture` is the classic ADR: a specialization, not a different document. A
+`DEC` with `scope: platform` must list all the products in `products`.
 
-## Contesto
+## Context
 
-Il **vincolo** che rendeva necessaria una decisione. Non la cronistoria di come ci siamo
-arrivati: la forza che non lasciava scelta se non scegliere.
+The **constraint** that made a decision necessary. Not the chronicle of how we got there:
+the force that left no choice but to choose.
 
-## Decisione
+## Decision
 
-All'attivo, al presente. *"Usiamo X per Y."*
+Active voice, present tense. *"We use X for Y."*
 
-## Alternative considerate
+## Alternatives considered
 
-| Alternativa | Perché scartata |
+| Alternative | Why discarded |
 |---|---|
 
-Se le alternative sembrano ovviamente peggiori, non le hai considerate: le hai costruite
-per far vincere la scelta già fatta. È l'anti-pattern più comune e più riconoscibile.
+If the alternatives look obviously worse, you did not consider them: you built them so the
+choice you had already made would win. It is the most common and most recognizable
+anti-pattern.
 
-## Conseguenze
+## Consequences
 
-Cosa diventa più facile. Cosa diventa più difficile. **Cosa diventa impossibile.**
-Includi le conseguenze scomode: sono quelle per cui il documento verrà riletto.
+What becomes easier. What becomes harder. **What becomes impossible.** Include the
+uncomfortable consequences: they are the ones the document will be reread for.
 
-## Condizione di riesame
+## Review condition
 
-*Opzionale ma molto utile.* Se la decisione è deliberatamente provvisoria, la condizione
-osservabile che la rimette in discussione. Una decisione provvisoria con condizione di
-riesame è una decisione; senza condizione è un rinvio mascherato, e va in `OPEN.md`.
+*Optional but very useful.* If the decision is deliberately provisional, the observable
+condition that puts it back on the table. A provisional decision with a review condition is
+a decision; without a condition it is a deferral in disguise, and it belongs in `OPEN.md`.
 
 ---
 
-## Anti-pattern
+## Anti-patterns
 
-- **Scritto a posteriori per giustificare.** Si riconosce sempre: le alternative sono
-  uomini di paglia.
-- **Modificarlo.** È immutabile. Se la decisione cambia, ne scrivi uno nuovo con
-  `supersedes` e porti il vecchio a `status: superseded`.
-- **Contesto che racconta la storia invece del vincolo.** Chi legge fra un anno vuole
-  sapere cosa ti costringeva, non chi era in riunione.
-- **Nessuna conseguenza negativa.** Ogni decisione ne ha. Ometterle rende il documento
-  inutile proprio nel momento in cui serve, cioè quando qualcuno ne subisce una.
-- **Un `DEC` per ogni scelta minuta.** Registra ciò che sarebbe costoso riscoprire.
-  Se la scelta si inverte in un pomeriggio, non serve un `DEC`.
+- **Written after the fact to justify.** You can always tell: the alternatives are straw
+  men.
+- **Editing it.** It is immutable. If the decision changes, you write a new one with
+  `supersedes` and move the old one to `status: superseded`.
+- **Context that tells the story instead of the constraint.** Whoever reads this a year from
+  now wants to know what was forcing your hand, not who was in the meeting.
+- **No negative consequences.** Every decision has some. Leaving them out makes the document
+  useless exactly when it is needed, which is when someone is on the receiving end of one.
+- **One `DEC` for every tiny choice.** Record what would be expensive to rediscover. If the
+  choice can be reversed in an afternoon, it does not need a `DEC`.

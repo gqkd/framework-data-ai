@@ -3,88 +3,91 @@ schema: framework/ingestion-register/v1
 artifact_type: ingestion-register
 lifecycle: append-only
 status: active
-products: [prodotto-a, prodotto-b, prodotto-c]
-owners: [NOME]
-created: AAAA-MM-GG
+products: [product-a, product-b, product-c]
+owners: [NAME]
+created: YYYY-MM-DD
 classification: confidential
 ---
 
-# Registro di ingestione del corpus business
+# Business corpus ingestion log
 
-**Domanda:** cosa affermano i documenti prodotti dal business, dove è scritto esattamente, e
-cosa ne abbiamo fatto?
+**Question:** what do the documents produced by the business claim, where exactly is it
+written, and what did we do with it?
 
-**Perché non si scrive diretto negli artefatti definitivi.** Tre ragioni concrete:
+**Why it is not written straight into the final artifacts.** Three concrete reasons:
 
-- **Provenienza.** Qui resta il rimando a documento e slide. Nell'artefatto definitivo quella
-  traccia si perde, e ne avrai bisogno ogni volta che un'affermazione va verificata.
-- **Coda di revisione.** Duecento slide producono più affermazioni di quante se ne valutino in
-  una sessione. Questo registro è lo stato del lavoro e ti permette di interromperti.
-- **Rifiuto tracciato.** Puoi respingere un'affermazione conservando il fatto che il business
-  l'ha detta — esattamente ciò che serve quando fra otto mesi qualcuno chiede perché quella
-  funzionalità non c'è.
+- **Provenance.** The pointer to document and slide stays here. In the final artifact that
+  trace is lost, and you will need it every time a claim has to be checked.
+- **Review queue.** Two hundred slides produce more claims than anyone can assess in one
+  sitting. This log is the state of that work and it lets you stop halfway.
+- **Traceable rejection.** You can reject a claim while keeping the fact that the business
+  made it. That is exactly what you need when someone asks, eight months later, why that
+  feature is not there.
 
-**Append-only:** le righe non si modificano. Cambia solo la colonna `Esito`, e se cambia una
-valutazione si aggiunge una riga nuova che rimanda alla precedente.
+**Append-only:** rows are not edited. Only the `Outcome` column changes, and if an
+assessment changes you add a new row that points back to the previous one.
 
-## §affermazioni
+## §claims
 
-| ID | Documento | Posizione | Verbatim | Tipo | Destinazione | Esito |
+| ID | Document | Position | Verbatim | Type | Destination | Outcome |
 |---|---|---|---|---|---|---|
-| ING-001 | offerta-cliente.pptx | slide 1 | "Un'unica esperienza per i tre moduli" | vincolo travestito da claim | `OPEN.md` OD-003 | instradato |
-| ING-002 | offerta-cliente.pptx | slide 2 | "Riduzione del 30% del tempo di riconciliazione" | obiettivo numerico | `CMT-004` + soglia `EVP` | instradato |
-| ING-003 | offerta-cliente.pptx | slide 2 | "Cliente attivo: chi ha operato negli ultimi 30 giorni" | definizione | `GLOSSARY` | instradato |
+| ING-001 | customer-offer.pptx | slide 1 | "A single experience across the three modules" | constraint disguised as a claim | `OPEN.md` OD-003 | routed |
+| ING-002 | customer-offer.pptx | slide 2 | "30% reduction in reconciliation time" | numeric target | `CMT-004` + `EVP` threshold | routed |
+| ING-003 | customer-offer.pptx | slide 2 | "Active customer: anyone who logged in within 30 days" | definition | `GLOSSARY` | routed |
 
-`Tipo`: usa la tassonomia di `routing-table.md §1`.
+`Type`: use the taxonomy of the ingestion routing reference.
 
-`Esito`: `da valutare` · `instradato` · `respinto` · `rinviato` · `contraddizione`
+`Outcome`: `to assess` · `routed` · `rejected` · `deferred` · `contradiction`
 
-Per `respinto` la ragione è obbligatoria: è l'informazione per cui il registro esiste.
+For `rejected` the reason is mandatory: it is the information this log exists for.
 
-## §contraddizioni
+## §contradictions
 
-La parte di maggior valore del registro. Ogni voce porta **entrambe** le provenienze.
+The most valuable part of the log. Every entry carries **both** provenances.
 
-| ID | Affermazione A | Fonte A | Affermazione B | Fonte B | Natura | Dove è finita |
+| ID | Claim A | Source A | Claim B | Source B | Nature | Where it went |
 |---|---|---|---|---|---|---|
-| ING-C01 | "Dati in tempo reale" | offerta-cliente.pptx slide 2 | "Aggiornamento ogni ora, batch notturno esistente" | analisi-requisiti.docx §Vincoli | promessa temporale incompatibile | `OPEN.md` OD-011 |
+| ING-C01 | "Real time data" | customer-offer.pptx slide 2 | "Hourly refresh, existing nightly batch" | requirements.docx §Constraints | incompatible timing promise | `OPEN.md` OD-011 |
 
-**Se le due versioni sono state dette a due clienti diversi**, non è una decisione tecnica: è
-un impegno da rinegoziare, va in `COMMITMENTS §Fuori portata` e va segnalato subito. Due
-clienti a cui è stato promesso il contrario è un problema che si risolve solo parlandone.
+**If the two versions were told to two different customers**, this is not a technical
+decision: it is a commitment to renegotiate. It goes in `COMMITMENTS §Out of reach` and it
+gets raised immediately. Two customers who were promised opposite things is a problem that
+only gets solved by talking about it.
 
-## §da guardare
+## §to review
 
-Slide e pagine segnalate da `extract.py` come povere di testo, cioè probabilmente grafiche.
+Slides and pages that came out of extraction with almost no text, which usually means they
+are drawings.
 
-| Documento | Pagine | Guardato | Cosa conteneva |
+| Document | Pages | Reviewed | What it contained |
 |---|---|---|---|
-| offerta-cliente.pptx | 3 | sì | diagramma a tre box: implica tenancy condivisa → OD-003 |
+| customer-offer.pptx | 3 | yes | three box diagram: implies shared tenancy → OD-003 |
 
-Su un deck commerciale il vincolo architetturale è spesso disegnato, non scritto. La colonna
-`Guardato` esiste perché la tentazione di saltare questo passaggio è forte.
+On a sales deck the architectural constraint is often drawn rather than written. The
+`Reviewed` column exists because the temptation to skip this step is strong.
 
-## §bilancio
+## §tally
 
-Compilato alla fine di ogni lotto di ingestione.
+Filled in at the end of each ingestion batch.
 
-- Documenti processati:
-- Affermazioni classificate:
-- Instradate / respinte / rinviate:
-- **Contraddizioni trovate:**
-- **Impegni risultati fuori portata:**
+- Documents processed:
+- Claims classified:
+- Routed / rejected / deferred:
+- **Contradictions found:**
+- **Commitments that turned out to be out of reach:**
 
 ---
 
-## Anti-pattern
+## Anti-patterns
 
-- **Estrarre tutto per completezza.** Un deck di quaranta slide contiene forse quindici
-  affermazioni con conseguenze. Il resto è narrazione commerciale, e includerla rende
-  irreperibile ciò che conta.
-- **Verbatim parafrasato.** La colonna si chiama verbatim per un motivo: l'ambiguità
-  dell'originale è precisamente l'informazione che serve per negoziare.
-- **Nessuna riga in `§contraddizioni`.** Con tre o più documenti scritti da persone diverse
-  non significa che non ci siano: significa che non li hai confrontati.
-- **Trattare il corpus come una specifica.** È la registrazione di ciò che è stato promesso.
-  Destinazione principale `COMMITMENTS`, non un documento di prodotto.
-- **Saltare `§da guardare`.** È dove stanno i vincoli architetturali che nessuno ha scritto.
+- **Extracting everything for completeness.** A forty slide deck holds perhaps fifteen
+  claims with consequences. The rest is sales narrative, and including it makes what
+  matters impossible to find.
+- **Paraphrasing the verbatim.** The column is called verbatim for a reason: the ambiguity
+  of the original is precisely the information you need in order to negotiate.
+- **No rows in `§contradictions`.** With three or more documents written by different
+  people that does not mean there are none. It means you have not compared them.
+- **Treating the corpus as a specification.** It is the record of what was promised. Its
+  main destination is `COMMITMENTS`, not a product document.
+- **Skipping `§to review`.** That is where the architectural constraints nobody wrote down
+  are hiding.

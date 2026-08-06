@@ -3,141 +3,143 @@ schema: framework/open-register/v1
 artifact_type: open-register
 lifecycle: living
 status: active
-products: [prodotto-a, prodotto-b, prodotto-c]
-owners: [NOME]
-created: AAAA-MM-GG
-last_review: AAAA-MM-GG HH:MM
+products: [product-a, product-b, product-c]
+owners: [NAME]
+created: YYYY-MM-DD
+last_review: YYYY-MM-DD HH:MM
 classification: internal
 ---
 
-# Decisioni aperte e problemi noti
+# Open decisions and known issues
 
-**A cosa serve.** Contiene tutto ciò che è ancora indeciso o consapevolmente rotto. È
-l'informazione che nessun altro documento del framework contiene: `decisions/` registra
-ciò che è stato *deciso*, `ARC` com'è fatto il sistema, `RSK` cosa può andare storto. Solo
-questo file dice **cosa non è ancora stato scelto** — e senza, un agente riempie il vuoto
-con un'ipotesi plausibile e la implementa con convinzione.
+**What it is for.** It holds everything that is still undecided or knowingly broken. It is
+the information no other document in the framework contains: `decisions/` records what has
+been *decided*, `ARC` how the system is built, `RSK` what can go wrong. Only this file says
+**what has not been chosen yet**. Without it, an agent fills the gap with a plausible
+assumption and implements it with conviction.
 
-**È l'unico documento del framework che si accorcia.** Quando una decisione viene presa,
-la voce esce da `§1` e diventa un `DEC-NNN`, lasciando una riga di rimando in `§4`. Se il
-file non si accorcia mai, stai accumulando invece di decidere.
+**It is the only document in the framework that gets shorter.** When a decision is taken,
+the entry leaves `§1` and becomes a `DEC-NNN`, leaving one cross-reference line in `§4`. If
+the file never gets shorter, you are accumulating instead of deciding.
 
-**Uno per repository, alla radice.** Se un prodotto ha bisogno di un proprio registro
-tecnico — perché ne aveva già uno prima di adottare il framework, o perché le sue voci
-sono troppe e troppo specifiche — può stare in `products/<p>/OPEN.md`, ma allora `AGENTS.md`
-deve dire esplicitamente quale dei due risponde a quale domanda. Due registri senza quella
-riga sono due registri che divergono.
+**One per repository, at the root.** If a product needs its own technical register (because
+it already had one before adopting the framework, or because its entries are too many and
+too specific) it can live in `products/<p>/OPEN.md`, but then `AGENTS.md` must say
+explicitly which of the two answers which question. Two registers without that line are two
+registers that diverge.
 
-## Come si usa
+## How to use it
 
-1. **Un agente legge questo file prima di prendere qualunque decisione strutturale.** Se
-   la scelta necessaria è elencata qui come aperta, non la prende: la solleva.
-2. **Il campo `Default in uso` è obbligatorio.** Una decisione non presa non significa
-   assenza di comportamento: qualcosa sta già succedendo, fosse anche «niente». Scrivere
-   cosa è la differenza fra un rinvio consapevole e un buco.
-3. **Il costo di ritorno determina l'urgenza, non l'importanza.** Le voci a costo alto
-   vanno decise anche con informazione incompleta, perché il costo di aspettare supera
-   quello di sbagliare. Quelle a costo basso si rinviano quanto si vuole.
-4. **Quando decidi:** scrivi il `DEC`, sostituisci la voce con una riga di rimando in `§4`,
-   elimina il resto.
-
----
-
-# §1 · Decisioni aperte
-
-Raggruppate per costo di ritorno, non per argomento: è il costo che dice quali guardare
-per prime.
-
-## Costo di ritorno ALTO — decidere prima della prima riga di codice
-
-### OD-001 · Titolo della decisione, in forma di scelta
-
-- **Domanda:** la scelta effettiva, formulata come domanda con almeno due risposte.
-- **Costo di ritorno:** alto.
-- **Default in uso:** cosa sta già succedendo, oggi, in assenza di decisione. Se davvero
-  non sta succedendo niente, scrivi `nessuno` — ma è la combinazione più cara che esista
-  insieme a un costo alto, e il validatore te la segnala.
-- **Il problema che il default introduce:** perché lasciarla aperta costa qualcosa.
-- **Dipende da:** altre voci `OD-NNN` che vanno decise prima, se ce ne sono.
-- **Orientamento:** la direzione verso cui propendiamo, e perché. Facoltativo, e non è
-  una decisione: serve a non ricominciare il ragionamento da zero fra due settimane.
-- **Scadenza:** una data, o un evento osservabile.
-
-## Costo di ritorno MEDIO — decidere entro il primo mese
-
-### OD-002 · Titolo
-
-- **Domanda:**
-- **Costo di ritorno:** medio.
-- **Default in uso:**
-- **Il problema che il default introduce:**
-- **Scadenza:**
-
-## Costo di ritorno BASSO — si rinviano quanto si vuole
-
-### OD-003 · Titolo
-
-- **Domanda:**
-- **Costo di ritorno:** basso.
-- **Default in uso:**
-- **Trigger:** la condizione che la rende urgente. Su una voce a costo basso il trigger
-  sostituisce la scadenza: non c'è una data entro cui deciderla, c'è un evento dopo il
-  quale non si può più rinviare.
+1. **An agent reads this file before taking any structural decision.** If the choice it
+   needs is listed here as open, it does not take it: it raises it.
+2. **The `Default in force` field is mandatory.** A decision not taken does not mean the
+   absence of behavior: something is already happening, even if that something is
+   "nothing". Writing down what it is is the difference between a deliberate deferral and a
+   hole.
+3. **The cost to reverse drives urgency, not importance.** High-cost entries have to be
+   decided even on incomplete information, because the cost of waiting exceeds the cost of
+   getting it wrong. Low-cost ones can be deferred as long as you like.
+4. **When you decide:** write the `DEC`, replace the entry with a cross-reference line in
+   `§4`, delete the rest.
 
 ---
 
-# §2 · Problemi noti accettati
+# §1 · Open decisions
 
-Problemi reali che abbiamo scelto di non risolvere ora. **Ogni voce ha un trigger che la
-riapre:** senza trigger non è un problema accettato, è un problema dimenticato.
+Grouped by cost to reverse, not by topic: it is the cost that tells you which ones to look
+at first.
 
-### KI-001 · Titolo
+## Cost to reverse HIGH: decide before the first line of code
 
-- Cosa è rotto o mancante, in una riga.
-- Perché lo accettiamo ora.
-- Chi o cosa ne subisce l'effetto.
-- **Trigger di riapertura:** la condizione osservabile che rende necessario risolverlo.
-- **Riferimento:** `CHG` / `DEC` / `SIG` collegato.
+### OD-001 · Title of the decision, in the form of a choice
+
+- **Question:** the actual choice, phrased as a question with at least two answers.
+- **Cost to reverse:** high.
+- **Default in force:** what is already happening, today, in the absence of a decision. If
+  nothing really is happening, write `none`, but together with a high cost that is the most
+  expensive combination there is, and the validator flags it for you.
+- **The problem the default introduces:** why leaving it open costs something.
+- **Depends on:** other `OD-NNN` entries that have to be decided first, if there are any.
+- **Leaning:** the direction we lean toward, and why. Optional, and it is not a decision:
+  it is there so you do not start the reasoning over from scratch in two weeks.
+- **Deadline:** a date, or an observable event.
+
+## Cost to reverse MEDIUM: decide within the first month
+
+### OD-002 · Title
+
+- **Question:**
+- **Cost to reverse:** medium.
+- **Default in force:**
+- **The problem the default introduces:**
+- **Deadline:**
+
+## Cost to reverse LOW: defer them as long as you like
+
+### OD-003 · Title
+
+- **Question:**
+- **Cost to reverse:** low.
+- **Default in force:**
+- **Trigger:** the condition that makes it urgent. On a low-cost entry the trigger replaces
+  the deadline: there is no date by which to decide it, there is an event after which it
+  can no longer be deferred.
 
 ---
 
-# §3 · Parcheggio
+# §2 · Accepted known issues
 
-Idee e domande emerse e non ancora qualificate. Non sono decisioni aperte: sono cose da
-guardare. Una riga ciascuna, senza formato. Se una resta qui per tre mesi senza che nessuno
-la tocchi, cancellala — il parcheggio che non si svuota è un secondo backlog che nessuno
-legge.
+Real problems we have chosen not to fix now. **Every entry has a trigger that reopens it:**
+without a trigger it is not an accepted problem, it is a forgotten one.
 
----
+### KI-001 · Title
 
-# §4 · Decisioni chiuse
-
-Una riga per voce chiusa, con la data e il `DEC` che l'ha chiusa. Non ricopiare il
-contenuto: sta nel `DEC`.
-
-- **AAAA-MM-GG · OD-NNN** → [`DEC-NNN`](decisions/DEC-NNN-slug.md) · una riga su cosa si è
-  deciso. Se la decisione ha chiuso la voce solo in parte, dillo qui e apri la parte
-  residua come nuova voce in `§1`, con il numero nuovo.
+- What is broken or missing, in one line.
+- Why we accept it for now.
+- Who or what bears the effect.
+- **Reopening trigger:** the observable condition that makes fixing it necessary.
+- **Reference:** the linked `CHG` / `DEC` / `SIG`.
 
 ---
 
-## Anti-pattern
+# §3 · Parking lot
 
-- **Omettere `Default in uso`.** È l'errore che rende inutile l'intero file. «Non deciso»
-  suona come «non sta succedendo niente», e invece qualcosa sta già succedendo: di solito
-  la scelta implicita di chi ha scritto il primo pezzo di codice.
-- **Usare il costo di ritorno per dire quanto la decisione è importante.** Sono cose
-  diverse. Una scelta poco importante ma costosa da ribaltare va decisa prima di una
-  importante e reversibile.
-- **Lasciare la voce in `§1` dopo aver scritto il `DEC`.** Il registro dice allora che è
-  aperta una cosa che è chiusa, e un agente si fermerà a chiedere il permesso per una
-  decisione già presa. Il validatore lo intercetta, ma solo se il `DEC` la dichiara in
+Ideas and questions that have surfaced and are not yet qualified. They are not open
+decisions: they are things to look at. One line each, no format. If one sits here for three
+months without anyone touching it, delete it. A parking lot that never empties is a second
+backlog nobody reads.
+
+---
+
+# §4 · Closed decisions
+
+One line per closed entry, with the date and the `DEC` that closed it. Do not copy the
+content across: it lives in the `DEC`.
+
+- **YYYY-MM-DD · OD-NNN** → [`DEC-NNN`](decisions/DEC-NNN-slug.md) · one line on what was
+  decided. If the decision closed the entry only in part, say so here and open the
+  remaining part as a new entry in `§1`, with a new number.
+
+---
+
+## Anti-patterns
+
+- **Omitting `Default in force`.** This is the error that makes the whole file useless.
+  "Not decided" sounds like "nothing is happening", and instead something is already
+  happening: usually the implicit choice made by whoever wrote the first piece of code.
+- **Using the cost to reverse to say how important the decision is.** They are different
+  things. A choice that matters little but is expensive to overturn has to be decided
+  before an important, reversible one.
+- **Leaving the entry in `§1` after writing the `DEC`.** The register then says that
+  something is open which is closed, and an agent will stop to ask permission for a
+  decision already taken. The validator catches it, but only if the `DEC` declares it in
   `derives_from`.
-- **Mettere in `derives_from` di un `DEC` un `OD-NNN` che quel `DEC` non chiude.** Un `DEC`
-  nomina una voce aperta per tre motivi diversi — la chiude, ne dipende, o ne apre una più
-  stretta — e `derives_from` significa il primo. Per gli altri due, il rimando va in prosa.
-- **Registrare qui i rischi.** Un rischio è qualcosa che può andare storto e sta in `RSK`;
-  una decisione aperta è qualcosa che va scelto. Se la voce non ha almeno due risposte
-  possibili, non appartiene a questo file.
-- **Farlo crescere.** Un registro che si allunga a ogni sessione e non si accorcia mai non
-  è un registro di decisioni: è la prova che non se ne sta prendendo nessuna.
+- **Putting an `OD-NNN` into the `derives_from` of a `DEC` that does not close it.** A
+  `DEC` names an open entry for three different reasons (it closes it, it depends on it, or
+  it opens a narrower one) and `derives_from` means the first. For the other two, the
+  cross-reference goes in prose.
+- **Recording risks here.** A risk is something that can go wrong and it belongs in `RSK`;
+  an open decision is something that has to be chosen. If the entry does not have at least
+  two possible answers, it does not belong in this file.
+- **Letting it grow.** A register that gets longer at every session and never gets shorter
+  is not a decision register: it is the proof that no decisions are being taken.

@@ -4,89 +4,91 @@ artifact_type: product-brief
 lifecycle: living
 status: active
 version: 1.0.0
-products: [prodotto-a]
-owners: [NOME]
-created: AAAA-MM-GG
-last_review: AAAA-MM-GG HH:MM
+products: [product-a]
+owners: [NAME]
+created: YYYY-MM-DD
+last_review: YYYY-MM-DD HH:MM
 derives_from: [PRB-NNN, HYP-NNN, CMT-NNN]
 classification: internal
 ---
 
-# Product brief — Nome prodotto
+# Product brief: Product name
 
-**Domanda:** qual è il prodotto corrente, per chi, quale outcome produce, quali
-comportamenti supporta?
+**Question:** what is the current product, for whom, what outcome does it produce, what
+behaviors does it support?
 
-**Perché esiste.** È la controparte prodotto di `ARC`: quel documento dice com'è fatto il
-sistema, questo dice cosa è il prodotto. Senza, il reshaping produce solo artefatti
-architetturali e le decisioni di prodotto restano orali. Se il prodotto è già stato
-venduto, questa definizione oggi esiste solo dentro dei pitch: scriverla è il primo atto.
+**Why it exists.** It is the product counterpart of `ARC`: that document says how the
+system is built, this one says what the product is. Without it, reshaping produces only
+architectural artifacts and product decisions stay verbal. If the product has already been
+sold, this definition today exists only inside pitches: writing it down is the first act.
 
-## Una riga
+## One line
 
-Cosa fa, per chi, con quale effetto.
+What it does, for whom, with what effect.
 
-## Attori
+## Actors
 
-| Ruolo | Cosa ottiene | Come lo misuriamo |
+| Role | What they get | How we measure it |
 |---|---|---|
 | | | |
 
-Distingui **utente** (usa) da **buyer** (paga) da **owner del processo** (subisce il
-cambiamento). Spesso sono tre persone diverse con interessi divergenti.
+Distinguish the **user** (uses it) from the **buyer** (pays for it) from the **process
+owner** (absorbs the change). They are often three different people with diverging
+interests.
 
 ## Outcome
 
-Cosa cambia nel mondo se il prodotto funziona. Non funzionalità: effetti.
-Ogni outcome ha una metrica dal `GLOSSARY`, con valore attuale e target.
+What changes in the world if the product works. Not features: effects.
+Every outcome has a metric from the `GLOSSARY`, with current value and target.
 
-## Capability attuali
+## Current capabilities
 
-Cosa il prodotto fa **oggi**, non cosa farà. Ogni capability con `stato: live |
+What the product does **today**, not what it will do. Every capability with `status: live |
 in-build | shaped | pitched`.
 
-`pitched` è il caso da nominare per primo: **promessa in un documento commerciale, senza
-nessun design dietro.** È lo stato più pericoloso che una capability possa avere, perché a
-chi legge un pitch è indistinguibile da `live`, e senza una parola per dirlo finisce
-silenziosamente fra le altre tre. Se una riga è `pitched`, il `PBR` deve dire *in quale
-documento* è stata promessa.
+`pitched` is the case to name first: **promised in a commercial document, with no design
+behind it.** It is the most dangerous state a capability can have, because to whoever reads
+a pitch it is indistinguishable from `live`, and without a word to say so it slips silently
+in among the other three. If a row is `pitched`, the `PBR` must say *in which document* it
+was promised.
 
-## §Fuori scope
+## §Out of scope
 
-Cosa il prodotto **non** fa, deliberatamente, con la ragione. Sezione obbligatoria.
+What the product does **not** do, deliberately, with the reason. Mandatory section.
 
-È la sezione più letta dagli agenti: impedisce di implementare con entusiasmo qualcosa che
-avevi valutato e scartato. Ogni voce con un rimando al `DEC` che l'ha esclusa, dove esiste.
+It is the section agents read most: it stops them from enthusiastically implementing
+something you had assessed and discarded. Every entry with a cross-reference to the `DEC`
+that excluded it, where one exists.
 
-## Complementarità con gli altri prodotti
+## Complementarity with the other products
 
-Cosa questo prodotto assume che facciano gli altri due, e cosa offre loro. I punti di
-contatto qui elencati devono corrispondere a un `DC` interno: se non c'è, è un'integrazione
-implicita, cioè un debito.
+What this product assumes the other two do, and what it offers them. The contact points
+listed here must correspond to an internal `DC`: if there is none, it is an implicit
+integration, which is to say a debt.
 
-## Metriche di prodotto
+## Product metrics
 
-Nome, definizione in `GLOSSARY`, valore attuale, target, chi lo guarda.
+Name, definition in `GLOSSARY`, current value, target, who watches it.
 
-## Vincoli
+## Constraints
 
-Commerciali (da `COMMITMENTS`), normativi, tecnici, di costo.
+Commercial (from `COMMITMENTS`), regulatory, technical, cost.
 
-## Release corrente
+## Current release
 
-Riferimento a `REL` e `RLM`. Campo generato.
+Reference to `REL` and `RLM`. Generated field.
 
 ---
 
-## Anti-pattern
+## Anti-patterns
 
-- **Elencare funzionalità invece di outcome.** Un elenco di feature non permette a nessuno
-  di decidere cosa tagliare quando serve tagliare.
-- **Confondere utente e buyer.** Nei prodotti B2B chi usa e chi paga vogliono cose
-  diverse; un brief che li fonde produce un prodotto che non soddisfa né l'uno né l'altro.
-- **Descrivere il prodotto immaginato.** Questo documento è vivente: descrive oggi. Il
-  futuro sta in `RMP`.
-- **Fuori scope vuoto.** Significa che non hai ancora deciso niente, oppure che le
-  decisioni sono orali.
-- **Complementarità dichiarata a parole senza un `DC`.** È il modo in cui tre prodotti
-  diventano uno inseparabile senza che nessuno l'abbia deciso.
+- **Listing features instead of outcomes.** A list of features lets nobody decide what to
+  cut when cutting is what is needed.
+- **Confusing user and buyer.** In B2B products the one who uses and the one who pays want
+  different things; a brief that merges them produces a product that satisfies neither.
+- **Describing the imagined product.** This document is living: it describes today. The
+  future belongs in `RMP`.
+- **An empty out of scope.** It means you have not decided anything yet, or that the
+  decisions are verbal.
+- **Complementarity declared in words without a `DC`.** It is how three products become one
+  inseparable product without anyone having decided it.

@@ -4,65 +4,67 @@ artifact_type: architecture
 lifecycle: living
 status: active
 version: 1.0.0
-products: [prodotto-a]
-owners: [NOME]
-created: AAAA-MM-GG
-last_review: AAAA-MM-GG HH:MM
+products: [product-a]
+owners: [NAME]
+created: YYYY-MM-DD
+last_review: YYYY-MM-DD HH:MM
 verified_against: COMMIT_HASH
 classification: internal
 ---
 
-# Architettura — Nome prodotto
+# Architecture: product name
 
-**Domanda:** com'è fatto il sistema adesso?
+**Question:** how is the system built right now?
 
-**Comincia a vivere in F5**, con la prima riga di codice — non dal go-live: design e
-implementazione divergono molto prima. Il campo `verified_against` registra il commit su
-cui questo documento è stato verificato l'ultima volta.
+**It starts living at F5**, with the first line of code, not at go-live: design and
+implementation diverge long before that. The `verified_against` field records the commit
+this document was last verified against.
 
-**Struttura per tre prodotti:** questo file contiene il **delta** rispetto a
-`PLATFORM.md`. Ciò che è condiviso si documenta una volta sola, là.
+**Structure for three products:** this file holds the **delta** against `PLATFORM.md`.
+What is shared is documented once, there.
 
-## Componenti
+## Components
 
-| Componente | Responsabilità (una riga) | Condiviso o specifico | `DEC` |
+| Component | Responsibility (one line) | Shared or specific | `DEC` |
 |---|---|---|---|
 
-## Flusso del dato end-to-end
+## End-to-end data flow
 
-Diagramma. È la parte che manca più spesso e quella che serve più di tutte: se una persona
-nuova non riesce a disegnare il sistema alla lavagna dopo aver letto questo documento, di
-solito manca il flusso del dato.
+A diagram. It is the part most often missing and the one that is needed most: if a new
+person cannot draw the system on a whiteboard after reading this document, what is usually
+missing is the data flow.
 
-## Stati del dato
+## Data states
 
-Dove risiede e in che forma: raw, curated, serving. Con rimando ai `DC`.
+Where it lives and in what form: raw, curated, serving. With pointers to the `DC`.
 
-## Confini
+## Boundaries
 
-Cosa è nostro, cosa è di terzi, cosa è degli altri due prodotti. Ogni confine verso un
-altro prodotto deve corrispondere a un `DC`.
+What is ours, what is third party, what belongs to the other two products. Every boundary
+towards another product must correspond to a `DC`.
 
-## Ambienti
+## Environments
 
-| Ambiente | Scopo | Differenze rilevanti dal produttivo |
+| Environment | Purpose | Relevant differences from production |
 |---|---|---|
 
-Le differenze sono la parte utile: è dove nascono i bug che non si riproducono.
+The differences are the useful part: they are where the bugs that do not reproduce come
+from.
 
-## Decisioni che spiegano questa architettura
+## Decisions that explain this architecture
 
-Elenco dei `DEC` rilevanti. Solo link: qui **com'è**, nei `DEC` **perché**.
+List of the relevant `DEC`. Links only: **how it is** here, **why** in the `DEC`.
 
 ---
 
-## Anti-pattern
+## Anti-patterns
 
-- **Diventare la somma di tutti i `DEC`.** Se `ARC` inizia a spiegare le motivazioni, sta
-  duplicando, e presto divergerà dai `DEC`.
-- **Descrivere il sistema progettato invece di quello costruito.** Questo è vivente:
-  se non corrisponde al codice, è dannoso, non incompleto.
-- **Nessun flusso del dato.** Vedi sopra.
-- **Duplicare `PLATFORM.md`.** Se una sezione è identica in tutti e tre gli `ARC`, non
-  appartiene agli `ARC`.
-- **`verified_against` mai aggiornato.** È il solo modo per sapere quanto ti puoi fidare.
+- **Becoming the sum of all the `DEC`.** If `ARC` starts explaining the rationale, it is
+  duplicating, and it will soon diverge from the `DEC`.
+- **Describing the system as designed instead of the one that was built.** This one is
+  living: if it does not match the code, it is harmful, not incomplete.
+- **No data flow.** See above.
+- **Duplicating `PLATFORM.md`.** If a section is identical in all three `ARC`, it does not
+  belong in the `ARC`.
+- **`verified_against` never updated.** It is the only way to know how far you can trust
+  this.

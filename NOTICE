@@ -1,10 +1,10 @@
-Framework di documentazione per progetti Data & AI
+Documentation framework for Data & AI projects
 Copyright 2026 Giulio Quaglia
 
-Distribuito secondo i termini della Apache License, Version 2.0 — vedi LICENSE.
+Distributed under the terms of the Apache License, Version 2.0. See LICENSE.
 
-Il framework è fatto per essere adottato e adattato: copia i template, cambia le regole
-che non ti servono, togli le sezioni che non useresti. La sola cosa che la licenza ti
-chiede in cambio, se ridistribuisci una versione modificata, è di dichiarare che l'hai
-modificata (§4.b) — perché chi legge una dottrina deve sapere se sta leggendo questa o
-una sua variante.
+The framework is meant to be adopted and adapted: copy the templates, drop the rules you
+do not need, delete the sections you would never fill in. The one thing the license asks
+in return, if you redistribute a modified version, is that you say you modified it
+(§4.b), because anyone reading a set of rules needs to know whether they are reading
+these or a variant of them.

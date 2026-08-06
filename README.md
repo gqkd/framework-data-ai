@@ -1,96 +1,86 @@
-# Framework di documentazione — Progetti Data & AI
+# Documentation framework for Data & AI projects
 
-Definisce **quali documenti esistono in un progetto Data/AI, chi li crea, quando, e a quale
-domanda risponde ciascuno**. Ha due destinatari: una persona nuova che deve capire il sistema
-senza rompere decisioni prese per buoni motivi, e un agente AI che deve rispondere senza
-inventare le parti mancanti.
+It defines **which documents exist in a Data/AI project, who creates them, when, and which
+question each one answers**. It has two audiences: a new person who has to understand the
+system well enough to change it without breaking decisions taken for good reasons, and an
+AI agent that has to answer questions without inventing the missing parts.
 
-Questo repository contiene **solo la definizione e gli strumenti**. Gli artefatti di un
-progetto reale — decisioni, prodotti, iniziative, corpus — vivono nel repository di quel
-progetto, non qui.
+This repository holds **the definition only**. The artifacts of a real project, its
+decisions, products, initiatives and corpus, live in that project's repository, not here.
 
-| File | Cosa è |
+| File | What it is |
 |---|---|
-| **`FRAMEWORK.md`** | Il documento di riferimento. Comincia da qui |
-| `framework-flow.mermaid` | Il ciclo di vita completo con i gate. Importabile in draw.io: *Arrange → Insert → Advanced → Mermaid* |
-| `Framework.drawio` | Lo stesso diagramma, già in formato draw.io |
-| `SKILLS.md` | Le cinque skill che gestiscono il framework: due costruite, tre specificate |
-| `templates/` | Un template per artefatto, con gli anti-pattern in fondo a ciascuno |
-| `skills/framework-capture/` | **Costruita:** ingesta il corpus business (pptx/pdf/docx) e registra informazioni conversazionali, propagando la cascata sugli altri file |
-| `skills/framework-audit/` | **Costruita:** valida un progetto e rigenera i suoi indici |
-| `tests/` | Il framework verificato su se stesso |
+| **`FRAMEWORK.md`** | The reference document. Start here |
+| `framework-flow.mermaid` | The lifecycle with its gates. Importable into draw.io: *Arrange → Insert → Advanced → Mermaid* |
+| `Framework.drawio` | An older drawing of the same lifecycle, kept for editing in draw.io |
+| `SKILLS.md` | The five skills that operate the framework. None is built yet |
+| `templates/` | One template per artifact, each with its anti-patterns at the bottom |
 
-## Ordine di lettura
+## Reading order
 
-**Per capire il framework:** `FRAMEWORK.md` → `framework-flow.mermaid` → `templates/README.md`
+**To understand the framework:** `FRAMEWORK.md` → `framework-flow.mermaid` →
+`templates/README.md`
 
-**Per cominciare a usarlo:** `FRAMEWORK.md §10` — l'entry assessment e il set del giorno uno
+**To start using it:** `FRAMEWORK.md §10`, the entry assessment and the day one set
 
-**Per automatizzarlo:** `SKILLS.md` → `skills/framework-capture/references/routing-table.md`
-(è il nucleo: dove va ogni informazione e cosa cambia con lei) → `skills/framework-audit/SKILL.md`
+**To automate it:** `SKILLS.md`
 
-## Applicarlo a un progetto
+## Applying it to a project
 
-Il framework non si copia dentro il progetto: si tiene clonato accanto e si invoca per
-percorso. Gli script non fanno nessuna assunzione su dove si trovano — `--root` dice su
-quale progetto stanno lavorando.
+The framework is not copied into the project. Keep it cloned next to it and refer to it by
+path:
 
-```bash
-pip install -r requirements.txt
-
-# Il gate: 0 errori è la condizione di merge del progetto
-python skills/framework-audit/scripts/validate.py --root ../mio-progetto --emit-index
-
-# Estrazione del corpus business (la esegue la skill framework-capture, non l'utente)
-python skills/framework-capture/scripts/extract.py ../mio-progetto/products/<p>/corpus \
-    -o ../mio-progetto/ingest-out/<p> --jsonl
+```
+~/projects/framework-data-ai      the definition
+~/projects/my-project             the artifacts
 ```
 
-Errori bloccano, avvisi no. `--emit-index` rigenera `decisions/INDEX.md` e `TRACEABILITY.md`
-**dentro il progetto**, non qui.
+Nothing here needs installing today, because there is nothing here to run. See the next
+section for why.
 
-Senza `markitdown` i `.pptx` producono zero blocchi, senza `python-docx` i `.docx`: in
-entrambi i casi l'estrazione **riesce** e non contiene niente, che è il modo più silenzioso
-di perdere un corpus. I `.pdf` richiedono [poppler](https://poppler.freedesktop.org/) sul
-`PATH`. La skill controlla le dipendenze prima di estrarre e si ferma se ne manca una.
+## There is no tooling yet
 
-## Verifica
+Two skills used to live here, `framework-capture` and `framework-audit`, the second of
+which carried the validator that acted as the merge gate. Both have been removed, together
+with their scripts and the test suite, because they are being rebuilt from scratch.
 
-```bash
-pip install -r requirements.txt
-pytest tests/
-```
+What this costs, stated plainly rather than discovered later:
 
-`tests/` verifica il framework su se stesso. Il test che conta è
-`test_day_one_set_has_no_blocking_errors`: costruisce il set del giorno uno di
-`FRAMEWORK.md §10` a partire dai template e controlla che passi il proprio validatore. Un
-framework il cui stato iniziale non supera il proprio gate insegna, al primo commit, che il
-gate si ignora.
+- **No gate.** Nothing checks front matter, artifact ids, dangling references, staleness of
+  living documents, or the discipline rules. Every one of those is currently enforced by
+  attention alone.
+- **No generated indices.** `decisions/INDEX.md` and `TRACEABILITY.md` were generated from
+  front matter. Until the validator exists again they are written by hand, which means they
+  will be wrong, which is worse than absent because a generated file is one nobody rereads.
+- **No corpus extraction.** Turning presentations and PDFs into sourced claims is manual.
 
-## Provenienza
+`SKILLS.md` describes what the five skills should do and in which order to build them. It
+is the starting point for the rebuild, and every design detail in it survived the deletion
+on purpose.
 
-Estratto il 2026-08-06 da un repository in cui era mescolato con la sua prima istanza. La
-storia è rimasta con quell'istanza, dove sta quasi tutto il suo contenuto; qui si riparte
-da uno snapshot.
+## Provenance
 
-**Una cosa da sapere:** diversi documenti rimandano a voci `OD-NNN` — `OD-002` in
-`FRAMEWORK.md §9` e `SKILLS.md §7`, `OD-005` in `SKILLS.md §2` e in `framework-capture` —
-che vivono nel registro delle decisioni aperte di quel progetto e qui non sono
-risolvibili. Vanno letti come «una decisione ancora aperta di quel tipo», non come rimandi
-a un file di questo repository.
+Extracted on 2026-08-06 from a repository where it was mixed with its first instance. The
+history stayed with that instance, which holds nearly all of its content; here it starts
+from a snapshot.
 
-Per il resto il testo è neutro: nomi di prodotto e slug di decisione negli esempi sono
-segnaposto. Un secondo progetto può adottarlo così com'è.
+**One thing to know:** several documents refer to `OD-NNN` entries, `OD-002` in
+`FRAMEWORK.md §9` and `SKILLS.md §7`, `OD-005` in `SKILLS.md §2`. Those live in that
+project's open register and cannot be resolved here. Read them as "an open
+decision of that kind", not as links to a file in this repository.
 
-## Licenza
+Otherwise the text is neutral: product names and decision slugs in the examples are
+placeholders. A second project can adopt it as it stands.
 
-[Apache License 2.0](LICENSE). Permissiva: puoi usarlo, modificarlo e ridistribuirlo anche
-in contesti commerciali. L'unico obbligo che conta per un framework di documentazione è il
-§4.b — se ridistribuisci una versione modificata, devi dichiarare che l'hai modificata. Chi
-legge una dottrina deve sapere se sta leggendo questa o una sua variante.
+## License
 
-## In una riga
+[Apache License 2.0](LICENSE). Permissive: you can use it, change it and redistribute it,
+including commercially. The clause that matters for a documentation framework is §4.b. If
+you redistribute a modified version you must state that you changed it, because anyone
+reading a set of rules needs to know whether they are reading these or a variant.
 
-Sette documenti viventi che devono essere veri, una ventina che si scrivono una volta e non
-si toccano più, e un file — `OPEN.md` — che dice cosa non è ancora deciso, perché è
-l'informazione che nessun altro documento contiene e che un agente altrimenti inventa.
+## In one line
+
+Seven living documents that have to be true, about twenty that are written once and never
+touched again, and one file, `OPEN.md`, that says what has not been decided yet, because
+that is the information no other document holds and the one an agent will otherwise invent.

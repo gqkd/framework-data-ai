@@ -1,326 +1,326 @@
-# Framework di documentazione — Progetti Data & AI
+# Documentation Framework: Data & AI Projects
 
-**Versione 1.0** · Documento di riferimento. Se stai entrando adesso nel progetto, leggi
-questo file per intero prima di aprire qualsiasi altro documento.
-
----
-
-## 1. A cosa serve
-
-Questo framework definisce **quali documenti esistono, chi li crea, quando, e quale
-domanda risponde ciascuno**. Ha due destinatari con esigenze diverse:
-
-- **una persona nuova**, che deve capire il sistema abbastanza per modificarlo senza
-  rompere decisioni prese per buoni motivi;
-- **un agente AI**, che deve poter rispondere a domande sul progetto senza inventare le
-  parti mancanti.
-
-Il secondo destinatario condiziona la forma dei documenti più del primo. Un agente non
-naviga un diagramma e non ricorda la riunione: legge file, segue link e — questo è il
-punto — **riempie i vuoti con ipotesi plausibili**. Per questo il framework insiste su
-tre cose che a un lettore umano sembrerebbero pedanteria: dichiarare cosa è fuori scope,
-dichiarare cosa non è stato deciso, e non lasciare che lo stesso fatto sia autorevole in
-due posti.
-
-### Cosa questo framework non contiene
-
-Elenco deliberato, da usare come difesa quando qualcuno proporrà di aggiungere un
-documento: **PRD**, **project plan**, **test plan separato**, **data dictionary
-autonomo**, **specifica dei requisiti**. Ogni proposta di nuovo artefatto deve superare
-una sola domanda:
-
-> A quale domanda risponde, che nessun documento esistente risponde già?
-
-Se non c'è risposta, la risposta è no.
+**Version 1.0** · Reference document. If you are joining the project now, read this file
+in full before opening any other document.
 
 ---
 
-## 2. Il principio unico
+## 1. What it is for
 
-> **Ogni fatto ha una sola fonte autorevole.**
+This framework defines **which documents exist, who creates them, when, and which
+question each one answers**. It has two audiences with different needs:
 
-È più importante di "un documento, una domanda". Un documento può rispondere a più
-domande vicine (il Runbook contiene comandi, SLO e monitoring: va bene, sono la stessa
-attività). Ciò che non può accadere è che *dove risiede il dato X* sia scritto in due
-documenti diversi, perché prima o poi divergeranno e nessuno saprà quale credere.
+- **a new person**, who has to understand the system well enough to change it without
+  breaking decisions that were made for good reasons;
+- **an AI agent**, which has to be able to answer questions about the project without
+  inventing the missing parts.
 
-Quando ti accorgi di stare scrivendo un fatto già presente altrove: mettici un link, non
-una copia.
+The second audience shapes the form of the documents more than the first. An agent does
+not navigate a diagram and does not remember the meeting: it reads files, follows links
+and, this is the point, **fills the gaps with plausible assumptions**. That is why the
+framework insists on three things that would look like pedantry to a human reader:
+declaring what is out of scope, declaring what has not been decided, and never letting
+the same fact be authoritative in two places.
+
+### What this framework does not contain
+
+A deliberate list, to be used as a defense when somebody proposes adding a document:
+**PRD**, **project plan**, **separate test plan**, **standalone data dictionary**,
+**requirements specification**. Every proposal for a new artifact has to clear one
+question:
+
+> Which question does it answer that no existing document already answers?
+
+If there is no answer, the answer is no.
 
 ---
 
-## 3. Le tre classi di artefatto
+## 2. The single principle
 
-Il regime di manutenzione è la proprietà più importante di un documento, più del suo
-contenuto. Ogni artefatto appartiene a una sola classe, dichiarata nel front-matter.
+> **Every fact has one authoritative source.**
 
-| Classe | Regola | Risponde a |
+It matters more than "one document, one question". A document can answer several nearby
+questions (the Runbook contains commands, SLOs and monitoring: that is fine, they are the
+same activity). What cannot happen is that *where data X lives* is written in two
+different documents, because sooner or later they will diverge and nobody will know which
+one to believe.
+
+When you notice you are writing a fact that already exists somewhere else: put a link
+there, not a copy.
+
+---
+
+## 3. The three artifact classes
+
+The maintenance regime is the most important property of a document, more important than
+its content. Every artifact belongs to one class only, declared in the front matter.
+
+| Class | Rule | Answers |
 |---|---|---|
-| **Vivente** (`living`) | Un solo file, sempre attuale, campo `last_review` | com'è **adesso** |
-| **Immutabile** (`immutable`) | Nuovo file ogni volta, mai riscritto, si *supersede* | **perché** si è deciso così |
-| **Append-only** (`append-only`) | Si aggiungono righe, non si modificano le esistenti | cosa è **successo** |
+| **Living** (`living`) | One file only, always current, `last_review` field | how it is **now** |
+| **Immutable** (`immutable`) | New file every time, never rewritten, it is *superseded* | **why** it was decided this way |
+| **Append-only** (`append-only`) | You add lines, you do not modify the existing ones | what **happened** |
 
-**Perché conta:** un agente che legge un documento storico come verità corrente prende
-decisioni sbagliate con totale sicurezza. La classe è ciò che glielo impedisce.
+**Why it matters:** an agent that reads a historical document as current truth makes wrong
+decisions with total confidence. The class is what stops it.
 
-**Corpo e stato non sono la stessa cosa.** «Mai riscritto» vale per la prosa e la decisione:
-quelle non cambiano mai, e se cambiano è un nuovo file che supersede. Il campo `status` è
-un'eccezione dichiarata: `CHG`, `HYP` e `DEC-ADR` lo fanno avanzare nello stesso file secondo
-le transizioni enumerate nel loro schema (`draft → approved → implemented → verified →
-rolled-back`, per un `CHG`) perché registra cosa è successo alla decisione, non cosa dice.
-Non è una riscrittura — è l'unico campo per cui il framework permette di toccare un
-immutabile sul posto.
+**Body and status are not the same thing.** "Never rewritten" applies to the prose and to
+the decision: those never change, and if they change it is a new file that supersedes. The
+`status` field is a declared exception: `CHG`, `HYP` and `DEC-ADR` move it forward in the
+same file along the transitions enumerated in their schema (`draft → approved →
+implemented → verified → rolled-back`, for a `CHG`) because it records what happened to
+the decision, not what the decision says. That is not a rewrite. It is the only field for
+which the framework allows touching an immutable in place.
 
-**Regola per gli append-only:** al momento dell'osservazione non conosci ancora causa e
-rimedio. Non aggiornare la riga: aggiungi un evento collegato.
+**Rule for append-only artifacts:** at the moment of observation you do not yet know cause
+and remedy. Do not update the line: add a linked event.
 
 ```
-SIG-014   segnale osservato
-ANA-014   analisi di SIG-014
-DEC-031   decisione presa su ANA-014
-CHG-052   cambiamento generato da DEC-031
+SIG-014   signal observed
+ANA-014   analysis of SIG-014
+DEC-031   decision taken on ANA-014
+CHG-052   change generated by DEC-031
 ```
 
 ---
 
-## 4. I due assi: iniziativa e prodotto
+## 4. The two axes: initiative and product
 
-È la distinzione strutturale che regge il framework alla seconda iniziativa sullo stesso
-sistema. Senza di essa la seconda iniziativa produce un documento di architettura
-concorrente, e da lì non si torna indietro.
+This is the structural distinction that keeps the framework standing at the second
+initiative on the same system. Without it the second initiative produces a competing
+architecture document, and from there you do not come back.
 
-**Artefatti di iniziativa** — nascono e muoiono con l'iniziativa, non si mantengono:
-`PRB` `HYP` `EVD` `CMP` `DFB` `SD`
+**Initiative artifacts.** They are born and die with the initiative, they are not
+maintained: `PRB` `HYP` `EVD` `CMP` `DFB` `SD`
 
-**Artefatti di prodotto** — vivono quanto il sistema e accumulano contributi da
-iniziative diverse:
-`PBR` `WF` `ARC` `EVP` `DC` `RB` `RMP` `RSK` `LOG`
+**Product artifacts.** They live as long as the system and accumulate contributions from
+different initiatives: `PBR` `WF` `ARC` `EVP` `DC` `RB` `RMP` `RSK` `LOG`
 
-**Artefatti di piattaforma** — condivisi fra i tre prodotti:
-`PLATFORM.md` `GLOSSARY.md` `DEC-ADR` (registro unico) `OPEN.md`
+**Platform artifacts.** Shared across the three products: `PLATFORM.md` `GLOSSARY.md`
+`DEC-ADR` (single register) `OPEN.md`
 
-Ne segue la struttura delle cartelle:
+The folder structure follows from this:
 
 ```
 repo/
-├── AGENTS.md                    control plane per gli agenti
-├── OPEN.md                      decisioni aperte e problemi noti
-├── COMMITMENTS.md               cosa è stato promesso commercialmente
-├── GLOSSARY.md                  unico, condiviso dai tre prodotti
-├── PLATFORM.md                  architettura del substrato condiviso
-├── corpus/                      documenti del business che parlano di più prodotti
-├── decisions/                   registro unico DEC-NNN (prodotto + architettura)
-│   ├── DEC-001-slug-della-decisione.md
-│   ├── DEC-002-slug-della-decisione.md
-│   └── DEC-003-slug-della-decisione.md
+├── AGENTS.md                    control plane for agents
+├── OPEN.md                      open decisions and known issues
+├── COMMITMENTS.md               what has been promised commercially
+├── GLOSSARY.md                  single, shared by the three products
+├── PLATFORM.md                  architecture of the shared substrate
+├── corpus/                      business documents covering more than one product
+├── decisions/                   single DEC-NNN register (product + architecture)
+│   ├── DEC-001-decision-slug.md
+│   ├── DEC-002-decision-slug.md
+│   └── DEC-003-decision-slug.md
 ├── initiatives/
 │   └── 2026-07-churn-scoring/
 │       ├── PRB-001.md  HYP-001.md  EVD-001.md
 │       └── CMP-001.md  DFB-001.md  SD-001.md
 └── products/
-    ├── prodotto-a/
-    │   ├── corpus/              documenti del business su questo prodotto
-    │   ├── product.yaml         manifest machine-readable
-    │   ├── PBR.md               product brief (vivente)
-    │   ├── ARC.md               delta rispetto a PLATFORM.md
-    │   ├── WF.md                workflow: §corrente §target §delta
-    │   ├── RMP.md               roadmap progressiva
-    │   ├── IMP.md               piano del ciclo corrente
-    │   ├── RSK.md               rischi: §stato §accettazioni §eventi
+    ├── product-a/
+    │   ├── corpus/              business documents about this product
+    │   ├── product.yaml         machine-readable manifest
+    │   ├── PBR.md               product brief (living)
+    │   ├── ARC.md               delta against PLATFORM.md
+    │   ├── WF.md                workflow: §current §target §delta
+    │   ├── RMP.md               progressive roadmap
+    │   ├── IMP.md               plan for the current cycle
+    │   ├── RSK.md               risks: §state §acceptances §events
     │   ├── RB.md                runbook + SLO
-    │   ├── LOG.md               registro segnali append-only
-    │   ├── contracts/           DC-NNN per dataset o interfaccia
+    │   ├── LOG.md               append-only signal log
+    │   ├── contracts/           DC-NNN per dataset or interface
     │   ├── changes/             CHG-NNN
     │   └── releases/            REL-NNN.md + RLM-NNN.yaml + EVR-NNN.md
-    ├── prodotto-b/
-    └── prodotto-c/
+    ├── product-b/
+    └── product-c/
 ```
 
 ---
 
-## 5. Il ciclo di vita
+## 5. The lifecycle
 
-Tre blocchi. Il primo è lineare e si percorre una volta per iniziativa. Il secondo
-costruisce. Il terzo è continuo e non finisce mai.
+Three blocks. The first is linear and you walk it once per initiative. The second builds.
+The third is continuous and never ends.
 
-### Blocco A — Discovery *(per iniziativa)*
+### Block A: Discovery *(per initiative)*
 
-| Fase | Produce |
+| Phase | Produces |
 |---|---|
-| **F1 · Segnale e framing** | `PRB` formulazione problema · `HYP` ipotesi |
-| **F2 · Problem discovery** | `WF §corrente` · `EVD` evidence brief |
+| **F1 · Signal and framing** | `PRB` problem statement · `HYP` hypothesis |
+| **F2 · Problem discovery** | `WF §current` · `EVD` evidence brief |
 | **F3 · Solution discovery** | `WF §target` · `CMP` competitor · `DFB` data feasibility |
 
-### Blocco B — Costruzione *(per prodotto)*
+### Block B: Construction *(per product)*
 
-| Fase | Produce |
+| Phase | Produces |
 |---|---|
-| **F4 · Shaping MVP e MVA** | `PBR` product brief · `SD` solution design + MVA · `EVP` evaluation plan · `DC` data contract · `DEC` |
-| **F5 · Build e release candidate** | `ARC` architettura — **vive da qui, non dal go-live** · codice |
-| **F6 · Go-live controllato** | `RB` runbook + SLO · `EVR` eval report · `REL` release note · `RLM` release manifest |
+| **F4 · Shaping MVP and MVA** | `PBR` product brief · `SD` solution design + MVA · `EVP` evaluation plan · `DC` data contract · `DEC` |
+| **F5 · Build and release candidate** | `ARC` architecture, **it lives from here, not from go-live** · code |
+| **F6 · Controlled go-live** | `RB` runbook + SLO · `EVR` eval report · `REL` release note · `RLM` release manifest |
 
-> **Correzione rispetto alla versione precedente:** prima il gate sulle soglie di
-> evaluation stava fra F4 e il go-live, ma F4 produce solo documenti di progetto — non
-> c'era niente da valutare. La build viene prima della valutazione. Sempre.
+> **Correction against the previous version:** the gate on the evaluation thresholds used
+> to sit between F4 and go-live, but F4 produces design documents only. There was nothing
+> to evaluate. The build comes before the evaluation. Always.
 
-### Blocco C — Esercizio ed evoluzione *(loop continuo, per prodotto)*
+### Block C: Operation and evolution *(continuous loop, per product)*
 
 ```
-Run & Observe  →  Change intake  →  Triage e impact assessment  →  [ICG]
-      ↑                                                             ↓
-   Deploy  ←  [RG]  ←  Build  ←  IMP  ←  CHG  ←  Reshaping ────────┘
+Run & Observe  →  Change intake  →  Triage and impact assessment  →  [ICG]
+      ↑                                                               ↓
+   Deploy  ←  [RG]  ←  Build  ←  IMP  ←  CHG  ←  Reshaping ──────────┘
 ```
 
-L'ordine conta, ed era sbagliato nella versione precedente: **il piano si scrive dopo il
-reshaping**, non prima. Se scrivi il piano e poi il reshaping cambia lo scope, il piano
-è già obsoleto.
+The order matters, and it was wrong in the previous version: **the plan is written after
+the reshaping**, not before. If you write the plan and then the reshaping changes the
+scope, the plan is already obsolete.
 
-| Passo | Produce |
+| Step | Produces |
 |---|---|
-| **Run & Observe** | `LOG` registro segnali (append-only) |
-| **Change intake** | selezione dai segnali e dagli incrementi di `RMP` |
-| **Triage e impact assessment** | classificazione → **ICG** |
-| **Reshaping** prodotto e/o architettura | `PBR` `WF` `ARC` `EVP` `DC` `RSK` `DEC` `RMP` |
-| **Change contract** | `CHG` — cosa è autorizzato |
-| **Cycle implementation plan** | `IMP` — come lo eseguiamo in questo ciclo |
-| **Build** | `ARC` aggiornata |
+| **Run & Observe** | `LOG` signal log (append-only) |
+| **Change intake** | selection from the signals and from the `RMP` increments |
+| **Triage and impact assessment** | classification → **ICG** |
+| **Reshaping** of product and/or architecture | `PBR` `WF` `ARC` `EVP` `DC` `RSK` `DEC` `RMP` |
+| **Change contract** | `CHG`, what is authorized |
+| **Cycle implementation plan** | `IMP`, how we execute it in this cycle |
+| **Build** | `ARC` updated |
 | **Release gate** | `EVR` |
 | **Deploy** | `REL` `RLM` |
 
 ---
 
-## 6. I gate
+## 6. The gates
 
-Due tipi, e confonderli è un errore comune. I **gate di ciclo di vita** si attraversano
-una volta. I **controlli ricorrenti** scattano a ogni giro e non fanno avanzare il
-progetto: lo trattengono.
+Two kinds, and confusing them is a common mistake. **Lifecycle gates** are crossed once.
+**Recurring controls** fire on every lap and do not move the project forward: they hold it
+back.
 
-| ID | Tipo | Domanda | Output | Se scade |
+| ID | Kind | Question | Output | If the deadline passes |
 |---|---|---|---|---|
-| **G1** | lifecycle | Il segnale merita tempo di indagine? | `DEC` | no-go |
-| **G2** | lifecycle | Il problema è reale, ricorrente e costoso? | `DEC` | no-go |
-| **G3** | lifecycle | La soluzione è desiderabile, sostenibile, fattibile e responsabile? | `DEC` | no-go |
-| **G4** | lifecycle | Prodotto, architettura e piano sono definiti abbastanza per **iniziare la build**? | `DEC` | blocca |
-| **RG** | ricorrente | Le soglie dell'`EVP` **congelato** sono superate? | `EVR` | no-go → **rework** |
-| **MOR** | lifecycle | Quali ipotesi ha confermato o smentito l'uso reale? | `DEC` | — |
-| **ICG** | ricorrente | Il cambiamento modifica prodotto, architettura, dati, evaluation o profilo di rischio? | routing nel `CHG` | — |
+| **G1** | lifecycle | Does the signal deserve investigation time? | `DEC` | no-go |
+| **G2** | lifecycle | Is the problem real, recurring and expensive? | `DEC` | no-go |
+| **G3** | lifecycle | Is the solution desirable, sustainable, feasible and responsible? | `DEC` | no-go |
+| **G4** | lifecycle | Are product, architecture and plan defined enough to **start the build**? | `DEC` | blocks |
+| **RG** | recurring | Are the thresholds of the **frozen** `EVP` cleared? | `EVR` | no-go → **rework** |
+| **MOR** | lifecycle | Which hypotheses has real use confirmed or disproved? | `DEC` | n/a |
+| **ICG** | recurring | Does the change modify product, architecture, data, evaluation or risk profile? | routing in the `CHG` | n/a |
 
-**Ogni gate produce un `DEC`.** Un gate che non lascia traccia scritta non è un gate, è
-una riunione. Ogni gate ha un decisore (un ruolo) e un tempo massimo: oltre la scadenza
-il default è no-go, perché un gate senza scadenza produce progetti in coma che nessuno
-chiude — chiuderli richiederebbe una decisione.
+**Every gate produces a `DEC`.** A gate that leaves no written trace is not a gate, it is
+a meeting. Every gate has a decision maker (a role) and a maximum time: past the deadline
+the default is no-go, because a gate without a deadline produces comatose projects that
+nobody closes. Closing them would take a decision.
 
-### RG — Release Gate
+### RG, Release Gate
 
-Non è un gate di ciclo di vita: è un controllo della pipeline, ripetuto a ogni release
-candidate, compresa la prima. Verifica l'`EVR` contro le soglie dell'`EVP` **nella
-versione congelata al momento della RC**. Il congelamento è ciò che impedisce di
-ritoccare le soglie dopo aver visto i risultati.
+It is not a lifecycle gate: it is a pipeline control, repeated at every release candidate,
+the first one included. It checks the `EVR` against the `EVP` thresholds **in the version
+frozen at RC time**. The freeze is what makes it impossible to touch up the thresholds
+after seeing the results.
 
-Se l'esito è negativo **prima del deployment**, si fa **rework**, non rollback. Il
-rollback esiste solo dopo un deployment, quando emergono regressioni o incidenti in
-produzione: quel percorso rientra da `LOG` → change intake.
+If the outcome is negative **before the deployment**, you do **rework**, not rollback.
+Rollback only exists after a deployment, when regressions or incidents show up in
+production: that path re-enters through `LOG` → change intake.
 
-### ICG — Impact Classification Gate
+### ICG, Impact Classification Gate
 
-La domanda "impatta l'architettura?" è troppo stretta: un cambiamento può non toccare
-l'architettura e invalidare l'outcome, il pricing, un data contract o il profilo di
-rischio. Instradamento:
+The question "does it impact the architecture?" is too narrow: a change can leave the
+architecture untouched and still invalidate the outcome, the pricing, a data contract or
+the risk profile. Routing:
 
-| Esito | Percorso |
+| Outcome | Path |
 |---|---|
-| Nessun impatto strutturale | `CHG` tecnico, direttamente a `IMP` |
-| Impatto prodotto | Product reshaping → `PBR` `WF` |
-| Impatto architettura | Architecture reshaping → `ARC` `DEC` |
-| Impatto entrambi | Joint reshaping |
-| Ipotesi di soluzione invalidata | rientro in **F3** |
-| Problema o segmento invalidato | rientro in **F2** |
+| No structural impact | technical `CHG`, straight to `IMP` |
+| Product impact | Product reshaping → `PBR` `WF` |
+| Architecture impact | Architecture reshaping → `ARC` `DEC` |
+| Impact on both | Joint reshaping |
+| Solution hypothesis invalidated | re-entry into **F3** |
+| Problem or segment invalidated | re-entry into **F2** |
 
 ---
 
-## 7. Il catalogo degli artefatti
+## 7. The artifact catalog
 
-Un template per ciascuno in `templates/`. Ogni template contiene gli anti-pattern.
+One template for each in `templates/`. Every template contains the anti-patterns.
 
-| ID | Nome | Classe | Asse | Nasce in |
+| ID | Name | Class | Axis | Born in |
 |---|---|---|---|---|
-| `AGENTS` | Control plane per agenti | vivente | piattaforma | giorno uno |
-| `OPEN` | Decisioni aperte e problemi noti | vivente | piattaforma | giorno uno |
-| `COMMITMENTS` | Impegni commerciali presi | vivente | piattaforma | giorno uno |
-| `GLOSSARY` | Glossario e dizionario metriche | vivente | piattaforma | giorno uno |
-| `PLATFORM` | Architettura del substrato condiviso | vivente | piattaforma | giorno uno |
-| `product.yaml` | Manifest del prodotto | vivente, in parte generato | prodotto | giorno uno |
-| `PBR` | Product brief | vivente | prodotto | F4 |
-| `PRB` | Formulazione problema | immutabile | iniziativa | F1 |
-| `HYP` | Ipotesi soluzione | immutabile | iniziativa | F1 |
-| `WF` | Workflow corrente / target / delta | vivente | prodotto | F2 |
-| `EVD` | Problem evidence brief | immutabile | iniziativa | F2 |
-| `CMP` | Comparativa competitor | immutabile | iniziativa | F3 |
-| `DFB` | Data feasibility brief | immutabile | iniziativa | F3 |
-| `SD` | Solution design + MVA | immutabile | iniziativa | F4 |
-| `EVP` | Evaluation plan | vivente, congelato per RC | prodotto | F4 |
-| `DC` | Data contract | vivente, versionato | prodotto | F4 |
-| `DEC-ADR` | Decision record — prodotto **o** architettura | immutabile | piattaforma | ovunque |
-| `ARC` | Architettura corrente | vivente | prodotto | **F5** |
-| `RB` | Runbook + SLO + monitoring | vivente | prodotto | F6 |
-| `EVR` | Evaluation report | immutabile | prodotto | RG |
-| `REL` | Release note (per umani) | immutabile | prodotto | F6 |
-| `RLM` | Release manifest (per macchine) | immutabile | prodotto | F6 |
-| `LOG` | Registro segnali | append-only | prodotto | F5 |
-| `ING` | Registro di ingestione del corpus business | append-only | piattaforma | giorno uno |
-| `RMP` | Progressive implementation roadmap | vivente | prodotto | F4 |
-| `CHG` | Change contract | immutabile | prodotto | loop |
-| `IMP` | Cycle implementation plan | vivente, sostituito | prodotto | loop |
-| `RSK` | Rischi: stato / accettazioni / eventi | vivente | prodotto | F3 |
+| `AGENTS` | Control plane for agents | living | platform | day one |
+| `OPEN` | Open decisions and known issues | living | platform | day one |
+| `COMMITMENTS` | Commercial commitments made | living | platform | day one |
+| `GLOSSARY` | Glossary and metric dictionary | living | platform | day one |
+| `PLATFORM` | Architecture of the shared substrate | living | platform | day one |
+| `product.yaml` | Product manifest | living, partly generated | product | day one |
+| `PBR` | Product brief | living | product | F4 |
+| `PRB` | Problem statement | immutable | initiative | F1 |
+| `HYP` | Solution hypothesis | immutable | initiative | F1 |
+| `WF` | Current / target / delta workflow | living | product | F2 |
+| `EVD` | Problem evidence brief | immutable | initiative | F2 |
+| `CMP` | Competitor comparison | immutable | initiative | F3 |
+| `DFB` | Data feasibility brief | immutable | initiative | F3 |
+| `SD` | Solution design + MVA | immutable | initiative | F4 |
+| `EVP` | Evaluation plan | living, frozen for RC | product | F4 |
+| `DC` | Data contract | living, versioned | product | F4 |
+| `DEC-ADR` | Decision record: product **or** architecture | immutable | platform | anywhere |
+| `ARC` | Current architecture | living | product | **F5** |
+| `RB` | Runbook + SLO + monitoring | living | product | F6 |
+| `EVR` | Evaluation report | immutable | product | RG |
+| `REL` | Release note (for humans) | immutable | product | F6 |
+| `RLM` | Release manifest (for machines) | immutable | product | F6 |
+| `LOG` | Signal log | append-only | product | F5 |
+| `ING` | Business corpus ingestion log | append-only | platform | day one |
+| `RMP` | Progressive implementation roadmap | living | product | F4 |
+| `CHG` | Change contract | immutable | product | loop |
+| `IMP` | Cycle implementation plan | living, replaced | product | loop |
+| `RSK` | Risks: state / acceptances / events | living | product | F3 |
 
-### Le distinzioni che si confondono più spesso
+### The distinctions that get confused most often
 
-**`DEC-ADR` è un solo tipo di documento per decisioni di prodotto e di architettura.**
-Il nome tiene insieme le due tradizioni: l'ADR classico è il caso `scope: architecture`.
-Un solo registro, una sola numerazione (`DEC-NNN`), una sola cartella; il campo `scope`
-determina la natura della decisione:
+**`DEC-ADR` is a single document type for product decisions and architecture decisions.**
+The name holds the two traditions together: the classic ADR is the `scope: architecture`
+case. One register, one numbering (`DEC-NNN`), one folder; the `scope` field determines
+the nature of the decision:
 
-| `scope` | Registra | Esempi |
+| `scope` | Records | Examples |
 |---|---|---|
-| `product` | cosa costruiamo, per chi, con quale priorità | esito di un gate · pivot · stop · scope dell'MVP · accettazione di un rischio commerciale |
-| `architecture` | com'è fatto il sistema — l'ADR classico | datastore · stile di integrazione · confini fra componenti |
-| `platform` | ciò che vincola tutti e tre i prodotti | tenancy · identità · substrato condiviso |
+| `product` | what we build, for whom, with what priority | gate outcome · pivot · stop · MVP scope · acceptance of a commercial risk |
+| `architecture` | how the system is built, the classic ADR | datastore · integration style · boundaries between components |
+| `platform` | what constrains all three products | tenancy · identity · shared substrate |
 
-Rinunciare a un prodotto o accettare un rischio commerciale sono decisioni tanto da
-registrare quanto la scelta di un database, e spesso più costose. Registri separati
-significherebbero che le decisioni cross-prodotto — le più care — non hanno casa e
-finiscono in quello del prodotto su cui stavi lavorando quel giorno.
+Dropping a product or accepting a commercial risk are decisions just as worth recording as
+the choice of a database, and often more expensive. Separate registers would mean that
+cross-product decisions, the most expensive ones, have no home and end up in the register
+of whichever product you were working on that day.
 
-**`RMP` ≠ `IMP`.** `RMP` risponde a *quali incrementi futuri ipotizziamo e da quali
-evidenze dipendono*: è vivente, guarda avanti, ed è un **input** al change intake.
-`IMP` risponde a *come eseguiamo i change contract approvati in questo ciclo*: è
-sostituito ogni ciclo, ed è un **output** del reshaping.
+**`RMP` ≠ `IMP`.** `RMP` answers *which future increments we hypothesize and which
+evidence they depend on*: it is living, it looks forward, and it is an **input** to the
+change intake. `IMP` answers *how we execute the approved change contracts in this cycle*:
+it is replaced every cycle, and it is an **output** of the reshaping.
 
-**`SD` → `ARC`.** `SD` è lo snapshot immutabile del progetto al gate G4. `ARC` è la
-verità corrente e comincia a vivere in **F5**, con la prima riga di codice: design e
-implementazione divergono molto prima del go-live.
+**`SD` → `ARC`.** `SD` is the immutable snapshot of the design at gate G4. `ARC` is the
+current truth and starts living in **F5**, with the first line of code: design and
+implementation diverge long before go-live.
 
-**`REL` + `RLM`.** La release note di dieci righe serve a una persona; non basta a un
-agente né a un rollback. Il manifest è la stessa release in forma machine-readable, con
-commit, digest, versioni di modello, prompt e dataset, `EVR` e `CHG` inclusi, target di
-rollback.
+**`REL` + `RLM`.** The ten-line release note serves a person; it is not enough for an agent
+and not enough for a rollback. The manifest is the same release in machine-readable form,
+with commit, digest, model, prompt and dataset versions, `EVR` and `CHG` included, rollback
+target.
 
-**`LOG` assorbe il feedback.** Non esiste un documento "feedback" separato: tutto entra
-in `LOG` con `type: incident | drift | feedback | request | metric | compliance`. Il
-testo originale di un feedback si conserva verbatim in un campo, perché è l'unica cosa
-che permette di ri-interpretarlo fra sei mesi.
+**`LOG` absorbs the feedback.** There is no separate "feedback" document: everything goes
+into `LOG` with `type: incident | drift | feedback | request | metric | compliance`. The
+original text of a feedback is kept verbatim in a field, because it is the only thing that
+lets you re-interpret it six months later.
 
-**`WF` e `RSK` sono file unici a paragrafi.** `WF` ha `§corrente`, `§target`, `§delta`;
-`RSK` ha `§stato`, `§accettazioni`, `§eventi`. File separati garantirebbero la
-divergenza, che è il fallimento peggiore. I titoli markdown sono già indirizzabili da un
-agente: usa link con anchor (`WF.md#target`).
+**`WF` and `RSK` are single files with sections.** `WF` has `§current`, `§target`,
+`§delta`; `RSK` has `§state`, `§acceptances`, `§events`. Separate files would guarantee
+divergence, which is the worst failure of all. Markdown headings are already addressable by
+an agent: use anchored links (`WF.md#target`).
 
 ---
 
-## 8. Front-matter e identificatori
+## 8. Front matter and identifiers
 
-Ogni artefatto markdown comincia con questo blocco. È ciò che rende la cartella un grafo
-interrogabile invece di un mucchio di file.
+Every markdown artifact starts with this block. It is what makes the folder a queryable
+graph instead of a heap of files.
 
 ```yaml
 ---
@@ -328,151 +328,152 @@ schema: framework/decision-record/v1
 id: DEC-014
 artifact_type: decision-record
 lifecycle: immutable            # living | immutable | append-only
-status: accepted                # valori definiti dallo schema dell'artefatto
+status: accepted                # values defined by the artifact schema
 version: 1.0.0
-products: [prodotto-a, prodotto-b]
-scope: architecture             # solo per DEC
-owners: [nome.cognome]
-approvers: [nome.cognome]
+products: [product-a, product-b]
+scope: architecture             # DEC only
+owners: [first.last]
+approvers: [first.last]
 created: 2026-07-27
-last_review: 2026-07-29 18:40   # obbligatorio solo per lifecycle: living
+last_review: 2026-07-29 18:40   # required only for lifecycle: living
 derives_from: [HYP-001, EVD-003]
 supersedes: DEC-009
-verified_against: a1b2c3d       # commit o tag, dove applicabile
+verified_against: a1b2c3d       # commit or tag, where applicable
 classification: internal
 ---
 ```
 
-`status` e `artifact_type` sono definiti dallo **schema specifico** dell'artefatto, non
-da un'enumerazione comune: un `DEC` è `proposed | accepted | superseded`, un `CHG` è
-`draft | approved | implemented | verified | rolled-back`. L'enumerazione unica sarebbe
-troppo generica per essere utile.
+`status` and `artifact_type` are defined by the artifact's **own schema**, not by a common
+enumeration: a `DEC` is `proposed | accepted | superseded`, a `CHG` is `draft | approved |
+implemented | verified | rolled-back`. A single enumeration would be too generic to be
+useful.
 
-**`created` è un giorno, `last_review` è un istante.** Un documento nasce una volta sola,
-ma si rivede anche tre volte nello stesso pomeriggio, e senza l'ora la terza revisione è
-indistinguibile dalla prima: si perde l'unica cosa che il campo serve a stabilire, cioè se
-la revisione è venuta prima o dopo il cambiamento che avrebbe dovuto recepire. Il formato è
-`AAAA-MM-GG HH:MM`; la sola data resta accettata e vale mezzanotte. Un valore compilato a
-metà — `2026-07-29 HH:MM` — **non** vale mezzanotte: è `LC004`, perché farlo passare
-significherebbe presentare un documento mai rivisto come rivisto oggi.
+**`created` is a day, `last_review` is an instant.** A document is born once, but it gets
+reviewed three times in the same afternoon, and without the time the third review is
+indistinguishable from the first: you lose the only thing the field exists to establish,
+that is whether the review came before or after the change it was supposed to take in. The
+format is `YYYY-MM-DD HH:MM`; the date alone is still accepted and counts as midnight. A
+half-filled value, `2026-07-29 HH:MM`, does **not** count as midnight: it is `LC004`,
+because letting it through would mean presenting a document that was never reviewed as
+reviewed today.
 
-### Catena di tracciabilità
+### Traceability chain
 
 ```
 PRB → HYP → EVD → DEC(gate) → SD → DEC/ADR → CHG → EVR → RLM → SIG → DEC → CHG
 ```
 
-Non si mantiene a mano: si genera dal front-matter. Vedi `SKILLS.md`.
+It is not maintained by hand: it is generated from the front matter. See `SKILLS.md`.
 
 ---
 
-## 9. La gestione dei tre prodotti
+## 9. Managing the three products
 
-I tre prodotti sono complementari e vengono costruiti da una sola persona. Questo cambia
-il calcolo rispetto a tre team indipendenti: il vincolo stringente non è la qualità
-dell'astrazione, è la **superficie di manutenzione**. Tre codebase divergenti sono un
-costo permanente.
+The three products are complementary and they are built by one single person. That changes
+the calculation compared with three independent teams: the binding constraint is not the
+quality of the abstraction, it is the **maintenance surface**. Three diverging codebases
+are a permanent cost.
 
-Quattro regole:
+Four rules:
 
-1. **Un solo `GLOSSARY.md`.** È il file dove la complementarità dei tre prodotti si
-   definisce o si perde. Se lo stesso concetto ha due nomi in due prodotti, la
-   complementarità è già rotta e nessuno se ne è accorto.
-2. **Un solo registro `decisions/`**, con campo `products`. Le decisioni cross-prodotto
-   sono le più costose e in registri separati finirebbero in quello del prodotto su cui
-   stavi lavorando quel giorno.
-3. **`PLATFORM.md` + un `ARC` breve per prodotto.** Non tre architetture: un substrato
-   condiviso (identità, accesso ai dati, deploy, osservabilità, convenzioni) più il
-   delta di dominio di ciascun prodotto.
-4. **I data contract *fra* i tuoi tre prodotti vengono prima di quelli verso
-   l'esterno.** Sono contratti con te stesso a sei mesi di distanza, e sono quelli che
-   romperai in silenzio.
+1. **One `GLOSSARY.md` only.** It is the file where the complementarity of the three
+   products is either defined or lost. If the same concept has two names in two products,
+   the complementarity is already broken and nobody has noticed.
+2. **One `decisions/` register only**, with a `products` field. Cross-product decisions are
+   the most expensive ones and in separate registers they would end up in the register of
+   whichever product you were working on that day.
+3. **`PLATFORM.md` + one short `ARC` per product.** Not three architectures: one shared
+   substrate (identity, data access, deploy, observability, conventions) plus the domain
+   delta of each product.
+4. **The data contracts *between* your three products come before the ones facing
+   outward.** They are contracts with yourself six months from now, and they are the ones
+   you will break in silence.
 
-Il perimetro esatto del substrato condiviso è una decisione aperta: `OPEN.md`, voce
-`OD-002`.
+The exact scope of the shared substrate is an open decision: `OPEN.md`, entry `OD-002`.
 
 ---
 
-## 10. Da dove si comincia
+## 10. Where to start
 
 ### Entry assessment
 
-Il framework ha più di un ingresso. Scegli la riga che descrive la tua situazione.
+The framework has more than one entrance. Pick the row that describes your situation.
 
-| Situazione | Ingresso |
+| Situation | Entrance |
 |---|---|
-| Idea, niente promesso a nessuno | F1, percorso completo |
-| **Idea già venduta o promessa** | F1 con `COMMITMENTS.md` come vincolo, e **discovery inversa** |
-| Codice esistente senza documentazione | F5 in reverse: `ARC` ricostruita dal codice, `PBR`, e un `DEC` per ogni decisione già implicita nel codice |
-| Prodotto in produzione | Run & Observe + baseline (`ARC` `RB` `DC` `RSK`), poi discovery inversa |
+| Idea, nothing promised to anyone | F1, full path |
+| **Idea already sold or promised** | F1 with `COMMITMENTS.md` as a constraint, and **reverse discovery** |
+| Existing code with no documentation | F5 in reverse: `ARC` reconstructed from the code, `PBR`, and a `DEC` for every decision already implicit in the code |
+| Product in production | Run & Observe + baseline (`ARC` `RB` `DC` `RSK`), then reverse discovery |
 
-**Sulla discovery inversa.** Quando la soluzione è già stata venduta, la discovery non
-va da problema → ipotesi → soluzione, ma al contrario: *soluzione promessa → quale
-problema risolve davvero → cosa succede se non lo risolve*. Chiamala per nome nei
-documenti. Simulare una discovery in avanti quando la risposta è già stata promessa
-produce documentazione finta, ed è il modo più rapido per perdere fiducia nell'intero
-impianto.
+**On reverse discovery.** When the solution has already been sold, discovery does not run
+from problem → hypothesis → solution, but the other way round: *promised solution → which
+problem it actually solves → what happens if it does not solve it*. Call it by its name in
+the documents. Faking a forward discovery when the answer has already been promised
+produces fake documentation, and it is the fastest way to lose trust in the whole
+structure.
 
-### Il set del giorno uno
+### The day one set
 
-Prima di scrivere una riga di codice, in quest'ordine:
+Before writing a line of code, in this order:
 
-1. `ING.md` + `COMMITMENTS.md` — ingesta il corpus prodotto dal business (presentazioni,
-   PDF, analisi dei requisiti) e da lì ricava cosa è stato promesso, a chi, entro quando,
-   con quale margine di interpretazione, e cosa è fuori portata tecnica. Sono requisiti che
-   scoprirai comunque: la scelta è se scoprirli ora o nel momento peggiore. La skill
-   `framework-capture` fa l'estrazione e la classificazione.
-2. `OPEN.md` — le decisioni che devi prendere prima di poter scrivere codice, con il
-   costo di tornare indietro su ciascuna.
-3. `GLOSSARY.md` — anche solo dieci voci. Le prime sono le entità condivise fra i tre
-   prodotti.
-4. `decisions/` — vuota, con la numerazione avviata.
-5. `AGENTS.md` — regole operative per gli agenti.
-6. `product.yaml` × 3 — manifest minimo per prodotto.
-7. `PBR.md` × 3 — la definizione dei tre prodotti oggi esiste solo dentro dei pitch
-   commerciali. Scriverla è il primo atto, non un artefatto di manutenzione.
-8. `PLATFORM.md` — anche solo con le sezioni vuote e le decisioni rinviate a `OPEN.md`.
+1. `ING.md` + `COMMITMENTS.md`: ingest the corpus produced by the business (decks, PDFs,
+   requirements analyses) and from there work out what has been promised, to whom, by
+   when, with what room for interpretation, and what is out of technical reach. These are
+   requirements you will discover anyway: the choice is whether you discover them now or
+   at the worst possible moment. The extraction and the classification still have to be
+   done, and the tooling for them is still to be built.
+2. `OPEN.md`: the decisions you have to take before you can write code, with the cost to
+   reverse each one.
+3. `GLOSSARY.md`: even just ten entries. The first ones are the entities shared between
+   the three products.
+4. `decisions/`: empty, with the numbering started.
+5. `AGENTS.md`: operating rules for the agents.
+6. `product.yaml` × 3: minimum manifest per product.
+7. `PBR.md` × 3: today the definition of the three products exists only inside sales
+   pitches. Writing it is the first act, not a maintenance artifact.
+8. `PLATFORM.md`: even just with empty sections and the decisions deferred to `OPEN.md`.
 
-Poi, **quando esiste la cosa da documentare** e non prima:
+Then, **when the thing to document exists** and not before:
 
-| Quando | Aggiungi |
+| When | Add |
 |---|---|
-| Prima riga di codice | `ARC.md` per prodotto |
-| Primo dataset condiviso | `DC` |
-| Primo componente con qualità da misurare | `EVP` |
-| Inizio della build | `LOG.md` |
-| Primo rilascio | `RB` `EVR` `REL` `RLM` |
-| Primo errore che un controllo avrebbe intercettato | quel controllo in CI |
+| First line of code | `ARC.md` per product |
+| First shared dataset | `DC` |
+| First component with quality to measure | `EVP` |
+| Start of the build | `LOG.md` |
+| First release | `RB` `EVR` `REL` `RLM` |
+| First error a check would have caught | that check in CI |
 
-### La regola che protegge il framework
+### The rule that protects the framework
 
-> Ogni artefatto deve superare una domanda sola: **mi fa risparmiare più tempo di quanto
-> costa mantenerlo, questa settimana?**
+> Every artifact has to clear one single question: **does it save me more time than it
+> costs to maintain, this week?**
 
-Se la risposta è "quando l'azienda crescerà", non è ora. Un framework al 60% che usi
-batte uno al 95% che abbandoni fra due mesi.
+If the answer is "when the company grows", it is not now. A framework at 60% that you use
+beats one at 95% that you abandon in two months.
 
 ---
 
-## 11. Regole per gli agenti
+## 11. Rules for agents
 
-Queste stanno anche in `AGENTS.md`, che è il file che un agente legge per primo. Qui per
-completezza del quadro.
+These are also in `AGENTS.md`, which is the file an agent reads first. Here for
+completeness of the picture.
 
-1. **`OPEN.md` prima di decidere qualsiasi cosa.** Se una scelta necessaria è elencata
-   là come aperta, l'agente non la prende: la solleva. È la regola che impedisce a un
-   agente di inventare una decisione e implementarla con convinzione.
-2. **Non implementare un segnale.** Una riga di `LOG`, un feedback o un incremento di
-   `RMP` non sono autorizzazioni a costruire. Si implementa un `CHG` approvato.
-3. **Fonte autorevole per tipo di domanda:** com'è fatto → `ARC` · perché → `decisions/`
-   · cosa significa un termine → `GLOSSARY` · cosa garantisce un dato → `DC` · cosa è
-   stato promesso → `COMMITMENTS` · cosa non è deciso → `OPEN`.
-4. **Rispettare la classe.** Non modificare il corpo di un `immutable`: crearne uno nuovo
-   che supersede. Il campo `status` fa eccezione — segue le transizioni dichiarate nello
-   schema del tipo e si aggiorna sul posto. Non riscrivere una riga di `append-only`:
-   aggiungere un evento collegato.
-5. **Aggiornamenti obbligatori dopo una modifica:** tocchi l'architettura → `ARC` **e**
-   un `DEC` · tocchi dati o schema → il `DC` relativo · tocchi un componente AI → un
-   nuovo `EVR` · rilasci → `REL` **e** `RLM`.
-6. **Se un fatto non è documentato, dirlo.** L'assenza è un'informazione. Un agente che
-   completa un vuoto con un'ipotesi plausibile fa più danni di uno che si ferma.
+1. **`OPEN.md` before deciding anything.** If a necessary choice is listed there as open,
+   the agent does not take it: it raises it. This is the rule that stops an agent from
+   inventing a decision and implementing it with conviction.
+2. **Do not implement a signal.** A `LOG` line, a feedback or an `RMP` increment are not
+   authorizations to build. What you implement is an approved `CHG`.
+3. **Authoritative source by kind of question:** how it is built → `ARC` · why →
+   `decisions/` · what a term means → `GLOSSARY` · what a piece of data guarantees → `DC`
+   · what has been promised → `COMMITMENTS` · what is not decided → `OPEN`.
+4. **Respect the class.** Do not modify the body of an `immutable`: create a new one that
+   supersedes it. The `status` field is the exception. It follows the transitions declared
+   in the schema of the type and is updated in place. Do not rewrite an `append-only` line:
+   add a linked event.
+5. **Mandatory updates after a change:** you touch the architecture → `ARC` **and** a `DEC`
+   · you touch data or schema → the relevant `DC` · you touch an AI component → a new `EVR`
+   · you release → `REL` **and** `RLM`.
+6. **If a fact is not documented, say so.** The absence is information. An agent that fills
+   a gap with a plausible assumption does more damage than one that stops.

@@ -4,43 +4,43 @@ artifact_type: release-note
 lifecycle: immutable
 status: active
 id: REL-NNN
-products: [prodotto-a]
-owners: [NOME]
-created: AAAA-MM-GG
+products: [product-a]
+owners: [NAME]
+created: YYYY-MM-DD
 derives_from: [CHG-NNN, EVR-NNN]
 classification: internal
 ---
 
 # REL-NNN · Release note
 
-**Domanda:** cosa è cambiato, per chi, e come si torna indietro?
+**Question:** what changed, for whom, and how do you go back?
 
-**Per una persona. Dieci righe.** La versione machine-readable è `RLM-NNN.yaml`: sono due
-documenti perché hanno due lettori, non per ridondanza.
+**For a person. Ten lines.** The machine-readable version is `RLM-NNN.yaml`: they are two
+documents because they have two readers, not out of redundancy.
 
-## Cosa cambia
+## What changes
 
-Dal punto di vista di chi usa il sistema. Non i commit: gli effetti.
+From the point of view of whoever uses the system. Not the commits: the effects.
 
-## Change incluse
+## Changes included
 
 `CHG-NNN` · `DEC-NNN`
 
-## Rischi e rollback
+## Risks and rollback
 
-Cosa potrebbe andare storto e come si torna indietro. Il target di rollback esatto è in
-`RLM`.
+What could go wrong and how you go back. The exact rollback target is in `RLM`.
 
-## Cosa monitorare nelle prime 48 ore
+## What to monitor in the first 48 hours
 
-Metriche specifiche di questa release, non quelle di routine.
+Metrics specific to this release, not the routine ones.
 
 ---
 
-## Anti-pattern
+## Anti-patterns
 
-- **Elencare i commit.** Chi legge non sa cosa sia un commit e non gli serve.
-- **Ometterla perché "è un cambiamento piccolo".** È il collante fra gli ID e la realtà:
-  il punto in cui una decisione tracciata diventa qualcosa che gira in produzione a una
-  data precisa.
-- **Duplicare `RLM`.** Se questa nota contiene hash, non è per umani.
+- **Listing the commits.** The reader does not know what a commit is and has no use for
+  one.
+- **Leaving it out because "it's a small change".** It is the glue between the IDs and
+  reality: the point where a traced decision becomes something running in production on a
+  precise date.
+- **Duplicating `RLM`.** If this note contains hashes, it is not for humans.

@@ -3,59 +3,60 @@ schema: framework/glossary/v1
 artifact_type: glossary
 lifecycle: living
 status: active
-products: [prodotto-a, prodotto-b, prodotto-c]
-owners: [NOME]
-created: AAAA-MM-GG
-last_review: AAAA-MM-GG HH:MM
+products: [product-a, product-b, product-c]
+owners: [NAME]
+created: YYYY-MM-DD
+last_review: YYYY-MM-DD HH:MM
 classification: internal
 ---
 
-# Glossario e dizionario metriche
+# Glossary and metrics dictionary
 
-**Unico per tutti i prodotti.** È il file dove la complementarità dei tre prodotti si
-definisce o si perde: se lo stesso concetto ha due nomi in due prodotti, o lo stesso nome
-significa due cose, la complementarità è già rotta e nessuno se ne è accorto.
+**One single file for all products.** It is the file where the complementarity of the
+three products is either defined or lost: if the same concept has two names in two
+products, or the same name means two things, the complementarity is already broken and
+nobody has noticed.
 
-**È normativo, non descrittivo.** Non registra come i termini vengono usati: stabilisce
-come vanno usati. Modificarne una voce richiede un `DEC`.
+**It is normative, not descriptive.** It does not record how terms are used: it
+establishes how they must be used. Changing an entry requires a `DEC`.
 
-## §Termini di dominio
+## §Domain terms
 
-### Nome del termine
+### Name of the term
 
-- **Definizione:** una frase, senza usare il termine stesso.
-- **Non include:** i casi che qualcuno assumerebbe inclusi e non lo sono. Campo
-  obbligatorio: è dove sta il valore.
-- **Sinonimi vietati:** altri modi in cui viene chiamato e che non vanno usati.
-- **Usato in:** prodotti e artefatti.
-- **Owner della definizione:** chi decide se cambia.
+- **Definition:** one sentence, without using the term itself.
+- **Does not include:** the cases someone would assume are included and are not.
+  Mandatory field: this is where the value is.
+- **Banned synonyms:** the other names it gets called and that must not be used.
+- **Used in:** products and artifacts.
+- **Owner of the definition:** who decides if it changes.
 
-## §Metriche
+## §Metrics
 
-### Nome della metrica
+### Name of the metric
 
-- **Definizione in parole:** cosa misura e perché a qualcuno importa.
-- **Formula:** esplicita, con numeratore e denominatore.
-- **Fonte:** tabella o `DC` di riferimento.
-- **Finestra temporale:** giorni, mese di calendario, rolling.
-- **Esclusioni:** account di test, resi, cancellazioni, utenti interni.
-- **Non confondere con:** la metrica simile da cui va distinta.
-- **Owner della definizione:**
-- **Prodotti che la calcolano:** se più di uno, **devono usare questa formula**. Se non
-  possono, sono due metriche diverse e servono due voci con due nomi diversi.
+- **Definition in words:** what it measures and why anyone cares.
+- **Formula:** explicit, with numerator and denominator.
+- **Source:** reference table or `DC`.
+- **Time window:** days, calendar month, rolling.
+- **Exclusions:** test accounts, returns, cancellations, internal users.
+- **Do not confuse with:** the similar metric it has to be distinguished from.
+- **Owner of the definition:**
+- **Products that compute it:** if more than one, **they must use this formula**. If they
+  cannot, they are two different metrics and need two entries with two different names.
 
 ---
 
-## Anti-pattern
+## Anti-patterns
 
-- **Definire un termine usando il termine.** "Cliente attivo: un cliente che è attivo."
-  Succede più spesso di quanto sembri.
-- **Omettere `Non include`.** È il campo che risolve le discussioni; senza, il glossario
-  è decorativo.
-- **Formule diverse per la stessa metrica in prodotti diversi.** È il fallimento tipico di
-  una suite complementare, e il più imbarazzante da spiegare a un cliente che confronta
-  due dashboard.
-- **Aggiungere una voce senza owner.** Una definizione che nessuno possiede si degrada
-  alla prima discussione.
-- **Trattarlo come descrittivo.** Se registri gli usi invece di stabilirli, hai scritto un
-  dizionario dei disaccordi.
+- **Defining a term using the term.** "Active customer: a customer who is active."
+  It happens more often than it seems.
+- **Leaving out `Does not include`.** It is the field that settles the arguments; without
+  it the glossary is decorative.
+- **Different formulas for the same metric in different products.** It is the typical
+  failure of a complementary suite, and the most embarrassing one to explain to a
+  customer comparing two dashboards.
+- **Adding an entry with no owner.** A definition nobody owns decays at the first
+  argument.
+- **Treating it as descriptive.** If you record usages instead of establishing them, you
+  have written a dictionary of disagreements.

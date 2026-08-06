@@ -4,75 +4,76 @@ artifact_type: solution-design
 lifecycle: immutable
 status: active
 id: SD-NNN
-products: [prodotto-a]
-owners: [NOME]
-created: AAAA-MM-GG
+products: [product-a]
+owners: [NAME]
+created: YYYY-MM-DD
 derives_from: [HYP-NNN, DFB-NNN, PBR]
 classification: internal
 ---
 
-# SD-NNN · Solution design e MVA
+# SD-NNN · Solution design and MVA
 
-**Domanda:** cosa costruiamo, con quali componenti, e cosa abbiamo deliberatamente
-rinviato?
+**Question:** what are we building, with which components, and what have we deliberately
+deferred?
 
-**Nota sulla classe:** immutabile. È lo snapshot del progetto al gate G4. Da F5 in poi la
-verità corrente sta in `ARC`, che comincia a vivere con la prima riga di codice: design e
-implementazione divergono molto prima del go-live.
+**Note on the class:** immutable. It is the snapshot of the design at gate G4. From F5
+onwards the current truth lives in `ARC`, which starts living with the first line of code:
+design and implementation diverge long before go-live.
 
-## Scope dell'MVP
+## Scope of the MVP
 
-Una frase.
+One sentence.
 
-## §Fuori scope
+## §Out of scope
 
-Esplicito, con la ragione e il rimando al `DEC` dove esiste. Sezione obbligatoria e la più
-letta dagli agenti.
+Explicit, with the reason and a pointer to the `DEC` where one exists. Mandatory section,
+and the one agents read most.
 
-## Componenti e flusso del dato
+## Components and data flow
 
-Diagramma end-to-end. Per ogni componente: responsabilità in una riga.
+End-to-end diagram. For each component: its responsibility in one line.
 
-## Scelte tecnologiche
+## Technology choices
 
-| Scelta | `DEC` | Nell'MVA? |
+| Choice | `DEC` | In the MVA? |
 |---|---|---|
-| | DEC-NNN | sì/no |
+| | DEC-NNN | yes/no |
 
-Qui **cosa**, nei `DEC` **perché**. Se questa tabella spiega le motivazioni, sta
-duplicando.
+**What** here, **why** in the `DEC`. If this table explains the reasoning, it is
+duplicating.
 
-## MVA — Minimum Viable Architecture
+## MVA: Minimum Viable Architecture
 
-Le decisioni architetturali **irreversibili o costose da invertire** che vanno prese
-adesso. Non l'architettura ideale: il sottoinsieme minimo.
+The architectural decisions that are **irreversible or expensive to reverse** and have to
+be taken now. Not the ideal architecture: the minimum subset.
 
-| Decisione | Perché ora | Costo di inversione | `DEC` |
+| Decision | Why now | Cost to reverse | `DEC` |
 |---|---|---|---|
 
-Test: se una decisione si può cambiare in una settimana, non appartiene all'MVA.
+Test: if a decision can be changed in a week, it does not belong in the MVA.
 
-## Debito accettato
+## Accepted debt
 
-| Debito | Perché lo accettiamo | Trigger di rientro |
+| Debt | Why we accept it | Re-entry trigger |
 |---|---|---|
 
-Il trigger è obbligatorio: senza, non è debito accettato ma debito dimenticato. Se il
-debito attraversa più artefatti, la sua casa è `OPEN.md §2`.
+The trigger is mandatory: without it, this is not accepted debt but forgotten debt. If the
+debt spans more than one artifact, its home is `OPEN.md §2`.
 
-## Modello di costo
+## Cost model
 
-Costo per unità (query, inferenza, token, GB) e costo a regime stimato. Nei sistemi AI il
-costo è un requisito non funzionale, non una voce di budget.
+Cost per unit (query, inference, token, GB) and estimated steady-state cost. In AI systems
+cost is a non-functional requirement, not a budget line item.
 
 ---
 
-## Anti-pattern
+## Anti-patterns
 
-- **MVA che include tutto "per sicurezza".** Se l'MVA coincide con l'architettura ideale,
-  non hai fatto la selezione che è l'unico scopo del concetto.
-- **Fuori scope vuoto.** Un agente leggerà l'assenza come dimenticanza e implementerà.
-- **Debito senza trigger.**
-- **Nessun modello di costo.** Nei progetti AI il costo unitario scoperto in produzione è
-  la causa più comune di riprogettazione forzata.
-- **Aggiornarlo dopo G4.** È immutabile: da lì in poi si aggiorna `ARC`.
+- **An MVA that includes everything "just to be safe".** If the MVA coincides with the
+  ideal architecture, you have not done the selection that is the only purpose of the
+  concept.
+- **Empty out of scope.** An agent will read the absence as an oversight and implement it.
+- **Debt with no trigger.**
+- **No cost model.** In AI projects, the unit cost discovered in production is the most
+  common cause of a forced redesign.
+- **Updating it after G4.** It is immutable: from there on you update `ARC`.

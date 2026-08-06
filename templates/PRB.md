@@ -4,59 +4,61 @@ artifact_type: problem-statement
 lifecycle: immutable
 status: active
 id: PRB-NNN
-products: [prodotto-a]
-owners: [NOME]
-created: AAAA-MM-GG
+products: [product-a]
+owners: [NAME]
+created: YYYY-MM-DD
 classification: internal
 ---
 
-# PRB-NNN · Titolo del problema
+# PRB-NNN · Problem title
 
-**Domanda:** quale problema, di chi, e quanto costa non risolverlo?
+**Question:** which problem, whose, and what does it cost not to solve it?
 
-**Nota sulla classe:** immutabile. Il valore di questo documento è proprio non essere
-aggiornato: fra sei mesi vorrai sapere cosa credevi all'inizio. Se la comprensione cambia,
-scrivi un nuovo `PRB` che supersede questo.
+**Note on the class:** immutable. The value of this document lies precisely in not being
+updated: six months from now you will want to know what you believed at the start. If the
+understanding changes, write a new `PRB` that supersedes this one.
 
-## Chi lo vive
+## Who lives it
 
-Ruolo concreto, non "gli utenti". Quante persone, in quale contesto, con quale frequenza.
+A concrete role, not "the users". How many people, in what context, how often.
 
-## Cosa fa oggi e cosa gli costa
+## What they do today and what it costs them
 
-Il comportamento attuale e il suo costo: tempo, errori, denaro, occasioni perse. Con
-numeri se ci sono, con la dichiarazione "non quantificato" se non ci sono.
+The current behavior and its cost: time, errors, money, lost opportunities. With numbers if
+there are any, with the explicit statement "not quantified" if there are none.
 
-## Come lo misuriamo oggi
+## How we measure it today
 
-La metrica esistente, oppure la frase esplicita **"oggi non lo misuriamo"** — che è
-un'informazione, non una lacuna del documento.
+The existing metric, or the explicit sentence **"today we do not measure it"**, which is
+information, not a gap in the document.
 
-## Cosa succede se non facciamo nulla
+## What happens if we do nothing
 
-Lo scenario base. Se la risposta è "niente di grave", il problema probabilmente non
-merita un progetto.
+The baseline scenario. If the answer is "nothing serious", the problem probably does not
+deserve a project.
 
-## §Confini
+## §Boundaries
 
-Cosa **non** è questo problema. Problemi vicini che qualcuno confonderà con questo.
+What this problem is **not**. Neighboring problems that someone will confuse with this one.
 
-## Discovery inversa
+## Reverse discovery
 
-*Compila solo se la soluzione è già stata promessa commercialmente.* Quale soluzione è
-stata venduta, e quale problema stiamo cercando a posteriori di far corrispondere.
-Dichiararlo apertamente: la documentazione onesta di una discovery inversa vale più di una
-discovery in avanti simulata. Rimando a `COMMITMENTS`.
+*Fill this in only if the solution has already been promised commercially.* Which solution
+was sold, and which problem we are trying after the fact to make it match. State it openly:
+the honest documentation of a reverse discovery is worth more than a simulated forward
+discovery. Cross-reference to `COMMITMENTS`.
 
 ---
 
-## Anti-pattern
+## Anti-patterns
 
-- **Contenere già la soluzione.** Se il titolo nomina una tecnologia — "serve una
-  dashboard", "serve un modello predittivo" — non è la formulazione di un problema ma una
-  soluzione travestita, e da quel momento tutta la discovery lavorerà per confermarla.
-- **"Gli utenti" come soggetto.** Se non riesci a nominare un ruolo, non hai ancora capito
-  chi ha il problema.
-- **Zero quantificazione e zero ammissione di non averla.** Una delle due deve esserci.
-- **Aggiornarlo.** È immutabile. Aggiornarlo cancella la tracciabilità di come è
-  cambiata la comprensione.
+- **Already containing the solution.** If the title names a technology ("we need a
+  dashboard", "we need a predictive model") it is not the statement of a problem but a
+  solution in disguise, and from that moment on the whole discovery will work to confirm
+  it.
+- **"The users" as the subject.** If you cannot name a role, you have not yet understood
+  who has the problem.
+- **Zero quantification and zero admission of having none.** One of the two has to be
+  there.
+- **Updating it.** It is immutable. Updating it erases the traceability of how the
+  understanding changed.

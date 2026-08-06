@@ -1,29 +1,30 @@
-# Manifest del prodotto — machine-readable.
-# Le sezioni marcate GENERATO vanno rigenerate, non scritte a mano: vedi in fondo.
+# Product manifest, machine-readable.
+# The sections marked GENERATED are meant to be regenerated, not hand written. See the
+# note at the bottom for what that means today.
 
 schema: framework/product-manifest/v1
 artifact_type: product-manifest
-lifecycle: living                # la classe dell'artefatto, come in ogni altro file
+lifecycle: living                # the artifact class, as in every other file
 status: active
-product: prodotto-a
-name: Nome commerciale
-one_liner: Cosa fa, per chi, in una riga.
-owners: [NOME]
-created: AAAA-MM-GG
-last_review: AAAA-MM-GG HH:MM
+product: product-a
+name: Commercial name
+one_liner: What it does, for whom, in one line.
+owners: [NAME]
+created: YYYY-MM-DD
+last_review: YYYY-MM-DD HH:MM
 
-# Dove sta il PRODOTTO nel ciclo di vita. Si chiama stage e non lifecycle perché
-# quest'ultimo è già la classe dell'artefatto, e lo stesso nome per due cose diverse
-# è esattamente ciò che il framework esiste per impedire.
+# Where the PRODUCT sits in the lifecycle. The field is called stage and not lifecycle
+# because lifecycle is already the artifact class, and the same name for two different
+# things is exactly what this framework exists to prevent.
 stage:
-  block: A | B | C            # discovery | costruzione | esercizio
+  block: A | B | C            # discovery | shaping | operation
   phase: F1 | F2 | F3 | F4 | BUILD | DEPLOY | RUN
   last_gate_passed: G3
   last_gate_decision: DEC-007
   next_gate: G4
   mor_completed: false
 
-release:                       # GENERATO
+release:                       # GENERATED
   current: REL-004
   manifest: RLM-004
   deployed_at: null
@@ -31,37 +32,38 @@ release:                       # GENERATO
 
 platform:
   shares: [identity, data-access, deploy, observability]
-  arc_delta: products/prodotto-a/ARC.md
+  arc_delta: products/product-a/ARC.md
 
-artifacts:                     # GENERATO
+artifacts:                     # GENERATED
   living:
-    - path: products/prodotto-a/PBR.md
-      last_review: AAAA-MM-GG HH:MM
+    - path: products/product-a/PBR.md
+      last_review: YYYY-MM-DD HH:MM
       stale: false
   immutable_count: 0
   append_only:
-    - products/prodotto-a/LOG.md
+    - products/product-a/LOG.md
 
-open_decisions: [OD-001, OD-003]   # GENERATO da OPEN.md
-open_risks: []                     # GENERATO da RSK.md §stato
-active_changes: []                 # GENERATO: CHG con status approved
+open_decisions: [OD-001, OD-003]   # GENERATED from OPEN.md
+open_risks: []                     # GENERATED from RSK.md §state
+active_changes: []                 # GENERATED: the CHG records with status approved
 
-entry_points:                      # dove comincia un agente, per tipo di attività
-  understand: [README.md, products/prodotto-a/PBR.md, products/prodotto-a/ARC.md]
-  implement: [products/prodotto-a/IMP.md, products/prodotto-a/changes/]
-  operate: [products/prodotto-a/RB.md]
-  evaluate: [products/prodotto-a/EVP.md]
-  data: [products/prodotto-a/contracts/]
+entry_points:                      # where an agent starts, by kind of activity
+  understand: [README.md, products/product-a/PBR.md, products/product-a/ARC.md]
+  implement: [products/product-a/IMP.md, products/product-a/changes/]
+  operate: [products/product-a/RB.md]
+  evaluate: [products/product-a/EVP.md]
+  data: [products/product-a/contracts/]
 
 roles:
-  product: NOME
-  tech: NOME
+  product: NAME
+  tech: NAME
 
-# Sulle sezioni GENERATO: oggi nessuno strumento le rigenera — validate.py --emit-index
-# produce decisions/INDEX.md e TRACEABILITY.md, non questo file. Finché la generazione
-# non esiste, quei campi li compili tu e vanno trattati come tali: una sezione marcata
-# "generato" che in realtà scrivi a mano è una sezione che nessuno ricontrolla, perché
-# tutti presumono che qualcosa la tenga vera.
+# On the GENERATED sections: today nothing regenerates them. No tooling exists yet, so you
+# fill those fields in by hand, and they have to be treated as hand written. A section
+# labeled "generated" that is in fact written by hand is a section nobody rereads,
+# because everyone assumes something keeps it true. Until the generator exists, that
+# label is a promise the repository is not keeping, so either keep the fields honest or
+# delete the ones you will not maintain.
 #
-# Come dovrà funzionare, quali campi sono derivabili e quali no, e perché non serve una
-# skill dedicata: SKILLS.md §7, "Da costruire: --emit-manifest".
+# Which fields are derivable and which are not, and why this does not need a dedicated
+# skill: SKILLS.md §7.

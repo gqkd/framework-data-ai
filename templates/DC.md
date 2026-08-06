@@ -5,69 +5,70 @@ lifecycle: living
 status: active
 id: DC-NNN
 version: 1.0.0
-products: [prodotto-a]
-consumers: [prodotto-b]
-owners: [NOME]
-created: AAAA-MM-GG
-last_review: AAAA-MM-GG HH:MM
+products: [product-a]
+consumers: [product-b]
+owners: [NAME]
+created: YYYY-MM-DD
+last_review: YYYY-MM-DD HH:MM
 classification: internal
 ---
 
-# DC-NNN · Data contract — Nome del dataset o interfaccia
+# DC-NNN · Data contract: name of the dataset or interface
 
-**Domanda:** cosa può aspettarsi chi consuma questi dati, e chi risponde se si rompe?
+**Question:** what can whoever consumes this data expect, and who answers if it breaks?
 
-**Priorità.** I contratti *fra i tre prodotti* vengono prima di quelli verso l'esterno.
-Sono contratti con te stesso a sei mesi di distanza, e sono quelli che romperai in
-silenzio.
+**Priority.** The contracts *between the three products* come before the ones facing
+outward. They are contracts with yourself six months from now, and they are the ones you
+will break silently.
 
 ## Schema
 
-| Campo | Tipo | Nullable | Chiave | PII | Semantica |
+| Field | Type | Nullable | Key | PII | Semantics |
 |---|---|---|---|---|---|
-| | | | PK/FK | sì/no | link a `GLOSSARY` |
+| | | | PK/FK | yes/no | link to `GLOSSARY` |
 
-## Garanzie
+## Guarantees
 
-| Garanzia | Valore | Come si verifica |
+| Guarantee | Value | How it is verified |
 |---|---|---|
-| Freschezza | max N minuti/ore dall'evento | |
-| Completezza | ≥ N% righe attese | |
-| Unicità | chiave unica al 100% | |
-| Valori ammessi | enum per campo | |
+| Freshness | max N minutes/hours from the event | |
+| Completeness | ≥ N% of expected rows | |
+| Uniqueness | key unique 100% of the time | |
+| Allowed values | enum per field | |
 
-**È la sezione per cui il documento esiste.** Lo schema lo deduci dal database in trenta
-secondi; le garanzie no, sono l'unica informazione non ricavabile da nessun'altra parte.
+**This is the section the document exists for.** You can work the schema out from the
+database in thirty seconds; the guarantees you cannot, they are the only information you
+cannot get from anywhere else.
 
-## Frequenza di aggiornamento
+## Update frequency
 
-## Consumatori noti
+## Known consumers
 
-Chi legge questo dato. Se un prodotto compare qui, deve comparire anche nella sezione
-complementarità del suo `PBR`.
+Who reads this data. If a product appears here, it must also appear in the complementarity
+section of its `PBR`.
 
-## Politica di breaking change
+## Breaking change policy
 
-- Cosa consideriamo breaking: rimozione di campo, cambio di tipo, cambio di semantica a
-  schema invariato (il più insidioso, perché non lo rileva nessun controllo automatico)
-- Preavviso dovuto ai consumatori
-- Durata del periodo di doppia scrittura
-- Come si versiona
+- What we consider breaking: removing a field, changing a type, changing the semantics with
+  the schema unchanged (the most insidious one, because no automated check detects it)
+- Notice owed to consumers
+- Length of the dual-write period
+- How versioning works
 
-## Storico versioni
+## Version history
 
-| Versione | Data | Cambiamento | Breaking | `DEC` |
+| Version | Date | Change | Breaking | `DEC` |
 |---|---|---|---|---|
 
 ---
 
-## Anti-pattern
+## Anti-patterns
 
-- **Schema senza garanzie.** Il documento perde la sua unica ragione di esistere.
-- **Semantica non collegata al `GLOSSARY`.** Nasce così la stessa metrica calcolata in due
-  modi in due prodotti.
-- **Cambiare la semantica lasciando lo schema.** È il breaking change che nessun controllo
-  automatico rileva e che rompe i consumatori in silenzio.
-- **Consumatori non elencati.** Non saprai chi avvisare, quindi non avviserai nessuno.
-- **Nessun `DC` fra i tuoi prodotti** perché "è tutto mio". È esattamente il caso in cui
-  serve di più.
+- **A schema with no guarantees.** The document loses its only reason to exist.
+- **Semantics not linked to the `GLOSSARY`.** This is how the same metric ends up computed
+  two different ways in two products.
+- **Changing the semantics and leaving the schema alone.** It is the breaking change that no
+  automated check detects and that breaks consumers silently.
+- **Consumers not listed.** You will not know who to warn, so you will warn nobody.
+- **No `DC` between your own products** because "it is all mine". That is exactly the case
+  where it is needed most.

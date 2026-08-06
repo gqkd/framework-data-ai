@@ -4,58 +4,59 @@ artifact_type: roadmap
 lifecycle: living
 status: active
 version: 1.0.0
-products: [prodotto-a]
-owners: [NOME]
-created: AAAA-MM-GG
-last_review: AAAA-MM-GG HH:MM
+products: [product-a]
+owners: [NAME]
+created: YYYY-MM-DD
+last_review: YYYY-MM-DD HH:MM
 classification: internal
 ---
 
-# Progressive implementation roadmap — Nome prodotto
+# Progressive implementation roadmap: Product name
 
-**Domanda:** quali incrementi futuri ipotizziamo, e da quali evidenze dipendono?
+**Question:** which future increments do we hypothesize, and which evidence do they depend
+on?
 
-**Non confondere con `IMP`.** Questo documento guarda avanti, è vivente e i suoi incrementi
-sono un **input** al change intake. `IMP` guarda il ciclo corrente, viene sostituito ogni
-ciclo, ed è un **output** del reshaping. Tenerli separati è ciò che evita di riscrivere il
-piano ogni volta che il reshaping cambia lo scope.
+**Do not confuse it with `IMP`.** This document looks ahead, it is living, and its
+increments are an **input** to change intake. `IMP` looks at the current cycle, is replaced
+every cycle, and is an **output** of reshaping. Keeping them separate is what stops you
+rewriting the plan every time reshaping changes the scope.
 
-## Incrementi
+## Increments
 
-Ogni incremento ha uno **stato di maturità**, che è la parte utile del documento:
+Every increment has a **maturity state**, which is the useful part of the document:
 
-| Stato | Significato |
+| State | Meaning |
 |---|---|
-| `committed` | Deciso, con `DEC`. Entrerà in un `CHG`. |
-| `shaped` | Definito abbastanza per essere stimato, non ancora deciso |
-| `conditional` | Dipende da un'evidenza che non abbiamo ancora |
+| `committed` | Decided, with a `DEC`. It will go into a `CHG`. |
+| `shaped` | Defined enough to be estimated, not yet decided |
+| `conditional` | Depends on evidence we do not have yet |
 
-### INC-NNN · Titolo
+### INC-NNN · Title
 
-| Campo | Contenuto |
+| Field | Content |
 |---|---|
-| Stato | committed · shaped · conditional |
-| Outcome atteso | quale outcome del `PBR` muove |
-| Dipende da | evidenze, altri incrementi, `OD` di `OPEN.md` |
-| Architecture enabler | cosa deve esistere prima, con rimando a `DEC` |
-| Entry criteria | quando può iniziare |
-| Exit criteria | quando è finito |
-| Prodotti coinvolti | se tocca più di uno, richiede un `DEC` con `scope: platform` |
+| State | committed · shaped · conditional |
+| Expected outcome | which `PBR` outcome it moves |
+| Depends on | evidence, other increments, `OD` from `OPEN.md` |
+| Architecture enabler | what must exist first, with a pointer to a `DEC` |
+| Entry criteria | when it can start |
+| Exit criteria | when it is finished |
+| Products involved | if it touches more than one, it requires a `DEC` with `scope: platform` |
 
-## §Non in roadmap
+## §Not in roadmap
 
-Cosa abbiamo deciso di non fare, con la ragione. Evita di rispiegare la stessa scelta ogni
-mese e dice a un agente che l'assenza è deliberata.
+What we have decided not to do, with the reason. It saves re-explaining the same choice
+every month and it tells an agent that the absence is deliberate.
 
 ---
 
-## Anti-pattern
+## Anti-patterns
 
-- **Trattarla come un piano con date.** Un incremento `conditional` con una data è una
-  bugia: la data implica una certezza che lo stato nega.
-- **Tutti gli incrementi `committed`.** Significa che non stai distinguendo, e la roadmap
-  torna a essere una lista dei desideri ordinata.
-- **Nessuna dipendenza da evidenze.** Se nessun incremento dipende da qualcosa che devi
-  ancora scoprire, non stai facendo un progetto data: stai eseguendo un ordine.
-- **Confonderla con `IMP`.** Il sintomo: la roadmap contiene assegnazioni e sequenze di
-  lavoro.
+- **Treating it as a plan with dates.** A `conditional` increment with a date is a lie:
+  the date implies a certainty the state denies.
+- **Every increment `committed`.** It means you are not distinguishing, and the roadmap
+  goes back to being an ordered wish list.
+- **No dependency on evidence.** If no increment depends on something you still have to
+  discover, you are not running a data project: you are carrying out an order.
+- **Confusing it with `IMP`.** The symptom: the roadmap contains assignments and work
+  sequences.

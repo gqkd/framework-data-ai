@@ -4,103 +4,107 @@ artifact_type: platform-architecture
 lifecycle: living
 status: draft
 version: 0.1.0
-products: [prodotto-a, prodotto-b, prodotto-c]
-owners: [NOME]
-created: AAAA-MM-GG
-last_review: AAAA-MM-GG HH:MM
+products: [product-a, product-b, product-c]
+owners: [NAME]
+created: YYYY-MM-DD
+last_review: YYYY-MM-DD HH:MM
 classification: internal
 ---
 
-# Architettura del substrato condiviso
+# Shared substrate architecture
 
-**Domanda:** cosa è comune ai tre prodotti, e con quali garanzie ciascuno può contarci?
+**Question:** what is common to the products, and with what guarantees can each of them
+rely on it?
 
-**Perché esiste.** Tre prodotti costruiti da una persona sola non hanno il problema di
-tre team: hanno il problema della superficie di manutenzione. Questo documento è la
-risposta — un substrato descritto una volta, più un `ARC` breve per prodotto che ne
-dichiara solo il **delta**. Senza, ogni `ARC` ridescrive identità, deploy e osservabilità,
-le tre descrizioni divergono, e la divergenza si scopre al primo refactor.
+**Why it exists.** Several products built by one person do not have the problem three
+teams have. They have the problem of maintenance surface. This document is the answer: one
+substrate described once, plus a short `ARC` per product that declares only the **delta**.
+Without it, every `ARC` redescribes identity, deployment and observability, the
+descriptions drift apart, and the drift surfaces at the first refactor.
 
-**Nasce al giorno uno**, anche solo con le sezioni vuote e le decisioni rinviate a
-`OPEN.md`. È diverso da `ARC`, che nasce in F5 con la prima riga di codice: qui le sezioni
-vuote sono informazione, perché dicono cosa non è ancora deciso.
+**It is born on day one**, even with empty sections and its decisions deferred to
+`OPEN.md`. This is unlike `ARC`, which is born in F5 with the first line of code: here the
+empty sections are information, because they say what has not been decided yet.
 
-> Il perimetro esatto è la decisione aperta `OD-002`. Finché è aperta, questo documento
-> elenca i candidati e non li dà per assegnati.
+> The exact scope is the open decision `OD-002`. While it is open, this document lists the
+> candidates and does not treat them as assigned.
 
-## Perimetro
+## Scope
 
-Cosa è piattaforma e cosa non lo è. La riga di confine è una sola:
+What is platform and what is not. There is a single boundary line:
 
-> Se cambia perché cambia il business di **un** prodotto, non è piattaforma.
+> If it changes because the business of **one** product changes, it is not platform.
 
-| Componente | Piattaforma | Ragione | `DEC` |
+| Component | Platform | Reason | `DEC` |
 |---|---|---|---|
-| Identità e autorizzazione | sì / no / da decidere | | |
-| Accesso ai dati e migrazioni | | | |
-| Deploy e infrastruttura | | | |
-| Osservabilità e logging | | | |
-| Convenzioni di API e di errore | | | |
-| Layer di valutazione AI | | | |
-| Logica di dominio | **no** | cambia con il business di un prodotto | |
+| Identity and authorization | yes / no / to be decided | | |
+| Data access and migrations | | | |
+| Deployment and infrastructure | | | |
+| Observability and logging | | | |
+| API and error conventions | | | |
+| AI evaluation layer | | | |
+| Domain logic | **no** | it changes with one product's business | |
 
-## Componenti
+## Components
 
-Uno per riga: cosa fa, cosa garantisce a chi lo usa, dove sta il codice.
+One per row: what it does, what it guarantees to whoever uses it, where the code lives.
 
-| Componente | Garanzia offerta | Percorso | Stato |
+| Component | Guarantee offered | Path | Status |
 |---|---|---|---|
 | | | | live · in-build · shaped |
 
-## Contratti verso i prodotti
+## Contracts towards the products
 
-Cosa un prodotto può assumere. **Ogni riga è un impegno**: romperla rompe tre prodotti
-insieme, ed è la ragione per cui i data contract interni vengono prima di quelli esterni.
+What a product is allowed to assume. **Every row is a commitment**: breaking one breaks
+every product at once, and that is why internal data contracts come before external ones.
 
-| Contratto | Consumatori | `DC` | Come si rompe |
+| Contract | Consumers | `DC` | How it breaks |
 |---|---|---|---|
 | | | | |
 
-## Modello di tenancy e identità
+## Tenancy and identity model
 
-La decisione più costosa da invertire dell'intero progetto: tocca schema,
-autorizzazione, fatturazione e migrazione dati. Se è ancora aperta, scrivi qui il rimando
-a `OD-003` e **il default in uso**, non una descrizione di come potrebbe essere.
+The most expensive decision in the whole project to reverse: it touches schema,
+authorization, billing and data migration. If it is still open, write the pointer to
+`OD-003` here along with **the default in force**, not a description of how it might turn
+out.
 
-## Vincoli che la piattaforma impone
+## Constraints the platform imposes
 
-Cosa un prodotto **non** può fare per il fatto di starci sopra. Un vincolo non scritto
-viene scoperto violandolo.
+What a product **cannot** do by virtue of sitting on top of it. An unwritten constraint
+gets discovered by violating it.
 
-## Separabilità
+## Separability
 
-I tre prodotti sono vendibili singolarmente. Per ciascuno: cosa serve per farlo girare da
-solo, e cosa oggi glielo impedisce.
+The products are meant to be sellable individually. For each one: what it takes to run it
+alone, and what prevents that today.
 
-| Prodotto | Gira da solo | Cosa lo lega agli altri |
+| Product | Runs alone | What ties it to the others |
 |---|---|---|
-| | sì / no | |
+| | yes / no | |
 
-Questa sezione è il presidio contro `OD-004`: in assenza di decisione il default di fatto
-diventa il database condiviso, che rende i prodotti inseparabili senza che nessuno
-l'abbia deciso.
+This section is the guard against `OD-004`. Absent a decision, the de facto default
+becomes the shared database, which makes the products inseparable without anyone having
+decided it.
 
-## Decisioni che vincolano tutti e tre
+## Decisions that bind every product
 
-Solo rimandi ai `DEC` con `scope: platform`. Generato da `validate.py --emit-index`.
+Pointers only, to the `DEC` records with `scope: platform`. Generated from front matter
+once the tooling exists; written by hand until then.
 
 ---
 
-## Anti-pattern
+## Anti-patterns
 
-- **Descrivere la piattaforma che vorresti.** Questo documento è vivente: descrive cosa
-  esiste oggi. Il substrato immaginato appartiene a `RMP` o a una voce di `OPEN.md`.
-- **Perimetro vuoto ma componenti pieni.** Significa che stai accumulando codice condiviso
-  senza aver deciso cosa merita di esserlo: è così che la logica di dominio finisce nella
-  piattaforma e i prodotti diventano inseparabili.
-- **Ripetere qui il contenuto di un `ARC`.** La piattaforma dice cosa è comune; il delta di
-  dominio sta nell'`ARC` del prodotto. Ripeterlo garantisce due versioni divergenti.
-- **Sezione separabilità compilata a memoria.** «Sì, gira da solo» va verificato provando a
-  farlo partire, non ragionandoci. Finché non l'hai provato il valore è "non verificato".
-- **Contratti verso i prodotti senza la colonna "come si rompe".** Un contratto di cui non
-  sai come si rompe non è un contratto, è una speranza.
+- **Describing the platform you would like.** This document is living: it describes what
+  exists today. The imagined substrate belongs in `RMP` or in an `OPEN.md` entry.
+- **Empty scope but full components.** It means you are accumulating shared code without
+  having decided what deserves to be shared. That is how domain logic ends up in the
+  platform and the products become inseparable.
+- **Repeating the content of an `ARC` here.** The platform says what is common; the domain
+  delta lives in the product's `ARC`. Repeating it guarantees two versions that diverge.
+- **A separability section filled in from memory.** "Yes, it runs alone" has to be verified
+  by trying to start it, not by reasoning about it. Until you have tried, the value is "not
+  verified".
+- **Contracts towards the products without the "how it breaks" column.** A contract whose
+  failure mode you do not know is not a contract, it is a hope.

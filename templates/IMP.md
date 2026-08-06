@@ -4,63 +4,64 @@ artifact_type: cycle-plan
 lifecycle: living
 status: active
 version: 12
-products: [prodotto-a]
-owners: [NOME]
-created: AAAA-MM-GG
-last_review: AAAA-MM-GG HH:MM
+products: [product-a]
+owners: [NAME]
+created: YYYY-MM-DD
+last_review: YYYY-MM-DD HH:MM
 classification: internal
 ---
 
-# Cycle implementation plan — ciclo N
+# Cycle implementation plan: cycle N
 
-**Domanda:** come eseguiamo i change contract approvati in questo ciclo?
+**Question:** how do we execute the change contracts approved in this cycle?
 
-**Vivente, sostituito ogni ciclo: vale sempre l'ultimo.** È un **output** del reshaping,
-non un input: scrivere il piano prima di sapere se prodotto o architettura devono cambiare
-significa riscriverlo appena il reshaping cambia lo scope. `version` è il numero del ciclo.
+**Living, replaced every cycle: the latest one always holds.** It is an **output** of
+reshaping, not an input. Writing the plan before you know whether product or architecture
+have to change means rewriting it the moment reshaping changes the scope. `version` is the
+cycle number.
 
-## Change selezionate
+## Selected changes
 
-| `CHG` | Perché ora | Dipende da | Stato |
+| `CHG` | Why now | Depends on | Status |
 |---|---|---|---|
 
-## §Escluse in questo ciclo
+## §Excluded in this cycle
 
-Le change valutate e non selezionate, con la ragione.
+The changes assessed and not selected, with the reason.
 
-È la sezione che ti evita di rispiegare la stessa scelta ogni settimana, e che dice a un
-agente la differenza fra "non è stato fatto" e "è stato deciso di non farlo".
+This is the section that saves you from re-explaining the same choice every week, and that
+tells an agent the difference between "it was not done" and "it was decided not to do it".
 
-## Sequenza e dipendenze
+## Sequence and dependencies
 
-Ordine di esecuzione. Cosa blocca cosa.
+Order of execution. What blocks what.
 
-## Strategia di integrazione e rollout
+## Integration and rollout strategy
 
-Come le change entrano insieme. Se rilasciate separatamente, in quale ordine e con quale
-compatibilità intermedia.
+How the changes land together. If they are released separately, in what order and with what
+intermediate compatibility.
 
-## Impatto sugli artefatti
+## Impact on artifacts
 
-| Artefatto | Aggiornamento richiesto |
+| Artifact | Update required |
 |---|---|
 | `ARC` | |
 | `DC` | |
-| `EVP` | se le soglie cambiano serve un `DEC` |
+| `EVP` | if the thresholds change you need a `DEC` |
 | `RSK` | |
 
-## Esito del ciclo
+## Cycle outcome
 
-*Compilato alla chiusura.* Cosa è entrato, cosa è slittato, cosa è stato abbandonato.
+*Filled in at closing.* What landed, what slipped, what was abandoned.
 
 ---
 
-## Anti-pattern
+## Anti-patterns
 
-- **Scriverlo prima del reshaping.** Errore strutturale: il piano diventa obsoleto appena
-  il reshaping cambia lo scope.
-- **Nessuna sezione "escluse".**
-- **Contenere incrementi di `RMP` invece di `CHG`.** Un incremento di roadmap non è
-  autorizzato: prima diventa un `CHG`.
-- **Accumulare i piani dei cicli passati.** È vivente e sostituito: la storia sta nei `CHG`
-  e nelle `REL`. Se conservi dodici piani, ne hai dodici che sembrano attuali.
+- **Writing it before reshaping.** A structural error: the plan is obsolete the moment
+  reshaping changes the scope.
+- **No "excluded" section.**
+- **Containing `RMP` increments instead of `CHG`.** A roadmap increment is not authorized:
+  first it becomes a `CHG`.
+- **Piling up the plans of past cycles.** It is living and replaced: the history lives in
+  the `CHG` and the `REL`. If you keep twelve plans, you have twelve that look current.

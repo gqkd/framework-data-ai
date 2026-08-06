@@ -4,81 +4,82 @@ artifact_type: workflow
 lifecycle: living
 status: active
 version: 1.0.0
-products: [prodotto-a]
-owners: [NOME]
-created: AAAA-MM-GG
-last_review: AAAA-MM-GG HH:MM
+products: [product-a]
+owners: [NAME]
+created: YYYY-MM-DD
+last_review: YYYY-MM-DD HH:MM
 derives_from: [PRB-NNN]
 classification: internal
 ---
 
-# Workflow — Nome del processo
+# Workflow: Process name
 
-**Domanda:** come funziona il processo oggi, come funzionerà, e cosa cambia esattamente?
+**Question:** how does the process work today, how will it work, and what exactly changes?
 
-**Un solo file, tre sezioni.** Il target ha senso solo in contrapposizione al corrente e
-il valore sta nel delta: file separati produrrebbero due diagrammi che divergono. Per
-riferimenti puntuali usa gli anchor: `WF.md#target`.
+**One file, three sections.** The target only makes sense set against the current state,
+and the value is in the delta: separate files would produce two diagrams that diverge. For
+precise references use the anchors: `WF.md#target`.
 
 ---
 
-# §corrente
+# §current
 
-Come funziona **davvero** oggi, incluse le scorciatoie.
+How it **really** works today, shortcuts included.
 
-## Passi
+## Steps
 
-| # | Chi | Cosa fa | Sistemi e file toccati | Dove nasce il dato |
+| # | Who | What they do | Systems and files touched | Where the data originates |
 |---|---|---|---|---|
-| 1 | | | nomi reali: quale tabella, quale Excel, quale cartella | creato / copiato |
+| 1 | | | real names: which table, which Excel file, which folder | created / copied |
 
-La colonna dei sistemi vuole i **nomi reali**. È la mappa dato → sistema, e per un agente
-è l'unica fonte da cui sapere dove risiede un'informazione.
+The systems column wants the **real names**. It is the data → system map, and for an agent
+it is the only source that tells it where a piece of information lives.
 
-## Punti di dolore
+## Pain points
 
-Numerati, ciascuno con rimando all'evidenza in `EVD` che lo documenta.
+Numbered, each with a pointer to the evidence in `EVD` that documents it.
 
-## Workaround esistenti
+## Existing workarounds
 
-Gli Excel ombra, i copia-incolla, i messaggi su chat. Sono la parte più informativa del
-documento, non l'imbarazzo da omettere: un workaround è un requisito che qualcuno ha già
-implementato a mano.
+The shadow Excel files, the copy-paste, the chat messages. They are the most informative
+part of the document, not the embarrassment to leave out: a workaround is a requirement
+somebody has already implemented by hand.
 
 ---
 
 # §target
 
-## Passi
+## Steps
 
-Stessa tabella del corrente, in versione target.
+The same table as the current state, in target form.
 
-## Cosa resta manuale, e perché
+## What stays manual, and why
 
-Sezione obbligatoria. Scelta deliberata, non omissione. Nei sistemi AI *dove sta l'umano*
-è una delle decisioni più costose da cambiare dopo: rimanda al `DEC` che la fissa.
+Mandatory section. A deliberate choice, not an omission. In AI systems *where the human
+sits* is one of the most expensive decisions to change later: point to the `DEC` that
+fixes it.
 
-## Impatto sui ruoli
+## Impact on roles
 
-Chi, da domani, fa una cosa diversa. Chi perde un pezzo di lavoro. Chi ne guadagna uno.
+Who, from tomorrow, does something different. Who loses a piece of work. Who gains one.
 
-## Requisiti che ne derivano
+## Requirements that follow from it
 
 ---
 
 # §delta
 
-Passo per passo: cosa scompare, cosa nasce, cosa cambia solo di attore. Generabile, ma
-tenerlo esplicito è utile perché è ciò che si legge in una revisione.
+Step by step: what disappears, what appears, what only changes actor. It can be generated,
+but keeping it explicit is useful because it is what gets read in a review.
 
 ---
 
-## Anti-pattern
+## Anti-patterns
 
-- **Descrivere il processo ufficiale invece di quello reale.** Se il §corrente sembra
-  ordinato, non l'hai osservato: l'hai chiesto a chi lo ha progettato.
-- **Sistemi generici.** "Il CRM" non serve a nessuno. Serve quale tabella.
-- **Nessuna riga in "cosa resta manuale".** Significa che stai promettendo automazione
-  totale, e non è vero.
-- **Aggiornare il §target senza aggiornare il §delta.** Il delta diventa una bugia
-  silenziosa, che è peggio di un delta assente.
+- **Describing the official process instead of the real one.** If §current looks tidy, you
+  did not observe it: you asked the person who designed it.
+- **Generic systems.** "The CRM" is no use to anyone. What is needed is which table.
+- **No rows in "what stays manual".** It means you are promising total automation, and it
+  is not true.
+- **Updating §target without updating §delta.** The delta becomes a silent lie, which is
+  worse than no delta at all.
