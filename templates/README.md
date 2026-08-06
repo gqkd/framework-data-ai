@@ -4,12 +4,10 @@ Un file per artefatto. Copia, rinomina secondo la convenzione, compila. Ogni tem
 contiene gli **anti-pattern** in fondo: sono la parte più utile, perché descrivono i modi
 concreti in cui quel documento diventa inutile.
 
-`OPEN.md` non ha template: il file alla radice del repository è già sia struttura sia
-istanza, e duplicarlo violerebbe la regola della fonte unica.
-
 | File | Artefatto | Classe | Naming |
 |---|---|---|---|
 | `AGENTS.md` | Control plane per agenti | vivente | `AGENTS.md` |
+| `OPEN.md` | Decisioni aperte e problemi noti | vivente | `OPEN.md` |
 | `PLATFORM.md` | Architettura del substrato condiviso | vivente | `PLATFORM.md` |
 | `product.yaml` | Manifest prodotto | vivente, in parte generato | `products/<p>/product.yaml` |
 | `COMMITMENTS.md` | Impegni commerciali | vivente | `COMMITMENTS.md` |

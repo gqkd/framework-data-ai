@@ -82,6 +82,13 @@ a un file di questo repository.
 Per il resto il testo è neutro: nomi di prodotto e slug di decisione negli esempi sono
 segnaposto. Un secondo progetto può adottarlo così com'è.
 
+## Licenza
+
+[Apache License 2.0](LICENSE). Permissiva: puoi usarlo, modificarlo e ridistribuirlo anche
+in contesti commerciali. L'unico obbligo che conta per un framework di documentazione è il
+§4.b — se ridistribuisci una versione modificata, devi dichiarare che l'hai modificata. Chi
+legge una dottrina deve sapere se sta leggendo questa o una sua variante.
+
 ## In una riga
 
 Sette documenti viventi che devono essere veri, una ventina che si scrivono una volta e non

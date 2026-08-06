@@ -1,0 +1,10 @@
+Framework di documentazione per progetti Data & AI
+Copyright 2026 Giulio Quaglia
+
+Distribuito secondo i termini della Apache License, Version 2.0 — vedi LICENSE.
+
+Il framework è fatto per essere adottato e adattato: copia i template, cambia le regole
+che non ti servono, togli le sezioni che non useresti. La sola cosa che la licenza ti
+chiede in cambio, se ridistribuisci una versione modificata, è di dichiarare che l'hai
+modificata (§4.b) — perché chi legge una dottrina deve sapere se sta leggendo questa o
+una sua variante.

@@ -22,7 +22,6 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent
 VALIDATE = ROOT / "skills" / "framework-audit" / "scripts" / "validate.py"
 TEMPLATES = ROOT / "templates"
-FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
 
 def _load_validate():
@@ -63,24 +62,13 @@ def day_one(tmp_path: Path) -> Path:
     """Il set del giorno uno di FRAMEWORK.md §10, compilato."""
     (tmp_path / "decisions").mkdir()
 
-    for name in ["ING.md", "COMMITMENTS.md", "GLOSSARY.md", "AGENTS.md", "PLATFORM.md"]:
+    for name in ["ING.md", "COMMITMENTS.md", "GLOSSARY.md", "AGENTS.md", "PLATFORM.md",
+                 "OPEN.md"]:
         src = TEMPLATES / name
         if not src.exists():
             pytest.fail(f"manca templates/{name}: è prescritto dal set del giorno uno")
         (tmp_path / name).write_text(_fill(src.read_text(encoding="utf-8"), "prodotto-a"),
                                      encoding="utf-8")
-
-    # `OPEN.md` è l'unico del set del giorno uno che non ha un template, ed è una
-    # scelta dichiarata in `templates/README.md`. Finché framework e progetto stavano
-    # nello stesso repository la fixture leggeva l'`OPEN.md` vero: comodo, e sbagliato
-    # — l'esito di questo test cambiava quando qualcuno modificava un registro di
-    # lavoro, per ragioni che col framework non c'entravano.
-    src = FIXTURES / "OPEN.md"
-    if not src.exists():
-        pytest.fail("manca tests/fixtures/OPEN.md: OPEN è prescritto dal set del giorno uno "
-                    "e non ha un template da cui costruirlo")
-    (tmp_path / "OPEN.md").write_text(_fill(src.read_text(encoding="utf-8"), "prodotto-a"),
-                                      encoding="utf-8")
 
     for p in PRODUCTS:
         d = tmp_path / "products" / p
