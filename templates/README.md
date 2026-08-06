@@ -8,7 +8,7 @@ they describe the concrete ways that document becomes useless.
 |---|---|---|---|
 | `AGENTS.md` | Control plane for agents | living | `AGENTS.md` |
 | `OPEN.md` | Open decisions and known issues | living | `OPEN.md` |
-| `PLATFORM.md` | Shared substrate architecture | living | `PLATFORM.md` |
+| `PLATFORM.md` | Shared substrate architecture, only if you have one | living | `PLATFORM.md` |
 | `product.yaml` | Product manifest | living, partly generated | `products/<p>/product.yaml` |
 | `COMMITMENTS.md` | Commercial commitments | living | `COMMITMENTS.md` |
 | `GLOSSARY.md` | Glossary and metrics | living | `GLOSSARY.md` |

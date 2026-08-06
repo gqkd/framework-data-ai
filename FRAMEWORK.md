@@ -96,8 +96,9 @@ maintained: `PRB` `HYP` `EVD` `CMP` `DFB` `SD`
 **Product artifacts.** They live as long as the system and accumulate contributions from
 different initiatives: `PBR` `WF` `ARC` `EVP` `DC` `RB` `RMP` `RSK` `LOG`
 
-**Platform artifacts.** Shared across every product: `PLATFORM.md` `GLOSSARY.md`
-`DEC-ADR` (single register) `OPEN.md`
+**Platform artifacts.** Shared across every product: `GLOSSARY.md` `DEC-ADR` (single
+register) `OPEN.md` `COMMITMENTS.md`. And `PLATFORM.md`, but only if you decided to build a
+shared substrate: see §9.
 
 The folder structure follows from this:
 
@@ -107,7 +108,7 @@ repo/
 ├── OPEN.md                      open decisions and known issues
 ├── COMMITMENTS.md               what has been promised commercially
 ├── GLOSSARY.md                  single, shared by every product
-├── PLATFORM.md                  architecture of the shared substrate
+├── PLATFORM.md                  only if you share a substrate. See §9
 ├── corpus/                      business documents covering more than one product
 ├── decisions/                   single DEC-NNN register (product + architecture)
 │   ├── DEC-001-decision-slug.md
@@ -122,7 +123,7 @@ repo/
     │   ├── corpus/              business documents about this product
     │   ├── product.yaml         machine-readable manifest
     │   ├── PBR.md               product brief (living)
-    │   ├── ARC.md               delta against PLATFORM.md
+    │   ├── ARC.md               delta against PLATFORM.md, or the whole architecture
     │   ├── WF.md                workflow: §current §target §delta
     │   ├── RMP.md               progressive roadmap
     │   ├── IMP.md               plan for the current cycle
@@ -248,7 +249,7 @@ One template for each in `templates/`. Every template contains the anti-patterns
 | `OPEN` | Open decisions and known issues | living | platform | day one |
 | `COMMITMENTS` | Commercial commitments made | living | platform | day one |
 | `GLOSSARY` | Glossary and metric dictionary | living | platform | day one |
-| `PLATFORM` | Architecture of the shared substrate | living | platform | day one |
+| `PLATFORM` | Architecture of the shared substrate | living | platform | **only if** a shared substrate is decided |
 | `product.yaml` | Product manifest | living, partly generated | product | day one |
 | `PBR` | Product brief | living | product | F4 |
 | `PRB` | Problem statement | immutable | initiative | F1 |
@@ -369,35 +370,64 @@ It is not maintained by hand: it is generated from the front matter. See `SKILLS
 
 ## 9. Managing more than one product
 
-**If you have one product, skip this section.** Nothing in it applies, and applying it
-anyway produces a `PLATFORM.md` that describes a substrate shared with nobody.
+**If you have one product, skip this section.** Everything below is about what several
+products share, and one product shares nothing with anyone.
 
-It applies when two conditions hold together: the products are meant to be complementary,
-and the team is small relative to their number. Both matter, and the second is the one
-people forget. With one team per product the binding constraint is the quality of the
-abstraction, because a bad boundary costs coordination between groups. With fewer people
-than products it is the **maintenance surface**: divergent codebases are a permanent cost
-paid by the same people, every week, forever.
+### Two questions, not one
 
-Four rules:
+They get collapsed constantly, and collapsing them is what produces a shared substrate
+nobody decided to build.
+
+> **Do you have more than one product?** That is a fact. It decides the folder structure.
+>
+> **Do those products share a technical substrate?** That is a **decision**. It decides
+> whether `PLATFORM.md` exists at all.
+
+N products managed in the same framework with nothing technical in common is a perfectly
+normal configuration, and the framework supports it as it stands: one `GLOSSARY.md`, one
+`decisions/`, one `OPEN.md`, one `COMMITMENTS.md`, and a full `ARC` per product. No
+`PLATFORM.md`, because there is no platform.
+
+**Do not create `PLATFORM.md` in advance.** An empty file waiting to be filled collects
+whatever has not found a home yet, and the substrate ends up defined by what accumulated in
+it rather than by a decision. If the question is open, it belongs in `OPEN.md` as an entry
+with its cost to reverse, not as an empty document.
+
+### If there is more than one product
+
+Three rules, and they hold whether or not you share a substrate.
 
 1. **One `GLOSSARY.md` only.** It is the file where complementarity is either defined or
    lost. If the same concept has two names in two products, the complementarity is already
-   broken and nobody has noticed.
+   broken and nobody has noticed. This is the rule that matters most when the products
+   share *nothing* technical, because then the glossary is the only thing holding them
+   together.
 2. **One `decisions/` register only**, with a `products` field. Cross-product decisions are
    the most expensive ones and in separate registers they would end up in the register of
    whichever product you were working on that day.
-3. **`PLATFORM.md` + one short `ARC` per product.** Not one architecture per product: one
-   shared substrate (identity, data access, deploy, observability, conventions) plus the
-   domain delta of each.
-4. **The data contracts *between* your own products come before the ones facing outward.**
+3. **The data contracts *between* your own products come before the ones facing outward.**
    They are contracts with yourself six months from now, and they are the ones you will
    break in silence.
 
-The exact scope of the shared substrate is a decision, not a given. Until it is taken it
-belongs in `OPEN.md` as an open entry, with the default currently in force written next to
-it: absent a decision, the default tends to become "whatever ended up in the shared folder",
-which is a scope defined by accumulation rather than by choice.
+### If, and only if, you decide to share a substrate
+
+A fourth rule joins them, and `PLATFORM.md` is born with the decision that creates it, not
+before.
+
+4. **`PLATFORM.md` plus one short `ARC` per product.** Not one full architecture per
+   product: one shared substrate (identity, data access, deploy, observability,
+   conventions) plus the domain delta of each. Without `PLATFORM.md` the `ARC` files are
+   full architectures and there is no delta to speak of.
+
+The condition that makes the decision worth taking is not the number of products. It is the
+ratio between people and products. With one team per product the binding constraint is the
+quality of the abstraction, because a bad boundary costs coordination between groups, and a
+shared substrate can easily cost more than it saves. With fewer people than products it is
+the **maintenance surface**: divergent codebases are a permanent cost paid by the same
+people, every week, forever, and that is when sharing starts to pay.
+
+Whichever way you decide, write the `DEC`. A substrate that exists because nobody decided
+against it is the expensive case.
 
 ---
 
@@ -441,9 +471,10 @@ Before writing a line of code, in this order:
 7. `PBR.md`, one per product. When you enter through "already sold", the definition of the
    product exists only inside sales pitches. Writing it down is the first act, not a
    maintenance artifact.
-8. `PLATFORM.md`, only if there is more than one product: even just with empty sections and
-   the decisions deferred to `OPEN.md`. With a single product the substrate is the product,
-   and the file would describe a boundary that does not exist.
+8. `PLATFORM.md` is **not** in the day one set. It is born with the decision to share a
+   substrate, and that decision does not have to be taken now. Until it is, the question
+   lives in `OPEN.md` as an entry with its cost to reverse. See §9 for why an empty
+   `PLATFORM.md` created in advance is worse than no file at all.
 
 Then, **when the thing to document exists** and not before:
 

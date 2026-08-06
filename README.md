@@ -58,24 +58,19 @@ What this costs, stated plainly rather than discovered later:
 is the starting point for the rebuild, and every design detail in it survived the deletion
 on purpose.
 
-## Provenance
+## One product or several
 
-Extracted on 2026-08-06 from a repository where it was mixed with its first instance, a
-suite of three complementary products built by one person. The history stayed with that
-instance, which holds nearly all of its content; here it starts from a snapshot.
+Both work, and the framework does not push you toward either.
 
-The text no longer carries that shape. Product names, decision slugs and identifiers in
-the examples are placeholders, and the sections that used to assume exactly three products
-now state the condition instead of the number. `FRAMEWORK.md §9` is the one place where
-the multi-product case is discussed, and it opens by telling you to skip it if you have a
-single product.
+With **one product** you get one `GLOSSARY.md`, one `decisions/`, one `OPEN.md`, and the
+product's own artifacts. Skip `FRAMEWORK.md §9` entirely and do not create `PLATFORM.md`.
 
-**What survives from the first instance, and is worth knowing:** the framework is shaped by
-having been written for a project that was **sold before it was built**. That is why
-`COMMITMENTS.md` is in the day one set, why `ING.md` exists at all, and why `FRAMEWORK.md
-§10` treats "the idea is already sold" as a first class entry point with its own reverse
-discovery path. If you are starting from an unsold idea, those parts will feel
-disproportionate. They are: use the entry assessment and skip them.
+With **several products** the shared files stay single (that is the point of them) and each
+product gets its own folder. Whether those products also share a technical substrate is a
+**separate decision**, not a consequence of there being more than one: N products with
+nothing in common but a glossary is a normal configuration. `PLATFORM.md` exists only if
+you decide to build a substrate, and creating it in advance is how you end up with one you
+never chose. `FRAMEWORK.md §9` covers both cases.
 
 ## License
 

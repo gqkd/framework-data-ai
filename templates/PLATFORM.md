@@ -13,21 +13,41 @@ classification: internal
 
 # Shared substrate architecture
 
+> **Do not create this file until you have decided to share a substrate.**
+>
+> Having several products does not require one. N products managed in the same framework
+> with nothing technical in common is a normal configuration: one `GLOSSARY.md`, one
+> `decisions/`, one `OPEN.md`, and a full `ARC` each. That is not a degraded setup, it is a
+> different one, and often the right one.
+>
+> An empty `PLATFORM.md` created in advance is worse than no file. It collects whatever has
+> not found a home yet, and the substrate ends up defined by what accumulated in it instead
+> of by a decision. While the question is open it belongs in `OPEN.md` as an entry with its
+> cost to reverse. If the answer turns out to be no, delete this file and record that `DEC`
+> too: a substrate that exists because nobody decided against it is the expensive case.
+
 **Question:** what is common to the products, and with what guarantees can each of them
 rely on it?
 
 **Why it exists.** Several products built by a team smaller than their number do not have
-the problem one team per product has. They have the problem of maintenance surface. This document is the answer: one
-substrate described once, plus a short `ARC` per product that declares only the **delta**.
-Without it, every `ARC` redescribes identity, deployment and observability, the
-descriptions drift apart, and the drift surfaces at the first refactor.
+the problem one team per product has. They have the problem of maintenance surface. This
+document is the answer: one substrate described once, plus a short `ARC` per product that
+declares only the **delta**. Without it, every `ARC` redescribes identity, deployment and
+observability, the descriptions drift apart, and the drift surfaces at the first refactor.
 
-**It is born on day one**, even with empty sections and its decisions deferred to
-`OPEN.md`. This is unlike `ARC`, which is born in F5 with the first line of code: here the
-empty sections are information, because they say what has not been decided yet.
+That reasoning has a condition attached, and it is the ratio between people and products,
+not their number. With one team per product a shared substrate can easily cost more in
+coordination than it saves in duplication. With fewer people than products it starts to
+pay.
 
-> The exact scope is an open decision. While it is open, name the `OD-NNN` entry here, and
-> let this document list the candidates rather than treat them as assigned.
+**It is born with the decision that creates it**, not on day one, and from that moment it
+can carry empty sections whose contents are deferred to `OPEN.md`. This is unlike `ARC`,
+which is born in F5 with the first line of code: here the empty sections are information,
+because they say what has not been decided yet.
+
+> The exact scope is a further decision, separate from the one to have a substrate at all.
+> While it is open, name the `OD-NNN` entry here, and let this document list the candidates
+> rather than treat them as assigned.
 
 ## Scope
 

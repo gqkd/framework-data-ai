@@ -20,9 +20,10 @@ classification: internal
 implementation diverge long before that. The `verified_against` field records the commit
 this document was last verified against.
 
-**Structure when there is more than one product:** this file holds the **delta** against
-`PLATFORM.md`.
-What is shared is documented once, there.
+**If the products share a substrate:** this file holds the **delta** against `PLATFORM.md`.
+What is shared is documented once, there. **If there is no `PLATFORM.md`**, and there does
+not have to be, this file is the whole architecture of the product and nothing here is a
+delta.
 
 ## Components
 
@@ -65,7 +66,7 @@ List of the relevant `DEC`. Links only: **how it is** here, **why** in the `DEC`
 - **Describing the system as designed instead of the one that was built.** This one is
   living: if it does not match the code, it is harmful, not incomplete.
 - **No data flow.** See above.
-- **Duplicating `PLATFORM.md`.** If a section is identical in every `ARC`, it does not
-  belong in the `ARC`.
+- **Duplicating `PLATFORM.md`, where one exists.** If a section is identical in every
+  `ARC`, it does not belong in the `ARC`.
 - **`verified_against` never updated.** It is the only way to know how far you can trust
   this.
