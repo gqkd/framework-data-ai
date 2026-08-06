@@ -1,0 +1,211 @@
+# Check catalog and default severities
+#
+# Every check the validator knows how to run is listed here, with what it costs to be
+# wrong. Turning one on is editing one line, which is the point: the rule the framework
+# gives itself is to add a check when the failure it prevents has already happened once,
+# and that rule is unaffordable if each check is a commit of code.
+#
+# Levels:
+#   error   printed and blocks: the validator exits 1
+#   warn    printed, does not block
+#   off     not run at all
+#
+# A project overrides any of these in `framework.yaml` at its own root:
+#
+#     checks:
+#       LC002: error        # we have been bitten by a stale living document
+#       XP003: off          # we only have one product
+#
+# WHY ALMOST EVERYTHING STARTS AT `warn`. Twelve checks turned on before the artifacts
+# exist are a factory built before the product: they slow you down without having
+# prevented anything yet, and the predictable reaction is to turn them all off at once.
+# Two are `error` on day one, and they are the two `SKILLS.md §9` names: front matter that
+# parses, and front matter that means something.
+
+stale_days: 90        # after how long a living document counts as unreviewed
+
+checks:
+
+  # ── Front matter ───────────────────────────────────────────────────────────
+  FM001:
+    level: error
+    title: front matter missing or unparseable
+    prevents: >
+      A file with no front matter is invisible to everything else here: no class, no
+      status, no place in the graph. It reads as prose to an agent, and prose has no
+      maintenance regime.
+
+  FM002:
+    level: error
+    title: front matter does not validate against the type's schema
+    prevents: >
+      The wrong `lifecycle` on a type is the expensive one: an immutable declared living
+      invites somebody to edit it, and a living one declared immutable freezes a document
+      that has to stay current. Also catches a `status` outside its enumeration, a missing
+      `scope` on a decision, and a required field left holding its template placeholder.
+
+  FM003:
+    level: warn
+    title: unknown artifact_type
+    prevents: >
+      A typo in `artifact_type` silently exempts a document from every type specific
+      check. It is not an error because a new template legitimately arrives before the
+      registry knows about it.
+
+  # ── Sections ───────────────────────────────────────────────────────────────
+  SEC001:
+    level: warn
+    title: mandatory section marker missing
+    prevents: >
+      A `CHG` with no "what must NOT change" is the most expensive defect in the
+      framework: an agent optimises what you asked for and breaks what you did not name.
+      Checked on the `<!-- section: id -->` markers, not on headings, so rewording or
+      translating a title does not break it.
+
+  # ── Maintenance regime ─────────────────────────────────────────────────────
+  LC001:
+    level: warn
+    title: living document without last_review
+    prevents: >
+      Without the field there is no way to notice the document has gone stale, and a stale
+      living document is worse than an absent one because it gets read as current.
+
+  LC002:
+    level: warn
+    title: living document not reviewed for longer than stale_days
+    prevents: >
+      The same failure, arrived at slowly. Raise this to `error` the first time a decision
+      is taken on a document nobody had reread.
+
+  LC003:
+    level: warn
+    title: immutable document carrying last_review
+    prevents: >
+      An immutable is not reviewed, it is superseded. The field suggests a maintenance
+      regime the document does not have, and invites the edit that breaks it.
+
+  LC004:
+    level: warn
+    title: last_review is not an instant
+    prevents: >
+      A half filled `2026-07-29 HH:MM` presented as midnight would make a document that
+      was never reviewed look reviewed. Also catches the template placeholder surviving
+      into a real repository.
+
+  # ── Identity and references ────────────────────────────────────────────────
+  ID001:
+    level: warn
+    title: duplicate id
+    prevents: >
+      Two documents with one id means every reference to it is ambiguous, and the
+      traceability chain silently picks one.
+
+  REF001:
+    level: warn
+    title: derives_from points at something that does not exist
+    prevents: >
+      A broken chain reads as an absent one. The document appears to descend from nothing,
+      which is exactly what an undocumented decision looks like.
+
+  REF002:
+    level: warn
+    title: supersedes points at something that does not exist
+
+  REF003:
+    level: warn
+    title: superseded document still carries a live status
+    prevents: >
+      Two documents both claiming to be current, one of which was replaced. An agent
+      reading the old one decides on a decision that was already overturned.
+
+  REF004:
+    level: warn
+    title: cycle in the supersedence chain
+
+  # ── Discipline ─────────────────────────────────────────────────────────────
+  RLM001:
+    level: warn
+    title: release manifest with an empty rollback.target
+    prevents: >
+      The manifest is useless at the one moment it exists for.
+
+  RLM002:
+    level: warn
+    title: rollback procedure declared untested
+    prevents: >
+      An untested rollback procedure is not a procedure, it is an intention.
+
+  OD001:
+    level: warn
+    title: no open register in the repository
+    prevents: >
+      Without `OPEN.md` an agent has no way to know what has not been decided, and will
+      fill the gap with a plausible assumption and implement it with conviction. It is the
+      single most damaging thing an agent does in a documented repository.
+
+  OD002:
+    level: warn
+    title: open decision already closed by a DEC that derives from it
+    prevents: >
+      The register says something is open that is decided, so an agent stops to ask
+      permission for a choice already made. Only a `DEC` that names the entry in
+      `derives_from` counts as closing it: a `DEC` cites an open entry for three different
+      reasons and treating all three as closure would make this warning fire constantly,
+      which teaches people to dismiss it.
+
+  OD003:
+    level: warn
+    title: high cost to reverse and no default in force
+    prevents: >
+      The most expensive combination there is. It has to be decided even on incomplete
+      information, because the cost of waiting exceeds the cost of getting it wrong.
+      Reads the prose of the entry, so it is coupled to the wording of the template: see
+      the note at the bottom of this file.
+
+  # ── Across products ────────────────────────────────────────────────────────
+  XP001:
+    level: warn
+    title: more than one glossary
+    prevents: >
+      The glossary is where the complementarity between products is either defined or
+      lost. Two of them means the same concept already has two names and nobody noticed.
+
+  XP002:
+    level: warn
+    title: data contract consumer is not a known product
+    prevents: >
+      Either the consumer is external and belongs in prose, or it is a typo and the
+      contract has no reader.
+
+  XP003:
+    level: warn
+    title: product with no product brief
+    prevents: >
+      The definition of the product exists only in somebody's head or in a sales pitch.
+
+  # ── Not implemented, and why ───────────────────────────────────────────────
+  CHG001:
+    level: "off"    # quoted: YAML 1.1 reads a bare off as false
+    title: change contract declaring AI impact without citing an EVR
+    prevents: >
+      A change to a model, a prompt or a retrieval index without a new evaluation report.
+    blocked_by: >
+      The recovered version read the body prose, looking for "impatto ai" next to "sì". It
+      would need the `ICG` routing as a structured field on the `CHG` front matter, which
+      does not exist yet. Matching prose is what point 3 removed everywhere else, and
+      putting it back for two checks would be reintroducing the failure on purpose.
+
+  CHG002:
+    level: "off"    # quoted: YAML 1.1 reads a bare off as false
+    title: change contract declaring architecture impact without citing a DEC
+    blocked_by: >
+      Same as CHG001.
+
+# ON THE PROSE COUPLED CHECKS. OD002 and OD003 read the body of `OPEN.md`: the `### OD-NNN`
+# headings, and the "Cost to reverse" and "Default in force" lines inside each entry. That
+# is the same fragility the section markers removed, one level down, at the level of fields
+# inside an entry rather than of sections inside a file. It has not been solved here
+# because the fix is not the same one: an entry is not a section, and marking every field
+# of every entry would cost more than the check is worth today. If `OPEN.md` gets reworded
+# or translated, these two go quiet without failing. That is why they are `warn` and not
+# `error`: a check that can silently stop working must not be one that blocks a merge.

@@ -13,8 +13,11 @@ decisions, products, initiatives and corpus, live in that project's repository, 
 | **`FRAMEWORK.md`** | The reference document. Start here |
 | `framework-flow.mermaid` | The lifecycle with its gates. Importable into draw.io: *Arrange → Insert → Advanced → Mermaid* |
 | `Framework.drawio` | An older drawing of the same lifecycle, kept for editing in draw.io |
-| `SKILLS.md` | The five skills that operate the framework. None is built yet |
+| `SKILLS.md` | The five skills that operate the framework. One has its script, none has its wrapper |
 | `templates/` | One template per artifact, each with its anti-patterns at the bottom |
+| `schemas/` | The artifact catalog and what each type is allowed to be. `artifact-types.yaml` is the source; `generate.py` projects it into the JSON Schemas, into `FRAMEWORK.md §7` and into `templates/README.md` |
+| `skills/framework-audit/` | The gate. `SKILL.md` to ask for it, `scripts/validate.py` to run it, `checks.yaml` for what it checks |
+| `tests/selfcheck.py` | The framework checked against itself. Runs in CI |
 
 ## Reading order
 
@@ -35,28 +38,82 @@ path:
 ~/projects/my-project             the artifacts
 ```
 
-Nothing here needs installing today, because there is nothing here to run. See the next
-section for why.
+## The gate
 
-## There is no tooling yet
+```bash
+pip install -r requirements.txt
+python skills/framework-audit/scripts/validate.py --root ../my-project
+python skills/framework-audit/scripts/validate.py --root ../my-project --emit-index
+```
 
-Two skills used to live here, `framework-capture` and `framework-audit`, the second of
-which carried the validator that acted as the merge gate. Both have been removed, together
-with their scripts and the test suite, because they are being rebuilt from scratch.
+Twenty two checks, catalogued in `skills/framework-audit/checks.yaml`, each with the
+failure it prevents written next to it. Two block on day one and they are the two
+`SKILLS.md §9` names: front matter that parses, and front matter that means something.
+Everything else warns. Two are `off`, because they would need input that does not exist
+yet, and the catalog says which and why.
 
-What this costs, stated plainly rather than discovered later:
+A project raises or lowers any of them in its own `framework.yaml`:
 
-- **No gate.** Nothing checks front matter, artifact ids, dangling references, staleness of
-  living documents, or the discipline rules. Every one of those is currently enforced by
-  attention alone.
-- **No generated indices.** `decisions/INDEX.md` and `TRACEABILITY.md` were generated from
-  front matter. Until the validator exists again they are written by hand, which means they
-  will be wrong, which is worse than absent because a generated file is one nobody rereads.
-- **No corpus extraction.** Turning presentations and PDFs into sourced claims is manual.
+```yaml
+checks:
+  LC002: error      # a decision was taken on a document nobody had reread
+  XP003: off        # we only have one product
+```
 
-`SKILLS.md` describes what the five skills should do and in which order to build them. It
-is the starting point for the rebuild, and every design detail in it survived the deletion
-on purpose.
+That one line is the whole mechanism behind the rule this framework gives itself: **turn a
+check on when the failure it prevents has already happened once, and not before.** If
+turning one on costs a commit of code, it does not happen, and twelve checks switched on in
+advance get switched off together the first time they are in the way.
+
+`--emit-index` regenerates `decisions/INDEX.md` and `TRACEABILITY.md` from the front
+matter, and `--emit-index --check` exits non-zero when what is on disk has drifted, which
+is the only thing that keeps a generated file from quietly becoming a hand written one.
+
+In a project's CI, one line:
+
+```yaml
+- run: python ../framework-data-ai/skills/framework-audit/scripts/validate.py --root .
+```
+
+How the project gets hold of the framework in CI is the part that is not solved. See below.
+
+### Where the rules live, and why none of them are in the validator
+
+| File | Holds |
+|---|---|
+| `schemas/artifact-types.yaml` | the catalog: what each type is, may be, must carry, and where it goes |
+| `schemas/framework/<type>/v1.json` | the front matter check itself, generated from the above |
+| `skills/framework-audit/checks.yaml` | which checks run, at what severity, and what each prevents |
+
+The catalog tables in `FRAMEWORK.md §7` and in `templates/README.md` are generated from the
+registry too. They used to be written by hand in both places and had already drifted: `DC`
+was `living, versioned` in one and `living` in the other, and so were `EVP` and `IMP`. The
+framework broke its own single rule inside its own reference document, within five commits
+of that rule being written.
+
+The front matter check *is* the published schema, rather than a Python reimplementation of
+it. One enforcement path and not two: a schema an editor reads and a schema CI enforces
+cannot disagree when they are the same file.
+
+`tests/selfcheck.py` closes the last hole. The validator skips `templates/` and `schemas/`
+for reasons written down in the registry, and the cost is that nothing was checking the
+definition everything else is checked against: that is how `templates/RLM.yaml` went
+without `status` and `owners` for as long as it did. The self check runs in CI here.
+
+## What still does not exist
+
+- **Four of the five skills.** `framework-capture`, `framework-init`, `framework-change`
+  and `framework-release` are specified in `SKILLS.md` and not built. `framework-audit` is.
+- **Corpus extraction.** Turning presentations and PDFs into sourced claims is manual.
+- **`--emit-manifest`.** The `GENERATED` sections of `product.yaml` are still written by
+  hand, and the template says so at the bottom, where somebody will read it.
+- **Versioning and distribution.** A project refers to the framework by path. There is no
+  `framework_version`, no way to pin one, and no migration note when a rename lands. With
+  one project this is invisible. With the second it is the first thing that breaks.
+- **Two checks that need structured input.** `CHG001` and `CHG002` want the `ICG` routing
+  as a field on the `CHG` front matter rather than as prose in its body. The recovered
+  versions matched prose, and matching prose is the fragility the section markers exist to
+  remove. They stay `off` until the field exists.
 
 ## One product or several
 

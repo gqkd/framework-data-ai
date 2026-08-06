@@ -6,7 +6,9 @@ schema: framework/release-manifest/v1
 artifact_type: release-manifest
 id: RLM-NNN
 lifecycle: immutable
-product: product-a
+status: active
+generated_by: framework-release   # nobody writes this file: `owners` would be fiction
+products: [product-a]
 release_note: REL-NNN
 created: YYYY-MM-DDTHH:MM:SSZ
 

@@ -1,0 +1,487 @@
+# Artifact type registry
+#
+# WHAT THIS IS. One machine-readable record of what each artifact type is allowed to be:
+# its maintenance class, its legal `status` values, the front matter fields it requires,
+# and the sections its body must contain.
+#
+# WHY IT EXISTS AS A FILE. FRAMEWORK.md §8 states that `status` and `artifact_type` are
+# defined by "the artifact's own schema". That schema had no home. The 28 `schema:`
+# identifiers carried by the templates point at nothing, and the values themselves lived
+# only inside `skills/framework-audit/scripts/validate.py`, deleted in commit acaded9.
+# Three templates out of 29 state their enum in the body (CHG, DEC-ADR, HYP). The other
+# 26 stated it nowhere at all. This file is where they now live.
+#
+# WHERE IT CAME FROM. Recovered from `acaded9^:skills/framework-audit/scripts/validate.py`
+# and checked field by field against the current templates. Every value here was verified
+# to be consistent with the template that carries it, with one exception recorded at the
+# bottom of this file.
+#
+# WHAT IS GENERATED FROM IT. `generate.py` writes three things, and `--check` exits
+# non-zero when any of them has drifted from this file:
+#
+#   framework/<artifact_type>/v1.json   one JSON Schema per type, which is what makes the
+#                                       `schema:` identifier each template carries resolve
+#   FRAMEWORK.md §7                     the artifact catalog
+#   templates/README.md                 the same catalog, with the naming conventions
+#
+# The last two were written by hand, in two places, and had already drifted: `DC` was
+# "living, versioned" in one and "living" in the other, and so were `EVP` and `IMP`. The
+# framework broke its own single rule inside its own reference document within five
+# commits. Do not edit any of the three: edit this, then regenerate.
+#
+# The schema covers the front matter only. `sections` stays here because it is about the
+# markdown body and no JSON Schema can express it, and so does `scan`, which is about
+# which files get looked at in the first place. Passing the schema is not passing the
+# gate.
+#
+# The schema identifier of a type is `framework/<artifact_type>/v1`. It is derivable from
+# the key, so it is not repeated on every entry.
+
+version: 1
+
+lifecycles: [living, immutable, append-only]
+
+# Required in the front matter of every artifact, whatever its type.
+base_required: [schema, artifact_type, lifecycle, status, owners, created]
+
+# ON `generated`. A type marked `generated: true` is written by a tool and not by a
+# person, and it swaps `owners` for `generated_by`, which names the tool. The swap is the
+# whole point. `owners` on a file nobody wrote is fiction, and a field naming somebody to
+# ask is worse than an absent one when the honest answer is "nobody, it was regenerated".
+# `generated_by` says something true instead, and says the thing an agent needs before it
+# starts editing: do not edit this, regenerate it.
+#
+# `release-manifest` is the only one today. `decisions/INDEX.md` and `TRACEABILITY.md`
+# will be next, and they carry no front matter at all right now.
+
+# ON `products`. The value `exactly-one` makes the field required and one element long.
+# It is declared only on the two types whose template used to carry `product:` in the
+# singular, which said the same thing through a field name rather than through a
+# constraint: a release belongs to one product, a manifest describes one product. The
+# constraint survived the rename and became checkable. Everywhere else `products` stays
+# unconstrained, and that is deliberate rather than an omission: a `DEC` with
+# `scope: platform` lists every product there is.
+
+# Values that mean "not filled in". A required field carrying one of these is missing,
+# not present: a template placeholder that reaches a real repository reads as a real
+# value to anything that does not know the template.
+#
+# The deleted validator enforced only the first two, and only on the fields listed under
+# `required` / `required_if_active`. The rest are recorded here as the sentinels the
+# templates actually use. Whether the validator rejects all of them is a decision for the
+# validator, not a fact recovered from it.
+placeholders:
+  enforced: [COMMIT_HASH, SHA_OF_THE_EVP_FILE]
+  other: [NAME, NNN, "YYYY-MM-DD", "YYYY-MM-DD HH:MM", "YYYY-MM-DDTHH:MM:SSZ"]
+
+# The identifier prefixes the framework uses. Not all of them are files, and that is the
+# reason this list exists: `SIG`, `ANA` and `INC` live as entries inside a `LOG`, `OD` and
+# `KI` inside `OPEN.md`, `CMT` inside `COMMITMENTS.md`, `RSK` inside `RSK.md §state`. A
+# reference check that only knew about files would report every single one of them as
+# dangling, and a check that cries wolf on correct documents gets turned off within a week.
+id_prefixes: [PRB, HYP, EVD, CMP, DFB, SD, DEC, CHG, EVR, REL, RLM, DC,
+              SIG, ANA, INC, OD, KI, RSK, CMT, ING]
+
+# Types whose body *defines* identifiers instead of only citing them. Every append-only
+# artifact does this too, and that is derivable from `lifecycle`, so it is not repeated
+# here.
+inline_id_types: [open-register, risk-register, commitments, roadmap]
+
+# What a validator built on this registry should look at.
+scan:
+  # `corpus` is source material, not an artifact: those are the documents the business
+  # handed over, and we cannot correct front matter we did not write. `ingest-out` is the
+  # intermediate product of extraction, regenerable.
+  #
+  # `templates` is skipped for a reason worth stating, because it has already cost
+  # something: it is why `templates/RLM.yaml` has been missing two base-required fields
+  # with nothing noticing. See the note at the bottom of this file.
+  # Anything whose name begins with a dot is tooling: `.git`, `.github`, `.venv`,
+  # `.gitlab-ci.yml`. No framework artifact is ever hidden, so this is a rule rather than
+  # a list, and a list is what it was: the validator reported the CI workflow of this very
+  # repository as a document with no front matter, minutes after the workflow was written.
+  # A list of exclusions is always one entry behind whatever was added last.
+  skip_hidden: true
+
+  # `schemas` and `skills` hold the framework's own definition and tooling. They are
+  # metadata about artifacts, not artifacts, and this file is the proof: run the validator
+  # on the framework repository without this line and it reports its own registry as a
+  # document with no front matter.
+  skip_dirs: [templates, skills, schemas, corpus, ingest-out, node_modules, __pycache__]
+
+  # Documents that speak *about* the framework rather than being produced *by* it.
+  # `framework.yaml` is the project's own validator configuration: without this line the
+  # validator reads its own config as an artifact and reports it for having no front
+  # matter, which is the kind of first impression a tool does not recover from.
+  skip_files: [README.md, FRAMEWORK.md, SKILLS.md, INDEX.md, TRACEABILITY.md,
+               framework.yaml]
+
+# ON `sections`. A value here is the id of a marker in the body, not a heading:
+#
+#     <!-- section: what-must-not-change -->
+#     ### 2 · What must NOT change
+#
+# The marker carries the identity, the heading carries the prose. Reword the heading,
+# number it differently, translate it, and the check still stands. It is the same split
+# the front matter already makes between what a document *is* and what it *says*.
+#
+# It was not always so, and the reason is worth keeping. The deleted validator matched
+# each value as a substring of any heading from level 1 to 3, and its values were the
+# Italian headings of the day: "corrente", "stato", "Cosa NON deve cambiare". The
+# templates were translated into English in commit acaded9, which would have left every
+# section check matching nothing at all. It would not have failed loudly either: a check
+# that finds no section and a check that was never written look the same from outside.
+# Nobody noticed only because the validator was deleted in that same commit.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The types. Order preserved from the deleted file: initiative immutables first, then
+# the platform and product immutables, then the living artifacts, then append-only.
+# ─────────────────────────────────────────────────────────────────────────────
+
+types:
+
+  agents-control-plane:
+    id: AGENTS
+    name: Control plane for agents
+    axis: platform
+    born_in: day one
+    template: templates/AGENTS.md
+    path: AGENTS.md
+    lifecycle: living
+    status: [active]
+
+  open-register:
+    id: OPEN
+    name: Open decisions and known issues
+    axis: platform
+    born_in: day one
+    template: templates/OPEN.md
+    path: OPEN.md
+    lifecycle: living
+    status: [active]
+
+  commitments:
+    id: COMMITMENTS
+    name: Commercial commitments made
+    axis: platform
+    born_in: day one
+    template: templates/COMMITMENTS.md
+    path: COMMITMENTS.md
+    lifecycle: living
+    status: [active]
+
+  glossary:
+    id: GLOSSARY
+    name: Glossary and metric dictionary
+    axis: platform
+    born_in: day one
+    template: templates/GLOSSARY.md
+    path: GLOSSARY.md
+    lifecycle: living
+    status: [active]
+
+  platform-architecture:
+    id: PLATFORM
+    name: Architecture of the shared substrate
+    axis: platform
+    born_in: only if a shared substrate is decided
+    template: templates/PLATFORM.md
+    path: PLATFORM.md
+    lifecycle: living
+    status: [active, draft]
+    # The shared substrate. Unlike ARC it is born on day one, before the code exists, so
+    # it cannot require `verified_against`.
+
+  product-manifest:
+    id: product.yaml
+    name: Product manifest
+    axis: product
+    born_in: day one
+    template: templates/product.yaml
+    path: products/<p>/product.yaml
+    class_note: partly generated
+    lifecycle: living
+    status: [active, draft]
+    products: exactly-one
+
+  product-brief:
+    id: PBR
+    name: Product brief
+    axis: product
+    born_in: F4
+    template: templates/PBR.md
+    path: products/<p>/PBR.md
+    lifecycle: living
+    status: [active, draft]
+
+  problem-statement:
+    id: PRB
+    name: Problem statement
+    axis: initiative
+    born_in: F1
+    template: templates/PRB.md
+    path: initiatives/<i>/PRB-NNN.md
+    lifecycle: immutable
+    status: [active, superseded]
+
+  hypothesis:
+    id: HYP
+    name: Solution hypothesis
+    axis: initiative
+    born_in: F1
+    template: templates/HYP.md
+    path: initiatives/<i>/HYP-NNN.md
+    lifecycle: immutable
+    status: [open, confirmed, refuted, partially-confirmed]
+
+  workflow:
+    id: WF
+    name: Current / target / delta workflow
+    axis: product
+    born_in: F2
+    template: templates/WF.md
+    path: products/<p>/WF.md
+    lifecycle: living
+    status: [active, draft]
+    sections: [current, target, delta]
+
+  evidence-brief:
+    id: EVD
+    name: Problem evidence brief
+    axis: initiative
+    born_in: F2
+    template: templates/EVD.md
+    path: initiatives/<i>/EVD-NNN.md
+    lifecycle: immutable
+    status: [active, superseded]
+
+  competitor-comparison:
+    id: CMP
+    name: Competitor comparison
+    axis: initiative
+    born_in: F3
+    template: templates/CMP.md
+    path: initiatives/<i>/CMP-NNN.md
+    lifecycle: immutable
+    status: [active, superseded]
+
+  data-feasibility:
+    id: DFB
+    name: Data feasibility brief
+    axis: initiative
+    born_in: F3
+    template: templates/DFB.md
+    path: initiatives/<i>/DFB-NNN.md
+    lifecycle: immutable
+    status: [active, superseded]
+
+  solution-design:
+    id: SD
+    name: Solution design + MVA
+    axis: initiative
+    born_in: F4
+    template: templates/SD.md
+    path: initiatives/<i>/SD-NNN.md
+    lifecycle: immutable
+    status: [active, superseded]
+
+  evaluation-plan:
+    id: EVP
+    name: Evaluation plan
+    axis: product
+    born_in: F4
+    template: templates/EVP.md
+    path: products/<p>/EVP.md
+    class_note: frozen for RC
+    lifecycle: living
+    status: [active, draft]
+
+  data-contract:
+    id: DC
+    name: Data contract
+    axis: product
+    born_in: F4
+    template: templates/DC.md
+    path: products/<p>/contracts/DC-NNN.md
+    class_note: versioned
+    lifecycle: living
+    status: [draft, active, deprecated]
+    # `draft` is the interface designed and not yet agreed. It is needed because a DC is
+    # written *before* it is signed: it is the document where the decisions blocking the
+    # signature get collected. Both alternatives are worse. Declaring it `active` means
+    # telling consumers they can rely on it. Not writing it until it is closed means
+    # having nowhere to write down what is blocking it.
+
+  decision-record:
+    id: DEC-ADR
+    name: 'Decision record: product **or** architecture'
+    axis: platform
+    born_in: anywhere
+    template: templates/DEC-ADR.md
+    path: decisions/DEC-NNN-slug.md
+    lifecycle: immutable
+    status: [proposed, accepted, superseded]
+    enums:
+      # The field that determines the nature of the decision. One register, one
+      # numbering, one folder: separate registers would leave cross-product decisions,
+      # the most expensive ones, with no home.
+      scope: [product, architecture, platform]
+
+  architecture:
+    id: ARC
+    name: Current architecture
+    axis: product
+    born_in: F5
+    template: templates/ARC.md
+    path: products/<p>/ARC.md
+    lifecycle: living
+    status: [active, draft]
+    # `verified_against` is a commit, and at design time there is no commit to verify
+    # against: demanding it from `draft` would forbid designing before implementing,
+    # which is the order the framework prescribes. From `active` it is mandatory again,
+    # because an architecture declared current and unverified describes what somebody
+    # hopes was built, and at a glance it is indistinguishable from one that describes
+    # the real system.
+    required_if_active: [verified_against]
+
+  runbook:
+    id: RB
+    name: Runbook + SLO + monitoring
+    axis: product
+    born_in: F6
+    template: templates/RB.md
+    path: products/<p>/RB.md
+    lifecycle: living
+    status: [active, draft]
+
+  evaluation-report:
+    id: EVR
+    name: Evaluation report
+    axis: product
+    born_in: RG
+    template: templates/EVR.md
+    path: products/<p>/releases/EVR-NNN.md
+    lifecycle: immutable
+    status: [active]
+    # The three fields that make an evaluation report an evidence document rather than a
+    # claim: which version of the plan it was measured against, the hash proving that
+    # version was frozen before the results were seen, and the commit it ran on.
+    required: [evp_version, evp_hash, verified_against]
+
+  release-note:
+    id: REL
+    name: Release note (for humans)
+    axis: product
+    born_in: F6
+    template: templates/REL.md
+    path: products/<p>/releases/REL-NNN.md
+    lifecycle: immutable
+    status: [active]
+
+  release-manifest:
+    id: RLM
+    name: Release manifest (for machines)
+    axis: product
+    born_in: F6
+    template: templates/RLM.yaml
+    path: products/<p>/releases/RLM-NNN.yaml
+    lifecycle: immutable
+    status: [active]
+    generated: true
+    products: exactly-one
+
+  signal-log:
+    id: LOG
+    name: Signal log
+    axis: product
+    born_in: F5
+    template: templates/LOG.md
+    path: products/<p>/LOG.md
+    lifecycle: append-only
+    status: [active]
+
+  ingestion-register:
+    id: ING
+    name: Business corpus ingestion log
+    axis: platform
+    born_in: day one
+    template: templates/ING.md
+    path: ING.md
+    lifecycle: append-only
+    status: [active]
+    sections: [claims, contradictions, to-review]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Findings from the recovery
+#
+# Every one of the 28 types above was checked against the template that declares it. The
+# `status` value in each template's front matter is a member of that type's enum, and
+# every declared `lifecycle` matches. The recovery turned up two gaps, both in files the
+# validator had never looked at, because `templates/` is in `skip_dirs` and so the
+# validator has never checked the templates it validates everything else against. Both
+# are now closed, and the reasoning is recorded here because this repository has no
+# `decisions/` of its own:
+#
+# 1. `templates/RLM.yaml` carried neither `status` nor `owners`. `status` was added.
+#    `owners` was not: the file also carries `approvals`, with who, which role and when,
+#    so a second field answering "who is accountable for this release" would have put the
+#    same fact in two places inside one file. What no field said was that nobody writes
+#    this file at all, which is why `generated_by` took the slot instead. See the note on
+#    `generated` above.
+#
+# 2. `templates/RLM.yaml` and `templates/product.yaml` used `product:` in the singular
+#    while every other artifact used `products:` as a list, and the cross-product checks
+#    read the plural. The product manifest, the one file that most authoritatively says a
+#    product exists, was invisible to the check that looks for products with no `PBR`.
+#    Both were renamed to `products:`, and "exactly one" moved from being implied by the
+#    field name to being a constraint a machine can check.
+#
+# Not recovered here, still only in git at `acaded9^`, and needed when the validator is
+# rebuilt: the check catalog with its codes and messages (FM001-FM008, LC001-LC004,
+# ID001, REF001-REF004, SEC001, XP001-XP003, CHG001-CHG002, RLM001-RLM002, OD001-OD003),
+# the `last_review` instant parsing with its refusal to treat a half filled timestamp as
+# midnight, and the index generators. Those are implementation. This file is the part
+# that was specification with nowhere to live.
+  roadmap:
+    id: RMP
+    name: Progressive implementation roadmap
+    axis: product
+    born_in: F4
+    template: templates/RMP.md
+    path: products/<p>/RMP.md
+    lifecycle: living
+    status: [active]
+
+  change-contract:
+    id: CHG
+    name: Change contract
+    axis: product
+    born_in: loop
+    template: templates/CHG.md
+    path: products/<p>/changes/CHG-NNN.md
+    lifecycle: immutable
+    status: [draft, approved, implemented, verified, rolled-back]
+    sections: [what-changes, what-must-not-change, how-we-know-it-worked]
+
+  cycle-plan:
+    id: IMP
+    name: Cycle implementation plan
+    axis: product
+    born_in: loop
+    template: templates/IMP.md
+    path: products/<p>/IMP.md
+    class_note: replaced
+    lifecycle: living
+    status: [active]
+
+  risk-register:
+    id: RSK
+    name: 'Risks: state / acceptances / events'
+    axis: product
+    born_in: F3
+    template: templates/RSK.md
+    path: products/<p>/RSK.md
+    lifecycle: living
+    status: [active]
+    sections: [state, acceptances, events]
+

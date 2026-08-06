@@ -29,10 +29,12 @@ or an `RMP` increment: those are signals, not authorizations. It must implement 
 
 Everything else is optional. These three are not: they are the document.
 
+<!-- section: what-changes -->
 ### 1 · What changes
 
 The observable behavior after the change. Not the files to modify: the effect.
 
+<!-- section: what-must-not-change -->
 ### 2 · What must NOT change
 
 The boundaries. Existing behaviors that must stay identical, components not to be touched,
@@ -41,6 +43,7 @@ contracts not to be broken.
 This is the field that makes the document useful to an agent: without it, an agent will
 optimize point 1 at the expense of things nobody told it to preserve.
 
+<!-- section: how-we-know-it-worked -->
 ### 3 · How we know it worked
 
 Verifiable acceptance criteria. A test, a metric with a threshold, an `EVR` that passes. If

@@ -27,6 +27,7 @@ written, and what did we do with it?
 **Append-only:** rows are not edited. Only the `Outcome` column changes, and if an
 assessment changes you add a new row that points back to the previous one.
 
+<!-- section: claims -->
 ## §claims
 
 | ID | Document | Position | Verbatim | Type | Destination | Outcome |
@@ -41,6 +42,7 @@ assessment changes you add a new row that points back to the previous one.
 
 For `rejected` the reason is mandatory: it is the information this log exists for.
 
+<!-- section: contradictions -->
 ## §contradictions
 
 The most valuable part of the log. Every entry carries **both** provenances.
@@ -54,6 +56,7 @@ decision: it is a commitment to renegotiate. It goes in `COMMITMENTS §Out of re
 gets raised immediately. Two customers who were promised opposite things is a problem that
 only gets solved by talking about it.
 
+<!-- section: to-review -->
 ## §to review
 
 Slides and pages that came out of extraction with almost no text, which usually means they

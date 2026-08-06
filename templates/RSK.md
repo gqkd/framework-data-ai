@@ -22,6 +22,7 @@ regimes in one file, split into sections, because separate files would diverge.
 
 ---
 
+<!-- section: state -->
 # §state
 
 Living. The current truth. One row per risk.
@@ -45,6 +46,7 @@ sits and what it can overturn · explainability available to the end user.
 
 ---
 
+<!-- section: acceptances -->
 # §acceptances
 
 Immutable. One entry per accepted risk: you do not modify it, you supersede it.
@@ -58,6 +60,7 @@ An accepted risk with no lapse condition is a forgotten risk with more bureaucra
 
 ---
 
+<!-- section: events -->
 # §events
 
 Append-only. What actually happened, so you can check after the fact whether the estimates

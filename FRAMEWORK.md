@@ -150,14 +150,14 @@ The third is continuous and never ends.
 |---|---|
 | **F1 · Signal and framing** | `PRB` problem statement · `HYP` hypothesis |
 | **F2 · Problem discovery** | `WF §current` · `EVD` evidence brief |
-| **F3 · Solution discovery** | `WF §target` · `CMP` competitor · `DFB` data feasibility |
+| **F3 · Solution discovery** | `WF §target` · `CMP` competitor · `DFB` data feasibility · `RSK` risks |
 
 ### Block B: Construction *(per product)*
 
 | Phase | Produces |
 |---|---|
-| **F4 · Shaping MVP and MVA** | `PBR` product brief · `SD` solution design + MVA · `EVP` evaluation plan · `DC` data contract · `DEC` |
-| **F5 · Build and release candidate** | `ARC` architecture, **it lives from here, not from go-live** · code |
+| **F4 · Shaping MVP and MVA** | `PBR` product brief · `SD` solution design + MVA · `EVP` evaluation plan · `DC` data contract · `RMP` roadmap · `DEC` |
+| **F5 · Build and release candidate** | `ARC` architecture, **it lives from here, not from go-live** · `LOG` signal log · code |
 | **F6 · Controlled go-live** | `RB` runbook + SLO · `EVR` eval report · `REL` release note · `RLM` release manifest |
 
 > **Correction against the previous version:** the gate on the evaluation thresholds used
@@ -243,13 +243,16 @@ the risk profile. Routing:
 
 One template for each in `templates/`. Every template contains the anti-patterns.
 
+<!-- generated: catalog -->
+*Generated from `schemas/artifact-types.yaml`. Edit that file, not this table.*
+
 | ID | Name | Class | Axis | Born in |
 |---|---|---|---|---|
 | `AGENTS` | Control plane for agents | living | platform | day one |
 | `OPEN` | Open decisions and known issues | living | platform | day one |
 | `COMMITMENTS` | Commercial commitments made | living | platform | day one |
 | `GLOSSARY` | Glossary and metric dictionary | living | platform | day one |
-| `PLATFORM` | Architecture of the shared substrate | living | platform | **only if** a shared substrate is decided |
+| `PLATFORM` | Architecture of the shared substrate | living | platform | only if a shared substrate is decided |
 | `product.yaml` | Product manifest | living, partly generated | product | day one |
 | `PBR` | Product brief | living | product | F4 |
 | `PRB` | Problem statement | immutable | initiative | F1 |
@@ -262,7 +265,7 @@ One template for each in `templates/`. Every template contains the anti-patterns
 | `EVP` | Evaluation plan | living, frozen for RC | product | F4 |
 | `DC` | Data contract | living, versioned | product | F4 |
 | `DEC-ADR` | Decision record: product **or** architecture | immutable | platform | anywhere |
-| `ARC` | Current architecture | living | product | **F5** |
+| `ARC` | Current architecture | living | product | F5 |
 | `RB` | Runbook + SLO + monitoring | living | product | F6 |
 | `EVR` | Evaluation report | immutable | product | RG |
 | `REL` | Release note (for humans) | immutable | product | F6 |
@@ -273,6 +276,7 @@ One template for each in `templates/`. Every template contains the anti-patterns
 | `CHG` | Change contract | immutable | product | loop |
 | `IMP` | Cycle implementation plan | living, replaced | product | loop |
 | `RSK` | Risks: state / acceptances / events | living | product | F3 |
+<!-- /generated -->
 
 ### The distinctions that get confused most often
 
@@ -347,7 +351,14 @@ classification: internal
 `status` and `artifact_type` are defined by the artifact's **own schema**, not by a common
 enumeration: a `DEC` is `proposed | accepted | superseded`, a `CHG` is `draft | approved |
 implemented | verified | rolled-back`. A single enumeration would be too generic to be
-useful.
+useful. Those schemas are in `schemas/`, and the identifier resolves to a file:
+`framework/decision-record/v1` is `schemas/framework/decision-record/v1.json`. What each
+type may contain is declared once, in `schemas/artifact-types.yaml`.
+
+**On the artifacts no person writes, `owners` becomes `generated_by`.** An `RLM` is
+produced by a tool, and naming somebody to ask about it would be fiction. The field names
+the generator instead, which is also what an agent needs to know before it starts editing
+one: do not edit this, regenerate it.
 
 **`created` is a day, `last_review` is an instant.** A document is born once, but it gets
 reviewed three times in the same afternoon, and without the time the third review is

@@ -22,6 +22,7 @@ precise references use the anchors: `WF.md#target`.
 
 ---
 
+<!-- section: current -->
 # §current
 
 How it **really** works today, shortcuts included.
@@ -47,6 +48,7 @@ somebody has already implemented by hand.
 
 ---
 
+<!-- section: target -->
 # §target
 
 ## Steps
@@ -67,6 +69,7 @@ Who, from tomorrow, does something different. Who loses a piece of work. Who gai
 
 ---
 
+<!-- section: delta -->
 # §delta
 
 Step by step: what disappears, what appears, what only changes actor. It can be generated,

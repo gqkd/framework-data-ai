@@ -1,0 +1,8 @@
+# Two dependencies, and the second one is a decision worth knowing about.
+#
+# `jsonschema` is what lets the front matter check live in the generated schemas instead
+# of being reimplemented in Python. One enforcement path rather than two: a schema an
+# editor reads and a schema CI enforces cannot disagree if they are the same file.
+
+pyyaml>=6.0
+jsonschema>=4.18

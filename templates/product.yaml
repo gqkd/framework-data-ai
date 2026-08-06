@@ -6,7 +6,7 @@ schema: framework/product-manifest/v1
 artifact_type: product-manifest
 lifecycle: living                # the artifact class, as in every other file
 status: active
-product: product-a
+products: [product-a]            # exactly one: a manifest describes one product
 name: Commercial name
 one_liner: What it does, for whom, in one line.
 owners: [NAME]

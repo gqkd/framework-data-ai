@@ -1,7 +1,8 @@
 # Skills for managing the framework
 
-Five skills. Two are to be rebuilt (`framework-capture`, `framework-audit`), three are
-specified well enough to be implemented when they are needed.
+Five skills. `framework-audit` is built: skill, script and check catalog. `framework-capture`
+is to be rebuilt. The other three are specified well enough to be implemented when they are
+needed.
 
 ---
 
@@ -222,21 +223,29 @@ time at equal risk.
 
 ---
 
-## 7 · `framework-audit`: verifying *(to be rebuilt)*
+## 7 · `framework-audit`: verifying *(built)*
 
-`skills/framework-audit/` with `scripts/validate.py`, to be verified on a trial repository.
+`SKILL.md` to ask for it, `scripts/validate.py` to run it, `checks.yaml` for what it checks.
+The skill adds no checking of its own: what it adds is the judgment about what to do with a
+finding, and mostly about what **not** to do with it, because almost every finding has a
+cheap repair that leaves the repository worse than it was. Updating `last_review` without
+having read the document is the fastest of them, and the one that makes the whole framework
+useless.
 
-It checks: front matter and schema by type · consistency between `lifecycle` and type ·
-`status` within the type's enumeration · uniqueness of IDs · dangling references · cycles in
-the supersedence chain · mandatory sections (`What must NOT change` of a `CHG`, `§delta` of a
-`WF`, the three of `RSK`, the three of `ING`) · staleness of the living artifacts · `CHG`
-that declare an impact without the artifact that derives from it · rollback undefined or
-untested · closed decisions still listed as open.
+**What it checks is not listed here.** It is in `skills/framework-audit/checks.yaml`, one
+entry per check, each with the failure it prevents and the severity in force. A prose copy
+of that list in this file would be a second source for the same fact, and it would be the
+one nobody updates. The catalog is also the configuration: a project changes a severity in
+its own `framework.yaml`, in one line, which is what makes "add a check when the failure it
+prevents has already happened" affordable enough to actually do.
 
-**Cross-product:** single glossary · consumers of the `DC` that match existing products ·
-products without a `PBR`.
+Two checks are `off` rather than absent, and the catalog says why: `CHG001` and `CHG002`
+need the `ICG` routing as a structured field on the `CHG` front matter. The recovered
+versions read the body prose, and prose matching is exactly the fragility the section
+markers were introduced to remove.
 
-**Generates:** `decisions/INDEX.md` and `TRACEABILITY.md`.
+**Generates:** `decisions/INDEX.md` and `TRACEABILITY.md`, with `--emit-index --check` for
+CI so a stale index fails loudly instead of quietly.
 
 A hygiene rule worth repeating: **do not update `last_review` without having read the
 document.** It is the fastest action for turning the validator green again and the only one
@@ -323,8 +332,8 @@ write it.
 
 | When | What | Why now |
 |---|---|---|
+| ~~Now~~ **done** | `framework-audit` | In CI with two checks only, both about front matter. The other twenty one are catalogued, and warn |
 | Now | `framework-capture` | You have the business corpus to ingest and you have nothing yet. It is the first real job |
-| Now | `framework-audit` | Turn it on in CI with **one** check only: valid front matter. The rest later |
 | Before the first commit | `framework-init` | You use it three times and it saves you three divergent structures |
 | At the first real change cycle | `framework-change` | Before that you do not have enough signals for it to be needed |
 | At the first `CHG` | `validate.py --emit-manifest` | Before that the manifest updates by hand in thirty seconds. See §7 |
