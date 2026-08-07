@@ -335,13 +335,22 @@ types:
 
   architecture:
     id: ARC
-    name: Current architecture
+    name: Current / target / delta architecture
     axis: product
     born_in: F5
     template: templates/ARC.md
     path: products/<p>/ARC.md
     lifecycle: living
     status: [active, draft]
+    # Three sections, for the reason `WF` has three: a target only means something set
+    # against what exists, and the value is in the delta. Separate files would leave two
+    # architectures diverging with nothing to say which one the code must match.
+    #
+    # The boundary that has to hold: §delta is structural, the `RMP` is temporal. §delta
+    # enumerates what is missing, the `RMP` says in what order and on what evidence. The
+    # MVA is not a fourth section: it is what §current is at the end of the MVP, recorded
+    # as designed in the `SD`, and the target is not the MVA plus more.
+    sections: [current, target, delta]
     # `verified_against` is a commit, and at design time there is no commit to verify
     # against: demanding it from `draft` would forbid designing before implementing,
     # which is the order the framework prescribes. From `active` it is mandatory again,

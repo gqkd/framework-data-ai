@@ -21,7 +21,9 @@ here.
 
 | Question | Source |
 |---|---|
-| How the system is built | `products/<p>/ARC.md`, plus `PLATFORM.md` if there is one |
+| How the system is built | `products/<p>/ARC.md#current`, plus `PLATFORM.md` if there is one |
+| What shape it is going to have | `products/<p>/ARC.md#target` |
+| What is missing to get there | `products/<p>/ARC.md#delta`, ordered by `RMP.md` |
 | Why it is built that way | `decisions/DEC-NNN.md` |
 | What the product does and for whom | `products/<p>/PBR.md` |
 | What a term or a metric means | `GLOSSARY.md` |

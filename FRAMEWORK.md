@@ -123,7 +123,7 @@ repo/
     │   ├── corpus/              business documents about this product
     │   ├── product.yaml         machine-readable manifest
     │   ├── PBR.md               product brief (living)
-    │   ├── ARC.md               delta against PLATFORM.md, or the whole architecture
+    │   ├── ARC.md               architecture: §current §target §delta
     │   ├── WF.md                workflow: §current §target §delta
     │   ├── RMP.md               progressive roadmap
     │   ├── IMP.md               plan for the current cycle
@@ -265,7 +265,7 @@ One template for each in `templates/`. Every template contains the anti-patterns
 | `EVP` | Evaluation plan | living, frozen for RC | product | F4 |
 | `DC` | Data contract | living, versioned | product | F4 |
 | `DEC-ADR` | Decision record: product **or** architecture | immutable | platform | anywhere |
-| `ARC` | Current architecture | living | product | F5 |
+| `ARC` | Current / target / delta architecture | living | product | F5 |
 | `RB` | Runbook + SLO + monitoring | living | product | F6 |
 | `EVR` | Evaluation report | immutable | product | RG |
 | `REL` | Release note (for humans) | immutable | product | F6 |
@@ -305,6 +305,15 @@ it is replaced every cycle, and it is an **output** of the reshaping.
 current truth and starts living in **F5**, with the first line of code: design and
 implementation diverge long before go-live.
 
+**`ARC §current` ≠ `ARC §target`, and the MVA is neither.** The MVA is what `§current` *is*
+at the end of the MVP: the architecture minimally sufficient to support it, decided at G4
+and recorded as designed in the `SD`. The target is **not** the MVA plus more, because an
+MVA legitimately contains things the target discards: it was built to be sufficient now,
+not to be the destination. `§delta` is what separates the two, and it is **structural**,
+never temporal: it enumerates what is missing, while the `RMP` says in what order and on
+what evidence. `verified_against` attests `§current` alone, since `§target` describes
+something nobody has built.
+
 **`REL` + `RLM`.** The ten-line release note serves a person; it is not enough for an agent
 and not enough for a rollback. The manifest is the same release in machine-readable form,
 with commit, digest, model, prompt and dataset versions, `EVR` and `CHG` included, rollback
@@ -315,10 +324,11 @@ into `LOG` with `type: incident | drift | feedback | request | metric | complian
 original text of a feedback is kept verbatim in a field, because it is the only thing that
 lets you re-interpret it six months later.
 
-**`WF` and `RSK` are single files with sections.** `WF` has `§current`, `§target`,
-`§delta`; `RSK` has `§state`, `§acceptances`, `§events`. Separate files would guarantee
-divergence, which is the worst failure of all. Markdown headings are already addressable by
-an agent: use anchored links (`WF.md#target`).
+**`ARC`, `WF` and `RSK` are single files with sections.** `ARC` and `WF` have `§current`,
+`§target`, `§delta`; `RSK` has `§state`, `§acceptances`, `§events`. Separate files would
+guarantee divergence, which is the worst failure of all: two architectures with nothing to
+say which one the code is supposed to match. Markdown headings are already addressable by
+an agent: use anchored links (`ARC.md#target`, `WF.md#target`).
 
 ---
 

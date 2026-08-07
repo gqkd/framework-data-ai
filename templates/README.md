@@ -26,7 +26,7 @@ they describe the concrete ways that document becomes useless.
 | `EVP.md` | Evaluation plan | living, frozen for RC | `products/<p>/EVP.md` |
 | `DC.md` | Data contract | living, versioned | `products/<p>/contracts/DC-NNN.md` |
 | `DEC-ADR.md` | Decision record: product **or** architecture | immutable | `decisions/DEC-NNN-slug.md` |
-| `ARC.md` | Current architecture | living | `products/<p>/ARC.md` |
+| `ARC.md` | Current / target / delta architecture | living | `products/<p>/ARC.md` |
 | `RB.md` | Runbook + SLO + monitoring | living | `products/<p>/RB.md` |
 | `EVR.md` | Evaluation report | immutable | `products/<p>/releases/EVR-NNN.md` |
 | `REL.md` | Release note (for humans) | immutable | `products/<p>/releases/REL-NNN.md` |
