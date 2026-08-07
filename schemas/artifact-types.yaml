@@ -88,6 +88,12 @@ id_prefixes: [PRB, HYP, EVD, CMP, DFB, SD, DEC, CHG, EVR, REL, RLM, DC,
 inline_id_types: [open-register, risk-register, commitments, roadmap]
 
 # What a validator built on this registry should look at.
+#
+# These are the framework's exclusions and they are a floor, not the whole list. A project
+# extends them under `scan:` in its own `framework.yaml`, with these same three keys,
+# because the directories a real project keeps its code in are not knowable from here: a
+# dbt model, a Kubernetes manifest and a CONTRIBUTING.md are each an `FM001`, and `FM001`
+# blocks. It extends and does not replace, for the reason each entry below states.
 scan:
   # `corpus` is source material, not an artifact: those are the documents the business
   # handed over, and we cannot correct front matter we did not write. `ingest-out` is the

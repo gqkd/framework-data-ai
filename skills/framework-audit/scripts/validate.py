@@ -25,9 +25,12 @@ The schemas do the front matter checking rather than Python reimplementing it, s
 one enforcement path and not two. Everything a schema cannot express, which is everything
 about the body and everything that spans more than one file, is below.
 
-A PROJECT CAN OVERRIDE THE SEVERITIES in `framework.yaml` at its own root, under `checks:`.
-That is what makes "add a check when the failure it prevents has already happened once"
-affordable: it is one line, not a commit of code.
+A PROJECT CONFIGURES TWO THINGS in `framework.yaml` at its own root. Under `checks:`, the
+severities, which is what makes "add a check when the failure it prevents has already
+happened once" affordable: one line, not a commit of code. Under `scan:`, which files are
+artifacts at all, because a project that also holds code holds a great deal of neither, and
+the directories it keeps that code in are not knowable from here. Both extend the framework
+defaults. A key that file does not recognise stops the validator rather than being ignored.
 
 Requires pyyaml and jsonschema.
 """
@@ -91,7 +94,17 @@ class Artifact:
 
     @property
     def type(self) -> str | None:
-        return self.meta.get("artifact_type")
+        """The declared `artifact_type`, or None when it is not a plain name.
+
+        Normalised here rather than at each use. `artifact_type: [a, b]` is one stray
+        bracket away in a hand written front matter, and almost every use of it downstream
+        is a dict or set lookup, which raises on an unhashable value: the validator died on
+        the malformed document instead of reporting it, and said nothing about the two
+        hundred it had not reached yet. The raw value stays in `meta` for whoever has to
+        print it back.
+        """
+        t = self.meta.get("artifact_type")
+        return t if isinstance(t, str) else None
 
 
 class Report:
@@ -119,6 +132,12 @@ class Report:
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Reading
+
+def as_list(v) -> list:
+    if v is None:
+        return []
+    return v if isinstance(v, list) else [v]
+
 
 def jsonify(o):
     """YAML gives back date and datetime objects; JSON Schema validates JSON.
@@ -188,7 +207,64 @@ def normalize_level(v, code: str) -> str:
     return v
 
 
-def load_config(root: Path) -> tuple[dict, int]:
+PROJECT_KEYS = {"checks", "stale_days", "scan"}
+SCAN_KEYS = {"skip_dirs", "skip_files", "skip_hidden"}
+
+
+def load_project(root: Path) -> dict:
+    """The project's own `framework.yaml`, with every key it holds recognised.
+
+    An unrecognised key stops the validator instead of being dropped. The check codes
+    already behaved this way and the reason carries over one level up unchanged: a `scan:`
+    block that reads as applied and is not leaves you with a validator you believe you
+    configured, and the first sign of it is CI failing on the very files you excluded.
+    """
+    path = root / "framework.yaml"
+    if not path.exists():
+        return {}
+    project = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(project, dict):
+        sys.exit(f"{path}: the top level has to be a mapping")
+
+    def reject(unknown: list, where: str, allowed: set) -> None:
+        if unknown:
+            sys.exit(f"{path}: unknown key(s) {', '.join(map(repr, unknown))}{where}. "
+                     f"This file holds: {', '.join(sorted(allowed))}.")
+
+    reject(sorted(set(project) - PROJECT_KEYS), "", PROJECT_KEYS)
+    scan = project.get("scan") or {}
+    if not isinstance(scan, dict):
+        sys.exit(f"{path}: `scan` has to be a mapping")
+    reject(sorted(set(scan) - SCAN_KEYS), " under `scan`", SCAN_KEYS)
+    return project
+
+
+def load_scan(registry: dict, project: dict) -> dict:
+    """The framework's own exclusions, extended by the project's.
+
+    Without this a project cannot be checked at all once it also holds code. `discover`
+    reads every `.md` and `.yaml` under the root, and a dbt model, a Kubernetes manifest
+    and a CONTRIBUTING.md are each an `FM001`, which is one of the two checks that block.
+    The only way out was `FM001: warn`, which switches off the check the validator exists
+    to run.
+
+    It extends and does not replace, which is the decision worth stating. The defaults are
+    not preferences: `corpus` is source material the framework defines as not-an-artifact,
+    `schemas` and `skills` are the framework's own definition. A project that means "also
+    skip dbt/" must not be able to mean "and start reporting the corpus" by writing one
+    line. The keys are the same ones the registry declares, so there is one vocabulary to
+    learn and not two.
+    """
+    base = registry["scan"]
+    scan = project.get("scan") or {}
+    return {
+        "skip_hidden": bool(scan.get("skip_hidden", base.get("skip_hidden"))),
+        "skip_dirs": set(base["skip_dirs"]) | set(as_list(scan.get("skip_dirs"))),
+        "skip_files": set(base["skip_files"]) | set(as_list(scan.get("skip_files"))),
+    }
+
+
+def load_config(project: dict) -> tuple[dict, int]:
     """Framework defaults, overlaid with the project's own `framework.yaml`."""
     base = yaml.safe_load(CHECKS.read_text(encoding="utf-8"))
     checks: dict[str, dict] = {}
@@ -196,30 +272,26 @@ def load_config(root: Path) -> tuple[dict, int]:
         spec = dict(spec or {})
         spec["level"] = normalize_level(spec.get("level", "warn"), code)
         checks[code] = spec
-    stale_days = int(base.get("stale_days", 90))
 
-    project_file = root / "framework.yaml"
-    if project_file.exists():
-        project = yaml.safe_load(project_file.read_text(encoding="utf-8")) or {}
-        stale_days = int(project.get("stale_days", stale_days))
-        for code, override in (project.get("checks") or {}).items():
-            if not isinstance(override, dict):     # `LC002: error` is the short form
-                override = {"level": override}
-            override = dict(override)
-            if "level" in override:
-                override["level"] = normalize_level(override["level"], code)
-            if code not in checks:
-                sys.exit(f"framework.yaml overrides {code!r}, which is not a check this "
-                         "validator knows. A typo here switches nothing on, silently. "
-                         "Run --list-checks for the catalog.")
-            checks[code] = {**checks[code], **override}
+    stale_days = int(project.get("stale_days", base.get("stale_days", 90)))
+    for code, override in (project.get("checks") or {}).items():
+        if not isinstance(override, dict):     # `LC002: error` is the short form
+            override = {"level": override}
+        override = dict(override)
+        if "level" in override:
+            override["level"] = normalize_level(override["level"], code)
+        if code not in checks:
+            sys.exit(f"framework.yaml overrides {code!r}, which is not a check this "
+                     "validator knows. A typo here switches nothing on, silently. "
+                     "Run --list-checks for the catalog.")
+        checks[code] = {**checks[code], **override}
     return checks, stale_days
 
 
-def discover(root: Path, registry: dict, report: Report) -> list[Artifact]:
-    skip_dirs = set(registry["scan"]["skip_dirs"])
-    skip_files = set(registry["scan"]["skip_files"])
-    skip_hidden = bool(registry["scan"].get("skip_hidden"))
+def discover(root: Path, scan: dict, registry: dict, report: Report) -> list[Artifact]:
+    skip_dirs = scan["skip_dirs"]
+    skip_files = scan["skip_files"]
+    skip_hidden = scan["skip_hidden"]
     id_re = re.compile(r"\b((?:%s)-\d{3,})\b" % "|".join(registry["id_prefixes"]))
 
     artifacts = []
@@ -249,13 +321,19 @@ def discover(root: Path, registry: dict, report: Report) -> list[Artifact]:
 # Checks
 
 def check_front_matter(a: Artifact, registry: dict, report: Report) -> None:
+    # The registry decides what is a known type, not the filesystem. Building a path out of
+    # the declared value and asking whether it exists is how `artifact_type: ../../..` in a
+    # front matter turns into a schema lookup somewhere else entirely. The `.exists()` stays
+    # for the case the registry names a type whose schema was never generated.
     t = a.type
-    schema_file = SCHEMA_DIR / str(t) / "v1.json" if t else None
+    schema_file = SCHEMA_DIR / t / "v1.json" if t and t in registry["types"] else None
 
-    if t is None or not schema_file.exists():
+    if schema_file is None or not schema_file.exists():
+        declared = a.meta.get("artifact_type")
         report.add("FM003", a.rel,
-                   f"artifact_type {t!r} has no schema in the registry: new template, or "
-                   "a typo? Until it is known, no type specific check runs on this file.")
+                   f"artifact_type {declared!r} has no schema in the registry: new "
+                   "template, or a typo? Until it is known, no type specific check runs "
+                   "on this file.")
         return
 
     schema = json.loads(schema_file.read_text(encoding="utf-8"))
@@ -331,12 +409,6 @@ def check_lifecycle(a: Artifact, stale_days: int, now: datetime, report: Report)
     elif lc == "immutable" and a.meta.get("last_review") is not None:
         report.add("LC003", a.rel,
                    "an immutable has no last_review: it is not reviewed, it is superseded")
-
-
-def as_list(v) -> list:
-    if v is None:
-        return []
-    return v if isinstance(v, list) else [v]
 
 
 def check_references(arts: list[Artifact], registry: dict, report: Report) -> None:
@@ -539,7 +611,9 @@ def main() -> int:
 
     root = args.root.resolve()
     registry = yaml.safe_load(REGISTRY.read_text(encoding="utf-8"))
-    config, stale_days = load_config(root)
+    project = load_project(root)
+    config, stale_days = load_config(project)
+    scan = load_scan(registry, project)
     if args.stale_days is not None:
         stale_days = args.stale_days
 
@@ -552,7 +626,7 @@ def main() -> int:
     report = Report(config)
     now = datetime.now()
 
-    arts = discover(root, registry, report)
+    arts = discover(root, scan, registry, report)
     for a in arts:
         check_front_matter(a, registry, report)
         check_sections(a, registry, report)

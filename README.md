@@ -65,6 +65,22 @@ check on when the failure it prevents has already happened once, and not before.
 turning one on costs a commit of code, it does not happen, and twelve checks switched on in
 advance get switched off together the first time they are in the way.
 
+The same file says which files are artifacts in the first place. The validator reads every
+`.md` and `.yaml` under the root, and a project that also holds code holds a great deal of
+neither:
+
+```yaml
+scan:
+  skip_dirs: [dbt, infra, notebooks]
+  skip_files: [CONTRIBUTING.md, environment.yml]
+```
+
+Those **extend** the framework's own exclusions, they do not replace them: `corpus/` is
+source material the framework defines as not-an-artifact, and `schemas/` and `skills/` are
+the framework itself. A key `framework.yaml` does not recognise stops the validator instead
+of being dropped, because a `scan:` block that reads as applied and is not leaves you with a
+validator you believe you configured.
+
 `--emit-index` regenerates `decisions/INDEX.md` and `TRACEABILITY.md` from the front
 matter, and `--emit-index --check` exits non-zero when what is on disk has drifted, which
 is the only thing that keeps a generated file from quietly becoming a hand written one.

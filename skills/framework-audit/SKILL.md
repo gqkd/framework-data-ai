@@ -56,6 +56,11 @@ Apply without asking only what is mechanical and cannot be wrong:
 
 Propose a diff and wait for everything else. In particular:
 
+- **`FM001` on a file that is not an artifact at all**, a dbt model, a Helm values file, a
+  `CONTRIBUTING.md`. This is a real repair and not a silencing: the validator was reading a
+  file the framework has no claim over. It goes in `scan.skip_dirs` or `scan.skip_files` in
+  the project's `framework.yaml`. Name the directory or the file, never a parent that also
+  holds artefacts.
 - **`FM002`** says the front matter contradicts the type. Two repairs exist and they are
   opposites: change the declaration, or change the document to match it. An `immutable`
   declared `living` might be a typo in the front matter, or it might be a document somebody
@@ -82,6 +87,10 @@ Propose a diff and wait for everything else. In particular:
   a repository with one product is correct. Switching off a check that *does* apply, in
   order to go green, is not a configuration change, it is a deletion of the finding. If you
   are tempted, propose it out loud with the reason and let a person decide.
+- **Widen `scan` to clear a finding.** It is lowering a severity, one level further out:
+  the document stops being reported because it stopped being looked at, and unlike a
+  severity there is no record in the report that anything was excluded. Adding `notebooks/`
+  is configuration. Adding `products/` is the deletion of every finding inside it.
 - **Add a section marker without the section.** `SEC001` on a `CHG` usually means the
   document is genuinely missing "what must NOT change", which is the most expensive gap in
   the framework: an agent optimises what it was asked for and breaks what nobody named. The
