@@ -2,7 +2,7 @@
 """
 Validator for the Data & AI documentation framework.
 
-One implementation, two entry points: the `framework-audit` skill runs it interactively
+One implementation, two entry points: the `audit` skill runs it interactively
 and interprets the results, CI runs the same file on every push and blocks the merge on
 errors. If the logic lived in the skill's instructions instead, it would drift from the
 version that runs in CI, which is the one that counts.
@@ -19,7 +19,7 @@ WHAT IT READS, AND WHY NONE OF IT IS HARD CODED HERE:
   schemas/artifact-types.yaml     what each type may be, which sections it must carry,
                                   which files to look at, which id prefixes exist
   schemas/framework/<t>/v1.json   the front matter check itself, generated from the above
-  skills/framework-audit/checks.yaml   which checks run, and at what severity
+  skills/audit/checks.yaml        which checks run, and at what severity
 
 The schemas do the front matter checking rather than Python reimplementing it, so there is
 one enforcement path and not two. Everything a schema cannot express, which is everything
@@ -61,7 +61,7 @@ except ImportError:
 FRAMEWORK = Path(__file__).resolve().parents[3]
 SCHEMA_DIR = FRAMEWORK / "schemas" / "framework"
 REGISTRY = FRAMEWORK / "schemas" / "artifact-types.yaml"
-CHECKS = FRAMEWORK / "skills" / "framework-audit" / "checks.yaml"
+CHECKS = FRAMEWORK / "skills" / "audit" / "checks.yaml"
 
 SECTION_MARK = re.compile(r"<!--\s*section:\s*([a-z0-9-]+)\s*-->")
 

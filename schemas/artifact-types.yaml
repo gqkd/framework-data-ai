@@ -109,11 +109,14 @@ scan:
   # A list of exclusions is always one entry behind whatever was added last.
   skip_hidden: true
 
-  # `schemas` and `skills` hold the framework's own definition and tooling. They are
-  # metadata about artifacts, not artifacts, and this file is the proof: run the validator
-  # on the framework repository without this line and it reports its own registry as a
-  # document with no front matter.
-  skip_dirs: [templates, skills, schemas, corpus, ingest-out, node_modules, __pycache__]
+  # `schemas`, `skills` and `references` hold the framework's own definition and tooling.
+  # They are metadata about artifacts, not artifacts, and this file is the proof: run the
+  # validator on the framework repository without this line and it reports its own registry
+  # as a document with no front matter. `references` earned its place the same way, one
+  # commit after the skills were written: the shared preamble and the routing table are
+  # prose the framework wrote about itself, and they came back as two blocking `FM001`.
+  skip_dirs: [templates, skills, schemas, references, corpus, ingest-out,
+              node_modules, __pycache__]
 
   # Documents that speak *about* the framework rather than being produced *by* it.
   # `framework.yaml` is the project's own validator configuration: without this line the

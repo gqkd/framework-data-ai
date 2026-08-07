@@ -1,349 +1,191 @@
-# Skills for managing the framework
+# The skills that operate the framework
 
-Five skills. `framework-audit` is built: skill, script and check catalog. `framework-capture`
-is to be rebuilt. The other three are specified well enough to be implemented when they are
-needed.
+Six skills, distributed as a Claude Code plugin. The plugin is named `framework-data-ai`
+and supplies the namespace, so the skills carry short names: `/framework-data-ai:start`,
+`:requirement`, `:resolve`, `:cycle`, `:release`, `:audit`.
+
+| Skill | What you actually say | What it does |
+|---|---|---|
+| **`start`** | *"partiamo, ecco i documenti"* | entry assessment, scaffolding, corpus ingestion, seeds `OPEN.md` |
+| **`requirement`** | *"abbiamo deciso"*, *"il cliente vuole"*, *"aggiungi che"* | classifies, routes to the one authoritative source, propagates, flags contradictions |
+| **`resolve`** | *"risolviamo gli open"*, *"definiamo il prodotto"* | works `OPEN.md` in cost-to-reverse order, produces `DEC` and the cascade |
+| **`cycle`** | *"cosa facciamo in questo ciclo"* | intake, `ICG`, reshaping, `CHG`, `IMP`, and the brief per change |
+| **`release`** | *"possiamo rilasciare?"* | the `RG` gate, `RLM`, `REL` |
+| **`audit`** | *"è tutto a posto?"* | runs the validator, and judges what to do with each finding |
 
 ---
 
 ## 1 · A necessary clarification about automation
 
-The goal, "not updating everything by hand" and replacing the "automated checks to add to
-CI", is reachable, but not all of it with the same tool.
-
-**A skill is not a daemon.** It runs when Claude runs: it does not fire on a push, it
-checks nothing overnight, it has no state between one invocation and the next. If the
-checks lived only in the skills, they would run when you remember to ask, which is to say
-rarely and not at the moments that count.
+**A skill is not a daemon.** It runs when Claude runs: it does not fire on a push, it checks
+nothing overnight, it has no state between one invocation and the next. If the checks lived
+only in the skills they would run when somebody remembers to ask, which is to say rarely and
+not at the moments that count.
 
 | Nature of the task | Tool | When it runs |
 |---|---|---|
-| Deterministic: schema, IDs, references, staleness, indexes | **Python script** | in CI on every push, and by hand when needed |
+| Deterministic: schema, ids, references, staleness, indices | **Python script** | in CI on every push, and by hand when needed |
 | Extraction from formats: pptx, pdf, docx with provenance | **Python script** | when you ingest |
 | Requires judgment: classifying a claim, propagating a cascade, writing a `CHG` | **Skill** | when you invoke it |
 | Requires your knowledge: what was observed, what was promised | **You** | |
 
-**The skills carry the scripts.** `framework-audit` contains `validate.py`: the skill runs
-it interactively and interprets the results, CI runs the same file and blocks the merge.
-One implementation, two entry points. If the logic were duplicated in the skill's
-instructions it would diverge from the version that runs in CI, that is, from the one that
-counts.
-
-**The skills live in the repository**, under `skills/`, versioned with the code. They are
-the same for every product: `product.yaml` says which one they are being applied to. It is
-the concrete mechanism for managing several products together. You do not need one skill
-per product.
+**The skills carry the scripts.** `audit` contains `validate.py`: the skill runs it
+interactively and interprets the results, CI runs the same file and blocks the merge. One
+implementation, two entry points. If the logic were duplicated in the skill's instructions
+it would diverge from the version that runs in CI, which is the one that counts.
 
 ---
 
-## 2 · Why five
+## 2 · Why these six, and where the boundaries fall
 
-A skill is selected on the basis of its description, and a vague description triggers
-unreliably: it fires when it is not needed and does not fire when it would be. Five
-boundaries correspond to the five moments where you genuinely change working mode:
+A skill is selected on its description, and a vague description triggers unreliably: it
+fires when it is not needed and stays quiet when it would help. So each of the six has to
+own a sentence you would actually say, and no two may compete for the same one.
 
-**set up** · **record** · **change** · **release** · **verify**
+**Information in, versus authorization out.** `requirement` brings information in and files
+it. `cycle` sends authorization out. The boundary is the one rule of the framework an agent
+breaks most easily: *a request is not a mandate*. "The customer wants Excel export" is a
+`SIG` in `LOG`. It becomes buildable only after intake, triage and the `ICG`.
 
-### Why corpus and conversation are a single skill
+**Deciding, versus recording a decision.** `resolve` closes an entry in `OPEN.md` and takes
+the decision with the user. `requirement` records a decision already taken. If `requirement`
+finds it would close an open entry, it says so and stops: closing it is `resolve`'s job,
+because closing an open decision is itself a decision.
 
-They look like two different things: loading two hundred slides, and saying "we decided on
-Postgres". But the underlying operation is identical, *external information → classified →
-routed → propagated*, and the logic that governs it (taxonomy, cascade, conflict handling)
-is the same.
+**Why `start` holds the corpus ingestion.** Scaffolding without ingestion gives you empty
+templates; ingestion without scaffolding has nowhere to write. They are one moment, the
+beginning, and splitting them would mean a skill that always calls the other.
 
-If they sat in two skills that logic would be duplicated, and it would diverge: after three
-months the corpus and the conversational notes would end up in different places, and you
-would not notice until an agent found two conflicting answers. It is the same reason
-`validate.py` is a single file.
+**Why the conversational recording is not in there with it.** It was, in an earlier design,
+on the argument that the classification logic would otherwise be duplicated. That argument
+no longer holds: `references/routing-table.md` is one file at the plugin root and both read
+it, so nothing is duplicated. What is gained is triggering: "ingest these decks" and "we
+decided on Postgres" are different sentences at different times, and one skill answering to
+both answers to neither reliably.
 
-So: **one skill, two input modes, one shared reference.**
+**Why `cycle` and `release` are two.** Between opening a cycle and shipping there are days
+of building. A single invocation cannot span them. They are two moments where you sit down.
+
+**Why cross-product work is not a seventh skill.** It is not a separate moment, it is a
+constraint running through the others: in the cascade of `requirement` (a glossary metric
+used by two products), in the checks of `audit` (single glossary, `DC` consumers), in the
+classification of `cycle` (a `DEC` with `scope: platform`). A dedicated skill would
+duplicate all of it.
+
+---
+
+## 3 · What every skill shares
+
+Four things live once, at the plugin root, because six copies of them would be the framework
+breaking its own single rule against itself.
+
+**`references/preamble.md`** — read `AGENTS.md`, `OPEN.md` and the `product.yaml` first; the
+class rules; never invent a field that attests something; never write `last_review` without
+having read the document.
+
+**`references/routing-table.md`** — the classification, the cascade and the conflict rules.
+Read by `start`, `requirement` and `resolve`. It is the single source of that logic: if
+copies diverged, the corpus and the conversational notes would end up in different places.
+
+**Propose, then write.** Every skill that writes shows a compact table first, never the
+document:
+
+| File | What changes |
+|---|---|
+| `decisions/DEC-012-postgres.md` | new · datastore chosen, closes OD-003 |
+| `products/alpha/ARC.md` | §current · store component added |
+| `OPEN.md` | OD-003 moves from §1 to §4 |
+
+Then, after the user agrees and the write has happened, it prints the document. A wall of
+generated document is not reviewable, so nobody reviews it and the approval becomes a
+formality. Two things are applied without asking, because they destroy nothing: appending a
+`SIG` to `LOG`, and adding to the parking lot of `OPEN.md`.
+
+**Close with the validator.** Not only `audit`. The cascade is where a write goes wrong, and
+the validator is what notices that a `DEC` moved and its `ARC` did not.
+
+---
+
+## 4 · The two levels of evaluation
+
+Merging these is the most expensive mistake available in this design, so they are named
+separately everywhere.
+
+| | Question | Artifacts | When |
+|---|---|---|---|
+| **Task acceptance** | did this change get done correctly? | `CHG#how-we-know-it-worked`, the validator, the project's tests | at the end of each change |
+| **Product evaluation** | is the product good enough to ship? | `EVR` against the frozen `EVP` | at the release gate |
+
+Collapse them and you get either an agent that believes the task is done because the model
+eval passed, or a release gate firing on every micro-task. They meet at exactly one point,
+already written in `AGENTS.md`: touching an AI component requires a new `EVR`.
+
+---
+
+## 5 · From documents to agents
+
+This is what the framework is for, beyond documenting: `cycle` ends by producing a brief per
+approved `CHG` that a coding agent can execute without inventing anything. Everything in the
+brief already exists in the repository. The brief assembles, it does not compose.
 
 ```
-framework-capture/
-├── SKILL.md                    mode selection + conversational procedure
-├── references/
-│   ├── routing-table.md        ⟵ the core: taxonomy, cascade, conflicts
-│   └── ingest-bulk.md          procedure for the business corpus
-└── scripts/
-    └── extract.py              pptx · pdf · docx → blocks with provenance
+Mandate       CHG-NNN §what-changes
+Guardrails    CHG-NNN §what-must-not-change · OPEN.md, what it may not decide
+Context       AGENTS.md authoritative sources · ARC#current · the relevant DC · GLOSSARY
+Done when     CHG-NNN §how-we-know-it-worked · mandatory updates · validator clean
+              a new EVR, if an AI component was touched
 ```
 
-### Why not a sixth skill for cross-product work
+The chain that produces the work is the architecture itself:
 
-Cross-product management is not a separate moment of work: it is a constraint that runs
-through the other five. It lives inside each of them: in the cascade of `capture` (a
-glossary metric used by two products), in the checks of `audit` (single glossary, consumers
-of the `DC`), in the classification of `change` (a `DEC` with `scope: platform`). A
-dedicated skill would duplicate all of this.
-
----
-
-## 3 · `framework-capture`: recording *(to be rebuilt)*
-
-The skill you will use most of all. It is the answer to "I want to add information
-conversationally and I want the files to be changed consistently".
-
-### Mode A: business corpus
-
-Presentations, PDFs, requirements analyses produced by the business before the technical
-project existed.
-
-The starting point that changes everything: **these documents are not a specification.**
-They are the record of what was promised, produced by the people whose job was to sell. The
-main destination is `COMMITMENTS.md`, not a product document. But they also contain five
-things of different value (domain vocabulary, numeric promises, constraints disguised as
-claims, descriptions of the current process, competitors mentioned) and they have to be
-separated because they end up in five places.
-
-`extract.py` normalizes pptx, pdf, docx and text into blocks labeled with document and
-position (slide N, page N). Two behaviors that are worth more than the rest:
-
-- **It flags and rasterizes text-poor pages.** On a sales deck the architectural promise is
-  often *drawn*: three boxes with arrows and the words "single platform" produce no
-  extractable text and are a tenancy constraint.
-- **It recognizes decks exported to PDF** and warns that the extracted text has lost the
-  layout, because in a deck the layout carries meaning.
-
-Then classification goes through **`ING.md`**, not straight into the artifacts: it preserves
-provenance, it acts as an interruptible review queue, and it lets you reject a claim while
-keeping the fact that the business made it. That is exactly what you need when, eight months
-later, someone asks why that feature is not there.
-
-**The highest-value output is the contradictions.** Three documents written by different
-people over eight months contradict each other, and nobody knows because nobody has read
-them all in one go. On the trial corpus one surfaces immediately: the deck promises
-"real-time data", the requirements analysis says "hourly refresh, existing nightly batch".
-If the two versions were told to two different customers this is not a technical problem but
-a commitment to renegotiate, and sooner is better.
-
-### Mode B: conversational
-
-**It does not record sentence by sentence.** A conversation is largely reasoning out loud,
-and filing every claim produces a log of noise in which the real facts become impossible to
-find. And since that log is the source an agent will work from, the damage propagates.
-
-The model is the **end-of-session sweep**:
-
-> From this conversation four things look recordable to me:
-> 1. *decision*: Postgres as the datastore → new `DEC` + `ARC` + closes an entry in `OPEN.md`
-> 2. *definition*: "active customer" = login in the last 30 days → `GLOSSARY`, **in
->    conflict** with the formula already present for product-b
-> 3. *request*: Excel export asked for by the customer → `SIG` in `LOG`
-> 4. *reasoning*: consider separating reporting → parking lot
->
-> Which ones do I record?
-
-Exceptions written immediately: an **incident** (the value depends on the exact time) and an
-**out-of-reach commitment** that has just surfaced.
-
-### The three ideas that make consistency work
-
-**Classification goes on epistemic strength, not on the topic.** "The system processes 10M
-rows a day" can mean *we promised it*, *we believe it will be needed* or *we measured it*:
-three things with the same textual shape that go to three different places. If the context
-does not tell them apart, the skill asks. It is the question that pays best.
-
-**The cascade is mandatory and tabulated.** A `DEC` with `scope: architecture` forces you to
-update `ARC` in the same pass; a glossary entry for a term that is also a field of a `DC`
-forces you to bump that contract; an out-of-reach commitment opens a row in `RSK` and one in
-`OPEN`. Writing to a single file is easy: writing to the right four is why the skill exists.
-
-**Automaticity is inversely proportional to the breadth of the cascade.** A single
-destination, append-only, no ambiguity, no conflict → apply directly. Cascade over several
-files, an immutable involved, a conflict detected, ambiguous classification → propose the
-diff and wait. The cascade is the point where an agent's confidence exceeds its accuracy:
-asking costs ten seconds, this mistake costs a decision.
+```
+ARC#delta   what is structurally missing
+   ↓
+RMP         in what order, and on what evidence
+   ↓
+CHG         what is authorized          ← the agent's task
+   ↓
+EVR/EVP     whether it can ship
+```
 
 ---
 
-## 4 · `framework-init`: setting up
-
-**Triggers on:** "set up the framework", "new product", "I have code with no
-documentation", "where do I start".
-
-1. **Entry assessment.** Idea · idea already sold · code without documentation · product in
-   production. It is not a formality: the entry point determines which documents make sense
-   and which would be fiction.
-2. **Scaffolding.** Folder tree, relevant templates with the front matter filled in. Not the
-   body.
-3. **Delegates to `framework-capture`** the ingestion of the business corpus, when the entry
-   point is "already sold". It does not reimplement extraction: it calls it.
-4. **Reconstruction from code**, when the entry point is "existing code": it proposes a
-   starting `ARC` and, the useful part, lists the **decisions already implicit in the code**
-   that have no `DEC`. A datastore chosen, a tenancy model: these are decisions taken, just
-   not recorded.
-5. **Seeds `OPEN.md`** with the decisions still to take, each with its cost to reverse.
-
-**Frequency:** three times in total. And that is right: a skill used three times that gets
-you started with the correct structure is worth more than ten runs of something marginal.
-
----
-
-## 5 · `framework-change`: changing
-
-**Triggers on:** "I need to add", "what do I do in this cycle", "open a change".
-
-It implements the stretch of the cycle that was in the wrong order: intake → triage → `ICG`
-→ reshaping → `CHG` → `IMP`.
-
-1. **Triage and impact assessment.** It reads `PBR`, `ARC`, the `DC`, `EVP`, `RSK` and
-   **proposes** the `ICG` classification. An `ICG` decided automatically is a gate that does
-   not exist.
-2. **Routes.** If reshaping is needed, it lists which artifacts to update **before** writing
-   the plan. If the routing is "hypothesis invalidated" it stops: the re-entry is in F3 or
-   F2, not in a `CHG`.
-3. **Writes the `CHG`** with the three mandatory fields. The added value is **What must NOT
-   change**: the skill fills it in better than you do, because it can read `ARC` and the `DC`
-   and find the contracts the change risks breaking without anyone having noticed.
-4. **Updates `IMP`** and the `§excluded` section.
-5. **Verifies** with `validate.py` before taking the `CHG` to `verified`.
-
-**Boundary with `capture`:** `capture` records the signal in `LOG`; `change` turns it into a
-mandate. A recorded signal is not authorized to be implemented. That is the separation that
-stops a product from becoming the sum of the last things anyone asked for.
-
----
-
-## 6 · `framework-release`: releasing
-
-**Triggers on:** "release", "prepare the release", "can I release?".
-
-1. **Checks the `RG` gate:** an `EVR` exists for the candidate, it cites the `EVP` in its
-   frozen version, all metrics and slices are above threshold. If not: **rework**, and it
-   says so with that word, because this is not a rollback. It is not in production yet.
-2. **Generates `RLM.yaml`** from git, the build and the configuration: commit, digest, model
-   and prompt versions, dataset, `DC` touched, `CHG` included, rollback target. Filling it
-   in by hand means getting it wrong.
-3. **Generates `REL.md`** from the `CHG`, translated into effects. Ten lines.
-4. **Updates** `product.yaml` and opens a `SIG` of type `metric` for the first 48 hours.
-5. **It does not run the deploy.** It prepares the evidence; you give the command.
-
-It is the skill with the lowest share of judgment, and therefore the one that saves the most
-time at equal risk.
-
----
-
-## 7 · `framework-audit`: verifying *(built)*
-
-`SKILL.md` to ask for it, `scripts/validate.py` to run it, `checks.yaml` for what it checks.
-The skill adds no checking of its own: what it adds is the judgment about what to do with a
-finding, and mostly about what **not** to do with it, because almost every finding has a
-cheap repair that leaves the repository worse than it was. Updating `last_review` without
-having read the document is the fastest of them, and the one that makes the whole framework
-useless.
-
-**What it checks is not listed here.** It is in `skills/framework-audit/checks.yaml`, one
-entry per check, each with the failure it prevents and the severity in force. A prose copy
-of that list in this file would be a second source for the same fact, and it would be the
-one nobody updates. The catalog is also the configuration: a project changes a severity in
-its own `framework.yaml`, in one line, which is what makes "add a check when the failure it
-prevents has already happened" affordable enough to actually do.
-
-Two checks are `off` rather than absent, and the catalog says why: `CHG001` and `CHG002`
-need the `ICG` routing as a structured field on the `CHG` front matter. The recovered
-versions read the body prose, and prose matching is exactly the fragility the section
-markers were introduced to remove.
-
-**Generates:** `decisions/INDEX.md` and `TRACEABILITY.md`, with `--emit-index --check` for
-CI so a stale index fails loudly instead of quietly.
-
-A hygiene rule worth repeating: **do not update `last_review` without having read the
-document.** It is the fastest action for turning the validator green again and the only one
-that makes the entire framework useless.
-
-### To be built: `--emit-manifest`, for the `GENERATED` sections of `product.yaml`
-
-Today those sections are marked "generated" and a person writes them. A section that
-declares itself generated and is not, is **worse than one written by hand**: nobody rereads
-it, because everyone assumes something keeps it true.
-
-Before writing the generator, split the manifest fields into two groups. The dividing line
-is: *does filling it in require judgment?*
-
-| Derivable, the script does it | From what |
-|---|---|
-| `artifacts.living[].last_review`, `.stale` | the same scan the validator already does |
-| `artifacts.immutable_count`, `.append_only` | same |
-| `open_decisions` | the `### OD-NNN` headings of `OPEN.md §1` |
-| `open_risks` | `RSK.md §state` |
-| `active_changes` | the `CHG` with `status: approved` |
-| `release.*` | the last `REL`/`RLM`, and `rollback_target` from the one before it |
-
-| Not derivable, stays conversational | Why |
-|---|---|
-| `stage.block`, `.phase`, `.next_gate`, `.mor_completed` | a gate is cleared by a person; no file records it before the `DEC` |
-| `one_liner`, `name` | it is a positioning decision |
-| `platform.shares` | it is an open decision, and it lives in `OPEN.md` |
-| `entry_points`, `roles` | conventions, not observable facts |
-
-Then: **the first group is generated by `validate.py --emit-manifest`**, alongside
-`--emit-index`, because it derives from the same scan and is the same kind of object, an
-index. The second group is maintained by `framework-capture` in conversational mode: "we
-cleared G3" is a claim with a destination, and `routing-table.md` is already the place where
-you decide which one.
-
-You do not need a new skill for this, and the reason is the same as in
-[§2 · Why not a sixth skill for cross-product work](#why-not-a-sixth-skill-for-cross-product-work):
-a skill that "manages the manifest" would duplicate the scan of `audit` and the taxonomy of
-`capture` in order to hold together a file that is only the projection of both.
-
-Three constraints on the generator, which are the reason it has to be written and not
-improvised:
-
-1. **Regenerating must not be able to erase the second group.** It rewrites the fields it
-   owns, it leaves the others intact. A generator that rewrites the whole file loses `stage`
-   on the first run, and nobody notices until it matters.
-2. **It must be idempotent and checkable in CI.** `--emit-manifest --check` exits non-zero if
-   the file on disk diverges from what would be generated: it is the only way to notice that
-   someone has hand-written into a generated field.
-3. **Until it exists, the fields stay marked for what they are.** The comment at the bottom
-   of `templates/product.yaml` says that today you fill them in yourself. That comment
-   disappears together with the problem, not before.
-
-**When to build it:** when there are enough artifacts that rereading them by hand costs more
-than writing the script. Realistically at the first `CHG`, not before. With a handful of
-`PBR` and zero `CHG` the manifest updates in thirty seconds and the generator is the factory built
-before the product.
-
----
-
-## 8 · What not to automate
+## 6 · What not to automate
 
 **Do not let a skill generate the content of `PRB`, `HYP`, `EVD`, `DFB`.**
 
-An agent produces a plausible problem statement, a well-formed hypothesis and a tidy evidence
-brief without having talked to anyone and without having queried a single piece of data. The
+An agent produces a plausible problem statement, a well formed hypothesis and a tidy
+evidence brief without having talked to anyone and without having queried a single row. The
 result passes any validator and contains no information. It is exactly the failure the
 framework exists to prevent, documentation that *looks* true, and it has an unpleasant
-property: it is indistinguishable from the good version under a quick inspection, so you do
-not notice until a decision taken on that basis turns out to be wrong.
+property: it is indistinguishable from the good version under a quick reading, so nobody
+notices until a decision taken on it turns out to be wrong.
 
-The risk is highest precisely in ingestion, where the temptation is strong: the business
-corpus contains claims shaped like requirements, and turning them into an `EVD` takes a step
-that looks small. It is not: nobody observed anything.
+The risk is highest in ingestion, where the temptation is strongest: the business corpus is
+full of claims shaped like requirements, and turning one into an `EVD` takes a step that
+looks small.
 
-**The rule:** a skill can structure, classify, link, propagate and generate from existing
-sources. **It cannot produce evidence.** If a document answers "what did we observe", you
+**The rule:** a skill may structure, classify, link, propagate and generate from existing
+sources. **It may not produce evidence.** If a document answers "what did we observe", you
 write it.
+
+This is also why `resolve` is an interview and not a generator. Asking is the safe form of
+filling a document: the skill elicits what you know instead of inventing what it does not.
 
 ---
 
-## 9 · Build order
+## 7 · What is still missing
 
-| When | What | Why now |
-|---|---|---|
-| ~~Now~~ **done** | `framework-audit` | In CI with two checks only, both about front matter. The other twenty one are catalogued, and warn |
-| Now | `framework-capture` | You have the business corpus to ingest and you have nothing yet. It is the first real job |
-| Before the first commit | `framework-init` | You use it three times and it saves you three divergent structures |
-| At the first real change cycle | `framework-change` | Before that you do not have enough signals for it to be needed |
-| At the first `CHG` | `validate.py --emit-manifest` | Before that the manifest updates by hand in thirty seconds. See §7 |
-| At the first release | `framework-release` | Before that there is nothing to release |
-
-On CI checks: **add them one at a time, when the failure they prevent has already happened
-once.** Twelve checks turned on before the code exists are a factory built before the
-product: they slow you down without having prevented anything yet, and the predictable
-reaction is to turn them all off.
+- **`--emit-manifest`.** The `GENERATED` sections of `product.yaml` are still written by
+  hand, and the template says so at the bottom where somebody will read it. Build it at the
+  first `CHG`, not before: with a handful of artifacts the manifest updates in thirty
+  seconds and a generator would be a factory built before the product.
+- **Versioning and distribution.** The plugin has a version; a project has no way yet to
+  declare which one it was written against, and no migration note when a rename lands.
+- **Two checks that need structured input.** `CHG001` and `CHG002` want the `ICG` routing as
+  a field on the `CHG` front matter rather than as prose in its body. They stay `off` until
+  the field exists, and the catalog says so in `blocked_by`.
 
 The rule that protects the framework applies to the skills too: **every skill must save more
 time than it costs to maintain, this week.** A skill is code, and like all code it ages and
-has to be kept aligned with a framework that changes in the meantime.
+has to be kept aligned with a framework that changes underneath it.

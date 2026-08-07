@@ -28,8 +28,8 @@ from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parents[1]
 REGISTRY = yaml.safe_load((ROOT / "schemas" / "artifact-types.yaml").read_text())
-CHECKS = yaml.safe_load((ROOT / "skills" / "framework-audit" / "checks.yaml").read_text())
-VALIDATE = ROOT / "skills" / "framework-audit" / "scripts" / "validate.py"
+CHECKS = yaml.safe_load((ROOT / "skills" / "audit" / "checks.yaml").read_text())
+VALIDATE = ROOT / "skills" / "audit" / "scripts" / "validate.py"
 GENERATE = ROOT / "schemas" / "generate.py"
 
 SECTION_MARK = re.compile(r"<!--\s*section:\s*([a-z0-9-]+)\s*-->")
@@ -180,27 +180,44 @@ def _phases_agree():
     return problems
 
 
-@check("the skill only names checks and flags that exist")
+@check("every skill only names checks, flags and files that exist")
 def _skill_references():
-    skill = (ROOT / "skills" / "framework-audit" / "SKILL.md")
-    text = skill.read_text()
+    # Runs over every skill, not just the one that owns the validator. A skill is prose
+    # that an agent executes, and prose naming a flag the validator does not accept fails
+    # at the moment somebody is trusting it. The three things checked here are the ones
+    # that go stale silently: the name that has to match the directory or the skill never
+    # resolves, a check code that was renamed, and a flag that never existed.
+    known_flags = set(re.findall(r'"(--[a-z-]+)"', VALIDATE.read_text()))
     problems = []
 
-    head = yaml.safe_load(text[4:text.find("\n---", 4)]) if text.startswith("---\n") else {}
-    if head.get("name") != skill.parent.name:
-        problems.append(f"name is {head.get('name')!r}, the directory is "
-                        f"{skill.parent.name!r}: the skill will not resolve")
-    if not head.get("description"):
-        problems.append("no description: a skill with none is a skill that never triggers")
+    skills = sorted(p for p in (ROOT / "skills").iterdir() if (p / "SKILL.md").exists())
+    if not skills:
+        return ["no skills found under skills/: the check is not running"]
 
-    body = text[text.find("\n---", 4):]
-    for code in sorted(set(re.findall(r"`([A-Z]{2,3}\d{3})`", body))):
-        if code not in CHECKS["checks"]:
-            problems.append(f"names {code}, which is not in the catalog")
-    known_flags = set(re.findall(r'"(--[a-z-]+)"', VALIDATE.read_text()))
-    for flag in sorted(set(re.findall(r"`(--[a-z-]+)`", body))):
-        if flag not in known_flags:
-            problems.append(f"names {flag}, which the validator does not accept")
+    for d in skills:
+        skill = d / "SKILL.md"
+        text = skill.read_text()
+        head = (yaml.safe_load(text[4:text.find("\n---", 4)])
+                if text.startswith("---\n") else {})
+        if head.get("name") != d.name:
+            problems.append(f"{d.name}: name is {head.get('name')!r}, the directory is "
+                            f"{d.name!r}: the skill will not resolve")
+        if not head.get("description"):
+            problems.append(f"{d.name}: no description, so it never triggers")
+
+        body = text[text.find("\n---", 4):]
+        for code in sorted(set(re.findall(r"`([A-Z]{2,3}\d{3})`", body))):
+            if code not in CHECKS["checks"]:
+                problems.append(f"{d.name}: names {code}, which is not in the catalog")
+        for flag in sorted(set(re.findall(r"`(--[a-z-]+)`", body))):
+            if flag not in known_flags:
+                problems.append(f"{d.name}: names {flag}, which the validator does not "
+                                "accept")
+        # A skill that points at a reference or a script it does not carry is a skill that
+        # stops halfway through, at the point where the agent goes looking for the file.
+        for ref in sorted(set(re.findall(r"`((?:references|scripts)/[\w./-]+)`", body))):
+            if not (d / ref).exists() and not (ROOT / ref).exists():
+                problems.append(f"{d.name}: points at {ref}, which does not exist")
     return problems
 
 

@@ -13,10 +13,11 @@ decisions, products, initiatives and corpus, live in that project's repository, 
 | **`FRAMEWORK.md`** | The reference document. Start here |
 | `framework-flow.mermaid` | The lifecycle with its gates. Importable into draw.io: *Arrange → Insert → Advanced → Mermaid* |
 | `Framework.drawio` | An older drawing of the same lifecycle, kept for editing in draw.io |
-| `SKILLS.md` | The five skills that operate the framework. One has its script, none has its wrapper |
+| `SKILLS.md` | The six skills that operate the framework, and where their boundaries fall |
 | `templates/` | One template per artifact, each with its anti-patterns at the bottom |
 | `schemas/` | The artifact catalog and what each type is allowed to be. `artifact-types.yaml` is the source; `generate.py` projects it into the JSON Schemas, into `FRAMEWORK.md §7` and into `templates/README.md` |
-| `skills/framework-audit/` | The gate. `SKILL.md` to ask for it, `scripts/validate.py` to run it, `checks.yaml` for what it checks |
+| `skills/` | The six skills. `audit/` also carries the gate: `scripts/validate.py` and `checks.yaml` |
+| `references/` | Shared by the skills: the common preamble and the routing table |
 | `tests/selfcheck.py` | The framework checked against itself. Runs in CI |
 
 ## Reading order
@@ -42,11 +43,11 @@ path:
 
 ```bash
 pip install -r requirements.txt
-python skills/framework-audit/scripts/validate.py --root ../my-project
-python skills/framework-audit/scripts/validate.py --root ../my-project --emit-index
+python skills/audit/scripts/validate.py --root ../my-project
+python skills/audit/scripts/validate.py --root ../my-project --emit-index
 ```
 
-Twenty two checks, catalogued in `skills/framework-audit/checks.yaml`, each with the
+Twenty two checks, catalogued in `skills/audit/checks.yaml`, each with the
 failure it prevents written next to it. Two block on day one and they are the two
 `SKILLS.md §9` names: front matter that parses, and front matter that means something.
 Everything else warns. Two are `off`, because they would need input that does not exist
@@ -88,7 +89,7 @@ is the only thing that keeps a generated file from quietly becoming a hand writt
 In a project's CI, one line:
 
 ```yaml
-- run: python ../framework-data-ai/skills/framework-audit/scripts/validate.py --root .
+- run: python ../framework-data-ai/skills/audit/scripts/validate.py --root .
 ```
 
 How the project gets hold of the framework in CI is the part that is not solved. See below.
@@ -99,7 +100,7 @@ How the project gets hold of the framework in CI is the part that is not solved.
 |---|---|
 | `schemas/artifact-types.yaml` | the catalog: what each type is, may be, must carry, and where it goes |
 | `schemas/framework/<type>/v1.json` | the front matter check itself, generated from the above |
-| `skills/framework-audit/checks.yaml` | which checks run, at what severity, and what each prevents |
+| `skills/audit/checks.yaml` | which checks run, at what severity, and what each prevents |
 
 The catalog tables in `FRAMEWORK.md §7` and in `templates/README.md` are generated from the
 registry too. They used to be written by hand in both places and had already drifted: `DC`
@@ -118,9 +119,6 @@ without `status` and `owners` for as long as it did. The self check runs in CI h
 
 ## What still does not exist
 
-- **Four of the five skills.** `framework-capture`, `framework-init`, `framework-change`
-  and `framework-release` are specified in `SKILLS.md` and not built. `framework-audit` is.
-- **Corpus extraction.** Turning presentations and PDFs into sourced claims is manual.
 - **`--emit-manifest`.** The `GENERATED` sections of `product.yaml` are still written by
   hand, and the template says so at the bottom, where somebody will read it.
 - **Versioning and distribution.** A project refers to the framework by path. There is no

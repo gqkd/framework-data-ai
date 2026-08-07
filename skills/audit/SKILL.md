@@ -1,5 +1,5 @@
 ---
-name: framework-audit
+name: audit
 description: >
   Check a Data & AI framework repository against its own rules: run the validator,
   interpret what it found, and fix what is safe to fix. Use when asked to audit, check or
@@ -9,7 +9,7 @@ description: >
   `TRACEABILITY.md`.
 ---
 
-# framework-audit
+# audit
 
 The validator is a script, and it runs the same way here and in CI: one implementation,
 two entry points. What this skill adds is not more checking, it is the judgment about what
@@ -21,7 +21,7 @@ disappear that leaves the repository worse than it was.
 ## Running it
 
 ```bash
-python <framework>/skills/framework-audit/scripts/validate.py --root <project> --json
+python ${CLAUDE_PLUGIN_ROOT}/skills/audit/scripts/validate.py --root <project> --json
 ```
 
 `--root` is the project being checked, not the framework. `--json` when you are going to
@@ -123,6 +123,6 @@ checks:
   LC002: error
 ```
 
-`skills/framework-audit/checks.yaml` is the catalog: every check carries the failure it
+`skills/audit/checks.yaml` is the catalog: every check carries the failure it
 prevents, which is what you read to decide. Two checks are `off` and cannot simply be
 switched on, and the catalog says why in `blocked_by`.
