@@ -15,6 +15,7 @@ just broken something.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import re
 import subprocess
@@ -34,6 +35,20 @@ GENERATE = ROOT / "schemas" / "generate.py"
 
 SECTION_MARK = re.compile(r"<!--\s*section:\s*([a-z0-9-]+)\s*-->")
 PLACEHOLDERS = set(REGISTRY["placeholders"]["enforced"])
+
+
+def _load(path: Path, name: str):
+    """Import the validator so its constants are read, never restated here."""
+    spec = importlib.util.spec_from_file_location(name, path)
+    mod = importlib.util.module_from_spec(spec)
+    # Registered before it runs: @dataclass resolves annotations through sys.modules, and
+    # without this the import dies on the first decorated class.
+    sys.modules[name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+GENERATED_MARK = _load(VALIDATE, "validate").GENERATED_MARK
 
 failures: list[str] = []
 
@@ -249,6 +264,110 @@ def _clean_repo():
             return [f"the validator crashed: {r.stderr.strip().splitlines()[-1]}"]
         out = json.loads(r.stdout)
         return [f"{f['code']} {f['path']}: {f['message']}" for f in out["findings"]]
+
+
+@check("--emit-index refuses to overwrite an index somebody maintains by hand")
+def _emit_index_refuses():
+    # `--emit-index` writes only what front matter can express, and the reason a project
+    # keeps one of these files by hand is always the part it cannot: a column for why a
+    # decision still matters, a row for where a source system enters the chain. The skill
+    # used to list this under "apply without asking", which is how an agent deletes that
+    # content while believing it is tidying up. The marker is the permission to overwrite.
+    fm = lambda **kw: "---\n" + "\n".join(f"{k}: {v}" for k, v in kw.items()) + "\n---\n\n"
+    dec = fm(schema="framework/decision-record/v1", artifact_type="decision-record",
+             id="DEC-001", lifecycle="immutable", status="accepted", scope="architecture",
+             products="[alpha]", owners="[owner]", created="2026-01-01") + "# DEC-001\n"
+    by_hand = "# Decision index\n\nHand maintained.\n\n| ID | Why it still matters |\n"
+    problems = []
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / "decisions").mkdir(parents=True)
+        (root / "decisions" / "DEC-001-slug.md").write_text(dec)
+        index = root / "decisions" / "INDEX.md"
+        index.write_text(by_hand)
+
+        run = lambda *extra: subprocess.run(
+            [sys.executable, str(VALIDATE), "--root", str(root), "--json",
+             "--emit-index", "--stale-days", "36500", *extra],
+            capture_output=True, text=True)
+
+        r = run()
+        if index.read_text() != by_hand:
+            problems.append("--emit-index overwrote a hand maintained decisions/INDEX.md")
+        if r.returncode == 0:
+            problems.append("--emit-index refused the write and still exited 0: a caller "
+                            "cannot tell the file was not regenerated")
+        if r.returncode in (0, 1):
+            rel = "decisions/INDEX.md"
+            if rel not in json.loads(r.stdout).get("hand_maintained", []):
+                problems.append(f"{rel} was not reported under hand_maintained")
+
+        # --check must not call it out of date: that wording is an instruction to run the
+        # overwrite, which is the thing being prevented.
+        c = run("--check")
+        if c.returncode in (0, 1):
+            out = json.loads(c.stdout)
+            if "decisions/INDEX.md" in out.get("out_of_date", []):
+                problems.append("--emit-index --check reports a hand maintained index as "
+                                "out of date, which points the reader at the overwrite")
+
+        # The marker is what grants permission, so a generated file still regenerates.
+        index.write_text(GENERATED_MARK + "\nstale\n")
+        run()
+        if GENERATED_MARK not in index.read_text() or "stale" in index.read_text():
+            problems.append("a marked index was not regenerated: the guard is too wide")
+
+    return problems
+
+
+@check("a register vouches for the identifiers it declares, not the ones it mentions")
+def _inline_ids_are_scoped():
+    # Both directions, because this check exists to hold a line between them. A register
+    # has to vouch for its own entries or every OD reference reads as dangling; it must not
+    # vouch for the identifiers it merely cites, or REF001 is cleared by writing a sentence
+    # about the missing document, which is precisely what the skill tells you to do.
+    fm = lambda **kw: "---\n" + "\n".join(f"{k}: {v}" for k, v in kw.items()) + "\n---\n\n"
+    dec = lambda i, **extra: fm(
+        schema="framework/decision-record/v1", artifact_type="decision-record", id=i,
+        lifecycle="immutable", status="accepted", scope="architecture",
+        products="[alpha]", owners="[owner]", created="2026-01-01", **extra) + f"# {i}\n"
+
+    files = {
+        # Declares OD-001 and KI-001; cites DEC-999, which it does not own.
+        "OPEN.md": fm(schema="framework/open-register/v1", artifact_type="open-register",
+                      lifecycle="living", status="active", owners="[owner]",
+                      created="2026-01-01", last_review="2026-01-01 09:00")
+        + "# Open\n\n- OD-001 - where the landing zone goes\n- KI-001 - nightly job is "
+          "flaky\n\nDEC-999 was never written, and this sentence must not make it exist.\n",
+        # Resolves against an entry inside the register: this is the case the loose rule
+        # was there to serve, and it has to keep working.
+        "decisions/DEC-001-slug.md": dec("DEC-001", derives_from="OD-001"),
+        # Resolves against nothing at all.
+        "decisions/DEC-002-slug.md": dec("DEC-002", derives_from="DEC-999"),
+    }
+
+    with tempfile.TemporaryDirectory() as tmp:
+        for rel, text in files.items():
+            p = Path(tmp) / rel
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(text)
+        r = subprocess.run(
+            [sys.executable, str(VALIDATE), "--root", tmp, "--json",
+             "--stale-days", "36500"], capture_output=True, text=True)
+        if r.returncode not in (0, 1):
+            return [f"the validator crashed: {r.stderr.strip().splitlines()[-1]}"]
+        ref001 = {f["path"] for f in json.loads(r.stdout)["findings"]
+                  if f["code"] == "REF001"}
+
+    problems = []
+    if "decisions/DEC-001-slug.md" in ref001:
+        problems.append("OD-001 is declared as an entry in OPEN.md and was still reported "
+                        "dangling: the register no longer vouches for its own entries")
+    if "decisions/DEC-002-slug.md" not in ref001:
+        problems.append("DEC-999 exists nowhere, yet REF001 did not fire: naming it in the "
+                        "prose of a register is enough to clear the finding")
+    return problems
 
 
 # ─────────────────────────────────────────────────────────────────────────────

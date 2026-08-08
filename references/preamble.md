@@ -73,8 +73,12 @@ make them annoying: appending a `SIG` to `LOG`, and adding an entry to the parki
 Any skill that wrote something ends by running the validator, and reports what it says:
 
 ```bash
-python ${CLAUDE_PLUGIN_ROOT}/skills/audit/scripts/validate.py --root <project>
+python3 "${CLAUDE_PLUGIN_ROOT:?unset: point it at your framework-data-ai checkout}/skills/audit/scripts/validate.py" --root <project>
 ```
+
+`python3` and the `:?` are both load bearing: `python` is not on PATH on most systems, and
+an unset `CLAUDE_PLUGIN_ROOT` collapses the path to `/skills/...` and fails with a message
+that names neither problem. The `audit` skill explains this once, in full.
 
 This is not ceremony. The cascade is where a write goes wrong, and the validator is what
 notices that a `DEC` moved and its `ARC` did not. If it reports something you caused, fix

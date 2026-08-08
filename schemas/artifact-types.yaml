@@ -82,10 +82,24 @@ placeholders:
 id_prefixes: [PRB, HYP, EVD, CMP, DFB, SD, DEC, CHG, EVR, REL, RLM, DC,
               SIG, ANA, INC, OD, KI, RSK, CMT, ING]
 
-# Types whose body *defines* identifiers instead of only citing them. Every append-only
-# artifact does this too, and that is derivable from `lifecycle`, so it is not repeated
-# here.
-inline_id_types: [open-register, risk-register, commitments, roadmap]
+# Types whose body *defines* identifiers instead of only citing them, and which prefixes
+# each one defines. The second half is the part that matters. Every one of these registers
+# also cites identifiers it does not own, constantly: `OPEN.md` names the `DEC` that closed
+# an entry, `LOG.md` names the `CHG` a signal produced, `ING.md` names where each extracted
+# claim was routed. Vouching for every identifier printed in a register would mean that
+# writing "there is no DEC-999" is enough to make DEC-999 exist, so a dangling reference
+# would disappear the moment somebody documented it, which is the one thing the reference
+# checks ask you to do.
+#
+# Append-only types are listed here like the others. Their lifecycle is not enough on its
+# own: it says the body accumulates entries, not which identifiers those entries carry.
+inline_id_declarations:
+  open-register: [OD, KI]
+  risk-register: [RSK]
+  commitments: [CMT]
+  roadmap: [INC]
+  signal-log: [SIG, ANA]
+  ingestion-register: [ING]
 
 # What a validator built on this registry should look at.
 #
