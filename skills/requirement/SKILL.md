@@ -17,7 +17,7 @@ description: >
 
 # requirement
 
-Read `references/preamble.md` at the plugin root first, then
+Read `references/preamble.md`, which sits at `${CLAUDE_PLUGIN_ROOT}`, first, then
 `references/routing-table.md`, which holds the classification, the cascade and the conflict
 rules. Read it every time. Do not work from memory of it and do not restate it here: it is
 the file that keeps this skill and `start` writing to the same places.

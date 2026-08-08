@@ -1,7 +1,7 @@
 # Routing table
 
-Shared by `start`, `requirement` and `resolve`. It answers one question: **given a
-statement, where does it get written and what changes with it?**
+Shared by `start`, `requirement` and `resolve`, and by `cycle` for §4. It answers one
+question: **given a statement, where does it get written and what changes with it?**
 
 This is the only source of that logic. Do not restate it inside a skill: if the copies
 diverged, the corpus and the conversational notes would end up in different places, and

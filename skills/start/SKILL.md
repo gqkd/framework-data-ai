@@ -15,7 +15,8 @@ description: >
 
 # start
 
-Read `references/preamble.md` at the plugin root before anything else, and
+Read `references/preamble.md`, which sits at `${CLAUDE_PLUGIN_ROOT}`, before anything
+else, and
 `references/routing-table.md` before classifying anything. The routing table is the single
 source of the classification and cascade logic. Read it, do not summarise it from memory:
 it is the file that keeps this skill and `requirement` writing to the same places.

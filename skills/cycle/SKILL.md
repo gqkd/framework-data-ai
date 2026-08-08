@@ -14,7 +14,7 @@ description: >
 
 # cycle
 
-Read `references/preamble.md` at the plugin root first.
+Read `references/preamble.md`, which sits at `${CLAUDE_PLUGIN_ROOT}`, first.
 
 This skill implements the stretch of the loop that is easy to run in the wrong order:
 **intake → triage → `ICG` → reshaping → `CHG` → `IMP` → briefs.** The plan comes *after* the
@@ -23,17 +23,27 @@ the plan is already obsolete and everyone keeps reading it.
 
 ## Step 1 · Intake
 
-Gather the candidates. They come from two places and nowhere else:
+Gather the candidates. Three documents hold them:
 
 - **`LOG.md`** — signals: incidents, drift, feedback, requests, metrics, compliance.
 - **`RMP.md`** — the increments already hypothesised, with the evidence each depends on.
+- **`ARC#delta`**, once the architecture has a target: the structural increments that
+  separate what is built from where it is going. `#delta` says *what* is missing, `RMP` says
+  in what order and on what evidence. If a delta row has no corresponding `RMP` entry, that
+  is worth surfacing: it means something structural is missing from the plan.
 
-And, once the architecture has a target, from **`ARC#delta`**: the structural increments
-that separate what is built from where it is going. `#delta` says *what* is missing, `RMP`
-says in what order and on what evidence. If a delta row has no corresponding `RMP` entry,
-that is worth surfacing: it means something structural is missing from the plan.
+And a fourth source that is not a document: **the user, in the conversation that opened the
+cycle.** "We also need to upgrade pandas" is a candidate and it is nowhere in `LOG.md`.
+Take it, and before classifying it write it where it belongs, because a candidate that
+exists only in a chat window is one nobody can audit afterwards: a request or an incident
+is a `SIG` appended to `LOG.md`, an increment is an `RMP` row. Appending a `SIG` is one of
+the two things the preamble lets you do without asking.
 
 A signal is a candidate, not a mandate. Nothing here is authorized yet.
+
+`LOG.md` records no triage state, and being append-only it could not carry one, so nothing
+distinguishes a signal already worked from one nobody has read. Until it does, say which
+signals you took and from what point, rather than implying the log was swept.
 
 ## Step 2 · Triage and the `ICG`
 
@@ -42,13 +52,23 @@ For each candidate, classify the impact. Read `PBR`, `ARC`, the relevant `DC`, `
 too narrow, because a change can leave the architecture untouched and still invalidate an
 outcome, a price, a data contract or the risk profile.
 
+Read `COMMITMENTS.md` and the accepted `DEC` records too. They are where the hardest calls
+are settled and neither is visible from the five above. A candidate that contradicts a
+signed commitment is not a change to classify, and a candidate that contradicts an accepted
+decision needs a `DEC` that supersedes rather than a `CHG` — an agent reading only `ARC`
+would file it as a routine increment and never see either.
+
+When a candidate contradicts something already written, that is a conflict, and
+`references/routing-table.md` §4 says what to do with one: show both versions with their
+provenance and ask which holds. Do not resolve it inside the classification.
+
 | Outcome | Path |
 |---|---|
 | No structural impact | technical `CHG`, straight to `IMP` |
 | Product impact | product reshaping → `PBR`, `WF` |
 | Architecture impact | architecture reshaping → `ARC`, `DEC` |
 | Both | joint reshaping |
-| Solution hypothesis invalidated | re-entry into F3. **Not** a `CHG** |
+| Solution hypothesis invalidated | re-entry into F3. **Not** a `CHG` |
 | Problem or segment invalidated | re-entry into F2. **Not** a `CHG` |
 
 **Propose the classification, do not decide it.** An `ICG` decided automatically is a gate

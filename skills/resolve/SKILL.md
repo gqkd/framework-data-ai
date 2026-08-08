@@ -14,7 +14,7 @@ description: >
 
 # resolve
 
-Read `references/preamble.md` at the plugin root first, and
+Read `references/preamble.md`, which sits at `${CLAUDE_PLUGIN_ROOT}`, first, and
 `references/routing-table.md` for the cascade each decision triggers.
 
 `OPEN.md` is the work queue and it is already ordered. §1 groups entries by cost to reverse:

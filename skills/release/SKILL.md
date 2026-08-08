@@ -13,7 +13,7 @@ description: >
 
 # release
 
-Read `references/preamble.md` at the plugin root first.
+Read `references/preamble.md`, which sits at `${CLAUDE_PLUGIN_ROOT}`, first.
 
 This is the skill with the lowest share of judgment and therefore the one that saves the
 most time at equal risk. Almost everything here is assembled from documents and from git.
