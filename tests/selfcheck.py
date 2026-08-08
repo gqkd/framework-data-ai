@@ -426,6 +426,30 @@ def _extract_reports_its_gaps():
         if e.returncode == 0:
             problems.append("the extractor exited 0 on a corpus with nothing in it")
 
+        f = Path(tmp) / "not-a-directory.md"
+        f.write_text("x", encoding="utf-8")
+        o = subprocess.run([sys.executable, str(EXTRACT), str(src), "-o", str(f)],
+                           capture_output=True, text=True)
+        if o.returncode == 0 or "Traceback" in o.stderr:
+            problems.append("-o pointed at a file should say so and stop, not raise: "
+                            f"rc={o.returncode}, stderr={o.stderr.strip()[:80]!r}")
+
+    # The text-poor pages branch, reached through the pure builder. Every format that can
+    # set `visual_review` goes through poppler, markitdown or LibreOffice, none of which a
+    # bare CI runner has, so driving the CLI would leave this untested wherever it matters.
+    x = _load(EXTRACT, "extract")
+    seen = x.build_extract_md(
+        2, [x.Block("deck.pdf", "page 1", "Architettura")],
+        [], [x.DocInfo("deck.pdf", "pdf", units=9, visual_review=[2, 3, 4])])
+    if "deck.pdf" not in seen or "2, 3, 4" not in seen:
+        problems.append("a document with text-poor pages is not named in extract.md with "
+                        "its page numbers: the warning lives only on stdout again")
+
+    quiet = x.build_extract_md(1, [x.Block("a.md", "document", "hi")], [],
+                               [x.DocInfo("a.md", "md", units=1)])
+    if "look at" in quiet or "produced no text" in quiet:
+        problems.append("extract.md warns about a corpus that had nothing wrong with it")
+
     return problems
 
 
