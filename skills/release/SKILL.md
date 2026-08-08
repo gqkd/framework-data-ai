@@ -30,10 +30,34 @@ Check, in order:
 2. **It cites the `EVP` in the version frozen at RC time**, through `evp_version` and
    `evp_hash`. The freeze is the whole mechanism: it is what makes it impossible to adjust
    the thresholds after seeing the results.
-3. **Every metric and every slice is above its threshold.** Slices matter as much as
-   aggregates: a model that clears the overall threshold while failing on one segment is a
-   model that fails for the people in that segment.
-4. **`verified_against`** names the commit the evaluation actually ran on.
+3. **The cited hash is the hash of the plan you are about to read.** Citing it is not
+   checking it. Recompute it and compare:
+
+   ```bash
+   sha256sum products/<p>/EVP.md          # or: shasum -a 256
+   ```
+
+   If it differs, the `EVP` on disk is not the one this candidate was measured against, and
+   the thresholds in front of you are not the ones that count. Do not judge against them.
+   Recover the frozen plan from the commit in `verified_against` and use that:
+
+   ```bash
+   git show <verified_against>:products/<p>/EVP.md
+   ```
+
+   A mismatch is not by itself dishonest: a review that only touched `last_review` moves the
+   hash too. It is still disqualifying for this candidate, and which of the two it was shows
+   in one `git diff`. Say which.
+4. **Every metric and every slice is at or better than its threshold**, judged against the
+   list in the frozen `EVP`, not the list the report chose to print. *Better* has a
+   direction and the `EVP` states it: for a maximum such as latency, cost or hallucination
+   rate, better is lower. A report may show metrics the plan never asked for, and they are
+   not evidence for this gate no matter how good they look. A metric the plan requires and
+   the report omits is a fail, not an absence: you cannot establish something you were not
+   shown. Exactly on the threshold passes.
+5. **Slices matter as much as aggregates.** A model that clears the overall threshold while
+   failing on one segment is a model that fails for the people in that segment.
+6. **`verified_against`** names the commit the evaluation actually ran on.
 
 If any of these is missing or below threshold, the outcome is **rework, not rollback**, and
 use that word. Nothing has been deployed yet, so there is nothing to roll back. Rollback
@@ -48,6 +72,12 @@ for this candidate.
 If `evp_hash` cannot be established, say so and stop. Do not compute a hash of the current
 `EVP` and present it as the frozen one: that turns the one piece of evidence the gate rests
 on into a decoration.
+
+**Read the numbers, not the verdict column.** An `EVR` states its own outcome per metric and
+that column is the author's claim, not the check. Compare each result against the frozen
+threshold yourself. The failure this catches is not usually a forged `pass`: it is a row
+worded so that no word in it is false and no reader stops, `0.812 against a 0.85 threshold`
+sitting at the bottom of a table of excellent numbers the plan never asked for.
 
 ## Step 2 · The manifest
 
