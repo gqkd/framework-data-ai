@@ -312,6 +312,23 @@ def discover(root: Path, scan: dict, registry: dict, report: Report) -> list[Art
             report.add("FM001", rel, err)
             continue
         art = Artifact(p, rel, meta, body)
+        # Every identifier in the body, not only the ones in a declaring position. That is
+        # looser than it looks like it should be, and the looseness is deliberate.
+        #
+        # A register does distinguish declaring an entry from citing one, but it does so in
+        # prose, not in layout. `OPEN.md §4` closes an entry with
+        # `- **2026-05-12 · OD-000** -> DEC-001`, and states a dependency with
+        # `- **Depends on:** OD-011.` Both are list items carrying an identifier after some
+        # text, and the only thing separating them is that one prefix is a date and the
+        # other is a field label. Keying a check on that is a heuristic that will misfire,
+        # and a check that misfires on correct documents gets switched off within a week,
+        # which costs more than the hole it closed.
+        #
+        # The hole is therefore known and bounded: inside a register, an identifier of a
+        # prefix that register declares is treated as existing even when it is only being
+        # cited. `inline_id_declarations` keeps that from spreading to every other prefix,
+        # which is where it did real damage. Closing the rest wants the registers to mark
+        # their entries, not the validator to guess at them.
         art.ids = set(id_re.findall(body))
         artifacts.append(art)
     return artifacts
