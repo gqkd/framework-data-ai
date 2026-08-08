@@ -183,6 +183,26 @@ checks:
     prevents: >
       The definition of the product exists only in somebody's head or in a sales pitch.
 
+  ICG001:
+    level: info    # the first `info` in this catalog, and the reason is below
+    title: signals no impact classification has ever considered
+    prevents: >
+      A cycle re-reading the whole log and guessing which signals are new, and the older
+      failure underneath it: a signal quietly never looked at by anyone. `LOG` is
+      append-only, so a row can never be marked handled and triage state cannot live
+      there. It lives in the `ICG` instead, where every candidate examined appears in
+      `routing`, including the ones routed `not-a-candidate`. This check is the question
+      "which signals has nobody looked at", which before the `ICG` existed had no answer
+      and was settled by guessing.
+    why_info: >
+      Untriaged signals are the state every repository is in before its first cycle, and
+      every repository written before the `ICG` type existed is in it for all of them. That
+      is not a fault, it is work not yet done, and a warning that fires on correct
+      documents on day one is a warning people learn to scroll past. It reports at `info`
+      and stays there until a project has reason to raise it, which is the framework's rule
+      everywhere else: one line in the project's `framework.yaml`, the first time somebody
+      opens a cycle and finds a signal from four months ago nobody had ever read.
+
   # ── Not implemented, and why ───────────────────────────────────────────────
   CHG001:
     level: "off"    # quoted: YAML 1.1 reads a bare off as false

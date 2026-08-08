@@ -50,6 +50,7 @@ identifier, so a `CHG` written later can be traced back to the row that authoriz
 | `hypothesis-invalidated` | re-entry into F3. **Not** a `CHG` |
 | `problem-invalidated` | re-entry into F2. **Not** a `CHG` |
 | `not-classifiable` | the evidence to classify it does not exist yet. Say what would settle it |
+| `not-a-candidate` | looked at, and it is not a change proposal at all. Say why in §3 |
 
 | `impacts` | What it requires |
 |---|---|
@@ -68,10 +69,15 @@ working product gets torn up. Name the measurement that would decide it.
 <!-- section: intake -->
 ## 1 · What was considered
 
-Where the candidates came from and, more importantly, where they stopped. `LOG` records no
-triage state and, being append-only, could not carry one: nothing distinguishes a signal
-already worked from one nobody has read. So say it here rather than implying the log was
-swept.
+Where the candidates came from and, more importantly, where they stopped.
+
+**Every signal you read goes in `routing`, including the ones that go nowhere.** `LOG` is
+append-only, so a row can never be marked handled and triage state cannot live there. It
+lives here instead, which means the difference between a signal nobody has read and one
+somebody read and set aside exists only if you record the second. `ICG001` reports the
+first, and it can only tell them apart because `not-a-candidate` is written down. A signal
+left out of `routing` because it was obviously nothing will be re-read every cycle from now
+until somebody routes it.
 
 - **From `LOG.md`:** which signals, and from which point onwards.
 - **From `RMP.md`:** which increments were live candidates this cycle.

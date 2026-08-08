@@ -564,6 +564,44 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
                        "because the cost of waiting exceeds the cost of being wrong.")
 
 
+def check_triage(arts: list[Artifact], report: Report) -> None:
+    """Which signals has nobody looked at.
+
+    `LOG` is append-only, so a row cannot be marked handled and triage state was simply
+    unrecorded: every cycle re-read the whole log and guessed which entries were new. It
+    lives in the `ICG` now, where every candidate examined appears in `routing`, including
+    the ones that turned out not to be candidates at all. So the question becomes a set
+    difference, and the answer stops depending on who is doing the reading.
+
+    One finding per log rather than one per signal. Adopting the framework on a project
+    that already has a log means every entry predates the first `ICG`, and a wall of
+    identical warnings on day one is how a check gets switched off before it is understood.
+    """
+    logs = [a for a in arts if a.type == "signal-log"]
+    if not logs:
+        return
+
+    triaged: set[str] = set()
+    for a in arts:
+        if a.type == "impact-classification":
+            routing = a.meta.get("routing")
+            if isinstance(routing, dict):
+                triaged |= {k for k in routing if isinstance(k, str)}
+
+    for log in logs:
+        untriaged = sorted(i for i in log.ids if i.startswith("SIG-") and i not in triaged)
+        if not untriaged:
+            continue
+        shown = ", ".join(untriaged[:8]) + (" ..." if len(untriaged) > 8 else "")
+        never = "no impact classification exists in this repository" if not triaged \
+            else "no impact classification lists them"
+        report.add("ICG001", log.rel,
+                   f"{len(untriaged)} signal(s) that {never}: {shown}. A signal nobody "
+                   "triaged is not the same as one triaged and set aside, and only the "
+                   "second is a decision. Route them in the next `ICG`, including as "
+                   "`not-a-candidate`, which is what stops the next cycle re-reading them.")
+
+
 def check_cross_product(arts: list[Artifact], report: Report) -> None:
     products = {p for a in arts for p in as_list(a.meta.get("products"))}
 
@@ -685,6 +723,7 @@ def main() -> int:
     check_references(arts, registry, report)
     check_release(arts, report)
     check_open_register(arts, report)
+    check_triage(arts, report)
     check_cross_product(arts, report)
 
     index_written: list[str] = []

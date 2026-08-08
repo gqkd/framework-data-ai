@@ -41,9 +41,12 @@ the two things the preamble lets you do without asking.
 
 A signal is a candidate, not a mandate. Nothing here is authorized yet.
 
-`LOG.md` records no triage state, and being append-only it could not carry one, so nothing
-distinguishes a signal already worked from one nobody has read. Until it does, say which
-signals you took and from what point, rather than implying the log was swept.
+`LOG.md` records no triage state and, being append-only, could never carry one: a row
+cannot be marked handled. So the state lives in the `ICG`, and every signal you read goes
+into its `routing` even when it goes nowhere, as `not-a-candidate`. That is the only thing
+separating a signal nobody has read from one somebody read and set aside, and `ICG001`
+reports the first. Leave a signal out because it was obviously nothing and every cycle from
+now on will read it again.
 
 ## Step 2 · Triage and the `ICG`
 
@@ -75,6 +78,7 @@ on the way, and one candidate can touch several.
 | `hypothesis-invalidated` | re-entry into F3. **Not** a `CHG` |
 | `problem-invalidated` | re-entry into F2. **Not** a `CHG` |
 | `not-classifiable` | the evidence to decide does not exist yet |
+| `not-a-candidate` | looked at, and it is not a change proposal at all |
 
 | `impacts` | What it obliges |
 |---|---|

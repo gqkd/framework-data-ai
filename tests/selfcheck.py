@@ -371,6 +371,71 @@ def _inline_ids_are_scoped():
     return problems
 
 
+@check("a signal set aside and a signal nobody read are told apart")
+def _triage_state_is_derivable():
+    # `LOG` is append-only, so no row can ever be marked handled, and triage state had
+    # nowhere to live: every cycle re-read the whole log and guessed. It is derived from
+    # the `ICG` now, which is only sound if a signal examined and dismissed counts as
+    # examined. That is what `not-a-candidate` is for, and if it stopped counting the
+    # check would nag forever about signals somebody already dealt with, which is how a
+    # check gets switched off.
+    fm = lambda **kw: "---\n" + "\n".join(f"{k}: {v}" for k, v in kw.items()) + "\n---\n\n"
+    log = fm(schema="framework/signal-log/v1", artifact_type="signal-log",
+             lifecycle="append-only", status="active", products="[alpha]",
+             owners="[owner]", created="2026-01-01") \
+        + "# Log\n\n| SIG-001 | drift |\n| SIG-002 | request |\n"
+
+    def icg(**routing):
+        head = fm(schema="framework/impact-classification/v1",
+                  artifact_type="impact-classification", lifecycle="immutable",
+                  status="accepted", id="ICG-001", products="[alpha]", owners="[owner]",
+                  created="2026-01-01",
+                  routing="\n" + "\n".join(f"  {k}: {v}" for k, v in routing.items()))
+        return head + "# ICG-001\n\n<!-- section: intake -->\n## I\n" \
+                      "<!-- section: classification -->\n## C\n" \
+                      "<!-- section: open-questions -->\n## O\n"
+
+    def run(files):
+        with tempfile.TemporaryDirectory() as tmp:
+            for rel, text in files.items():
+                p = Path(tmp) / rel
+                p.parent.mkdir(parents=True, exist_ok=True)
+                p.write_text(text)
+            r = subprocess.run(
+                [sys.executable, str(VALIDATE), "--root", tmp, "--json",
+                 "--stale-days", "36500"], capture_output=True, text=True)
+            if r.returncode not in (0, 1):
+                return None
+            return [f for f in json.loads(r.stdout)["findings"] if f["code"] == "ICG001"]
+
+    problems = []
+    base = "products/alpha/LOG.md"
+    cyc = "products/alpha/cycles/ICG-001.md"
+
+    got = run({base: log})
+    if got is None:
+        return ["the validator crashed on a log with no impact classification"]
+    if len(got) != 1:
+        problems.append("a log with no ICG at all raised no ICG001: nothing in the "
+                        "repository has been triaged and the check says so nowhere")
+    elif "SIG-001" not in got[0]["message"] or "SIG-002" not in got[0]["message"]:
+        problems.append(f"ICG001 does not name the untriaged signals: {got[0]['message']}")
+
+    got = run({base: log, cyc: icg(**{"SIG-001": "architecture"})})
+    if not got or "SIG-002" not in got[0]["message"]:
+        problems.append("SIG-002 appears in no ICG and was not reported")
+    elif "SIG-001" in got[0]["message"]:
+        problems.append("SIG-001 was classified and is still reported as untriaged")
+
+    got = run({base: log, cyc: icg(**{"SIG-001": "architecture",
+                                      "SIG-002": "not-a-candidate"})})
+    if got:
+        problems.append("a signal routed `not-a-candidate` is still counted as never "
+                        f"looked at: {got[0]['message']}. Examined and set aside is a "
+                        "decision, and re-reporting it forever is how the check dies")
+    return problems
+
+
 @check("a gate verdict has a closed vocabulary")
 def _maps_are_constrained():
     # `maps` in the registry exists so the `ICG` can carry one verdict per candidate as

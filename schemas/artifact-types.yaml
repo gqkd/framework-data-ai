@@ -502,10 +502,15 @@ types:
     # contract breaking with no product or architecture movement had to be filed as
     # something it was not.
     maps:
+    # Every candidate looked at goes in `routing`, including the ones that turned out not
+    # to be candidates. That is what makes triage state a question you can ask the
+    # documents: `LOG` is append-only and could never carry a "handled" column, so without
+    # this every cycle re-reads the whole log and guesses which signals are new.
       routing:
         required: true
         one_of: [none, product, architecture, both,
-                 hypothesis-invalidated, problem-invalidated, not-classifiable]
+                 hypothesis-invalidated, problem-invalidated,
+                 not-classifiable, not-a-candidate]
       impacts:
         any_of: [architecture, data, ai, risk-compliance]
 

@@ -37,7 +37,8 @@
           "both",
           "hypothesis-invalidated",
           "problem-invalidated",
-          "not-classifiable"
+          "not-classifiable",
+          "not-a-candidate"
         ]
       }
     },
