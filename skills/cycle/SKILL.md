@@ -62,17 +62,47 @@ When a candidate contradicts something already written, that is a conflict, and
 `references/routing-table.md` §4 says what to do with one: show both versions with their
 provenance and ask which holds. Do not resolve it inside the classification.
 
-| Outcome | Path |
-|---|---|
-| No structural impact | technical `CHG`, straight to `IMP` |
-| Product impact | product reshaping → `PBR`, `WF` |
-| Architecture impact | architecture reshaping → `ARC`, `DEC` |
-| Both | joint reshaping |
-| Solution hypothesis invalidated | re-entry into F3. **Not** a `CHG` |
-| Problem or segment invalidated | re-entry into F2. **Not** a `CHG` |
+The classification has two halves and they are not the same question. **Routing** is where
+the candidate goes, and there is one answer per candidate. **Impacts** are what it touches
+on the way, and one candidate can touch several.
 
-**Propose the classification, do not decide it.** An `ICG` decided automatically is a gate
-that does not exist. The last two rows especially: if the hypothesis is invalidated, the
+| `routing` | Path |
+|---|---|
+| `none` | no structural impact: technical `CHG`, straight to `IMP` |
+| `product` | product reshaping → `PBR`, `WF` |
+| `architecture` | architecture reshaping → `ARC`, `DEC` |
+| `both` | joint reshaping |
+| `hypothesis-invalidated` | re-entry into F3. **Not** a `CHG` |
+| `problem-invalidated` | re-entry into F2. **Not** a `CHG` |
+| `not-classifiable` | the evidence to decide does not exist yet |
+
+| `impacts` | What it obliges |
+|---|---|
+| `architecture` | an updated `ARC` **and** a `DEC` |
+| `data` | a `DC` version bump and notice to its consumers |
+| `ai` | a new `EVR` |
+| `risk-compliance` | a line in `RSK §state` |
+
+A data contract breaking with no product and no architecture movement routes `none` and
+carries `data`. Filing it as an architecture change because that was the closest available
+word is how the obligation attached to it gets lost.
+
+`not-classifiable` is the honest answer to the most common thing at triage: a candidate
+nobody has measured. Three people saying a number feels wrong is not an invalidated
+hypothesis, and it is not a bug either. Say what measurement would settle it and route it
+there. Forcing it into one of the other rows either closes a real signal or tears up a
+working product.
+
+**Write the `ICG`.** One per cycle, at `products/<p>/cycles/ICG-NNN.md`, from
+`templates/ICG.md`. It carries `routing` and `impacts` in its front matter, keyed by
+candidate, plus what was considered and what is unresolved. This is what makes the gate a
+gate: before it existed the classification survived only inside the `CHG` documents that
+came out of it, so a candidate routed back into discovery, and every triage a user stopped
+after reading, left nothing behind at all.
+
+**Propose the classification, do not decide it.** The `ICG` is written `status: proposed`
+and becomes `accepted` when the user says so. A gate crossed automatically is a gate that
+does not exist. The two invalidation rows especially: if the hypothesis is invalidated, the
 honest outcome is that this is not a change, it is discovery starting again, and saying so
 is more valuable than producing a change contract that pretends otherwise.
 
@@ -87,8 +117,11 @@ not decide it here to keep the cycle moving.
 
 ## Step 4 · The change contract
 
-One `CHG` per authorized change. Three sections are mandatory and the middle one is the
-reason this document exists:
+One `CHG` per authorized change, and each one names the `ICG` it came from in its `icg`
+field. That link is the whole reason the routing is a field: it is what lets a check ask
+whether a change declaring an AI impact cites an `EVR`, instead of a person remembering to.
+
+Three sections are mandatory and the middle one is the reason this document exists:
 
 **What changes.** The mandate, concretely.
 

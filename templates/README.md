@@ -34,6 +34,7 @@ they describe the concrete ways that document becomes useless.
 | `LOG.md` | Signal log | append-only | `products/<p>/LOG.md` |
 | `ING.md` | Business corpus ingestion log | append-only | `ING.md` |
 | `RMP.md` | Progressive implementation roadmap | living | `products/<p>/RMP.md` |
+| `ICG.md` | Impact classification gate | immutable | `products/<p>/cycles/ICG-NNN.md` |
 | `CHG.md` | Change contract | immutable | `products/<p>/changes/CHG-NNN.md` |
 | `IMP.md` | Cycle implementation plan | living, replaced | `products/<p>/IMP.md` |
 | `RSK.md` | Risks: state / acceptances / events | living | `products/<p>/RSK.md` |

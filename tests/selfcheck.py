@@ -371,6 +371,48 @@ def _inline_ids_are_scoped():
     return problems
 
 
+@check("a gate verdict has a closed vocabulary")
+def _maps_are_constrained():
+    # `maps` in the registry exists so the `ICG` can carry one verdict per candidate as
+    # front matter instead of as a table somebody has to read. That is the entire reason
+    # the gate got an artifact, and it is worth nothing if an invented routing passes: a
+    # field with an open vocabulary is prose with a colon in it. `CHG001` and `CHG002` are
+    # switched off waiting on this, so the constraint has to bite before they come back.
+    typed = {n: s for n, s in REGISTRY["types"].items() if s.get("maps")}
+    if not typed:
+        return ["no type declares `maps`: this check is no longer running"]
+
+    problems = []
+    for name, spec in typed.items():
+        schema = json.loads((ROOT / "schemas" / "framework" / name / "v1.json")
+                            .read_text(encoding="utf-8"))
+        validator = Draft202012Validator(schema)
+        for field, rule in spec["maps"].items():
+            legal = rule.get("one_of") or rule.get("any_of")
+            wrap = (lambda v: v) if "one_of" in rule else (lambda v: [v])
+            base = {"schema": f"framework/{name}/v1", "artifact_type": name,
+                    "lifecycle": spec["lifecycle"], "status": spec["status"][0],
+                    "owners": ["someone"], "created": "2026-01-01"}
+            for f2, r2 in spec["maps"].items():
+                if r2.get("required"):
+                    v = (r2.get("one_of") or r2.get("any_of"))[0]
+                    base[f2] = {"X-001": v if "one_of" in r2 else [v]}
+
+            ok = dict(base, **{field: {"X-001": wrap(legal[0])}})
+            if validator.is_valid(ok):
+                pass
+            else:
+                err = next(validator.iter_errors(ok)).message
+                problems.append(f"{name}.{field}: rejected the legal value "
+                                f"{legal[0]!r}: {err}")
+
+            bad = dict(base, **{field: {"X-001": wrap("not-a-real-outcome")}})
+            if validator.is_valid(bad):
+                problems.append(f"{name}.{field}: accepted 'not-a-real-outcome', so the "
+                                "vocabulary is open and the field is prose with a colon")
+    return problems
+
+
 @check("supersedes reads as a list, and a diamond is not a cycle")
 def _supersedes_takes_a_list():
     # `supersedes: [DEC-001, DEC-004]` is how anyone replacing two decisions at once would

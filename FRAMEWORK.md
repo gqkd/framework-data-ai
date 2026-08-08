@@ -273,6 +273,7 @@ One template for each in `templates/`. Every template contains the anti-patterns
 | `LOG` | Signal log | append-only | product | F5 |
 | `ING` | Business corpus ingestion log | append-only | platform | day one |
 | `RMP` | Progressive implementation roadmap | living | product | F4 |
+| `ICG` | Impact classification gate | immutable | product | loop |
 | `CHG` | Change contract | immutable | product | loop |
 | `IMP` | Cycle implementation plan | living, replaced | product | loop |
 | `RSK` | Risks: state / acceptances / events | living | product | F3 |

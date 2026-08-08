@@ -8,6 +8,7 @@ products: [product-a]
 owners: [NAME]
 approvers: [NAME]
 created: YYYY-MM-DD
+icg: ICG-NNN
 derives_from: [SIG-NNN, INC-NNN, DEC-NNN]
 classification: internal
 ---
@@ -56,14 +57,19 @@ it is not verifiable, it is not a criterion: it is a hope.
 | Field | When it is needed |
 |---|---|
 | **Trigger** | always useful: which `SIG` or `INC` originates it |
-| **`ICG` routing** | outcome of the impact classification: none / product / architecture / both |
-| **Architecture impact** | if yes → requires an updated `ARC` **and** a `DEC` |
-| **Data impact** | if yes → requires a `DC` bump and notice to consumers |
-| **AI impact** | if yes → requires a new `EVR` |
-| **Risk or compliance impact** | if yes → a line in `RSK §state` |
 | **Artifacts to update** | explicit list, checked by the validator |
 | **Rollout** | if it is not an ordinary release |
 | **Rollback** | if the standard rollback is not enough |
+
+**The routing and the impacts are not fields here.** They live in the `ICG` named by the
+`icg` field above, keyed by the candidate this change derives from, because that is where
+they were decided and a fact belongs to one document. Restating them here is how the two
+come to disagree, and the one that would be believed is this one, which is the copy. To
+read them: `icg` → `routing[candidate]` and `icg` → `impacts[candidate]`.
+
+What each impact obliges you to do is unchanged: `architecture` wants an updated `ARC` and
+a `DEC`, `data` a `DC` version bump and notice to its consumers, `ai` a new `EVR`, and
+`risk-compliance` a line in `RSK §state`.
 
 ## Verification
 

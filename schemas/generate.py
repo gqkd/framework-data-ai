@@ -109,6 +109,25 @@ def build(name: str, spec: dict, registry: dict) -> dict:
         if field not in required:
             required.append(field)
 
+    # A field that maps one identifier to a verdict about it. The `ICG` needs this and
+    # nothing else did: a triage classifies many candidates in one document, so the thing
+    # to pin is not a single value but a value per candidate. Written as front matter
+    # rather than as a table in the body because that is the whole reason the gate is
+    # getting an artifact: `CHG001` and `CHG002` are switched off precisely because the
+    # routing was prose, and a check reading prose is the failure they were disabled over.
+    for field, rule in (spec.get("maps") or {}).items():
+        if "one_of" in rule:
+            value: dict = {"enum": list(rule["one_of"])}
+        elif "any_of" in rule:
+            value = {"type": "array", "items": {"enum": list(rule["any_of"])},
+                     "minItems": 1, "uniqueItems": True}
+        else:
+            raise SystemExit(f"{name}.maps.{field}: needs `one_of` or `any_of`")
+        properties[field] = {"type": "object", "minProperties": 1,
+                             "additionalProperties": value}
+        if rule.get("required") and field not in required:
+            required.append(field)
+
     for field in spec.get("required", []):
         properties[field] = non_placeholder(placeholders)
         if field not in required:

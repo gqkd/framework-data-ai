@@ -80,7 +80,7 @@ placeholders:
 # reference check that only knew about files would report every single one of them as
 # dangling, and a check that cries wolf on correct documents gets turned off within a week.
 id_prefixes: [PRB, HYP, EVD, CMP, DFB, SD, DEC, CHG, EVR, REL, RLM, DC,
-              SIG, ANA, INC, OD, KI, RSK, CMT, ING]
+              SIG, ANA, INC, OD, KI, RSK, CMT, ING, ICG]
 
 # Types whose body *defines* identifiers instead of only citing them, and which prefixes
 # each one defines. The second half is the part that matters. Every one of these registers
@@ -483,6 +483,31 @@ types:
     path: products/<p>/RMP.md
     lifecycle: living
     status: [active]
+
+  impact-classification:
+    id: ICG
+    name: Impact classification gate
+    axis: product
+    born_in: loop
+    template: templates/ICG.md
+    path: products/<p>/cycles/ICG-NNN.md
+    lifecycle: immutable
+    status: [proposed, accepted, superseded]
+    sections: [intake, classification, open-questions]
+    # One document per cycle, one row per candidate. `routing` is where each candidate
+    # goes and there is exactly one answer per candidate; `impacts` is what it touches on
+    # the way and a candidate can touch several, which is why the two are separate fields
+    # and not one longer enum. `templates/CHG.md` already carried the four impacts as
+    # separate flags while the gate upstream could only emit a single verdict, so a data
+    # contract breaking with no product or architecture movement had to be filed as
+    # something it was not.
+    maps:
+      routing:
+        required: true
+        one_of: [none, product, architecture, both,
+                 hypothesis-invalidated, problem-invalidated, not-classifiable]
+      impacts:
+        any_of: [architecture, data, ai, risk-compliance]
 
   change-contract:
     id: CHG

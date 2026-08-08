@@ -190,10 +190,13 @@ checks:
     prevents: >
       A change to a model, a prompt or a retrieval index without a new evaluation report.
     blocked_by: >
-      The recovered version read the body prose, looking for "impatto ai" next to "sì". It
-      would need the `ICG` routing as a structured field on the `CHG` front matter, which
-      does not exist yet. Matching prose is what point 3 removed everywhere else, and
-      putting it back for two checks would be reintroducing the failure on purpose.
+      The recovered version read the body prose, looking for "impatto ai" next to "sì".
+      Matching prose is what the section markers removed everywhere else, and putting it
+      back for two checks would be reintroducing the failure on purpose. Half of what was
+      missing now exists: `impact-classification` carries `routing` and `impacts` as front
+      matter fields, keyed by candidate. What is still missing is the join. A `CHG` names
+      its `icg` and its `derives_from`, so the lookup is `icg` → `impacts[candidate]`, and
+      until that is written and tested these stay off rather than half working.
 
   CHG002:
     level: "off"    # quoted: YAML 1.1 reads a bare off as false
