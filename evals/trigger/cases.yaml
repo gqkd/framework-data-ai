@@ -1,0 +1,359 @@
+cases:
+- prompt: OD-004 has been sitting in OPEN.md for two months, we finally decided to go with Snowflake.
+    close it out properly
+  expect: resolve
+  why: closing an open decision is what resolve does, DEC included
+- prompt: abbiamo avuto un incidente stanotte, l'accuracy in produzione e' crollata a 0.62, dobbiamo tornare
+    alla 1.6
+  expect: release
+  why: 'a production regression after a deploy: rollback, which is release''s other half'
+- prompt: abbiamo deciso con il team che la coda di riconciliazione passa su redis invece che sulla tabella
+    postgres, era diventata un collo di bottiglia sotto carico. dai una sistemata ai file del progetto
+    che sennò fra un mese non se lo ricorda piu' nessuno
+  expect: requirement
+- prompt: abbiamo deciso di usare Postgres come primary datastore invece di Mongo, segnalo da qualche
+    parte prima che me lo dimentico
+  expect: requirement
+  why: a decision taken, stated in prose, with no file named
+- prompt: abbiamo deciso di usare un solo identity provider per tutti e due i prodotti, aggiungilo dove
+    va
+  expect: requirement
+  why: same, and the description claims this case explicitly
+- prompt: abbiamo promesso a Rossi nell'offerta commerciale di aprile che il report di chiusura sara'
+    disponibile entro il quinto giorno lavorativo del mese. mi sa che questa va scritta da qualche parte
+    perche' nessuno se la ricorda
+  expect: requirement
+- prompt: 'add a new requirement for the forecasting product: the batch job has to finish before 6am CET.
+    write it into the right artifact'
+  expect: requirement
+  why: a functional requirement stated in prose
+- prompt: add that a 'movimento sospeso' is a bank movement with no matching accounting entry after 30
+    days. everyone on the team is using the phrase to mean something slightly different and it's causing
+    arguments in standup
+  expect: requirement
+- prompt: 'aggiorna l''EVP di atlas: dal prossimo ciclo vogliamo alzare la soglia di citation precision
+    a 0.93'
+  expect: requirement
+  why: a threshold change is a fact to record, EVP is its one home
+- prompt: 'aggiungi al glossario la definizione di cliente attivo che abbiamo concordato ieri col cliente:
+    almeno un ordine negli ultimi 90 giorni'
+  expect: requirement
+  why: a definition belongs in GLOSSARY
+- prompt: aggiungi al parcheggio di OPEN.md che potremmo vendere il forecast anche ai fornitori
+  expect: requirement
+  why: the parking lot of OPEN.md is a routing destination
+- prompt: apriamo un change per il rename di cust_id in customer_id nella tabella atlas_scores, RevOps
+    lo vuole come stringa per il loro nuovo export CRM
+  expect: cycle
+- prompt: 'apriamo un ciclo: cosa costruiamo nel prossimo sprint? ho tre SIG aperti in LOG e due incrementi
+    in RMP'
+  expect: cycle
+  why: opening a cycle from SIG and RMP is the intake step verbatim
+- prompt: are we ready to ship v1.7 of atlas to prod-eu-west-1? build is green, image digest is in the
+    CI log
+  expect: release
+- prompt: 'before we merge #218 can you check the docs are still consistent — there''s a new DEC in decisions/
+    and i''m fairly sure the ARC of the product didn''t move with it'
+  expect: audit
+- prompt: can we release? the eval finished last night and every number in EVR-007 looks green to me
+  expect: release
+- prompt: can you review the python in scripts/ingest/ for bugs before i merge this branch, especially
+    the retry logic around the API calls
+  expect: none
+  why: reviewing python for bugs is not documentation work
+- prompt: che differenza c'e' fra ARC.md#target e ARC.md#delta in questo framework? non mi e' chiaro quale
+    dei due dovrei aggiornare quando cambio un componente
+  expect: none
+  why: a question about the framework, not an action on a repository
+- prompt: 'chiudiamo il ciclo: CHG-041 e CHG-042 sono implementate, l''eval e'' passata, manca solo la
+    parte documentale'
+  expect: release
+- prompt: cosa facciamo in questo ciclo? ho tre richieste arrivate dal cliente
+  expect: cycle
+  why: deciding what to build next
+- prompt: cosa mettiamo nell'MVP e cosa no
+  expect: resolve
+- prompt: 'cut a release for atlas: rc.2 passed the eval suite this morning, tag is v1.7.0, commit 53ffb07'
+  expect: release
+- prompt: cut the 1.4.0 release, update the release manifest and write the release note
+  expect: release
+- prompt: dammi i task per gli agenti, ho tre CHG approvati su atlas e voglio far girare i coding agent
+    stanotte
+  expect: cycle
+- prompt: 'definiamo il prodotto: ho letto il brief e non so da dove iniziare'
+  expect: resolve
+- prompt: definiamo l'architettura di retail-forecast, il target non esiste ancora
+  expect: resolve
+- prompt: devo aggiungere l'export in Excel della risk list, il CSM di Northwind me l'ha chiesto due volte
+    ormai
+  expect: cycle
+- prompt: e' tutto a posto nel repo? fammi girare i controlli
+  expect: audit
+  why: running the checks
+- prompt: esegui il deploy in produzione di atlas su prod-eu-west-1, fai il rollout progressivo al 10%
+    e poi al 100%
+  expect: none
+  why: a deploy. release prepares evidence and explicitly must not deploy
+- prompt: explain what a decision record is and when I am supposed to write one instead of just a comment
+    in the code
+  expect: none
+  why: explaining a concept
+- prompt: extract the tables out of this one PDF (report_2025.pdf) into a csv, I just need the numbers
+    in appendix B
+  expect: none
+  why: 'trap: extraction, but of tables to CSV, not a business corpus'
+- prompt: fai un check del framework su questo repo e dimmi cosa non torna, poi sistema quello che si
+    può sistemare senza rischi
+  expect: audit
+- prompt: fammi girare il validator su questo repo e dimmi cosa esce, ieri il CI si lamentava di LC002
+    su tre file e non ho capito perche'
+  expect: audit
+  why: the validator, and a check code
+- prompt: 'fammi l''audit del repo: voglio sapere quanti documenti living sono scaduti e quali reference
+    sono rotti'
+  expect: audit
+  why: stale living documents and broken references
+- prompt: genera il manifest per la release 007 di atlas, mi serve prima della call delle 15
+  expect: release
+- prompt: go ahead and implement a redis cache in front of the scoring lookup, ARC#current says atlas-web
+    queries the warehouse on page load and it's slow on Monday mornings
+  expect: cycle
+- prompt: guarda qui
+  expect: start
+- prompt: half of these documents look ancient, some say last_review 2024. is anything in /repos/atlas
+    actually out of date or am i being paranoid
+  expect: audit
+- prompt: ho ereditato un repo con un po' di dbt models e due DAG airflow e zero documentazione. il cliente
+    vuole sapere cosa fa. come mi muovo?
+  expect: start
+- prompt: ho questi PowerPoint del commerciale (sono tipo 4 deck piu' un paio di pdf dell'offerta) e devo
+    tirarci fuori qualcosa di sensato prima del kickoff di lunedi
+  expect: start
+- prompt: i added three decision records this sprint, can you regenerate decisions/INDEX.md and TRACEABILITY.md
+    for me
+  expect: audit
+- prompt: 'il CHG-012 e'' approvato, implementalo: aggiungi il campo tenant_id alla tabella movements,
+    scrivi la migrazione e aggiorna il matcher'
+  expect: none
+  why: implementing an approved CHG is coding, downstream of every skill here
+- prompt: il cliente bianchi ci ha chiesto ieri in call l'export in excel della coda di riconciliazione.
+    lo segno da qualche parte o lo lasciamo perdere?
+  expect: requirement
+- prompt: il cliente vuole l'export in Excel, aggiungilo al log dei segnali di atlas come request e basta,
+    non voglio ancora deciderci niente
+  expect: requirement
+  why: recording a request as a SIG, and nothing more
+- prompt: imposta il framework in questa cartella, e' un prodotto nuovo che si chiama forecasting-engine
+  expect: start
+- prompt: in realta' il dato non arriva piu' in batch notturno, la banca ha attivato il push orario il
+    mese scorso. adesso arriva ogni ora e la documentazione dice ancora 02:00
+  expect: requirement
+- prompt: ingest these csvs into bigquery - there's about 40 of them in gs://acme-raw/2026/ and the schemas
+    drift a bit between months. write me the load script
+  expect: none
+  why: 'trap: ingest, but of CSVs into a warehouse, not documents'
+- prompt: ingest these documents please - they're in ./corpus, mostly sales decks and one requirements
+    analysis the client's BA wrote. we're starting the engagement next week
+  expect: start
+- prompt: la CI mi blocca il merge, il job `framework` fallisce con exit 1 ma dal log non capisco quale
+    documento sia il problema. puoi guardare?
+  expect: audit
+- prompt: mi serve la release note per REL-007, il PM la manda ai clienti domani mattina e non deve contenere
+    hash
+  expect: release
+- prompt: mi spieghi perche' il framework non prevede un documento di specifica dei requisiti? mi sembra
+    strano, tutti i progetti che ho visto ne hanno uno
+  expect: none
+  why: a question about the framework's design
+- prompt: mi validi la documentazione del progetto in /repos/orion? sospetto che ci siano dei derives_from
+    che puntano a roba cancellata
+  expect: audit
+- prompt: my sprint retro is tomorrow, help me write talking points about why the last two weeks went
+    badly for the team
+  expect: none
+  why: retro talking points
+- prompt: non possiamo far uscire i dati dall'UE, il legale e' stato chiaro stamattina. teniamone conto
+    da qualche parte prima che qualcuno proponga di nuovo us-east-1
+  expect: requirement
+- prompt: ok allora, cosa facciamo in questo ciclo? ho una decina di segnali nel LOG di atlas e due increment
+    su RMP che stanno lì da maggio e nessuno li ha guardati
+  expect: cycle
+- prompt: ok partiamo con il progetto Acme. e' un data platform per un cliente retail, non abbiamo ancora
+    scritto niente. da dove cominciamo?
+  expect: start
+- prompt: 'ok ricapitolando la call di oggi: passiamo ad airflow, il cliente vuole l''export excel, il
+    report di chiusura va firmato dal responsabile amministrativo, e il legale dice niente dati fuori
+    UE. aggiorna la documentazione'
+  expect: requirement
+- prompt: our terraform plan is showing a drift on the bigquery dataset atlas_gold, can you check what
+    actually changed vs main
+  expect: none
+  why: infrastructure drift
+- prompt: 'parti pure: aggiungi il bottone di export CSV alla risk list di atlas, il componente è atlas-web,
+    dovrebbe essere mezz''ora di lavoro'
+  expect: cycle
+- prompt: partiamo col framework su questo progetto nuovo, ti carico i documenti che ci ha dato il cliente
+    nella cartella corpus/
+  expect: start
+- prompt: partiamo con un nuovo prodotto, ecco i deck commerciali e il DPA in corpus/, mettili dentro
+    e dimmi cosa manca
+  expect: start
+- prompt: partiamo con un progetto nuovo per un altro cliente, ti passo i deck che ci hanno mandato
+  expect: start
+- prompt: plan the next cycle, we have three weeks and the roadmap says forecasting v2 plus the SLA work
+  expect: cycle
+- prompt: plan this cycle for atlas, and include what we are NOT doing — last time nobody could remember
+    what we'd decided against
+  expect: cycle
+- prompt: possiamo rilasciare atlas 1.4? l'EVR è passato ieri sera, AUC 0.74
+  expect: release
+- prompt: possiamo rilasciare atlas? l'eval e' finita ieri sera, EVR-007 sta in products/atlas/releases/
+    e i numeri mi sembrano tutti verdi
+  expect: release
+- prompt: possiamo rilasciare la 0.4 questa settimana?
+  expect: release
+- prompt: 'prepara la release 1.2.0 del prodotto riconciliazione: REL e RLM, e ricordati di mettere il
+    rollback target che l''ultima volta era vuoto'
+  expect: release
+- prompt: prepara la release note per la 1.4 e il manifest corrispondente, il commit è 9f2ab41 e il rollback
+    target è v1.3.2
+  expect: release
+- prompt: prepare a release of our internal python package atlas-client to the private pypi, bump the
+    version to 0.4.2 and write the changelog
+  expect: none
+  why: 'trap: a release, of a python package to pypi, with no EVR and no gate'
+- prompt: prima del rilascio di venerdì voglio essere sicuro che i documenti siano coerenti tra loro,
+    in particolare che gli ARC e i DEC dicano la stessa cosa
+  expect: audit
+- prompt: prima di deployare voglio la verifica formale che le soglie dell'EVP siano tutte rispettate
+    da EVR-007, slice comprese
+  expect: release
+- prompt: prima di far partire lo sviluppo su store-ops, cosa devo decidere?
+  expect: resolve
+- prompt: 'prossimo sprint su atlas: cosa ci mettiamo dentro e soprattutto cosa lasciamo fuori, l''ultima
+    volta nessuno si ricordava cosa avevamo scartato'
+  expect: cycle
+- prompt: qual e' la MVA di retail-forecast? mi serve per capire cosa costruiamo entro l'MVP
+  expect: resolve
+- prompt: quali commitment abbiamo preso col cliente sulla latenza? mi pare ci fosse qualcosa nel contratto
+    sui 2 secondi
+  expect: none
+  why: reading a commitment back, not recording one
+- prompt: quanto costa in media una riconciliazione manuale secondo i dati che abbiamo in postgres? fammi
+    una query sulla tabella matches e dimmi la mediana per operatore
+  expect: none
+  why: a SQL question about the business, not about the documents
+- prompt: quanto mi costa in token far girare un ciclo intero con tutte e sei le skill del plugin su un
+    repo da 200 file?
+  expect: none
+  why: a question about the cost of the plugin
+- prompt: questo repo non ha ne' AGENTS.md ne' OPEN.md, partiamo da zero. imposta la struttura del framework
+    per un prodotto solo, si chiama riconciliazione
+  expect: start
+  why: a repository with no framework in it
+- prompt: release the lock on the postgres table order_lines, a migration died holding it and everything
+    behind it is stuck
+  expect: none
+  why: 'trap: release, of a database lock'
+- prompt: riassumimi cosa dice COMMITMENTS.md, sono 40 righe di tabella e ho una call fra dieci minuti
+    con il commerciale
+  expect: none
+  why: summarising a document that already exists
+- prompt: rinomina il prodotto da 'riconciliazione' a 'recon' in tutti i file del repo, front matter compreso,
+    e sistema i path products/riconciliazione/
+  expect: none
+  why: 'a rename across the repository: mechanical editing, no routing decision'
+- prompt: riscrivi templates/CHG.md, la sezione 3 è confusa e la gente ci scrive dentro 'funziona meglio'
+  expect: none
+  why: editing the framework itself, not a project using it
+- prompt: risolviamo gli open decision che sono rimasti, partiamo da OD-005 che è high cost to reverse
+    e non ha default
+  expect: resolve
+- prompt: risolviamo gli open di atlas, partiamo da OD-004 che è quello che costa di più da tornare indietro
+  expect: resolve
+- prompt: risolviamo gli open, sono fermi da due mesi
+  expect: resolve
+- prompt: run our dbt tests on the staging target and tell me which models are failing, i think it's the
+    not_null on dim_customer.email again
+  expect: none
+  why: dbt tests
+- prompt: run the validator on this repo and tell me what's failing, I think OPEN.md is missing a default
+    in force somewhere
+  expect: audit
+- prompt: scrivi il CHG per aggiungere l'export excel che ha chiesto il cliente giovedi in call
+  expect: cycle
+  why: a CHG is written by cycle, after the classification
+- prompt: scrivi il runbook di atlas, mancano le procedure di on-call e gli SLO non sono scritti da nessuna
+    parte
+  expect: none
+  why: 'writing a runbook: a real artifact, and no skill claims it'
+- prompt: scrivimi la funzione python che fa il match fra movimenti bancari e scritture contabili su importo
+    e data, con tolleranza di 2 giorni e gestione dei parziali
+  expect: none
+  why: writing application code
+- prompt: serve anche che l'operatore possa riassegnare una riga della coda a un collega, oggi non si
+    puo' e se uno va in ferie la sua roba resta li' ferma per due settimane
+  expect: requirement
+- prompt: siamo pronti per il rilascio della 1.7? il cliente ci ha chiesto se andiamo in prod venerdi
+  expect: release
+- prompt: spiegami cosa contiene un CHG e in che cosa si differenzia da un DEC, non ho mai capito bene
+    il confine
+  expect: none
+  why: explaining the difference between two document types
+- prompt: stamattina alle 6 la pipeline e' saltata, il caricamento del file banca non e' partito e ce
+    ne siamo accorti solo alle 11 quando ha chiamato il cliente. va tracciato
+  expect: requirement
+- prompt: the buyers asked for an Excel export of the forecast, write it down somewhere sensible
+  expect: requirement
+  why: a customer request, no file named
+- prompt: the framework check keeps failing with FM002 on products/orion/PBR.md and i genuinely don't
+    know what it wants from me
+  expect: audit
+- prompt: the json schema at schemas/framework/architecture/v1.json is too permissive, add a pattern constraint
+    so verified_against has to look like a git sha
+  expect: none
+  why: editing the framework's own schema
+- prompt: the nightly batch failed again on a malformed row and nobody got scores yesterday, write it
+    up in products/atlas/LOG.md as an incident
+  expect: requirement
+  why: an incident, recorded in LOG
+- prompt: the open register has nine entries and nobody has closed one since March. can we sit down and
+    work through them together?
+  expect: resolve
+- prompt: validate this CSV export against the column types in our data contract DC-001, i'm seeing nulls
+    in customer_id where there shouldn't be any
+  expect: none
+  why: 'trap: validate, but a CSV against a contract, not the documents'
+- prompt: we decided to go with airflow for the nightly pipeline instead of the managed cloud scheduler,
+    mainly because the team already knows it and we have three dags elsewhere. can you record this properly
+  expect: requirement
+- prompt: we inherited this repo from the previous vendor. i want to know what's broken in the docs before
+    anyone touches them — which files have bad frontmatter, which decisions point at documents that don't
+    exist, that kind of thing
+  expect: audit
+- prompt: we just closed the deal and I have the pitch deck, the offer PDF and the contract. the solution
+    was already promised to the customer, I need to get the project documentation off the ground
+  expect: start
+- prompt: what do I need to decide before we write any code on this?
+  expect: resolve
+- prompt: what do we build next on atlas? I've got SIG-025 and SIG-027 sitting in the log and nothing
+    planned
+  expect: cycle
+- prompt: where do I start debugging this? the selfcheck test fails on my machine but passes in CI
+  expect: none
+  why: 'trap: where do I start, about debugging a test'
+- prompt: where do I start? brand new engagement, data & AI platform, client already signed the SOW and
+    nothing is documented
+  expect: start
+- prompt: why is this release blocked? the eval report says go but nobody on the team will sign off on
+    it
+  expect: release
+- prompt: write me a decision record for moving the gold layer to snowflake, scope architecture, it supersedes
+    DEC-001
+  expect: requirement
+  why: writing a decision that was taken
+- prompt: è tutto a posto con la documentazione prima che apra la PR? il repo del progetto sta in ~/work/atlas,
+    ci ho lavorato tutta la settimana e non vorrei aver rotto qualcosa
+  expect: audit
+- prompt: è tutto a posto nel repo? fammi girare il validator su products/atlas e dimmi cosa esce
+  expect: audit

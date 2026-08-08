@@ -129,7 +129,7 @@ scan:
   # as a document with no front matter. `references` earned its place the same way, one
   # commit after the skills were written: the shared preamble and the routing table are
   # prose the framework wrote about itself, and they came back as two blocking `FM001`.
-  skip_dirs: [templates, skills, schemas, references, corpus, ingest-out,
+  skip_dirs: [templates, skills, schemas, references, evals, corpus, ingest-out,
               node_modules, __pycache__]
 
   # Documents that speak *about* the framework rather than being produced *by* it.
