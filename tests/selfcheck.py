@@ -31,6 +31,7 @@ ROOT = Path(__file__).resolve().parents[1]
 REGISTRY = yaml.safe_load((ROOT / "schemas" / "artifact-types.yaml").read_text())
 CHECKS = yaml.safe_load((ROOT / "skills" / "audit" / "checks.yaml").read_text())
 VALIDATE = ROOT / "skills" / "audit" / "scripts" / "validate.py"
+EXTRACT = ROOT / "skills" / "start" / "scripts" / "extract.py"
 GENERATE = ROOT / "schemas" / "generate.py"
 
 SECTION_MARK = re.compile(r"<!--\s*section:\s*([a-z0-9-]+)\s*-->")
@@ -367,6 +368,64 @@ def _inline_ids_are_scoped():
     if "decisions/DEC-002-slug.md" not in ref001:
         problems.append("DEC-999 exists nowhere, yet REF001 did not fire: naming it in the "
                         "prose of a register is enough to clear the finding")
+    return problems
+
+
+@check("the extractor says which documents gave it nothing")
+def _extract_reports_its_gaps():
+    # The other executable in this repository, and until now the one nothing ran. It is
+    # allowed to fail on a document: a scanned PDF has no text layer and that is not a bug.
+    # What it is not allowed to do is leave the failure only in `inventory.json`, because
+    # the corpus then reads as complete to whoever classifies it. Nothing here needs
+    # markitdown or python-docx: plain files that yield no text exercise the same path.
+    corpus = {
+        "offerta.md": "# Offerta\n\nRefresh orario dei dati, non giornaliero.\n",
+        "empty.md": "",
+        "whitespace.txt": "   \n\t\n",
+        "notes.rst": "unsupported extension, must not be counted as ingested\n",
+    }
+    problems = []
+
+    with tempfile.TemporaryDirectory() as tmp:
+        src = Path(tmp) / "corpus"
+        src.mkdir()
+        for name, text in corpus.items():
+            (src / name).write_text(text, encoding="utf-8")
+        out = Path(tmp) / "out"
+
+        r = subprocess.run([sys.executable, str(EXTRACT), str(src), "-o", str(out)],
+                           capture_output=True, text=True)
+        if r.returncode != 0:
+            return [f"the extractor exited {r.returncode} on a readable corpus: "
+                    f"{r.stderr.strip().splitlines()[-1] if r.stderr.strip() else ''}"]
+
+        md = (out / "extract.md").read_text(encoding="utf-8")
+        inv = json.loads((out / "inventory.json").read_text(encoding="utf-8"))
+
+        if "Refresh orario" not in md:
+            problems.append("the one document with text is missing from extract.md")
+        if "offerta.md" not in md:
+            problems.append("a block in extract.md does not name the file it came from: "
+                            "provenance is the whole point of the extraction")
+        for name in ("empty.md", "whitespace.txt"):
+            if name not in md:
+                problems.append(f"{name} produced no text and extract.md does not say so: "
+                                "the gap is only in inventory.json, where nobody looks")
+
+        listed = {d["source"] for d in inv["documents"]}
+        if listed != {"offerta.md", "empty.md", "whitespace.txt"}:
+            problems.append(f"inventory.json accounts for {sorted(listed)}: every handled "
+                            "document belongs there, and nothing else does")
+
+        # An empty corpus is a failure and has to be one: a caller that reads exit 0 goes on
+        # to classify an extraction that never happened.
+        empty = Path(tmp) / "empty-dir"
+        empty.mkdir()
+        e = subprocess.run([sys.executable, str(EXTRACT), str(empty), "-o", str(out)],
+                           capture_output=True, text=True)
+        if e.returncode == 0:
+            problems.append("the extractor exited 0 on a corpus with nothing in it")
+
     return problems
 
 

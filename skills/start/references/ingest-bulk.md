@@ -30,14 +30,25 @@ root when they concern more than one. **You run the extraction**, one folder at 
 user does not run commands.
 
 ```bash
-python -c "import markitdown, docx; print('ok')"   # first: without these the output is empty
-python ${CLAUDE_PLUGIN_ROOT}/skills/start/scripts/extract.py \
+python3 -c "import markitdown, docx; print('ok')"  # first: without these the output is empty
+python3 "${CLAUDE_PLUGIN_ROOT:?unset: point it at your framework-data-ai checkout}/skills/start/scripts/extract.py" \
     products/<p>/corpus -o ingest-out/<p> --jsonl
 ```
+
+`python3` and the `:?` are both load bearing: `python` is not on PATH on most systems, and
+an unset `CLAUDE_PLUGIN_ROOT` collapses the path to `/skills/...` and fails with a message
+that names neither problem. `-o` is a directory, not a file.
 
 It produces `extract.md` with one block per slide, page or section, each labelled with its
 provenance. You need that: you will go back to the original slide every time a claim has to
 be checked, and without the number you will not find it again.
+
+Read the top of `extract.md` before anything else. When a document produced no text it is
+listed there with the reason, and the reasons are not interchangeable: a scanned PDF needs
+OCR or your eyes, a `.docx` that wanted `python-docx` needs one `pip install` and a rerun,
+a file the filesystem refused was never yours to read. Those claims are missing, not
+absent, and a corpus quietly short of a third of itself still reads as complete.
+`inventory.json` in the same folder carries the same accounting per document.
 
 One output per product, not one for everything. When two products promise the same thing
 differently, knowing which corpus each version came from is half the reconciliation work.
