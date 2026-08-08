@@ -437,35 +437,56 @@ def check_references(arts: list[Artifact], registry: dict, report: Report) -> No
         if prefixes:
             inline |= {i for i in a.ids if i.split("-", 1)[0] in prefixes}
     known = set(by_id) | inline
+    sup_edges: dict[str, list[str]] = {}
 
     for a in arts:
         for ref in as_list(a.meta.get("derives_from")):
             if isinstance(ref, str) and id_re.fullmatch(ref) and ref not in known:
                 report.add("REF001", a.rel, f"derives_from points at {ref!r}, which does "
                                             "not exist anywhere in this repository")
-        sup = a.meta.get("supersedes")
-        if sup and isinstance(sup, str) and id_re.fullmatch(sup):
+        # One decision replacing two earlier ones is an ordinary thing to write, and
+        # `supersedes: [DEC-001, DEC-004]` is how anyone would write it: `derives_from`
+        # in the same front matter already takes a list. It used to be read only when it
+        # was a bare string, so the list form skipped REF002 and REF003 in silence and
+        # then killed the cycle walk with an unhashable type.
+        for sup in as_list(a.meta.get("supersedes")):
+            if not (isinstance(sup, str) and id_re.fullmatch(sup)):
+                continue
+            sup_edges.setdefault(a.id, []).append(sup)
             if sup not in known:
                 report.add("REF002", a.rel, f"supersedes points at {sup!r}, which does "
                                             "not exist")
-            else:
-                target = by_id.get(sup)
-                if target is not None and target.meta.get("status") != "superseded":
-                    report.add("REF003", target.rel,
-                               f"superseded by {a.id} but status is "
-                               f"{target.meta.get('status')!r}: it has to move to "
-                               "'superseded', or both documents claim to be current")
+                continue
+            target = by_id.get(sup)
+            if target is not None and target.meta.get("status") != "superseded":
+                report.add("REF003", target.rel,
+                           f"superseded by {a.id} but status is "
+                           f"{target.meta.get('status')!r}: it has to move to "
+                           "'superseded', or both documents claim to be current")
 
-    for start in by_id:
-        seen, cur = set(), start
-        while cur:
-            if cur in seen:
-                report.add("REF004", by_id[start].rel,
-                           f"cyclic supersedence chain starting at {start}")
-                break
-            seen.add(cur)
-            nxt = by_id.get(cur)
-            cur = nxt.meta.get("supersedes") if nxt else None
+    # Depth first, colouring what is on the current path. An edge back into the path is a
+    # cycle; an edge into something already finished is not. The difference only shows up
+    # once supersedes can branch: two decisions replaced by the same later one meet again
+    # further up, and a plain visited set would call that meeting a loop.
+    on_path, done = set(), set()
+    for root in by_id:
+        if root in done:
+            continue
+        stack = [(root, iter(sup_edges.get(root, ())))]
+        on_path.add(root)
+        while stack:
+            node, edges = stack[-1]
+            nxt = next(edges, None)
+            if nxt is None:
+                on_path.discard(node)
+                done.add(node)
+                stack.pop()
+            elif nxt in on_path:
+                report.add("REF004", by_id[nxt].rel,
+                           f"cyclic supersedence chain through {nxt}")
+            elif nxt not in done and nxt in by_id:
+                on_path.add(nxt)
+                stack.append((nxt, iter(sup_edges.get(nxt, ()))))
 
 
 def check_release(arts: list[Artifact], report: Report) -> None:

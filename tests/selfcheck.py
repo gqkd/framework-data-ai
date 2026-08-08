@@ -371,6 +371,79 @@ def _inline_ids_are_scoped():
     return problems
 
 
+@check("supersedes reads as a list, and a diamond is not a cycle")
+def _supersedes_takes_a_list():
+    # `supersedes: [DEC-001, DEC-004]` is how anyone replacing two decisions at once would
+    # write it, and `derives_from` beside it already takes a list. The string-only read cost
+    # twice: REF002 and REF003 skipped the list form without a word, so two documents could
+    # both claim to be current, and then the cycle walk died on an unhashable type, which
+    # takes the whole gate down with no verdict at all.
+    fm = lambda **kw: "---\n" + "\n".join(f"{k}: {v}" for k, v in kw.items()) + "\n---\n\n"
+    def dec(i, **extra):
+        meta = dict(schema="framework/decision-record/v1",
+                    artifact_type="decision-record", id=i, lifecycle="immutable",
+                    status="accepted", scope="architecture", products="[alpha]",
+                    owners="[owner]", created="2026-01-01")
+        meta.update(extra)                      # so a case can set its own status
+        return fm(**meta) + f"# {i}\n"
+
+    def codes(files):
+        with tempfile.TemporaryDirectory() as tmp:
+            for name, text in files.items():
+                p = Path(tmp) / "decisions" / name
+                p.parent.mkdir(parents=True, exist_ok=True)
+                p.write_text(text)
+            r = subprocess.run(
+                [sys.executable, str(VALIDATE), "--root", tmp, "--json",
+                 "--stale-days", "36500"], capture_output=True, text=True)
+            if r.returncode not in (0, 1):
+                last = r.stderr.strip().splitlines()[-1] if r.stderr.strip() else "?"
+                return None, last
+            return [f["code"] for f in json.loads(r.stdout)["findings"]], None
+
+    problems = []
+
+    # Two at once. Both targets are still `accepted`, so both have to be reported.
+    got, crash = codes({"DEC-001.md": dec("DEC-001"), "DEC-002.md": dec("DEC-002"),
+                        "DEC-003.md": dec("DEC-003", supersedes="[DEC-001, DEC-002]")})
+    if crash:
+        problems.append(f"a list-valued supersedes brought the validator down: {crash}")
+    elif got.count("REF003") != 2:
+        problems.append(f"supersedes: [DEC-001, DEC-002] reported REF003 "
+                        f"{got.count('REF003')} times out of 2: the list form is being "
+                        "read past in silence, and both documents still read as current")
+
+    # A cycle written with lists is still a cycle.
+    got, crash = codes({"DEC-001.md": dec("DEC-001", supersedes="[DEC-002]"),
+                        "DEC-002.md": dec("DEC-002", supersedes="[DEC-001]")})
+    if crash:
+        problems.append(f"a cyclic supersedence chain crashed the validator: {crash}")
+    elif "REF004" not in got:
+        problems.append("DEC-001 and DEC-002 supersede each other and REF004 did not fire")
+
+    # A diamond is not a cycle. DEC-004 replaces two decisions that both replaced DEC-001,
+    # so the walk meets DEC-001 twice by different routes. Nothing here loops, and a plain
+    # visited set would call that meeting a loop and report a cycle that is not there.
+    got, crash = codes({
+        "DEC-001.md": dec("DEC-001", status="superseded"),
+        "DEC-002.md": dec("DEC-002", status="superseded", supersedes="[DEC-001]"),
+        "DEC-003.md": dec("DEC-003", status="superseded", supersedes="[DEC-001]"),
+        "DEC-004.md": dec("DEC-004", supersedes="[DEC-002, DEC-003]")})
+    if crash:
+        problems.append(f"a branching supersedence chain crashed the validator: {crash}")
+    elif "REF004" in got:
+        problems.append("two decisions replaced by the same later one were reported as a "
+                        "cyclic chain: the walk is confusing a diamond with a loop")
+
+    # The scalar form is what FRAMEWORK.md writes, and it has to keep working.
+    got, crash = codes({"DEC-001.md": dec("DEC-001"),
+                        "DEC-002.md": dec("DEC-002", supersedes="DEC-001")})
+    if crash or "REF003" not in (got or []):
+        problems.append("supersedes as a bare string stopped being checked")
+
+    return problems
+
+
 @check("the extractor says which documents gave it nothing")
 def _extract_reports_its_gaps():
     # The other executable in this repository, and until now the one nothing ran. It is
