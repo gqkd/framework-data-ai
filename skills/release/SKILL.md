@@ -55,9 +55,15 @@ Check, in order:
    not evidence for this gate no matter how good they look. A metric the plan requires and
    the report omits is a fail, not an absence: you cannot establish something you were not
    shown. Exactly on the threshold passes.
-5. **Slices matter as much as aggregates.** A model that clears the overall threshold while
+5. **Only the metrics the plan says block, block.** The `EVP` carries that column and it is
+   a decision somebody took while the outcome was still unknown, which is the only moment
+   it can honestly be taken. A cost ceiling is often deliberately not blocking: worth
+   knowing, not worth stopping a release for. Blocking on it anyway is the same failure as
+   waving a breach through, in the direction nobody complains about, and it teaches people
+   that the gate is noise. Report every breach; block on the ones the plan says to.
+6. **Slices matter as much as aggregates.** A model that clears the overall threshold while
    failing on one segment is a model that fails for the people in that segment.
-6. **`verified_against`** names the commit the evaluation actually ran on.
+7. **`verified_against`** names the commit the evaluation actually ran on.
 
 If any of these is missing or below threshold, the outcome is **rework, not rollback**, and
 use that word. Nothing has been deployed yet, so there is nothing to roll back. Rollback

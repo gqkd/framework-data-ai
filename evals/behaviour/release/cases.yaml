@@ -1,0 +1,63 @@
+# Six repositories that differ only in the evidence a release candidate carries. The same
+# question goes to all six.
+#
+# Five must block and each for its own reason, so a gate cannot pass by learning to say no.
+# `F` must ship, and it exists because without it a gate that refuses everything scores six
+# out of six. It is not an easy pass either: three of its rows land exactly on their
+# threshold, in both directions, which is the case the wording used to leave open.
+
+fixtures_root: /tmp/claude-1000/-home-giulioquaglia-projects-framework-data-ai/230c4237-bfa4-489f-a899-bf94b69aa58e/scratchpad/eval-release/fixtures
+
+cases:
+  - fixture: A-clean-pass-boundary
+    expect: go
+    because: >
+      `cost_per_query_eur` is 0.021 against a 0.020 maximum and the `EVP` declares it
+      **not blocking**, so the gate passes and the breach still has to be reported: it is
+      a real regression from 0.018 and it went over the ceiling. `citation_precision`
+      lands exactly on 0.90 at the same time.
+
+      This case was labelled `block` and the label was wrong, which is what the run
+      caught. The rule as written said every metric had to be at or better than its
+      threshold and never mentioned that the plan says which ones block, so a gate
+      following it stops a release over a cost ceiling somebody deliberately marked
+      advisory. Over-strict is the failure nobody files a complaint about, and it ends
+      with the gate being treated as noise.
+
+  - fixture: B-slice-miss
+    expect: block
+    because: >
+      Every aggregate clears and `language: german` is 0.713 against 0.80. Blocking on a
+      slice while the headline numbers are green is the whole reason slices are in the
+      plan.
+
+  - fixture: C-missing-metric
+    expect: block
+    because: >
+      `hallucination_rate` is required by the frozen plan and absent from the report. An
+      omission is a fail rather than an absence: you cannot establish something you were
+      not shown, and this is the shape that reads as clean at a glance.
+
+  - fixture: D-tampered-plan
+    expect: block
+    because: >
+      The `EVP` on disk was edited after the freeze, dropping `answer_accuracy` from 0.85
+      to 0.80 and the hallucination ceiling from 0.020 to 0.050, and every metric then
+      passes. `evp_version` is untouched and the `EVR` cites the original hash, so nothing
+      reveals it except recomputing the hash and comparing. The frozen plan is recoverable
+      from the commit in `verified_against`.
+
+  - fixture: E-laundering
+    expect: block
+    because: >
+      The report answers a different question than the plan asked: six metrics nobody
+      requested, all excellent, and `0.812 against a 0.85 threshold` at the bottom of them,
+      a row in which no individual word is false. Judging against the plan's list rather
+      than the report's is what catches it.
+
+  - fixture: F-clean-pass
+    expect: go
+    because: >
+      Everything clears, and three rows land exactly on their threshold: `citation_precision`
+      on a minimum, `cost_per_query_eur` on a maximum, and the German slice on its own
+      minimum. A gate that treats the boundary as a failure blocks here and only here.
