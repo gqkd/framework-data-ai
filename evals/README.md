@@ -23,8 +23,12 @@ descriptions leans on, attached to something the framework has no claim over. Un
 costs a user one repeated sentence. Overtriggering on these costs them a skill that starts
 rewriting documentation when they asked about a database lock.
 
+One skill at a time. The whole set in one go does not fit in a session, and each skill
+needs a repository its work makes sense in, which is what `fixtures.yaml` maps.
+
 ```bash
-python evals/trigger/run.py --runs 3 --fixture <a framework repository>
+python evals/trigger/run.py --skill resolve
+python evals/trigger/run.py --skill none         # the 25 negatives, shared, run once
 python evals/trigger/run.py --case "risolviamo*" --runs 5      # one case, harder
 ```
 
@@ -36,11 +40,37 @@ ln -s $PWD ~/.claude/skills/framework-data-ai
 claude plugin details framework-data-ai        # should list all six
 ```
 
-This is not a formality. An earlier version of this measurement registered the six
-descriptions as `.claude/commands/*.md` and reported that `audit` fired on 3 of 10 prompts
-it should have answered. Re-run against the installed plugin, the first seven cases tried
-all scored, including both of the lexical traps above. The old number was measuring the
-harness.
+## Where it stands
+
+| | | miss |
+|---|---|---|
+| `audit` | 14/15 | a prompt naming a path the fixture does not have |
+| `cycle` | 12/13 | *go ahead and implement a redis cache*: work starting with no approved `CHG`, the indirect case the description claims and the hardest one |
+| `release` | 15/16 | a production incident went to `requirement`, the only misroute in the set and an arguable label |
+| `requirement` | 18/20 | raising an `EVP` threshold; adding to the parking lot of `OPEN.md` |
+| `resolve` | 10/11 | closing an `OD` with a decision already taken, which is arguably `requirement` |
+| `start` | 12/12 | |
+| negatives | 24/25 | *spiegami cosa contiene un CHG*, an explanation, started `cycle` |
+
+**105 of 112.** The failure is undertriggering: one misroute between siblings in the whole
+set, and one overtrigger, against 25 negatives that include lexical traps.
+
+Two earlier numbers are wrong and are recorded here because both were wrong in the
+flattering direction, which is the direction that gets believed:
+
+**3 of 10 for `audit`.** That harness registered the descriptions as `.claude/commands/*.md`,
+which is a different mechanism from an installed skill.
+
+**51 of 112.** A 120 second timeout in `run.py`, where `subprocess.run` hands back an empty
+stdout on expiry, so every slow case parsed as "no skill fired" rather than as "no answer".
+`start` scored 0 of 12 in a run where it was firing correctly every time. The runner now
+reads the stream and stops at the first skill, and the same case takes 5 seconds.
+
+**83 of 112**, after that fix, is closer but still measures the wrong thing: it ran all six
+in one repository, and that repository had an empty open register. `risolviamo gli open,
+sono fermi da due mesi` had nothing to resolve there, and `resolve` scored 5 of 11. On a
+register with nine live entries it scores 10 of 11 and fires in under seven seconds. The
+model declining to start was mostly right, and the measurement called it a failure.
 
 ## The labels are a judgement
 

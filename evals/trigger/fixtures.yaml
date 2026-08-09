@@ -1,0 +1,46 @@
+# Which repository each skill's prompts get measured in.
+#
+# A prompt only means what it means somewhere it could be acted on. The first full run put
+# all six skills in one repository whose open register was empty, so `risolviamo gli open,
+# sono fermi da due mesi` had nothing to resolve. `resolve` scored 5 of 11 there and fired
+# in 6.6 seconds on a register with nine live entries, which says the fixture was being
+# measured and not the description.
+#
+# `default` is where the `none` cases run when no skill is named. Their answer must not
+# depend on the repository: a prompt about a database lock is not framework work in any
+# state of any project, and if one of them starts firing because the fixture changed, that
+# is the finding.
+#
+# THESE PATHS ARE NOT IN THIS REPOSITORY YET. They were built during the evaluation that
+# produced this directory and they live in a scratch directory, which is a bad place for
+# the most expensive artifact of that work: `D-tampered-plan` encodes a frozen evaluation
+# plan edited after the fact, with the git history to prove it, and it took a while to get
+# right. Moving them in is the next thing, and until it happens a fresh clone has to point
+# these somewhere itself.
+
+fixtures:
+  default: /tmp/claude-1000/-home-giulioquaglia-projects-framework-data-ai/230c4237-bfa4-489f-a899-bf94b69aa58e/scratchpad/eval-cycle/fixture-base
+
+  # A repository with real defects in it: bad front matter, a dangling reference, a
+  # decision superseded by one that never moved the old one to `superseded`.
+  audit: /tmp/claude-1000/-home-giulioquaglia-projects-framework-data-ai/230c4237-bfa4-489f-a899-bf94b69aa58e/scratchpad/eval-audit/fixtures/dirty-repo
+
+  # A signal log and a roadmap with candidates in them, plus the previous cycle's `ICG`,
+  # so the triage state question is live rather than theoretical.
+  cycle: /tmp/claude-1000/-home-giulioquaglia-projects-framework-data-ai/230c4237-bfa4-489f-a899-bf94b69aa58e/scratchpad/eval-cycle/fixture-base
+
+  # A release candidate with an `EVR`, a frozen `EVP` and a gate that has something to say.
+  release: /tmp/claude-1000/-home-giulioquaglia-projects-framework-data-ai/230c4237-bfa4-489f-a899-bf94b69aa58e/scratchpad/eval-release/fixtures/F-clean-pass
+
+  # A documented product, so a statement has somewhere to be filed and something to
+  # contradict.
+  requirement: /tmp/claude-1000/-home-giulioquaglia-projects-framework-data-ai/230c4237-bfa4-489f-a899-bf94b69aa58e/scratchpad/eval-requirement/seed
+
+  # Nine open decisions, deliberately shuffled, two of them filed under a heading that
+  # contradicts the cost they declare.
+  resolve: /tmp/claude-1000/-home-giulioquaglia-projects-framework-data-ai/230c4237-bfa4-489f-a899-bf94b69aa58e/scratchpad/eval-resolve/fixtures/ordering-a
+
+  # A project with business documents and no framework in it, which is the only state
+  # `start` is written for. Measuring it in a documented repository asks it to set up
+  # something that is already set up.
+  start: /tmp/claude-1000/-home-giulioquaglia-projects-framework-data-ai/230c4237-bfa4-489f-a899-bf94b69aa58e/scratchpad/eval-start/corpus-project
