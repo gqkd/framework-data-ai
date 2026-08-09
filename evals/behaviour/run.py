@@ -1,29 +1,30 @@
 #!/usr/bin/env python3
-"""Does the release gate reach the right verdict, on six repositories that differ only in
-the evidence they carry.
+"""Does a skill do the right thing once it fires, on repositories built to tell it apart.
 
-    python evals/behaviour/release/run.py                 # all six, one at a time
-    python evals/behaviour/release/run.py --case D        # one of them
+    python evals/behaviour/run.py release           # every case, one at a time
+    python evals/behaviour/run.py release --case D  # one of them
+    python evals/behaviour/run.py cycle
 
-Triggering asks whether the skill answers. This asks whether the answer is right, which is
-the half that matters for a gate: a gate that fires reliably and says yes to everything is
+Triggering asks whether the skill answers. This asks whether the answer is right, which
+for a gate is the half that matters: one that fires reliably and says yes to everything is
 worse than no gate, because somebody is now relying on it.
 
-The same sentence goes to all six. Only the repository differs, so anything the model gets
-right or wrong comes from the evidence rather than from how the question was put. Five of
-the six must block, each for its own reason, and `F` must ship: a set where everything
-blocks scores full marks for a gate that refuses everything, which is why `F` was built.
+One sentence per skill, the same for all of its cases, so what the model gets right or
+wrong comes from the repository rather than from how the question was put.
 
-`Bash` is allowed and that is deliberate. The gate as written requires recomputing the
-hash of the frozen plan and recovering it from `git show` when it does not match; without
-a shell the skill cannot do what it is told to do, and the run would fail for a reason
-that has nothing to do with the skill. The fixture is copied first, so it can write
-whatever it likes.
+NO TOOL IS DENIED, DELIBERATELY. The release gate has to recompute a hash and recover a
+frozen plan with `git show`; without a shell it cannot do what it is told, and the run
+would fail for a reason that has nothing to do with the skill. Writes are allowed for the
+same reason: `-p` denies them by default, and the first run of this graded judgement only,
+because the skill reached the right verdict and then printed a manifest it could not save.
+Half of what these skills do is produce artifacts, and an unwritten one cannot be wrong.
+The fixture is copied first.
 
-GRADING IS BY HAND, AND SIX IS WHY. A keyword match on "go" and "block" would score the
-laundering case correct for saying the word while missing that `answer_accuracy` at 0.812
-is below a 0.85 threshold, which is the entire point of that fixture. The verdicts are
-printed in full and read. That does not scale, and at six cases it does not have to.
+GRADING IS BY HAND, AND THE CASE COUNT IS WHY. A keyword match on "go" and "block" scores
+the laundering fixture correct for saying the word while missing that 0.812 under a 0.85
+threshold is the entire point of it. What the run said, what it wrote, and whether the
+repository still validates are printed, and read. That does not scale, and at six cases it
+does not have to.
 """
 
 from __future__ import annotations
@@ -31,6 +32,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -40,11 +42,8 @@ from pathlib import Path
 import yaml
 
 HERE = Path(__file__).resolve().parent
-PROMPT = ("possiamo rilasciare la 1.7? il cliente ci ha chiesto se andiamo in produzione "
-          "questa settimana")
-
-
-VALIDATE = HERE.parents[2] / "skills" / "audit" / "scripts" / "validate.py"
+VALIDATE = HERE.parents[1] / "skills" / "audit" / "scripts" / "validate.py"
+FRONT = re.compile(r"\A---\n(.*?)\n---\n", re.S)
 
 
 def inspect(fixture: Path, cwd: Path) -> tuple[list[str], str]:
@@ -64,6 +63,16 @@ def inspect(fixture: Path, cwd: Path) -> tuple[list[str], str]:
         if (fixture / p).read_bytes() != (cwd / p).read_bytes():
             changed.append(f"{p} (modified)")
 
+    # The front matter of anything new, because for some of these the verdict *is* the
+    # front matter: an `ICG` says what it decided in `routing`, and reading that back is
+    # the difference between "it wrote a document" and "it wrote the right one".
+    for rel in sorted(str(p) for p in (after - before)):
+        if not rel.endswith((".md", ".yaml", ".yml")):
+            continue
+        m = FRONT.match((cwd / rel).read_text(encoding="utf-8", errors="replace"))
+        if m:
+            changed.append(f"\n--- {rel}\n" + m.group(1))
+
     try:
         r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(cwd), "--json"],
                            capture_output=True, text=True, timeout=120)
@@ -75,7 +84,7 @@ def inspect(fixture: Path, cwd: Path) -> tuple[list[str], str]:
     return changed, verdict
 
 
-def run_one(fixture: Path, timeout: int) -> tuple[str, list[str], list[str], str]:
+def run_one(fixture: Path, prompt: str, timeout: int) -> tuple[str, list[str], list[str], str]:
     """Return the closing text, the skills invoked, what was written, and the validator."""
     tmp = Path(tempfile.mkdtemp(prefix="rel-"))
     cwd = tmp / "project"
@@ -88,7 +97,7 @@ def run_one(fixture: Path, timeout: int) -> tuple[str, list[str], list[str], str
         # `release` is for is producing an `RLM` and a `REL`, so the run has to be able
         # to write them. The fixture is already a throwaway copy.
         p = subprocess.run(
-            ["claude", "-p", PROMPT, "--output-format", "stream-json", "--verbose",
+            ["claude", "-p", prompt, "--output-format", "stream-json", "--verbose",
              "--permission-mode", "acceptEdits"],
             cwd=cwd, env=env, stdin=subprocess.DEVNULL,
             capture_output=True, text=True, timeout=timeout)
@@ -120,11 +129,15 @@ def run_one(fixture: Path, timeout: int) -> tuple[str, list[str], list[str], str
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--case", help="one fixture, by the letter that starts its name")
+    ap.add_argument("skill", help="which skill's cases to run")
+    ap.add_argument("--case", help="one fixture, by the letter or name it starts with")
     ap.add_argument("--timeout", type=int, default=900)
     args = ap.parse_args()
 
-    spec = yaml.safe_load((HERE / "cases.yaml").read_text())
+    spec_file = HERE / args.skill / "cases.yaml"
+    if not spec_file.exists():
+        sys.exit(f"no cases for {args.skill!r}: {spec_file} does not exist")
+    spec = yaml.safe_load(spec_file.read_text())
     root = Path(spec["fixtures_root"]).expanduser()
     cases = [c for c in spec["cases"]
              if not args.case or c["fixture"].startswith(args.case)]
@@ -138,7 +151,7 @@ def main() -> int:
             continue
         print(f"\n{'=' * 78}\n{c['fixture']}   expected: {c['expect']}\n  because: "
               f"{c['because']}\n{'=' * 78}")
-        text, skills, written, valid = run_one(fx, args.timeout)
+        text, skills, written, valid = run_one(fx, spec["prompt"], args.timeout)
         print(f"skills invoked : {skills or 'none'}")
         print(f"repo after run : {valid}")
         print("wrote          : " + (", ".join(written) if written else "nothing"))

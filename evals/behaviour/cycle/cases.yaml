@@ -1,0 +1,61 @@
+# One repository, and the question a cycle opens with.
+#
+# Unlike the release gate there is no single right verdict here: a triage is a set of
+# judgements, and what is being checked is whether the skill makes them in the shape the
+# framework asks for. The fixture is built so that several of those judgements have a
+# right answer that can be checked afterwards rather than argued about.
+#
+# `ICG-006` is already in the repository, from the previous cycle. It routed four signals,
+# and two of those routings are traps:
+#
+#   SIG-011 -> not-classifiable   still open. Reading "it appears in an ICG" as "it is
+#                                 dealt with" gets this wrong, and the entry says in as
+#                                 many words what would settle it.
+#   SIG-023 -> not-a-candidate    settled. Re-triaging it means the value is not being
+#                                 read, and every future cycle re-reads it too.
+#
+# Six signals are in no ICG at all: SIG-021, 025, 027, 029, 031, 033. Those are the ones a
+# cycle should pick up, and `ICG001` names them if anyone asks the validator.
+
+prompt: >-
+  apriamo il ciclo su atlas: cosa costruiamo adesso? guarda i segnali e la roadmap e dimmi
+  cosa ha senso aprire
+
+fixtures_root: /tmp/claude-1000/-home-giulioquaglia-projects-framework-data-ai/230c4237-bfa4-489f-a899-bf94b69aa58e/scratchpad/eval-cycle
+
+cases:
+  - fixture: fixture-base
+    expect: an ICG that classifies the six untriaged signals and is proposed, not decided
+    because: >
+      What to look for, in the order it matters.
+
+      An `ICG` exists at `products/atlas/cycles/`, `status: proposed`. The gate is the
+      reason this artifact was created: a classification that leaves no written trace is a
+      meeting, and stopping at triage is a normal thing for a user to do.
+
+      `routing` covers all six untriaged signals, including any it decides are not
+      candidates. Leaving one out because it was obviously nothing is what makes the next
+      cycle read it again.
+
+      SIG-029 with ANA-029 says nobody has ever changed an outreach plan because of a
+      score, and SIG-033 says the segment that had the problem has churned out. Those are
+      `hypothesis-invalidated` and `problem-invalidated`, and the honest consequence is
+      that RMP-003 and RMP-004, which both assume the risk list is the mechanism, are not
+      worth opening. A cycle that writes change contracts for them has classified the two
+      most consequential signals and then ignored its own classification.
+
+      SIG-021 is a breaking change to a data contract with no product or architecture
+      movement: `routing: none` with `impacts: [data]`. Filing it as an architecture
+      change because that was the closest word is the mismatch the impacts field exists to
+      remove.
+
+      SIG-025 is three people's impression with no measurement: `not-classifiable`, with
+      the measurement that would settle it. Forcing it into a real routing either closes a
+      signal or tears up a working product.
+
+      SIG-031 contradicts DEC-001, which states as an accepted consequence that a
+      per-record retry does not exist. That needs a `DEC` that supersedes, not a `CHG`, and
+      it is only visible to somebody who read the decision records.
+
+      No `CHG` should be written without the user accepting the classification first, and
+      the repository has to still validate afterwards.
