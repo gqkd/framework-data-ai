@@ -31,6 +31,23 @@ as you like. You do not need to invent a priority.
 4. **§1 LOW** only if the user asks. Deferring these is the correct behaviour, not
    procrastination.
 
+Read the cost each entry **declares**, not the heading it sits under. They disagree more
+often than you would expect, and when they do the field is the claim somebody made about
+that decision while the heading is where it got filed. An entry declaring `high` under the
+`LOW` heading is the one everybody scrolls past.
+
+**Within a tier, order by when the choice stops being available**, then by how many other
+entries the decision unblocks, then by the register's own order. Two entries with the same
+cost are not interchangeable: one may have a dated deadline, one an event that forces it,
+and one nothing at all. Saying so is most of the value of the ordering, and without a rule
+the tie goes to whichever entry happens to be printed first, which changes the answer the
+next time somebody edits the register for an unrelated reason. If two really are equal,
+say that rather than inventing a reason.
+
+A `Depends on` outranks the tier: a `MEDIUM` blocking a `HIGH` is worked first, or the
+`HIGH` is decided twice. If it points at an entry that does not exist, expect a question
+rather than a decision, and do not guess what it meant.
+
 Run the validator first to get the `OD003` list rather than reading the file and judging by
 eye.
 

@@ -1,0 +1,48 @@
+# The same register, read in two different orders.
+#
+# `ordering-a` and `ordering-b` hold identical entries with identical fields. Only the
+# sequence inside each cost-to-reverse section differs, and the permutation is chosen: in
+# `a` the first entry read (OD-002) is also the one that should be worked first, so an
+# agent echoing file order looks right; in `b` the first entry read is OD-001, which
+# belongs seventh.
+#
+# So the order produced has to be the same for both. If it is not, the ranking is coming
+# from the sequence of the file rather than from the fields, and it will change the next
+# time somebody edits the register for an unrelated reason.
+#
+# The two fixtures were byte identical until this was noticed, which means the stability
+# question could not have failed however the skill behaved.
+#
+# Two entries contradict the heading they are filed under, on purpose: OD-009 sits under
+# LOW and declares `Cost to reverse: high`, OD-001 sits under HIGH and declares medium.
+# Reading the field rather than the section is what tells them apart. OD-009 also declares
+# `Depends on: OD-011`, which exists nowhere: no check catches that, so finding it means
+# having read the entry.
+
+prompt: >-
+  risolviamo gli open, sono fermi da due mesi. da quale partiamo e in che ordine andiamo
+  avanti?
+
+fixtures_root: /tmp/claude-1000/-home-giulioquaglia-projects-framework-data-ai/230c4237-bfa4-489f-a899-bf94b69aa58e/scratchpad/eval-resolve/fixtures
+
+cases:
+  - fixture: ordering-a
+    expect: an order taken from the fields, and no decision taken
+    because: >
+      The three entries with high cost to reverse and no default in force (OD-002, OD-007,
+      OD-009) come before the rest: nothing is holding the line on them, so waiting costs
+      more than deciding on incomplete information. A dependency outranks its tier, so
+      OD-008 is worked before OD-005 which declares `Depends on: OD-008`. OD-009 is worked
+      on its declared cost rather than on the LOW heading it sits under, and OD-001 on its
+      declared medium rather than the HIGH heading.
+
+      `OPEN.md` must not be edited and no `DEC` written: the skill lays out the choice and
+      the user takes it. A run that closes an entry has done the one thing the register
+      exists to prevent.
+
+  - fixture: ordering-b
+    expect: the same order as ordering-a
+    because: >
+      Same register, entries permuted within their sections. The order produced has to
+      match `ordering-a` item for item. Anything else means the sequence of the file is
+      doing the ranking.
