@@ -10,7 +10,10 @@ for a gate is the half that matters: one that fires reliably and says yes to eve
 worse than no gate, because somebody is now relying on it.
 
 One sentence per skill, the same for all of its cases, so what the model gets right or
-wrong comes from the repository rather than from how the question was put.
+wrong comes from the repository rather than from how the question was put. Where the
+repository is the constant instead, a case carries its own `prompt` and its own `name`:
+`requirement` is one project and many statements to file, which is the shape of the
+question inverted.
 
 NO TOOL IS DENIED, DELIBERATELY. The release gate has to recompute a hash and recover a
 frozen plan with `git show`; without a shell it cannot do what it is told, and the run
@@ -141,7 +144,7 @@ def run_one(fixture: Path, prompt: str, timeout: int) -> tuple[str, list[str], l
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("skill", help="which skill's cases to run")
-    ap.add_argument("--case", help="one fixture, by the letter or name it starts with")
+    ap.add_argument("--case", help="one case, by the name or fixture it starts with")
     ap.add_argument("--timeout", type=int, default=900)
     args = ap.parse_args()
 
@@ -152,19 +155,22 @@ def main() -> int:
     root = Path(spec["fixtures_root"])
     if not root.is_absolute():
         root = (HERE.parents[1] / root).resolve()
+    for c in spec["cases"]:
+        c.setdefault("name", c["fixture"])
+        c.setdefault("prompt", spec.get("prompt"))
     cases = [c for c in spec["cases"]
-             if not args.case or c["fixture"].startswith(args.case)]
+             if not args.case or c["name"].startswith(args.case)]
     if not cases:
-        sys.exit(f"no fixture starts with {args.case!r}")
+        sys.exit(f"no case starts with {args.case!r}")
 
     for c in cases:
         fx = root / c["fixture"]
         if not fx.exists():
             print(f"! {fx} is missing, skipping", file=sys.stderr)
             continue
-        print(f"\n{'=' * 78}\n{c['fixture']}   expected: {c['expect']}\n  because: "
+        print(f"\n{'=' * 78}\n{c['name']}   expected: {c['expect']}\n  because: "
               f"{c['because']}\n{'=' * 78}")
-        text, skills, written, valid = run_one(fx, spec["prompt"], args.timeout)
+        text, skills, written, valid = run_one(fx, c["prompt"], args.timeout)
         # The answer first. A run of this was cut off partway through the front matter
         # listing, and the closing text, which is most of what is being graded, never
         # printed. Reading that transcript back, a grep for what the skill should have

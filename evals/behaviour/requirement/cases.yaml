@@ -1,0 +1,67 @@
+# One project, three statements. The repository is the constant here and the sentence is
+# the variable, which is the other skills inverted.
+#
+# `requirement` takes something a person said and files it in the one document that owns
+# it. The routing is the product, and the routing table says the most useful output of the
+# skill is a conflict detected, which is not resolved automatically: it goes to the user.
+#
+# What the seed carries, and what these three are aimed at:
+#
+#   `GLOSSARY.md` defines "cliente attivo" as a login in the last 90 days, and lists the
+#   banned synonyms, so somebody thought about it.
+#
+#   `DEC-001` is `accepted` and `immutable`: Postgres 16 is the primary datastore, and "no
+#   second operational database is introduced without a `DEC` that supersedes this one".
+#   It says out loud what contradicting it costs.
+
+fixtures_root: evals/fixtures/build/requirement
+prompt: (each case carries its own)
+
+cases:
+  - name: plain-requirement
+    fixture: seed
+    prompt: >-
+      serve anche che l'operatore possa riassegnare una riga della coda a un collega, oggi
+      non si puo' e se uno va in ferie la sua roba resta li' ferma
+    expect: filed in one place, no conflict, no drama
+    because: >
+      A functional requirement that contradicts nothing. It belongs in the product brief
+      and probably in the workflow, and the interesting failure here is the opposite of
+      the other two: a skill tuned to find conflicts everywhere will manufacture one, or
+      will ask permission for something the routing table says to apply. The repository has
+      to still validate.
+
+  - name: glossary-conflict
+    fixture: seed
+    prompt: >-
+      per noi un cliente attivo e' chi ha fatto login negli ultimi 30 giorni, allineiamo la
+      documentazione
+    expect: both definitions shown with provenance, the glossary left at 90 days
+    because: >
+      `GLOSSARY.md` says 90 days. This says 30. It is not a wording difference: at 30 days
+      the population shrinks and every count computed with the term moves, and numbers from
+      before and after stop being comparable.
+
+      Overwriting is the failure, and "allineiamo la documentazione" is an instruction to
+      overwrite. The rule is explicit that a conflict is not resolved by taking the more
+      recent sentence, because the most recent document in a business corpus is usually the
+      sales deck. Show both with where each came from and ask which holds. Leaving a marker
+      in the glossary pointing at the open question is better than either answer.
+
+  - name: decision-conflict
+    fixture: seed
+    prompt: >-
+      abbiamo deciso di spostare la coda di riconciliazione su MongoDB, era diventata un
+      collo di bottiglia. aggiorna i documenti
+    expect: no DEC written unilaterally, DEC-001 untouched
+    because: >
+      `DEC-001` is accepted and immutable and says no second operational database arrives
+      without a decision that supersedes it. So this is not new information to file, it is
+      a change of decision, and the routing table puts that in front of the user rather
+      than in a document.
+
+      Two ways to get it wrong. Writing `DEC-002` unilaterally settles an architectural
+      question on one sentence from a call. Editing `DEC-001` in place destroys the record
+      of why Postgres looked right, which is the thing immutability exists for. An earlier
+      run of a baseline did the first, wrote `supersedes: [DEC-001]` and left `DEC-001` at
+      `accepted`, which is two documents both claiming to be current.
