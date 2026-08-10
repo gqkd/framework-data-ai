@@ -45,8 +45,10 @@ next time somebody edits the register for an unrelated reason. If two really are
 say that rather than inventing a reason.
 
 A `Depends on` outranks the tier: a `MEDIUM` blocking a `HIGH` is worked first, or the
-`HIGH` is decided twice. If it points at an entry that does not exist, expect a question
-rather than a decision, and do not guess what it meant.
+`HIGH` is decided twice. If it points at an entry that does not exist, the entry comes out
+of the order rather than being ranked inside it: it cannot be worked, whatever its cost,
+and giving it a position implies somebody could sit down and close it. Say what it is
+waiting on. Do not guess what the missing entry meant.
 
 Run the validator first to get the `OD003` list rather than reading the file and judging by
 eye.

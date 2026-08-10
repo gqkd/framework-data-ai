@@ -46,3 +46,20 @@ cases:
       Same register, entries permuted within their sections. The order produced has to
       match `ordering-a` item for item. Anything else means the sequence of the file is
       doing the ranking.
+
+      It does not match yet, and the run that found that is worth reading before this is
+      treated as a simple pass or fail. The constraints hold in both: OD-008 before the
+      OD-005 that depends on it, OD-007 before the OD-004 it unblocks. What moves is the
+      free choice between two entries that are equal on cost and both forced by an
+      undated event, and the two runs weigh those events differently: one puts the
+      identity provider first because its window closes on external users, 151 people to
+      re-enrol and a conversation with the DPO to redo; the other puts the repository
+      split first because its window closes when store-ops takes its own CI, which is
+      the nearest event of any.
+
+      Neither reasoned from position in the file, which the earlier run did in as many
+      words and which is why these two fixtures stopped being identical. The rule added
+      after that removed the wrong reason without making the answer determinate, and
+      saying so is more honest than tightening it until the two agree: two defensible
+      orders from the same register is a fact about the register, not only about the
+      skill.
