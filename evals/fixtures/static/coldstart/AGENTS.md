@@ -31,6 +31,5 @@ record, because nothing has been decided.
 
 1. **Do not take decisions listed in `OPEN.md`.** Stop and ask.
 2. Absence is information. If a fact is not documented, say so rather than assuming it.
-3. The framework templates live at
-   `/home/giulioquaglia/projects/framework-data-ai/templates/` and the validator at
-   `/home/giulioquaglia/projects/framework-data-ai/skills/audit/scripts/validate.py`.
+3. The framework templates live at `${CLAUDE_PLUGIN_ROOT}/templates/` and the validator at
+   `${CLAUDE_PLUGIN_ROOT}/skills/audit/scripts/validate.py`.
