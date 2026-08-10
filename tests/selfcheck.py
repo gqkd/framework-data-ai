@@ -399,7 +399,12 @@ def _framework_version():
             r = subprocess.run(
                 [sys.executable, str(VALIDATE), "--root", tmp, "--json",
                  "--stale-days", "36500"], capture_output=True, text=True)
-            if r.returncode not in (0, 1):
+            # Exit 1 is how the validator reports findings, so it cannot also mean
+            # "crashed", and a traceback exits 1 too. Unparseable output is the only
+            # thing that tells them apart. Without this the test still catches a
+            # regression, by exploding on empty stdout, and a selfcheck that crashes
+            # says less than one that names what broke.
+            if r.returncode not in (0, 1) or not r.stdout.strip():
                 last = r.stderr.strip().splitlines()[-1] if r.stderr.strip() else "?"
                 return None, last
             return {(f["code"], f["level"]) for f in json.loads(r.stdout)["findings"]
@@ -419,6 +424,28 @@ def _framework_version():
         elif got != want:
             problems.append(f"{what}: expected {sorted(want) or 'nothing'}, got "
                             f"{sorted(got) or 'nothing'}")
+
+    # A quoted number in YAML is a string. Reported as a version skew it sends somebody
+    # looking for a migration that does not exist, which is the confusion this check was
+    # added to remove rather than cause.
+    got, crash = codes(f'framework_version: "{current}"\n')
+    if crash:
+        problems.append(f"a quoted version crashed the validator: {crash}")
+    elif got != {("FW001", "warn")}:
+        problems.append(f"a quoted version reported {sorted(got) or 'nothing'}, and has to "
+                        "be told apart from a real mismatch")
+    else:
+        with tempfile.TemporaryDirectory() as tmp:
+            for rel, text in base.items():
+                (Path(tmp) / rel).write_text(text)
+            (Path(tmp) / "framework.yaml").write_text(f'framework_version: "{current}"\n')
+            r = subprocess.run([sys.executable, str(VALIDATE), "--root", tmp, "--json",
+                                "--stale-days", "36500"], capture_output=True, text=True)
+            msg = next(f["message"] for f in json.loads(r.stdout)["findings"]
+                       if f["code"] == "FW001")
+            if "quoted" not in msg and "string" not in msg:
+                problems.append("a quoted version is reported as a version mismatch "
+                                f"rather than as a quoted number: {msg[:80]}")
 
     # An unrecognised key stops the validator, by design, so the new one has to be on the
     # allowed list or every project that adopts it cannot run the checks at all.
@@ -518,9 +545,9 @@ def _maps_are_constrained():
             for f2, r2 in spec["maps"].items():
                 if r2.get("required"):
                     v = (r2.get("one_of") or r2.get("any_of"))[0]
-                    base[f2] = {"X-001": v if "one_of" in r2 else [v]}
+                    base[f2] = {"SIG-001": v if "one_of" in r2 else [v]}
 
-            ok = dict(base, **{field: {"X-001": wrap(legal[0])}})
+            ok = dict(base, **{field: {"SIG-001": wrap(legal[0])}})
             if validator.is_valid(ok):
                 pass
             else:
@@ -528,10 +555,19 @@ def _maps_are_constrained():
                 problems.append(f"{name}.{field}: rejected the legal value "
                                 f"{legal[0]!r}: {err}")
 
-            bad = dict(base, **{field: {"X-001": wrap("not-a-real-outcome")}})
+            bad = dict(base, **{field: {"SIG-001": wrap("not-a-real-outcome")}})
             if validator.is_valid(bad):
                 problems.append(f"{name}.{field}: accepted 'not-a-real-outcome', so the "
                                 "vocabulary is open and the field is prose with a colon")
+
+            # The keys matter more than the values: they are what the rest of the
+            # framework joins on. `routing: {banana: none}` validated for a day, and a
+            # mistyped candidate then stayed reported as never triaged with nothing
+            # saying why.
+            for key in ("banana", "SIG_001", "SIG-1"):
+                if validator.is_valid(dict(base, **{field: {key: wrap(legal[0])}})):
+                    problems.append(f"{name}.{field}: accepted {key!r} as a key, so a "
+                                    "mistyped identifier passes and joins on nothing")
     return problems
 
 
@@ -560,7 +596,7 @@ def _supersedes_takes_a_list():
             r = subprocess.run(
                 [sys.executable, str(VALIDATE), "--root", tmp, "--json",
                  "--stale-days", "36500"], capture_output=True, text=True)
-            if r.returncode not in (0, 1):
+            if r.returncode not in (0, 1) or not r.stdout.strip():
                 last = r.stderr.strip().splitlines()[-1] if r.stderr.strip() else "?"
                 return None, last
             return [f["code"] for f in json.loads(r.stdout)["findings"]], None

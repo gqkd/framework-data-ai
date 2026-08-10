@@ -47,7 +47,7 @@ python3 skills/audit/scripts/validate.py --root ../my-project
 python3 skills/audit/scripts/validate.py --root ../my-project --emit-index
 ```
 
-Twenty two checks, catalogued in `skills/audit/checks.yaml`, each with the
+Twenty six checks, catalogued in `skills/audit/checks.yaml`, each with the
 failure it prevents written next to it. Two block on day one and they are the two
 `SKILLS.md §9` names: front matter that parses, and front matter that means something.
 Everything else warns. Two are `off`, because they would need input that does not exist

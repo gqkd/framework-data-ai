@@ -123,7 +123,19 @@ def build(name: str, spec: dict, registry: dict) -> dict:
                      "minItems": 1, "uniqueItems": True}
         else:
             raise SystemExit(f"{name}.maps.{field}: needs `one_of` or `any_of`")
+        # The keys are constrained as well as the values, and the keys are the part that
+        # matters more: they are the identifiers the rest of the framework joins on. With
+        # them open, `routing: {banana: none}` validated, and a mistyped candidate then
+        # stayed reported as never triaged with nothing anywhere saying why.
+        # `NNN` is allowed beside a real number because the templates have to validate
+        # against their own schemas, and a template cannot carry a real identifier. That
+        # rule is worth more than closing this hole: the template is the thing people copy,
+        # and one that fails the check it teaches is worse than a permissive pattern. `NNN`
+        # is in the registry's placeholder list and not in the enforced one, so the
+        # framework already decided it reaching a repository is not a blocking error.
+        ids = "|".join(registry["id_prefixes"])
         properties[field] = {"type": "object", "minProperties": 1,
+                             "propertyNames": {"pattern": rf"^({ids})-(\d{{3,}}|NNN)$"},
                              "additionalProperties": value}
         if rule.get("required") and field not in required:
             required.append(field)

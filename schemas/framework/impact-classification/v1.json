@@ -29,6 +29,9 @@
     "routing": {
       "type": "object",
       "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^(PRB|HYP|EVD|CMP|DFB|SD|DEC|CHG|EVR|REL|RLM|DC|SIG|ANA|INC|OD|KI|RSK|CMT|ING|ICG)-(\\d{3,}|NNN)$"
+      },
       "additionalProperties": {
         "enum": [
           "none",
@@ -45,6 +48,9 @@
     "impacts": {
       "type": "object",
       "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^(PRB|HYP|EVD|CMP|DFB|SD|DEC|CHG|EVR|REL|RLM|DC|SIG|ANA|INC|OD|KI|RSK|CMT|ING|ICG)-(\\d{3,}|NNN)$"
+      },
       "additionalProperties": {
         "type": "array",
         "items": {

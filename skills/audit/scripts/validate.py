@@ -587,9 +587,19 @@ def check_framework_version(root: Path, project: dict, registry: dict,
                    f"change nothing here will distinguish a migration from a mistake. "
                    f"The framework is at {current}.")
         return
+    # A quoted number in YAML is a string, and `"1" != 1`. Reported as a version skew it
+    # sends somebody looking for a migration that does not exist, which is the confusion
+    # this check was added to remove rather than cause.
+    if not isinstance(declared, int):
+        report.add("FW001", "framework.yaml",
+                   f"framework_version is {declared!r}, which is "
+                   f"{type(declared).__name__} and not a whole number. In YAML a quoted "
+                   f"value is a string: write `framework_version: {current}` without "
+                   f"quotes. Until it is a number this says nothing about which framework "
+                   f"the repository was written against.")
+        return
     if declared != current:
-        direction = "behind" if isinstance(declared, int) and isinstance(current, int) \
-            and declared < current else "ahead of"
+        direction = "behind" if declared < current else "ahead of"
         report.add("FW001", "framework.yaml",
                    f"declares framework_version {declared!r} and the framework is at "
                    f"{current!r}, so this repository is {direction} it. Findings below "
