@@ -142,8 +142,22 @@ scan:
   # as a document with no front matter. `references` earned its place the same way, one
   # commit after the skills were written: the shared preamble and the routing table are
   # prose the framework wrote about itself, and they came back as two blocking `FM001`.
-  skip_dirs: [templates, skills, schemas, references, evals, corpus, ingest-out,
-              node_modules, __pycache__]
+  #
+  # `build` is where a generator puts its output, and this repository is why it is named:
+  # `evals/fixtures/build/` holds fourteen repositories that are broken on purpose, so a
+  # validator run pointed at the framework itself reported thirteen errors and eighty
+  # warnings from fixtures that are supposed to have them. A generated output directory
+  # holds no source document in any project, which is what makes it safe to name here.
+  #
+  # `evals` is deliberately NOT here, and was for a day. Excluding it fixed the same
+  # symptom by charging every real project a silent exclusion of a directory name a Data/AI
+  # project plausibly uses for artifacts of its own. This repository is not a project and
+  # is never validated as one: the `FM001` findings a misdirected run still produces from
+  # `evals/**/*.yaml` are the correct signal that `--root` is wrong, and the `audit` skill
+  # already says a clean report on the wrong repository is worse than an error. An
+  # exclusion that protects the framework's convenience is paid for by everyone using it.
+  skip_dirs: [templates, skills, schemas, references, corpus, ingest-out,
+              build, node_modules, __pycache__]
 
   # Documents that speak *about* the framework rather than being produced *by* it.
   # `framework.yaml` is the project's own validator configuration: without this line the
