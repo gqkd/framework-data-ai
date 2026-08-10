@@ -61,17 +61,28 @@ claude plugin details framework-data-ai        # should list all six
 Use this while you are still changing the skills. Edit a skill and the change is live in
 the next session. Remove it with `rm ~/.claude/skills/framework-data-ai`.
 
-**2. Install it as a plugin.** Also local. A marketplace can be a directory on your disk,
-so this publishes nothing either:
+**2. Install it as a plugin.** Also local. A marketplace can be a directory on your own
+disk, so this publishes nothing either:
 
 ```bash
 claude plugin marketplace add $PWD --scope local
 claude plugin install framework-data-ai@framework-data-ai --scope local
 ```
 
-This needs one file the repository does not have yet, `.claude-plugin/marketplace.json`.
-Switch to this when you stop editing the skills, because after an install you have to
-reinstall to pick up a change.
+This copies the repository into `~/.claude/plugins/cache/`. The copy is taken at install
+time, so an edit to a skill does not reach it until you reinstall. That is the only reason
+to prefer the symlink while you are still changing things.
+
+Having both is safe: installing the plugin disables the symlink automatically, and
+uninstalling re-enables it. `claude plugin details framework-data-ai` shows which one is
+live under `Source:`.
+
+To undo it:
+
+```bash
+claude plugin uninstall framework-data-ai@framework-data-ai --scope local
+claude plugin marketplace remove framework-data-ai
+```
 
 **3. Publish it.** Push the repository somewhere others can reach, and they add it as a
 marketplace by URL. Nothing above requires this.
