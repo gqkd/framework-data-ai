@@ -96,9 +96,20 @@ def run_one(fixture: Path, prompt: str, timeout: int) -> tuple[str, list[str], l
         # which grades the judgement and leaves the artifacts unmeasured. Half of what
         # `release` is for is producing an `RLM` and a `REL`, so the run has to be able
         # to write them. The fixture is already a throwaway copy.
+        # `acceptEdits` covers writing inside the copy and not a shell command reaching
+        # outside it, which is where `validate.py` lives when the plugin is installed. Three
+        # runs in a row reported that they could not execute it, and running the validator
+        # is the first instruction in two of these skills: what was being measured was the
+        # skill with its own first step removed.
+        #
+        # Granted by pattern rather than with `bypassPermissions`, which would hand a
+        # subprocess on somebody's machine a shell with no guardrails to save typing one
+        # argument. `Read` is broad because reading is cheap to be wrong about; the shell is
+        # not, and gets exactly the interpreter the two scripts need.
         p = subprocess.run(
             ["claude", "-p", prompt, "--output-format", "stream-json", "--verbose",
-             "--permission-mode", "acceptEdits"],
+             "--permission-mode", "acceptEdits",
+             "--allowedTools", "Read", "Glob", "Grep", "Bash(python3:*)", "Bash(git:*)"],
             cwd=cwd, env=env, stdin=subprocess.DEVNULL,
             capture_output=True, text=True, timeout=timeout)
         out = p.stdout
