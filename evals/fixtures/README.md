@@ -33,6 +33,7 @@ project with a corpus and no framework in it.
 | `resolve/ordering-a` | Nine open decisions. Two are filed under a heading that contradicts the cost they declare, one depends on an entry that exists nowhere, one is missing `Default in force` entirely. |
 | `resolve/ordering-b` | The same register, entries permuted inside their sections, derived rather than stored so the two cannot drift. The order produced must match `ordering-a`, and when it does not, the ranking is coming from the sequence of the file. |
 | `resolve/coldstart` | Almost nothing written, because almost everything is blocked on a decision nobody took. |
+| `platform` | Three products on one substrate and a change that reaches all of them: a signed commitment promising an identifier to customers, another promising to pseudonymise it, three architectures joining on it, and a risk accepted on the grounds that it stays what it is. Eleven documents, three owners. The only fixture here where "propose a diff and wait" produces something too long to read. |
 | `start/corpus-project` | Business documents and no framework, the only state `start` is written for. Three of the seven give nothing back: an empty scanned PDF, a `.docx` that is not a zip archive, and a file of whitespace. They need three different things done about them, so a run that reports a count has not helped. |
 
 ## A fixture that cannot fail is not a fixture

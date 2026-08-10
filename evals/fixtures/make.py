@@ -38,6 +38,7 @@ GENERATED = {
     "cycle": ("cycle.py", "cycle/fixture-base"),
     "requirement": ("requirement.py", "requirement/seed"),
     "release": ("release.py", None),          # writes its own tree, six of them
+    "platform": ("platform.py", "platform"),
 }
 STATIC = {
     "resolve/ordering-a": "ordering-a",

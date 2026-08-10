@@ -143,7 +143,7 @@ def run_one(fixture: Path, prompt: str, timeout: int) -> tuple[str, list[str], l
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("skill", help="which skill's cases to run")
+    ap.add_argument("skill", help="which case set to run: a skill name, or a scenario")
     ap.add_argument("--case", help="one case, by the name or fixture it starts with")
     ap.add_argument("--timeout", type=int, default=900)
     args = ap.parse_args()
