@@ -88,10 +88,37 @@ wrong the number is wrong, and that is a better failure than a number nobody can
 own, which is the comparison this runner does not do. `cases.yaml` keeps the labels in data
 rather than in code so the move costs a reshape of one file and nothing else.
 
+## Behaviour
+
+Triggering is the cheap half. `behaviour/` asks whether the answer is right once the skill
+fires, one skill at a time, against the repositories in `fixtures/`:
+
+```bash
+python evals/fixtures/make.py          # build the repositories first
+python evals/behaviour/run.py release  # or audit, cycle, requirement, resolve, start
+```
+
+All six have a run. Every one of them found something, and in four cases the defect was in
+this repository rather than in the skill: a gate rule that blocked on metrics the plan
+declares non-blocking, a fixture claiming a coverage it did not have, a measurement that
+could not reach the validator the skill is told to run first, and a truncated transcript
+read as a result.
+
+**Grading is by hand.** The runner prints what the skill said, what it wrote, and whether
+the repository still validates, and a person decides. A keyword match on "go" and "block"
+scores the laundering fixture correct for saying the word while missing that 0.812 under a
+0.85 threshold is the entire point of it. At six cases per skill that is affordable; it is
+the first thing that has to change if the set grows.
+
 ## What is not measured yet
 
-Triggering is the cheap half. Whether a skill does the right thing once it fires is the
-expensive half, and it needs a fixture repository per scenario. Those fixtures exist, built
-during the evaluation that produced this directory, and they are not in this repository:
-the impact classification and release gate ones in particular encode scenarios worth
-keeping. Bringing them in is the next thing.
+**No baseline arm.** Nothing here answers "would plain Claude have done as well", which is
+the question that decides whether the skills earn their token cost. `claude plugin eval`
+runs that arm by itself and is in early access.
+
+**Nothing runs in CI**, because all of it needs a model.
+
+**Every input here was written by somebody who already understood the framework.** The
+fixtures were built to be hard and several of them caught real defects, but they were built
+by the same understanding that wrote the skills. A real project is the first input nobody
+here shaped.
