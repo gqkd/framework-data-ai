@@ -138,7 +138,9 @@ def main() -> int:
     if not spec_file.exists():
         sys.exit(f"no cases for {args.skill!r}: {spec_file} does not exist")
     spec = yaml.safe_load(spec_file.read_text())
-    root = Path(spec["fixtures_root"]).expanduser()
+    root = Path(spec["fixtures_root"])
+    if not root.is_absolute():
+        root = (HERE.parents[1] / root).resolve()
     cases = [c for c in spec["cases"]
              if not args.case or c["fixture"].startswith(args.case)]
     if not cases:

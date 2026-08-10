@@ -11,36 +11,33 @@
 # state of any project, and if one of them starts firing because the fixture changed, that
 # is the finding.
 #
-# THESE PATHS ARE NOT IN THIS REPOSITORY YET. They were built during the evaluation that
-# produced this directory and they live in a scratch directory, which is a bad place for
-# the most expensive artifact of that work: `D-tampered-plan` encodes a frozen evaluation
-# plan edited after the fact, with the git history to prove it, and it took a while to get
-# right. Moving them in is the next thing, and until it happens a fresh clone has to point
-# these somewhere itself.
+# Paths are relative to the repository root and point at what `evals/fixtures/make.py`
+# builds. Run that first; `build/` is not tracked, because for most of these the source is
+# a generator and the directory is its output.
 
 fixtures:
-  default: /tmp/claude-1000/-home-giulioquaglia-projects-framework-data-ai/230c4237-bfa4-489f-a899-bf94b69aa58e/scratchpad/eval-cycle/fixture-base
+  default: evals/fixtures/build/cycle/fixture-base
 
   # A repository with real defects in it: bad front matter, a dangling reference, a
   # decision superseded by one that never moved the old one to `superseded`.
-  audit: /tmp/claude-1000/-home-giulioquaglia-projects-framework-data-ai/230c4237-bfa4-489f-a899-bf94b69aa58e/scratchpad/eval-audit/fixtures/dirty-repo
+  audit: evals/fixtures/build/audit/dirty-repo
 
   # A signal log and a roadmap with candidates in them, plus the previous cycle's `ICG`,
   # so the triage state question is live rather than theoretical.
-  cycle: /tmp/claude-1000/-home-giulioquaglia-projects-framework-data-ai/230c4237-bfa4-489f-a899-bf94b69aa58e/scratchpad/eval-cycle/fixture-base
+  cycle: evals/fixtures/build/cycle/fixture-base
 
   # A release candidate with an `EVR`, a frozen `EVP` and a gate that has something to say.
-  release: /tmp/claude-1000/-home-giulioquaglia-projects-framework-data-ai/230c4237-bfa4-489f-a899-bf94b69aa58e/scratchpad/eval-release/fixtures/F-clean-pass
+  release: evals/fixtures/build/release/F-clean-pass
 
   # A documented product, so a statement has somewhere to be filed and something to
   # contradict.
-  requirement: /tmp/claude-1000/-home-giulioquaglia-projects-framework-data-ai/230c4237-bfa4-489f-a899-bf94b69aa58e/scratchpad/eval-requirement/seed
+  requirement: evals/fixtures/build/requirement/seed
 
   # Nine open decisions, deliberately shuffled, two of them filed under a heading that
   # contradicts the cost they declare.
-  resolve: /tmp/claude-1000/-home-giulioquaglia-projects-framework-data-ai/230c4237-bfa4-489f-a899-bf94b69aa58e/scratchpad/eval-resolve/fixtures/ordering-a
+  resolve: evals/fixtures/build/resolve/ordering-a
 
   # A project with business documents and no framework in it, which is the only state
   # `start` is written for. Measuring it in a documented repository asks it to set up
   # something that is already set up.
-  start: /tmp/claude-1000/-home-giulioquaglia-projects-framework-data-ai/230c4237-bfa4-489f-a899-bf94b69aa58e/scratchpad/eval-start/corpus-project
+  start: evals/fixtures/build/start/corpus-project

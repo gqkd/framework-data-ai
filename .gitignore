@@ -7,3 +7,4 @@ venv/
 # Prodotto intermedio dell'estrazione, se lanci extract.py da qui per provarlo.
 # L'artefatto durevole è l'ING.md del progetto, non questo.
 ingest-out/
+evals/fixtures/build/

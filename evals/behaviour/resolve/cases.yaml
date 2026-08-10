@@ -23,7 +23,7 @@ prompt: >-
   risolviamo gli open, sono fermi da due mesi. da quale partiamo e in che ordine andiamo
   avanti?
 
-fixtures_root: /tmp/claude-1000/-home-giulioquaglia-projects-framework-data-ai/230c4237-bfa4-489f-a899-bf94b69aa58e/scratchpad/eval-resolve/fixtures
+fixtures_root: evals/fixtures/build/resolve
 
 cases:
   - fixture: ordering-a

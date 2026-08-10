@@ -155,7 +155,8 @@ def main() -> int:
     # whichever one is loaded, since their answer must not depend on it.
     fmap = {}
     if args.fixtures.exists():
-        fmap = {k: Path(v).expanduser() for k, v in
+        fmap = {k: (ROOT / v).resolve() if not Path(v).is_absolute() else Path(v)
+                for k, v in
                 yaml.safe_load(args.fixtures.read_text()).get("fixtures", {}).items()}
     default = args.fixture or fmap.get(args.skill) or fmap.get("default")
     if not default or not Path(default).exists():

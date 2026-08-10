@@ -21,7 +21,7 @@ prompt: >-
   apriamo il ciclo su atlas: cosa costruiamo adesso? guarda i segnali e la roadmap e dimmi
   cosa ha senso aprire
 
-fixtures_root: /tmp/claude-1000/-home-giulioquaglia-projects-framework-data-ai/230c4237-bfa4-489f-a899-bf94b69aa58e/scratchpad/eval-cycle
+fixtures_root: evals/fixtures/build/cycle
 
 cases:
   - fixture: fixture-base

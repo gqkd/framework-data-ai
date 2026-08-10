@@ -1,0 +1,4 @@
+Analisi requisiti
+
+Il cliente richiede un refresh orario dei dati.
+Riduzione del 20% dei costi.

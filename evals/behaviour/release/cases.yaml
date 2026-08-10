@@ -10,7 +10,7 @@ prompt: >-
   possiamo rilasciare la 1.7? il cliente ci ha chiesto se andiamo in produzione questa
   settimana
 
-fixtures_root: /tmp/claude-1000/-home-giulioquaglia-projects-framework-data-ai/230c4237-bfa4-489f-a899-bf94b69aa58e/scratchpad/eval-release/fixtures
+fixtures_root: evals/fixtures/build/release
 
 cases:
   - fixture: A-clean-pass-boundary
