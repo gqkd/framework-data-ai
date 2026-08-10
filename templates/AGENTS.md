@@ -21,6 +21,7 @@ here.
 
 | Question | Source |
 |---|---|
+| **Where the code is** | `products/<p>/product.yaml` under `code:`, one entry per repository |
 | How the system is built | `products/<p>/ARC.md#current`, plus `PLATFORM.md` if there is one |
 | What shape it is going to have | `products/<p>/ARC.md#target` |
 | What is missing to get there | `products/<p>/ARC.md#delta`, ordered by `RMP.md` |
@@ -38,10 +39,14 @@ here.
 1. **Do not take decisions listed in `OPEN.md`.** If you need a choice that is listed
    there as open, stop and ask. Do not fill the gap with a plausible assumption: that is
    the main way an agent causes damage that is hard to trace back.
-2. **Do not implement a signal.** A line in `LOG`, a piece of feedback or an increment in
+2. **The code is not in this repository.** This repository holds the documents. `code:` in
+   each `product.yaml` says which repositories hold the code, what is in each one, and
+   where it is expected to be checked out. Read the code there before describing it: a
+   document is a claim about a system, and the system is somewhere else.
+3. **Do not implement a signal.** A line in `LOG`, a piece of feedback or an increment in
    `RMP` does not authorize you to build. What you implement is a `CHG` with
    `status: approved`.
-3. **A contradiction you find while answering a question goes in the parking lot of
+4. **A contradiction you find while answering a question goes in the parking lot of
    `OPEN.md`, one line, before you answer.** Most of what these documents get read for is
    questions, and reading them turns things up: two signed commitments that cannot both
    hold, a term the glossary defines the way no artifact uses it, an accepted risk resting
@@ -49,11 +54,11 @@ here.
    the terminal window, and whoever asks next has to find it again. This is the one write
    that needs no permission and no skill running, and it is the difference between a
    discovery and a remark. Say in the answer that you did it.
-3. **Respect the artifact class.**
+5. **Respect the artifact class.**
    - `immutable` → do not modify it; create a new one with `supersedes`
    - `append-only` → do not rewrite lines; add a linked event
    - `living` → modify it and update `last_review`
-4. **If a fact is not documented, say so.** Absence is information. Prefer "it is not
+6. **If a fact is not documented, say so.** Absence is information. Prefer "it is not
    documented where this data lives" to an invented answer.
 
 ## Mandatory updates

@@ -34,6 +34,29 @@ platform:
   shares: [identity, data-access, deploy, observability]
   arc_delta: products/product-a/ARC.md
 
+# Where this product's code lives. One entry per repository, however many there are.
+#
+# This exists because the documentation does not have to live with the code, and often
+# should not: a project that keeps its documents in their own repository has nothing else
+# to say where the code is, and an agent told to read the document and then act can read
+# and then not know where to go.
+#
+# `contains` is one line and it is the field that does the work: with five repositories the
+# name alone does not say which one to open.
+#
+# `path` is where it is expected to be checked out, relative to this repository, so that an
+# agent can reach it. Relative and not absolute, because an absolute path is true on one
+# machine. Omit it for a repository nobody clones locally.
+code:
+  frontend:
+    url: git@github.com:org/product-a-frontend.git
+    contains: the customer-facing app. React, and the only place UI copy lives
+    path: ../product-a-frontend
+  backend:
+    url: git@github.com:org/product-a-backend.git
+    contains: the API and the domain logic. Owns the database migrations
+    path: ../product-a-backend
+
 artifacts:                     # GENERATED
   living:
     - path: products/product-a/PBR.md

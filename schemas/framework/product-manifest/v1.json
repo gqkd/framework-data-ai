@@ -29,6 +29,35 @@
       "type": "array",
       "minItems": 1,
       "maxItems": 1
+    },
+    "code": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9._-]*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1
+          },
+          "contains": {
+            "type": "string",
+            "minLength": 1
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "url",
+          "contains"
+        ],
+        "additionalProperties": false
+      }
     }
   },
   "required": [

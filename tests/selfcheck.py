@@ -606,54 +606,72 @@ def _triage_state_is_derivable():
     return problems
 
 
-@check("a gate verdict has a closed vocabulary")
+@check("a gate verdict has a closed vocabulary, and so do the keys it is filed under")
 def _maps_are_constrained():
-    # `maps` in the registry exists so the `ICG` can carry one verdict per candidate as
-    # front matter instead of as a table somebody has to read. That is the entire reason
-    # the gate got an artifact, and it is worth nothing if an invented routing passes: a
-    # field with an open vocabulary is prose with a colon in it. `CHG001` and `CHG002` are
-    # switched off waiting on this, so the constraint has to bite before they come back.
+    # `maps` exists so a document can carry a value per identifier as front matter instead
+    # of as a table somebody has to read. It is worth nothing if anything validates: a
+    # field with an open vocabulary is prose with a colon in it, and an open key is worse,
+    # because the keys are what the rest of the framework joins on.
+    #
+    # Three shapes, and each is checked both ways. `one_of` is one value per key,
+    # `any_of` a set, `fields` a record: the code map needs the third, because a
+    # repository is a URL and a sentence saying what is in it, not a single word.
     typed = {n: s for n, s in REGISTRY["types"].items() if s.get("maps")}
     if not typed:
         return ["no type declares `maps`: this check is no longer running"]
 
+    ids = "|".join(REGISTRY["id_prefixes"])
     problems = []
     for name, spec in typed.items():
         schema = json.loads((ROOT / "schemas" / "framework" / name / "v1.json")
                             .read_text(encoding="utf-8"))
-        validator = Draft202012Validator(schema)
+        v = Draft202012Validator(schema)
         for field, rule in spec["maps"].items():
-            legal = rule.get("one_of") or rule.get("any_of")
-            wrap = (lambda v: v) if "one_of" in rule else (lambda v: [v])
+            # A key the pattern accepts, and three it must not.
+            good_key = "SIG-001" if not rule.get("keys") else "frontend"
+            bad_keys = ["banana", "SIG_001"] if not rule.get("keys") else ["Frontend", "1x"]
+
+            if "one_of" in rule:
+                ok_val, bad_vals = rule["one_of"][0], ["not-a-real-outcome"]
+            elif "any_of" in rule:
+                ok_val, bad_vals = [rule["any_of"][0]], [["not-a-real-outcome"], []]
+            elif "fields" in rule:
+                req = list(rule["fields"]["required"])
+                ok_val = {k: "x" for k in req}
+                bad_vals = [{}, dict({k: "x" for k in req}, surprise="x")]
+                if len(req) > 1:
+                    bad_vals.append({req[0]: "x"})          # one required key missing
+            else:
+                problems.append(f"{name}.{field}: declares no value shape")
+                continue
+
             base = {"schema": f"framework/{name}/v1", "artifact_type": name,
                     "lifecycle": spec["lifecycle"], "status": spec["status"][0],
                     "owners": ["someone"], "created": "2026-01-01"}
+            if spec.get("products") == "exactly-one":
+                base["products"] = ["alpha"]
             for f2, r2 in spec["maps"].items():
-                if r2.get("required"):
-                    v = (r2.get("one_of") or r2.get("any_of"))[0]
-                    base[f2] = {"SIG-001": v if "one_of" in r2 else [v]}
+                if not r2.get("required"):
+                    continue
+                k2 = "SIG-001" if not r2.get("keys") else "frontend"
+                if "one_of" in r2:
+                    base[f2] = {k2: r2["one_of"][0]}
+                elif "any_of" in r2:
+                    base[f2] = {k2: [r2["any_of"][0]]}
+                else:
+                    base[f2] = {k2: {k: "x" for k in r2["fields"]["required"]}}
 
-            ok = dict(base, **{field: {"SIG-001": wrap(legal[0])}})
-            if validator.is_valid(ok):
-                pass
-            else:
-                err = next(validator.iter_errors(ok)).message
-                problems.append(f"{name}.{field}: rejected the legal value "
-                                f"{legal[0]!r}: {err}")
-
-            bad = dict(base, **{field: {"SIG-001": wrap("not-a-real-outcome")}})
-            if validator.is_valid(bad):
-                problems.append(f"{name}.{field}: accepted 'not-a-real-outcome', so the "
-                                "vocabulary is open and the field is prose with a colon")
-
-            # The keys matter more than the values: they are what the rest of the
-            # framework joins on. `routing: {banana: none}` validated for a day, and a
-            # mistyped candidate then stayed reported as never triaged with nothing
-            # saying why.
-            for key in ("banana", "SIG_001", "SIG-1"):
-                if validator.is_valid(dict(base, **{field: {key: wrap(legal[0])}})):
-                    problems.append(f"{name}.{field}: accepted {key!r} as a key, so a "
-                                    "mistyped identifier passes and joins on nothing")
+            if not v.is_valid(dict(base, **{field: {good_key: ok_val}})):
+                err = next(v.iter_errors(dict(base, **{field: {good_key: ok_val}}))).message
+                problems.append(f"{name}.{field}: rejected a legal entry: {err}")
+            for bad in bad_vals:
+                if v.is_valid(dict(base, **{field: {good_key: bad}})):
+                    problems.append(f"{name}.{field}: accepted {bad!r} as a value, so the "
+                                    "shape is open and the field is prose with a colon")
+            for bad in bad_keys:
+                if v.is_valid(dict(base, **{field: {bad: ok_val}})):
+                    problems.append(f"{name}.{field}: accepted {bad!r} as a key, so a "
+                                    "mistyped name passes and joins on nothing")
     return problems
 
 

@@ -121,8 +121,18 @@ def build(name: str, spec: dict, registry: dict) -> dict:
         elif "any_of" in rule:
             value = {"type": "array", "items": {"enum": list(rule["any_of"])},
                      "minItems": 1, "uniqueItems": True}
+        elif "fields" in rule:
+            # A record per key rather than a verdict per key. The code map needs this:
+            # a repository is not one value, it is a URL and a sentence saying what is in
+            # it, and an agent told only a name still cannot go and read anything.
+            f = rule["fields"]
+            props = {k: {"type": "string", "minLength": 1}
+                     for k in list(f.get("required", [])) + list(f.get("optional", []))}
+            value = {"type": "object", "properties": props,
+                     "required": list(f.get("required", [])),
+                     "additionalProperties": False}
         else:
-            raise SystemExit(f"{name}.maps.{field}: needs `one_of` or `any_of`")
+            raise SystemExit(f"{name}.maps.{field}: needs `one_of`, `any_of` or `fields`")
         # The keys are constrained as well as the values, and the keys are the part that
         # matters more: they are the identifiers the rest of the framework joins on. With
         # them open, `routing: {banana: none}` validated, and a mistyped candidate then
@@ -133,9 +143,15 @@ def build(name: str, spec: dict, registry: dict) -> dict:
         # and one that fails the check it teaches is worse than a permissive pattern. `NNN`
         # is in the registry's placeholder list and not in the enforced one, so the
         # framework already decided it reaching a repository is not a blocking error.
+        #
+        # `keys` overrides the pattern for a map whose keys are not framework identifiers.
+        # Repository names are the case: they are somebody's slugs, not `SIG-001`, and
+        # forcing them into the identifier shape would make the field unusable rather than
+        # safe.
         ids = "|".join(registry["id_prefixes"])
+        key_pattern = rule.get("keys") or rf"^({ids})-(\d{{3,}}|NNN)$"
         properties[field] = {"type": "object", "minProperties": 1,
-                             "propertyNames": {"pattern": rf"^({ids})-(\d{{3,}}|NNN)$"},
+                             "propertyNames": {"pattern": key_pattern},
                              "additionalProperties": value}
         if rule.get("required") and field not in required:
             required.append(field)

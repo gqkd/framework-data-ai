@@ -254,6 +254,23 @@ types:
     status: [active, draft]
     products: exactly-one
 
+    # Where this product's code actually lives. Documents and code are in one repository
+    # in the simple case, and the framework assumed that everywhere: `scan.skip_dirs`
+    # exists to exclude code sitting *inside* the documentation root. A project keeping its
+    # documentation in its own repository, with the code in several others, had nothing to
+    # say so with, and an agent told to read the document and act could read and then not
+    # know where to go.
+    #
+    # Keys are repository names and not framework identifiers, so they get their own
+    # pattern. `path` is where it is expected to be checked out, relative to this
+    # repository, because an absolute path is true on one machine.
+    maps:
+      code:
+        keys: "^[a-z][a-z0-9._-]*$"
+        fields:
+          required: [url, contains]
+          optional: [path]
+
   product-brief:
     id: PBR
     name: Product brief
