@@ -1,9 +1,11 @@
 # Documentation framework for Data & AI projects
 
-It defines **which documents exist in a Data/AI project, who creates them, when, and which
-question each one answers**. It has two audiences: a new person who has to understand the
-system well enough to change it without breaking decisions taken for good reasons, and an
-AI agent that has to answer questions without inventing the missing parts.
+It defines **which documents exist in a Data/AI project, who writes them, when, and what
+question each one answers**.
+
+Two kinds of reader need it. A new person, who has to understand the system before changing
+it, so they do not undo a decision somebody made for a good reason. And an AI agent, which
+has to answer questions without filling the gaps with something plausible.
 
 This repository holds **the definition only**. The artifacts of a real project, its
 decisions, products, initiatives and corpus, live in that project's repository, not here.
@@ -42,89 +44,105 @@ path:
 
 ## Using it with the skills
 
-Six skills operate the framework from inside Claude Code. `SKILLS.md` is the reference for
-what each one does and where their boundaries fall; this is the on-ramp.
+Six skills run the framework from inside Claude Code. This section is how to start.
+`SKILLS.md` says what each one does in detail.
 
-### Install it
+### Turning it on
 
-From a checkout, one line, and nothing is copied:
+There are three separate things here, and only the last one is public.
+
+**1. A symlink.** Nothing is copied and nothing is published:
 
 ```bash
 ln -s $PWD ~/.claude/skills/framework-data-ai
 claude plugin details framework-data-ai        # should list all six
 ```
 
-A symlink rather than an install, deliberately: the checkout stays the single source, so a
-change to a skill is live in the next session with nothing to reinstall. The six cost about
-1,500 tokens in every session just by being available, and two to three thousand more each
-time one fires. That is the price of having them, and it is worth knowing before you decide
-it is worth paying.
+Use this while you are still changing the skills. Edit a skill and the change is live in
+the next session. Remove it with `rm ~/.claude/skills/framework-data-ai`.
+
+**2. Install it as a plugin.** Also local. A marketplace can be a directory on your disk,
+so this publishes nothing either:
+
+```bash
+claude plugin marketplace add $PWD --scope local
+claude plugin install framework-data-ai@framework-data-ai --scope local
+```
+
+This needs one file the repository does not have yet, `.claude-plugin/marketplace.json`.
+Switch to this when you stop editing the skills, because after an install you have to
+reinstall to pick up a change.
+
+**3. Publish it.** Push the repository somewhere others can reach, and they add it as a
+marketplace by URL. Nothing above requires this.
+
+**What it costs.** The six skills add about 1,500 tokens to every session, just by being
+available. Each one costs another two to three thousand when it runs.
 
 ### Where to enter
 
-You do not pick a skill, you say what happened. One of them answers.
+You do not choose a skill. You say what happened, and one of them answers. The skills
+understand Italian and English equally.
 
-| What is true right now | What to say | What answers |
+| What is true right now | What you say | What answers |
 |---|---|---|
-| No documentation, or a pile of documents from the client | *"partiamo, ecco i deck"* · *"where do I start"* | `start` |
-| Somebody said something worth recording | *"abbiamo deciso"* · *"the customer wants"* | `requirement` |
-| Work is blocked on a choice nobody has made | *"risolviamo gli open"* · *"what do I need to decide"* | `resolve` |
-| Deciding what to build next | *"cosa facciamo in questo ciclo"* | `cycle` |
-| A release candidate exists | *"possiamo rilasciare?"* | `release` |
-| Before merging, or CI is failing | *"fammi un check"* | `audit` |
+| No documentation yet, or a folder of client documents | *"let's start, the documents are in corpus/"* | `start` |
+| Somebody said something worth writing down | *"we decided to use Airflow"* | `requirement` |
+| Work is stuck on a choice nobody made | *"let's work through the open decisions"* | `resolve` |
+| Choosing what to build next | *"what do we build this cycle?"* | `cycle` |
+| A release candidate is ready | *"can we ship 1.7?"* | `release` |
+| Before you merge, or CI is failing | *"check the docs"* | `audit` |
 
 ### A first session
 
-On a project with business documents and no framework in it:
+A project with client documents in `corpus/` and no framework in it:
 
-```
-you   partiamo con questo progetto, i documenti del cliente sono in corpus/
-      → start reads the corpus, scaffolds AGENTS.md, OPEN.md, GLOSSARY.md and the
-        product folder, writes ING.md with a provenance line per claim, and tells you
-        which documents gave it nothing and what each of those needs. It writes no
-        decisions: at ingestion nothing has been decided.
+**You:** *"let's start with this project, the client documents are in corpus/"*
 
-you   risolviamo gli open, da quale partiamo?
-      → resolve orders OPEN.md by what it costs to reverse, and works one at a time.
-        Expect it to hand back a question, not a decision.
+`start` reads the documents. It creates `AGENTS.md`, `OPEN.md`, `GLOSSARY.md` and a folder
+for the product. It writes `ING.md`, which records where each claim came from. It tells you
+which documents it could not read and what each one needs. It writes no decisions, because
+at this point nothing has been decided.
 
-you   cosa costruiamo adesso?
-      → cycle classifies each candidate through the ICG gate and writes the
-        classification down. Expect `proposed`, not `accepted`.
+**You:** *"let's work through the open decisions, which one first?"*
 
-you   possiamo rilasciare?
-      → release checks the report against the frozen evaluation plan and says go or
-        rework. Expect it to refuse to deploy: preparing the evidence is its job, the
-        command is yours.
-```
+`resolve` sorts `OPEN.md` by how expensive each choice is to undo, and takes one at a time.
+Expect a question back, not a decision.
 
-### What to expect them not to do
+**You:** *"what do we build now?"*
 
-This is the part worth reading before the first session, because a skill that surprises you
-once gets switched off.
+`cycle` sorts the candidates into kinds of change and writes that down. Expect it marked
+`proposed`, not `accepted`.
 
-**They propose and wait.** Two writes happen without asking, because they destroy nothing:
-appending a signal to `LOG`, and adding a line to the parking lot of `OPEN.md`. Everything
-else arrives as a diff and a question.
+**You:** *"can we ship?"*
 
-**Told to overwrite, they will not.** Asked to "align the documentation" with a new
-definition of a term the glossary already defines differently, the run left the glossary
-alone, showed both definitions with where each came from, and asked which one holds. That
-is the designed behaviour and not caution: the most recent sentence in a project is usually
-the least reliable one.
+`release` compares the test results against the plan that was frozen before the tests ran,
+and says ship or rework. It will not deploy. Preparing the evidence is its job; running the
+command is yours.
 
-**They will not settle an architectural question on one sentence.** Told a queue was moving
-to another database, contradicting an accepted decision, the run recorded the signal and
-proposed the rest, including moving the old decision to `superseded`, which is the only
-field an immutable allows.
+### What they will not do
 
-**They report what they did not do.** A finding left standing on purpose, with the reason,
-is a good outcome. A report that says everything is green after ten minutes usually means
-something was silenced.
+Read this before the first session. A tool that surprises you once gets switched off.
 
-**They cannot check the world.** `verified_against` names a commit and `evp_hash` names a
-file; a skill can tell you it could not establish either, and that is the honest answer. It
-will not fill them in with something plausible.
+**They propose, then wait.** Two things happen without asking, because neither can destroy
+anything: adding a signal to `LOG`, and adding a line to the parking lot in `OPEN.md`.
+Everything else comes back as a diff and a question.
+
+**They will not overwrite a definition.** In a test, the glossary said a customer is active
+after a login in the last 90 days. Told "make it 30 days, align the documentation", the
+skill left the glossary alone. It showed both versions, said where each came from, and asked
+which one holds. The newest sentence in a project is usually the least reliable one.
+
+**They will not decide architecture from one sentence.** Told a queue was moving to MongoDB,
+which contradicted a decision already on record, the skill wrote down the request and
+proposed the rest. It did not write the new decision itself.
+
+**They tell you what they did not do.** A problem left open on purpose, with the reason, is
+a good result. A report that says everything is fine after ten minutes usually means
+something got hidden.
+
+**They cannot check the world.** Some fields name a commit or a file hash. If a skill cannot
+confirm one, it says so. It will not fill in something plausible.
 
 ## The gate
 
@@ -148,10 +166,11 @@ checks:
   XP003: off        # we only have one product
 ```
 
-That one line is the whole mechanism behind the rule this framework gives itself: **turn a
-check on when the failure it prevents has already happened once, and not before.** If
-turning one on costs a commit of code, it does not happen, and twelve checks switched on in
-advance get switched off together the first time they are in the way.
+That one line is why the framework can follow its own rule: **turn a check on once the
+thing it prevents has actually happened, and not before.**
+
+If turning a check on costs a commit of code, nobody does it. And twelve checks turned on
+in advance all get turned off together, the first time they get in the way.
 
 The same file says which files are artifacts in the first place. The validator reads every
 `.md` and `.yaml` under the root, and a project that also holds code holds a great deal of
@@ -173,12 +192,13 @@ validator you believe you configured.
 matter, and `--emit-index --check` exits non-zero when what is on disk has drifted, which
 is what keeps a generated file from quietly becoming a hand written one.
 
-It only touches a file that says `Generated by` in its header. Without that line the file
-is left alone and named in the report, because the two directions are not symmetric: a
-generated file that drifted costs a regeneration, and a hand written file that got
-regenerated costs whatever it held that front matter cannot express. Projects do keep these
-by hand, for a column on why a decision still matters or a row for where a source system
-enters the chain, and the generator can only ever write back the part it can derive.
+It only touches a file whose header says `Generated by`. Any other file is left alone and
+named in the report instead.
+
+The two mistakes are not the same size. Regenerating a file that had drifted costs one
+command. Regenerating a file somebody maintained by hand loses whatever they put in it that
+front matter cannot hold: a column on why a decision still matters, a row for where a source
+system enters the chain. The generator can only write back what it can derive.
 
 In a project's CI, one line:
 
@@ -219,14 +239,16 @@ without `status` and `owners` for as long as it did. The self check runs in CI h
   release to install, and no migration note when a rename lands. With one project this is
   invisible. With the second it is the first thing that breaks.
 
-  Half of it does exist now: a project writes `framework_version` in its own
-  `framework.yaml` and the validator says so when the two disagree. That does not pin
-  anything, and it is not meant to. It answers the question that comes first, which is
-  whether a finding is the rules having moved or the documents being wrong, because those
-  need opposite responses and a team that guesses wrong at it twice stops reading the
-  validator. `version:` in `schemas/artifact-types.yaml` says what a bump means, and it is
-  deliberately not the plugin's version: a release that rewords a skill changes nothing
-  about whether a document still validates.
+  Half of it exists. A project writes `framework_version` in its own `framework.yaml`, and
+  the validator tells you when that number and the framework's disagree.
+
+  This pins nothing, and is not meant to. It answers the question that comes first: is this
+  finding here because the rules moved, or because the document is wrong? Those need
+  opposite responses. Guess wrong twice and people stop reading the validator.
+
+  `version:` in `schemas/artifact-types.yaml` explains when the number goes up. It is not
+  the plugin's version, on purpose: a release that rewords a skill cannot break a
+  document.
 - **Two checks that need structured input.** `CHG001` and `CHG002` want the `ICG` routing
   as a field on the `CHG` front matter rather than as prose in its body. The recovered
   versions matched prose, and matching prose is the fragility the section markers exist to
@@ -249,6 +271,8 @@ reading a set of rules needs to know whether they are reading these or a variant
 
 ## In one line
 
-Seven living documents that have to be true, about twenty that are written once and never
-touched again, and one file, `OPEN.md`, that says what has not been decided yet, because
-that is the information no other document holds and the one an agent will otherwise invent.
+Seven living documents that have to stay true. About twenty written once and never touched
+again. And `OPEN.md`, which says what has not been decided yet.
+
+That last one is the point. No other document holds it, and it is what an agent invents when
+nobody wrote it down.
