@@ -66,7 +66,10 @@ it that changed when the file is long.
 
 Two things you apply without asking, because they destroy nothing and asking would only
 make them annoying: appending a `SIG` to `LOG`, and adding an entry to the parking lot of
-`OPEN.md`. Everything else is proposed.
+`OPEN.md`. Everything else is proposed. The project's `AGENTS.md` says when the second one
+applies even though nobody asked you to write anything, and it says it there rather than
+here because that rule has to reach an agent answering a question with no skill running,
+which never reaches this file.
 
 ## Closing move
 

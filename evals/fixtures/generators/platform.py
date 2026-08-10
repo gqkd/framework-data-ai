@@ -86,6 +86,9 @@ crosses between them.
    not exist.
 2. **Do not take decisions listed in `OPEN.md`.** Stop and ask.
 3. **A `DC` with more than one consumer cannot be changed by one consumer.**
+4. **A contradiction you find while answering a question goes in the parking lot of
+   `OPEN.md`, one line, before you answer.** It is the one write that needs no permission,
+   and it is the difference between a discovery and a remark.
 
 ## Real commands
 

@@ -41,6 +41,14 @@ here.
 2. **Do not implement a signal.** A line in `LOG`, a piece of feedback or an increment in
    `RMP` does not authorize you to build. What you implement is a `CHG` with
    `status: approved`.
+3. **A contradiction you find while answering a question goes in the parking lot of
+   `OPEN.md`, one line, before you answer.** Most of what these documents get read for is
+   questions, and reading them turns things up: two signed commitments that cannot both
+   hold, a term the glossary defines the way no artifact uses it, an accepted risk resting
+   on a fact that has changed. Answer and write nothing and the finding lasts as long as
+   the terminal window, and whoever asks next has to find it again. This is the one write
+   that needs no permission and no skill running, and it is the difference between a
+   discovery and a remark. Say in the answer that you did it.
 3. **Respect the artifact class.**
    - `immutable` → do not modify it; create a new one with `supersedes`
    - `append-only` → do not rewrite lines; add a linked event
