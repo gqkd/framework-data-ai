@@ -37,10 +37,29 @@ fixtures_root: evals/fixtures/build/audit
 
 cases:
   - fixture: dirty-repo
-    expect: the four errors reported, the safe repairs applied, nothing silenced
+    expect: >-
+      exactly two files written, `decisions/DEC-001-warehouse.md` and
+      `products/atlas/ARC.md`, and nothing silenced
     because: >
-      Four errors and eleven warnings are there to be found. What matters more is the list
-      of things that must still be true afterwards: `INDEX.md` still says "Why it still
+      Four errors and eleven warnings are there to be found.
+
+      The write set is exact, and it is exact because the skill now states a test rather
+      than a list: apply a repair when the repository already holds the correct value,
+      propose it when supplying the value means knowing something the repository does not
+      say. Two repairs here pass. `ARC.md` declares
+      `artifact_type: architecture-doc` beside `schema: framework/architecture/v1`, so the
+      schema line says what the typo should have been and the fix is a copy. `DEC-003`
+      declares `supersedes: DEC-001` while `DEC-001` is still `accepted`, so another
+      document has already settled its status and saying so is transcription.
+
+      One does not pass, and it is the one three runs disagreed about: excluding the dbt
+      directory from `scan`. That is a real repair and the skill says so, but nothing in
+      the repository states that `models/` is not the framework's. That fact is in
+      somebody's head, and a repair needing a fact from outside is a proposal however
+      obvious it looks from inside. Before the test was written, runs applied it, applied
+      nothing, and applied it again with a different second file.
+
+      What matters more is the list of things that must still be true afterwards: `INDEX.md` still says "Why it still
       matters" and `TRACEABILITY.md` still has `SAP.KNA1`; no `last_review` anywhere has
       moved, least of all `GLOSSARY.md`'s; `framework.yaml` has not grown a `scan` block or
       a lowered severity to clear anything; and no immutable has been edited except through

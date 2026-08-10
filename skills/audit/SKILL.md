@@ -55,10 +55,29 @@ the warning standing: it is doing its job.
 
 ## Fix directly, or propose
 
-Apply without asking only what is mechanical and cannot be wrong:
+One test, and it is the same one `references/routing-table.md` §5 applies everywhere else:
 
-- **A missing `<!-- section: id -->` marker** when the section itself is plainly there
-  under a heading and only the marker is absent.
+> **Apply it when the repository already contains the correct value. Propose it when
+> supplying the value means knowing something the repository does not say.**
+
+That is decidable by reading, which a list of examples is not. Three things pass it:
+
+- **A missing `<!-- section: id -->` marker** when the section is plainly there under a
+  heading and only the marker is absent.
+- **A field contradicted by another field in the same front matter.**
+  `artifact_type: architecture-doc` next to `schema: framework/architecture/v1` is a typo
+  and the schema line says what it should have been. You are not choosing a value, you are
+  copying one.
+- **A `status` on an immutable that another document has already settled.** If a `DEC`
+  declares `supersedes: DEC-001`, then `DEC-001` is superseded and saying so is
+  transcription. `status` is the only field on an immutable this can ever apply to.
+
+Everything else is proposed, and the boundary is worth being exact about because it is
+where runs of this skill diverge. Excluding a dbt directory from `scan` is a real repair
+and the framework says so, but nothing in the repository states that `models/` is not the
+framework's: that fact lives in somebody's head, and a repair that needs a fact from
+outside is a proposal however obvious it looks from inside. Same for `FM002` where the
+front matter and the document disagree and neither is a copy of the other.
 
 Propose a diff and wait for everything else. In particular:
 
