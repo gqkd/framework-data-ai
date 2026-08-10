@@ -128,9 +128,18 @@ without `status` and `owners` for as long as it did. The self check runs in CI h
 
 - **`--emit-manifest`.** The `GENERATED` sections of `product.yaml` are still written by
   hand, and the template says so at the bottom, where somebody will read it.
-- **Versioning and distribution.** A project refers to the framework by path. There is no
-  `framework_version`, no way to pin one, and no migration note when a rename lands. With
-  one project this is invisible. With the second it is the first thing that breaks.
+- **Distribution.** A project refers to the framework by path. There is no packaging, no
+  release to install, and no migration note when a rename lands. With one project this is
+  invisible. With the second it is the first thing that breaks.
+
+  Half of it does exist now: a project writes `framework_version` in its own
+  `framework.yaml` and the validator says so when the two disagree. That does not pin
+  anything, and it is not meant to. It answers the question that comes first, which is
+  whether a finding is the rules having moved or the documents being wrong, because those
+  need opposite responses and a team that guesses wrong at it twice stops reading the
+  validator. `version:` in `schemas/artifact-types.yaml` says what a bump means, and it is
+  deliberately not the plugin's version: a release that rewords a skill changes nothing
+  about whether a document still validates.
 - **Two checks that need structured input.** `CHG001` and `CHG002` want the `ICG` routing
   as a field on the `CHG` front matter rather than as prose in its body. The recovered
   versions matched prose, and matching prose is the fragility the section markers exist to

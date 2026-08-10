@@ -37,6 +37,19 @@
 # The schema identifier of a type is `framework/<artifact_type>/v1`. It is derivable from
 # the key, so it is not repeated on every entry.
 
+# The number a project pins in its own `framework.yaml` as `framework_version`, and the
+# only version here that means anything to one. It is not the plugin's: a plugin release
+# that rewords a skill changes nothing about whether a document still validates, and a
+# project should not be asked to care.
+#
+# It goes up when a document that validated stops validating, or starts meaning something
+# else: a new required field, a narrowed enum, a type removed, a check promoted to error in
+# the catalog. Adding a type, adding an optional field or adding a check at `warn` leaves it
+# alone, because none of those can break a repository that was correct yesterday.
+#
+# An integer and not a semantic version, deliberately. The only question a project has is
+# "do I have to do something", and three components invite an argument about which one
+# moved instead of an answer.
 version: 1
 
 lifecycles: [living, immutable, append-only]

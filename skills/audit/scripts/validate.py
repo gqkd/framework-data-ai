@@ -207,7 +207,7 @@ def normalize_level(v, code: str) -> str:
     return v
 
 
-PROJECT_KEYS = {"checks", "stale_days", "scan"}
+PROJECT_KEYS = {"checks", "stale_days", "scan", "framework_version"}
 SCAN_KEYS = {"skip_dirs", "skip_files", "skip_hidden"}
 
 
@@ -564,6 +564,40 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
                        "because the cost of waiting exceeds the cost of being wrong.")
 
 
+def check_framework_version(root: Path, project: dict, registry: dict,
+                            report: Report) -> None:
+    """Which version of the framework this repository was written against.
+
+    Without it, the day the framework moves under a project there is no way to tell "the
+    rules changed" from "we did this wrong", and those two need opposite responses. The
+    first is a migration and somebody else's fault; the second is a repair. Guessing
+    between them is how a team decides the validator is unreliable and stops reading it.
+
+    A mismatch warns rather than blocks, and that direction matters: the moment the
+    registry moves is exactly when a project most needs to be able to run the validator
+    and see what it says. A gate that fails closed on a version bump gets bypassed on the
+    day it was supposed to help.
+    """
+    declared = project.get("framework_version")
+    current = registry.get("version")
+    if declared is None:
+        report.add("FW002", "framework.yaml",
+                   f"no `framework_version`. This repository does not record which "
+                   f"version of the framework it was written against, so when the rules "
+                   f"change nothing here will distinguish a migration from a mistake. "
+                   f"The framework is at {current}.")
+        return
+    if declared != current:
+        direction = "behind" if isinstance(declared, int) and isinstance(current, int) \
+            and declared < current else "ahead of"
+        report.add("FW001", "framework.yaml",
+                   f"declares framework_version {declared!r} and the framework is at "
+                   f"{current!r}, so this repository is {direction} it. Findings below "
+                   f"may be the rules having moved rather than the documents being "
+                   f"wrong. Read the registry's `version` comment for what a bump means, "
+                   f"then either migrate and update this line, or pin the framework.")
+
+
 def check_triage(arts: list[Artifact], report: Report) -> None:
     """Which signals has nobody looked at.
 
@@ -722,6 +756,7 @@ def main() -> int:
         check_lifecycle(a, stale_days, now, report)
     check_references(arts, registry, report)
     check_release(arts, report)
+    check_framework_version(root, project, registry, report)
     check_open_register(arts, report)
     check_triage(arts, report)
     check_cross_product(arts, report)

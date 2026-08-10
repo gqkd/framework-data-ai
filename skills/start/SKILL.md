@@ -65,15 +65,26 @@ in `OPEN.md` as an entry with its cost to reverse. An empty `PLATFORM.md` waitin
 filled collects whatever has not found a home yet, and the substrate ends up defined by
 what accumulated in it rather than by a choice.
 
-If the project holds code as well as documents, write a `framework.yaml` with the
-directories the validator should not read. Otherwise the first run reports every dbt model
-and every Kubernetes manifest as a document with no front matter, which is a first
-impression a tool does not recover from.
+**Always write a `framework.yaml`**, even when there is nothing to configure, because one
+line in it is not configuration:
 
 ```yaml
-scan:
+framework_version: 1          # from `version:` in the framework's artifact-types.yaml
+
+scan:                         # only if the project holds code as well as documents
   skip_dirs: [dbt, infra, notebooks]
 ```
+
+`framework_version` records which framework this repository was written against. The day
+the framework changes, findings appear in a repository nobody touched, and without that
+line there is nothing to tell "the rules moved" from "we did this wrong". Those want
+opposite responses, one is a migration and one is a repair, and a team that guesses wrong
+at it twice stops reading the validator. Copy the number from `version:` at the top of the
+framework's `schemas/artifact-types.yaml`; do not invent one.
+
+`scan` is the other half, and only when the project holds code. Without it the first run
+reports every dbt model and every Kubernetes manifest as a document with no front matter,
+which is a first impression a tool does not recover from.
 
 ## Step 3 · Ingest the corpus
 

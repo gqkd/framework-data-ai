@@ -252,6 +252,10 @@ def _clean_repo():
             schema="framework/product-brief/v1", artifact_type="product-brief",
             lifecycle="living", status="active", products="[alpha]", owners="[owner]",
             created="2026-01-01", last_review="2026-01-01 09:00") + "# Brief\n",
+        # A correct repository says which framework it was written against. Read from the
+        # registry rather than written as 1, so this stays true through a bump instead of
+        # becoming the first thing that breaks on the day one happens.
+        "framework.yaml": f"framework_version: {REGISTRY['version']}\n",
     }
     with tempfile.TemporaryDirectory() as tmp:
         for rel, text in files.items():
@@ -368,6 +372,59 @@ def _inline_ids_are_scoped():
     if "decisions/DEC-002-slug.md" not in ref001:
         problems.append("DEC-999 exists nowhere, yet REF001 did not fire: naming it in the "
                         "prose of a register is enough to clear the finding")
+    return problems
+
+
+@check("a repository says which framework it was written against, or is told it does not")
+def _framework_version():
+    # The point is telling a migration from a mistake. When the registry moves, findings
+    # appear in repositories nobody touched, and without this line there is nothing to
+    # distinguish "the rules changed" from "we did this wrong" — which need opposite
+    # responses. Guessing wrong at that a few times is how a team stops reading the
+    # validator.
+    current = REGISTRY["version"]
+    fm = lambda **kw: "---\n" + "\n".join(f"{k}: {v}" for k, v in kw.items()) + "\n---\n\n"
+    base = {"OPEN.md": fm(schema="framework/open-register/v1",
+                          artifact_type="open-register", lifecycle="living",
+                          status="active", owners="[owner]", created="2026-01-01",
+                          last_review="2026-01-01 09:00") + "# Open\n"}
+
+    def codes(config: str | None):
+        files = dict(base)
+        if config is not None:
+            files["framework.yaml"] = config
+        with tempfile.TemporaryDirectory() as tmp:
+            for rel, text in files.items():
+                (Path(tmp) / rel).write_text(text)
+            r = subprocess.run(
+                [sys.executable, str(VALIDATE), "--root", tmp, "--json",
+                 "--stale-days", "36500"], capture_output=True, text=True)
+            if r.returncode not in (0, 1):
+                last = r.stderr.strip().splitlines()[-1] if r.stderr.strip() else "?"
+                return None, last
+            return {(f["code"], f["level"]) for f in json.loads(r.stdout)["findings"]
+                    if f["code"].startswith("FW")}, None
+
+    problems = []
+    cases = [
+        (None, {("FW002", "info")}, "no framework.yaml at all"),
+        ("checks:\n  LC002: warn\n", {("FW002", "info")}, "a config with no version"),
+        (f"framework_version: {current}\n", set(), "the current version"),
+        (f"framework_version: {current + 1}\n", {("FW001", "warn")}, "a version ahead"),
+    ]
+    for config, want, what in cases:
+        got, crash = codes(config)
+        if crash:
+            problems.append(f"{what}: the validator did not complete: {crash}")
+        elif got != want:
+            problems.append(f"{what}: expected {sorted(want) or 'nothing'}, got "
+                            f"{sorted(got) or 'nothing'}")
+
+    # An unrecognised key stops the validator, by design, so the new one has to be on the
+    # allowed list or every project that adopts it cannot run the checks at all.
+    got, crash = codes(f"framework_version: {current}\nstale_days: 30\n")
+    if crash:
+        problems.append(f"`framework_version` beside another key is rejected: {crash}")
     return problems
 
 
