@@ -25,9 +25,10 @@ decisions, products, initiatives and corpus, live in that project's repository, 
 **To understand the framework:** `FRAMEWORK.md` → `framework-flow.mermaid` →
 `templates/README.md`
 
-**To start using it:** `FRAMEWORK.md §10`, the entry assessment and the day one set
+**To start using it by hand:** `FRAMEWORK.md §10`, the entry assessment and the day one set
 
-**To automate it:** `SKILLS.md`
+**To start using it with the skills:** *Using it with the skills*, below, then `SKILLS.md`
+for what each one does and where their boundaries fall
 
 ## Applying it to a project
 
@@ -38,6 +39,92 @@ path:
 ~/projects/framework-data-ai      the definition
 ~/projects/my-project             the artifacts
 ```
+
+## Using it with the skills
+
+Six skills operate the framework from inside Claude Code. `SKILLS.md` is the reference for
+what each one does and where their boundaries fall; this is the on-ramp.
+
+### Install it
+
+From a checkout, one line, and nothing is copied:
+
+```bash
+ln -s $PWD ~/.claude/skills/framework-data-ai
+claude plugin details framework-data-ai        # should list all six
+```
+
+A symlink rather than an install, deliberately: the checkout stays the single source, so a
+change to a skill is live in the next session with nothing to reinstall. The six cost about
+1,500 tokens in every session just by being available, and two to three thousand more each
+time one fires. That is the price of having them, and it is worth knowing before you decide
+it is worth paying.
+
+### Where to enter
+
+You do not pick a skill, you say what happened. One of them answers.
+
+| What is true right now | What to say | What answers |
+|---|---|---|
+| No documentation, or a pile of documents from the client | *"partiamo, ecco i deck"* · *"where do I start"* | `start` |
+| Somebody said something worth recording | *"abbiamo deciso"* · *"the customer wants"* | `requirement` |
+| Work is blocked on a choice nobody has made | *"risolviamo gli open"* · *"what do I need to decide"* | `resolve` |
+| Deciding what to build next | *"cosa facciamo in questo ciclo"* | `cycle` |
+| A release candidate exists | *"possiamo rilasciare?"* | `release` |
+| Before merging, or CI is failing | *"fammi un check"* | `audit` |
+
+### A first session
+
+On a project with business documents and no framework in it:
+
+```
+you   partiamo con questo progetto, i documenti del cliente sono in corpus/
+      → start reads the corpus, scaffolds AGENTS.md, OPEN.md, GLOSSARY.md and the
+        product folder, writes ING.md with a provenance line per claim, and tells you
+        which documents gave it nothing and what each of those needs. It writes no
+        decisions: at ingestion nothing has been decided.
+
+you   risolviamo gli open, da quale partiamo?
+      → resolve orders OPEN.md by what it costs to reverse, and works one at a time.
+        Expect it to hand back a question, not a decision.
+
+you   cosa costruiamo adesso?
+      → cycle classifies each candidate through the ICG gate and writes the
+        classification down. Expect `proposed`, not `accepted`.
+
+you   possiamo rilasciare?
+      → release checks the report against the frozen evaluation plan and says go or
+        rework. Expect it to refuse to deploy: preparing the evidence is its job, the
+        command is yours.
+```
+
+### What to expect them not to do
+
+This is the part worth reading before the first session, because a skill that surprises you
+once gets switched off.
+
+**They propose and wait.** Two writes happen without asking, because they destroy nothing:
+appending a signal to `LOG`, and adding a line to the parking lot of `OPEN.md`. Everything
+else arrives as a diff and a question.
+
+**Told to overwrite, they will not.** Asked to "align the documentation" with a new
+definition of a term the glossary already defines differently, the run left the glossary
+alone, showed both definitions with where each came from, and asked which one holds. That
+is the designed behaviour and not caution: the most recent sentence in a project is usually
+the least reliable one.
+
+**They will not settle an architectural question on one sentence.** Told a queue was moving
+to another database, contradicting an accepted decision, the run recorded the signal and
+proposed the rest, including moving the old decision to `superseded`, which is the only
+field an immutable allows.
+
+**They report what they did not do.** A finding left standing on purpose, with the reason,
+is a good outcome. A report that says everything is green after ten minutes usually means
+something was silenced.
+
+**They cannot check the world.** `verified_against` names a commit and `evp_hash` names a
+file; a skill can tell you it could not establish either, and that is the honest answer. It
+will not fill them in with something plausible.
 
 ## The gate
 
@@ -147,17 +234,11 @@ without `status` and `owners` for as long as it did. The self check runs in CI h
 
 ## One product or several
 
-Both work, and the framework does not push you toward either.
+Both work. With one product, skip `FRAMEWORK.md §9` and do not create `PLATFORM.md`.
 
-With **one product** you get one `GLOSSARY.md`, one `decisions/`, one `OPEN.md`, and the
-product's own artifacts. Skip `FRAMEWORK.md §9` entirely and do not create `PLATFORM.md`.
-
-With **several products** the shared files stay single (that is the point of them) and each
-product gets its own folder. Whether those products also share a technical substrate is a
-**separate decision**, not a consequence of there being more than one: N products with
-nothing in common but a glossary is a normal configuration. `PLATFORM.md` exists only if
-you decide to build a substrate, and creating it in advance is how you end up with one you
-never chose. `FRAMEWORK.md §9` covers both cases.
+With several, read it: the section turns on one distinction that gets collapsed constantly,
+between having more than one product, which is a fact about the folder structure, and those
+products sharing a substrate, which is a decision. It is not repeated here.
 
 ## License
 

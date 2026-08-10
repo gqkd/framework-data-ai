@@ -4,14 +4,18 @@ Six skills, distributed as a Claude Code plugin. The plugin is named `framework-
 and supplies the namespace, so the skills carry short names: `/framework-data-ai:start`,
 `:requirement`, `:resolve`, `:cycle`, `:release`, `:audit`.
 
+The example phrasings are in both languages because the skills are: each description carries
+its trigger phrases in Italian and in English, and the measurement in `evals/trigger/`
+covers both. They are examples of what somebody types, not a syntax.
+
 | Skill | What you actually say | What it does |
 |---|---|---|
-| **`start`** | *"partiamo, ecco i documenti"* | entry assessment, scaffolding, corpus ingestion, seeds `OPEN.md` |
-| **`requirement`** | *"abbiamo deciso"*, *"il cliente vuole"*, *"aggiungi che"* | classifies, routes to the one authoritative source, propagates, flags contradictions |
-| **`resolve`** | *"risolviamo gli open"*, *"definiamo il prodotto"* | works `OPEN.md` in cost-to-reverse order, produces `DEC` and the cascade |
-| **`cycle`** | *"cosa facciamo in questo ciclo"* | intake, `ICG`, reshaping, `CHG`, `IMP`, and the brief per change |
-| **`release`** | *"possiamo rilasciare?"* | the `RG` gate, `RLM`, `REL` |
-| **`audit`** | *"è tutto a posto?"* | runs the validator, and judges what to do with each finding |
+| **`start`** | *"partiamo, ecco i documenti"* · *"where do I start"* | entry assessment, scaffolding, corpus ingestion, seeds `OPEN.md` |
+| **`requirement`** | *"abbiamo deciso"*, *"il cliente vuole"* · *"the customer wants"*, *"add that"* | classifies, routes to the one authoritative source, propagates, flags contradictions |
+| **`resolve`** | *"risolviamo gli open"* · *"what do I need to decide"* | works `OPEN.md` in cost-to-reverse order, produces `DEC` and the cascade |
+| **`cycle`** | *"cosa facciamo in questo ciclo"* · *"what do we build next"* | intake, `ICG`, reshaping, `CHG`, `IMP`, and the brief per change |
+| **`release`** | *"possiamo rilasciare?"* · *"are we ready to ship"* | the `RG` gate, `RLM`, `REL` |
+| **`audit`** | *"è tutto a posto?"* · *"check the docs are consistent"* | runs the validator, and judges what to do with each finding |
 
 ---
 
