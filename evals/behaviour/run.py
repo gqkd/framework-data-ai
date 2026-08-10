@@ -165,11 +165,16 @@ def main() -> int:
         print(f"\n{'=' * 78}\n{c['fixture']}   expected: {c['expect']}\n  because: "
               f"{c['because']}\n{'=' * 78}")
         text, skills, written, valid = run_one(fx, spec["prompt"], args.timeout)
+        # The answer first. A run of this was cut off partway through the front matter
+        # listing, and the closing text, which is most of what is being graded, never
+        # printed. Reading that transcript back, a grep for what the skill should have
+        # said came up empty, which reads exactly like the skill not saying it. Whatever
+        # is most expensive to lose goes at the top.
         print(f"skills invoked : {skills or 'none'}")
         print(f"repo after run : {valid}")
-        print("wrote          : " + (", ".join(written) if written else "nothing"))
         print()
         print(text.strip()[:3500])
+        print(f"\n{'-' * 78}\nwrote: " + (", ".join(written) if written else "nothing"))
     return 0
 
 

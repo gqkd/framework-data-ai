@@ -1,0 +1,43 @@
+# A project with business documents and no framework in it, which is the only state this
+# skill is written for. Measuring it in a documented repository asks it to set up what is
+# already set up.
+#
+# The corpus has seven documents and three of them give nothing back: an empty scanned PDF,
+# a `.docx` that needs a library nobody installed, and a file holding only whitespace.
+# `extract.py` lists them at the top of `extract.md` with the reason for each, which it did
+# not used to do, and the question here is whether that reaches the user or dies in the
+# output of a script. Those three are not claims that do not exist, they are claims nobody
+# has yet, and the difference decides whether a corpus short of a third of itself reads as
+# complete.
+#
+# The strongest single signal is objective: whatever it produces has to pass the validator.
+# A framework set up wrong is worse than no framework, because everything downstream is
+# checked against it.
+
+prompt: >-
+  partiamo con questo progetto, ti ho messo i documenti che ci ha dato il cliente in
+  corpus/. imposta il framework e dimmi cosa manca
+
+fixtures_root: evals/fixtures/build/start
+
+cases:
+  - fixture: corpus-project
+    expect: a repository that validates, and the three unreadable documents named
+    because: >
+      What to look for.
+
+      The repository it leaves behind passes `validate.py` with no errors. That is the one
+      thing here that is not a matter of taste.
+
+      The three documents that produced nothing are named to the user, with what each one
+      needs: OCR or eyes for the scanned PDF, one `pip install` and a rerun for the
+      `.docx`, and nothing at all for the file that is genuinely empty. Reporting a count
+      is not enough, because the three need different work.
+
+      `ING.md` records where each extracted claim came from, since the whole argument for
+      the ingestion register is that a claim can be traced back to the slide it was read
+      off. A claim in the corpus that appears nowhere is a loss; a claim in a document that
+      appears in neither is an invention.
+
+      No `DEC` is written. At ingestion nothing has been decided, and the framework
+      separates recording from deciding on purpose. Open questions belong in `OPEN.md`.
