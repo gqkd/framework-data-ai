@@ -564,6 +564,72 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
                        "because the cost of waiting exceeds the cost of being wrong.")
 
 
+def check_change_contracts(arts: list[Artifact], report: Report) -> None:
+    """What an `ICG` said a change touches, against what the change actually cites.
+
+    These two were catalogued and switched off from the day they were written, because the
+    only place the routing existed was prose inside the `CHG` body, and the recovered
+    version matched words in it. Matching prose is the fragility the section markers were
+    introduced to remove, so putting it back for two checks was never worth it.
+
+    The `ICG` made the join possible. A `CHG` names the classification it came from in
+    `icg` and its candidate in `derives_from`, and the classification records what that
+    candidate touches in `impacts`. So the question is a lookup and not a search.
+
+    Both bind on `status` rather than on existence, because the artifacts arrive in an
+    order. A `DEC` precedes the contract: the reshaping happens before the change is
+    authorized, so an approved `CHG` should already cite one. An `EVR` follows the build,
+    so demanding it earlier than `verified` would forbid the order the framework
+    prescribes.
+
+    A `CHG` with no `icg` is skipped rather than reported. It is a real gap, and the
+    `cycle` skill already says not to authorize what was not classified, but inventing a
+    finding here would make these two checks about something other than their titles.
+    """
+    by_id = {a.id: a for a in arts if a.id}
+    icgs = {a.id: a for a in arts if a.type == "impact-classification"}
+
+    for a in arts:
+        if a.type != "change-contract":
+            continue
+        icg = icgs.get(a.meta.get("icg"))
+        if icg is None:
+            continue
+        impacts_map = icg.meta.get("impacts")
+        if not isinstance(impacts_map, dict):
+            continue
+
+        # Every candidate this change derives from, and everything they touch between them.
+        touches: set[str] = set()
+        for ref in as_list(a.meta.get("derives_from")):
+            for i in as_list(impacts_map.get(ref)):
+                if isinstance(i, str):
+                    touches.add(i)
+
+        status = a.meta.get("status")
+        if "ai" in touches and status == "verified":
+            evr = a.meta.get("verified_by")
+            target = by_id.get(evr) if isinstance(evr, str) else None
+            if target is None or target.type != "evaluation-report":
+                named = f"{evr!r}, which is not an evaluation report in this repository" \
+                    if evr else "nothing in `verified_by`"
+                report.add("CHG001", a.rel,
+                           f"{icg.id} says this touches an AI component, and the change is "
+                           f"`verified` citing {named}. Touching a model, a prompt or a "
+                           "retrieval index and calling it done without an evaluation "
+                           "report means nobody measured what it did.")
+        if "architecture" in touches and status in ("approved", "implemented", "verified"):
+            decs = [r for r in as_list(a.meta.get("derives_from"))
+                    if isinstance(r, str) and (by_id.get(r) is not None
+                                               and by_id[r].type == "decision-record")]
+            if not decs:
+                report.add("CHG002", a.rel,
+                           f"{icg.id} says this touches the architecture, and the change is "
+                           f"`{status}` without a decision record in `derives_from`. The "
+                           "architecture moved and the reason it moved is written nowhere, "
+                           "which is the question a `DEC` exists to answer.")
+
+
 def check_framework_version(root: Path, project: dict, registry: dict,
                             report: Report) -> None:
     """Which version of the framework this repository was written against.
@@ -766,6 +832,7 @@ def main() -> int:
         check_lifecycle(a, stale_days, now, report)
     check_references(arts, registry, report)
     check_release(arts, report)
+    check_change_contracts(arts, report)
     check_framework_version(root, project, registry, report)
     check_open_register(arts, report)
     check_triage(arts, report)

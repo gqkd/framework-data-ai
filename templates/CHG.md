@@ -10,6 +10,7 @@ approvers: [NAME]
 created: YYYY-MM-DD
 icg: ICG-NNN
 derives_from: [SIG-NNN, INC-NNN, DEC-NNN]
+verified_by: null               # the EVR, once there is one. Empty until `status: verified`
 classification: internal
 ---
 

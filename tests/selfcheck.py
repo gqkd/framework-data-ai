@@ -375,6 +375,92 @@ def _inline_ids_are_scoped():
     return problems
 
 
+@check("a change cites the decision and the evaluation its classification demands")
+def _change_contracts():
+    # `CHG001` and `CHG002` were catalogued and off from the day they were written, because
+    # the routing they needed existed only as prose in the `CHG` body and the recovered
+    # version matched words in it. The `ICG` made the join a lookup instead.
+    #
+    # Both bind on `status`, and that is the half worth testing: the artifacts arrive in an
+    # order. A `DEC` precedes the contract, an `EVR` follows the build. A check that
+    # demanded either at `draft` would forbid the order the framework prescribes, and would
+    # be switched off within a week for crying wolf on correct documents.
+    fm = lambda **kw: "---\n" + "\n".join(f"{k}: {v}" for k, v in kw.items()) + "\n---\n\n"
+    sections = ("<!-- section: what-changes -->\n## A\n"
+                "<!-- section: what-must-not-change -->\n## B\n"
+                "<!-- section: how-we-know-it-worked -->\n## C\n")
+
+    base = {
+        "OPEN.md": fm(schema="framework/open-register/v1", artifact_type="open-register",
+                      lifecycle="living", status="active", owners="[o]",
+                      created="2026-01-01", last_review="2026-01-01 09:00") + "# Open\n",
+        "products/p/cycles/ICG-001.md": fm(
+            schema="framework/impact-classification/v1",
+            artifact_type="impact-classification", lifecycle="immutable",
+            status="accepted", id="ICG-001", products="[p]", owners="[o]",
+            created="2026-01-01",
+            routing="\n  SIG-001: architecture",
+            impacts="\n  SIG-001: [architecture, ai]")
+        + "# ICG-001\n\n<!-- section: intake -->\n## I\n"
+          "<!-- section: classification -->\n## C\n"
+          "<!-- section: open-questions -->\n## O\n",
+        "decisions/DEC-001.md": fm(
+            schema="framework/decision-record/v1", artifact_type="decision-record",
+            id="DEC-001", lifecycle="immutable", status="accepted", scope="architecture",
+            products="[p]", owners="[o]", created="2026-01-01") + "# DEC-001\n",
+        "products/p/releases/EVR-001.md": fm(
+            schema="framework/evaluation-report/v1", artifact_type="evaluation-report",
+            id="EVR-001", lifecycle="immutable", status="final", products="[p]",
+            owners="[o]", created="2026-01-01") + "# EVR-001\n",
+    }
+
+    def chg(status, derives, verified_by="null", icg="ICG-001"):
+        meta = dict(schema="framework/change-contract/v1",
+                    artifact_type="change-contract", lifecycle="immutable",
+                    status=status, id="CHG-001", products="[p]", owners="[o]",
+                    created="2026-01-01", derives_from=derives, verified_by=verified_by)
+        if icg:
+            meta["icg"] = icg
+        return fm(**meta) + "# CHG-001\n\n" + sections
+
+    def codes(chg_text):
+        files = dict(base, **{"products/p/changes/CHG-001.md": chg_text})
+        with tempfile.TemporaryDirectory() as tmp:
+            for rel, text in files.items():
+                f = Path(tmp) / rel
+                f.parent.mkdir(parents=True, exist_ok=True)
+                f.write_text(text)
+            r = subprocess.run(
+                [sys.executable, str(VALIDATE), "--root", tmp, "--json",
+                 "--stale-days", "36500"], capture_output=True, text=True)
+            if r.returncode not in (0, 1) or not r.stdout.strip():
+                return None
+            return {f["code"] for f in json.loads(r.stdout)["findings"]
+                    if f["code"].startswith("CHG")}
+
+    cases = [
+        ("verified, nothing cited", chg("verified", "[SIG-001]"), {"CHG001", "CHG002"}),
+        ("verified, both cited",
+         chg("verified", "[SIG-001, DEC-001]", "EVR-001"), set()),
+        ("implemented, no EVR yet", chg("implemented", "[SIG-001, DEC-001]"), set()),
+        ("approved, no DEC", chg("approved", "[SIG-001]"), {"CHG002"}),
+        ("draft, no DEC", chg("draft", "[SIG-001]"), set()),
+        ("verified_by names something that is not an EVR",
+         chg("verified", "[SIG-001, DEC-001]", "DEC-001"), {"CHG001"}),
+        ("no icg, so nothing to look up",
+         chg("verified", "[SIG-001]", icg=None), set()),
+    ]
+    problems = []
+    for what, text, want in cases:
+        got = codes(text)
+        if got is None:
+            problems.append(f"{what}: the validator did not complete")
+        elif got != want:
+            problems.append(f"{what}: expected {sorted(want) or 'nothing'}, got "
+                            f"{sorted(got) or 'nothing'}")
+    return problems
+
+
 @check("a repository says which framework it was written against, or is told it does not")
 def _framework_version():
     # The point is telling a migration from a mistake. When the registry moves, findings

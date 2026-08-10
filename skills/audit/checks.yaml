@@ -222,26 +222,25 @@ checks:
       everywhere else: one line in the project's `framework.yaml`, the first time somebody
       opens a cycle and finds a signal from four months ago nobody had ever read.
 
-  # ── Not implemented, and why ───────────────────────────────────────────────
   CHG001:
-    level: "off"    # quoted: YAML 1.1 reads a bare off as false
+    level: warn
     title: change contract declaring AI impact without citing an EVR
     prevents: >
-      A change to a model, a prompt or a retrieval index without a new evaluation report.
-    blocked_by: >
-      The recovered version read the body prose, looking for "impatto ai" next to "sì".
-      Matching prose is what the section markers removed everywhere else, and putting it
-      back for two checks would be reintroducing the failure on purpose. Half of what was
-      missing now exists: `impact-classification` carries `routing` and `impacts` as front
-      matter fields, keyed by candidate. What is still missing is the join. A `CHG` names
-      its `icg` and its `derives_from`, so the lookup is `icg` → `impacts[candidate]`, and
-      until that is written and tested these stay off rather than half working.
+      A change to a model, a prompt or a retrieval index called done with nobody having
+      measured what it did. It reads the `ICG` the change names in `icg` and the candidate
+      it names in `derives_from`, so the routing is a field lookup rather than a phrase
+      matched in prose. It fires only at `status: verified`, because the evaluation report
+      follows the build and demanding it sooner would forbid the order the framework
+      prescribes. A `CHG` with no `icg` is skipped: that gap is real and is not this check.
 
   CHG002:
-    level: "off"    # quoted: YAML 1.1 reads a bare off as false
+    level: warn
     title: change contract declaring architecture impact without citing a DEC
-    blocked_by: >
-      Same as CHG001.
+    prevents: >
+      The architecture moving with the reason written nowhere. Same lookup, and it fires
+      from `approved` onwards rather than at `verified`, because the reshaping happens
+      before the change is authorized: a decision record should already exist by the time
+      anybody is allowed to build.
 
 # ON THE PROSE COUPLED CHECKS. OD002 and OD003 read the body of `OPEN.md`: the `### OD-NNN`
 # headings, and the "Cost to reverse" and "Default in force" lines inside each entry. That
