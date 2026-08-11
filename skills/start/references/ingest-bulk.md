@@ -1,7 +1,7 @@
 # Ingesting the business corpus
 
-The procedure for the first load: sales decks, PDFs, requirements analyses, documents the
-business produced before the technical project existed.
+The procedure for the first load: sales decks, PDFs, requirements analyses, the pricing
+spreadsheet, documents the business produced before the technical project existed.
 
 ## What these documents really are
 
@@ -30,25 +30,38 @@ root when they concern more than one. **You run the extraction**, one folder at 
 user does not run commands.
 
 ```bash
-python3 -c "import markitdown, docx; print('ok')"  # first: without these the output is empty
+anydoc -V || python3 -c "import anydoc"     # first: without it every office file is empty
 python3 "${CLAUDE_PLUGIN_ROOT:?unset: point it at your framework-data-ai checkout}/skills/start/scripts/extract.py" \
     products/<p>/corpus -o ingest-out/<p> --jsonl
 ```
+
+Either of the two forms passing is enough: `npm install -g @firecrawl/anydoc` gives the
+command, `pip install firecrawl-anydoc` gives the module, and the script takes whichever it
+finds. PDFs also want `poppler-utils`, which is what gives a page a number and what tells a
+scanned PDF from a readable one. The script says so itself when either is missing, at the
+top of `extract.md` and not only on the terminal.
 
 `python3` and the `:?` are both load bearing: `python` is not on PATH on most systems, and
 an unset `CLAUDE_PLUGIN_ROOT` collapses the path to `/skills/...` and fails with a message
 that names neither problem. `-o` is a directory, not a file.
 
 It produces `extract.md` with one block per slide, page or section, each labelled with its
-provenance. You need that: you will go back to the original slide every time a claim has to
-be checked, and without the number you will not find it again.
+provenance: `slide 4`, `page 12`, `§ Pricing 2026` for a worksheet or a Word section. You
+need that: you will go back to the original slide every time a claim has to be checked, and
+without the number you will not find it again.
 
 Read the top of `extract.md` before anything else. When a document produced no text it is
 listed there with the reason, and the reasons are not interchangeable: a scanned PDF needs
-OCR or your eyes, a `.docx` that wanted `python-docx` needs one `pip install` and a rerun,
+OCR or your eyes, a document that says it needs a converter needs one install and a rerun,
 a file the filesystem refused was never yours to read. Those claims are missing, not
 absent, and a corpus quietly short of a third of itself still reads as complete.
 `inventory.json` in the same folder carries the same accounting per document.
+
+A second list can appear there: documents that converted **but not in pieces**. Those gave
+their text and lost their locator, so a claim from one of them points at the file and not
+at a slide. A legacy `.ppt` with no LibreOffice to convert it, a `.odp`, a PDF read without
+poppler. Nothing is missing from those, but going back to check one means reading the whole
+document, which is the cost you are choosing when you classify them anyway.
 
 One output per product, not one for everything. When two products promise the same thing
 differently, knowing which corpus each version came from is half the reconciliation work.

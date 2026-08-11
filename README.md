@@ -90,6 +90,23 @@ marketplace by URL. Nothing above requires this.
 **What it costs.** The six skills add about 1,500 tokens to every session, just by being
 available. Each one costs another two to three thousand when it runs.
 
+### If you have client documents to read
+
+`start` reads decks, PDFs, Word files and spreadsheets. The converter is not bundled:
+
+```bash
+npm install -g @firecrawl/anydoc     # or: pip install firecrawl-anydoc
+sudo apt install poppler-utils       # PDFs only, and not optional there
+```
+
+Without the first, every office file comes back empty. The extractor says so at the top of
+its own report, so you find out before you classify anything rather than after.
+
+`poppler-utils` is what gives a PDF page a number and what tells a scanned PDF from a
+readable one. `anydoc` reads PDFs too and is the fallback, but it has no page in it: the
+text arrives and the page number does not, and a claim you cannot point back at a page is
+a claim you cannot check.
+
 ### Where to enter
 
 You do not choose a skill. You say what happened, and one of them answers. The skills

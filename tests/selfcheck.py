@@ -16,11 +16,13 @@ just broken something.
 from __future__ import annotations
 
 import importlib.util
+import io
 import json
 import re
 import subprocess
 import sys
 import tempfile
+import zipfile
 from datetime import date, datetime
 from pathlib import Path
 
@@ -826,6 +828,67 @@ def _extract_reports_its_gaps():
                                [x.DocInfo("a.md", "md", units=1)])
     if "look at" in quiet or "produced no text" in quiet:
         problems.append("extract.md warns about a corpus that had nothing wrong with it")
+
+    return problems
+
+
+@check("the extractor keeps the provenance the converter throws away")
+def _extract_keeps_provenance():
+    # anydoc has no slide and no page in its document model: a whole deck comes back as one
+    # flat stream. Everything that puts a claim back on slide 4 is written here, so it is
+    # this repository's to test. All three pieces are pure, which is the point: a CI runner
+    # with no converter installed still checks the part that would silently degrade.
+    x = _load(EXTRACT, "extract")
+    problems = []
+
+    def deck(n: int) -> bytes:
+        ids = "".join(f'<p:sldId id="{255 + i}" r:id="rId{i}"/>' for i in range(1, n + 1))
+        pres = ('<?xml version="1.0"?><p:presentation xmlns:p="x">'
+                f"<p:sldIdLst>{ids}</p:sldIdLst></p:presentation>")
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as z:
+            z.writestr("ppt/presentation.xml", pres)
+            for i in range(1, n + 1):
+                z.writestr(f"ppt/slides/slide{i}.xml", f"<p:sld>slide {i}</p:sld>")
+        return buf.getvalue()
+
+    slices = x.slice_pptx(deck(3))
+    if len(slices) != 3:
+        problems.append(f"a three slide deck sliced into {len(slices)} packages: without "
+                        "one per slide, every claim in a deck is located to the file and "
+                        "checking it means reading the deck")
+    for i, s in enumerate(slices, 1):
+        z = zipfile.ZipFile(io.BytesIO(s))
+        if (kept := z.read("ppt/presentation.xml").decode().count("<p:sldId ")) != 1:
+            problems.append(f"slice {i} kept {kept} slides in its running order: the split "
+                            "did not split, and the numbers it reports are wrong")
+        # The trap: writestr stamps the offset of the copy onto the ZipInfo it is handed,
+        # so copying by ZipInfo corrupts the source archive and every slice after the first
+        # comes back short. Slice 3 having all four parts is the assertion.
+        if len(z.namelist()) != 4:
+            problems.append(f"slice {i} lost parts of the package: {z.namelist()}")
+
+    if x.slice_pptx(b"PPT legacy binary, not a zip"):
+        problems.append("something that is not a package was sliced anyway: the caller "
+                        "reads an empty list as its cue to convert the file whole")
+
+    # In the report the provenance line is itself a heading. A `# Title` arriving inside a
+    # block would outrank it, and the boundary between one document and the next is what
+    # tells a classifier which file a claim came from.
+    body = x.demote("# Title\n\n```\n# not a heading\n```\n\n## Section")
+    if not ("\n" + body).count("\n### Title") or "#### Section" not in body:
+        problems.append("a heading inside a block was not demoted below the provenance "
+                        "heading: extract.md stops saying where a document ends")
+    if "\n# not a heading" not in body:
+        problems.append("a comment inside a code fence was rewritten as a heading")
+
+    blocks = x.split_on_headings("req.docx", "intro\n\n# One\n\nalpha\n\n## Two\n\nbeta")
+    if (got := [b.locator for b in blocks]) != ["preamble", "§ One", "§ Two"]:
+        problems.append(f"sections came back located as {got}: a heading is the only "
+                        "locator a document with no pages has")
+    joined = "".join(b.text for b in blocks)
+    if any(w not in joined for w in ("intro", "alpha", "beta")):
+        problems.append("splitting a document on its headings dropped text from it")
 
     return problems
 

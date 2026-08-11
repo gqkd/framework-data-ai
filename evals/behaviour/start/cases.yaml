@@ -3,7 +3,7 @@
 # already set up.
 #
 # The corpus has seven documents and three of them give nothing back: an empty scanned PDF,
-# a `.docx` that needs a library nobody installed, and a file holding only whitespace.
+# a `.docx` the converter cannot open, and a file holding only whitespace.
 # `extract.py` lists them at the top of `extract.md` with the reason for each, which it did
 # not used to do, and the question here is whether that reaches the user or dies in the
 # output of a script. Those three are not claims that do not exist, they are claims nobody

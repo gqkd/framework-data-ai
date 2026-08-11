@@ -3,8 +3,8 @@ name: start
 description: >
   Set up the Data & AI documentation framework in a project and ingest the business corpus
   that already exists. Use at the very beginning of a project, and whenever the user has
-  business documents to bring in: decks, pitch decks, PDFs, requirements analyses, offers,
-  contracts, transcripts. Triggers on "partiamo", "iniziamo il progetto", "ingesta questi
+  business documents to bring in: decks, pitch decks, PDFs, requirements analyses,
+  spreadsheets, offers, contracts, transcripts. Triggers on "partiamo", "iniziamo il progetto", "ingesta questi
   documenti", "ho questi PowerPoint del commerciale", "parti da questi PDF", "estrai i
   requisiti da qui", "imposta il framework", "nuovo prodotto", "ho del codice senza
   documentazione", "da dove comincio", "set up the framework", "new product", "ingest these
