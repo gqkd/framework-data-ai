@@ -151,6 +151,45 @@ def anydoc_ready() -> str:
     return _READY
 
 
+def is_deck(pdfinfo_meta: str) -> bool:
+    """Whether a PDF is a presentation, from the page geometry `pdfinfo` already reports.
+
+    A4 portrait is 595 x 842 and a 16:9 slide is 960 x 540. Wide landscape means slides,
+    and that changes what a thin page means: on a report two hundred characters is a short
+    page, on a slide it is a title over a diagram.
+
+    The line sits at 1.25, which is below 4:3, and that is a deliberate inclusion rather
+    than a loose bound. 4:3 is 1.33 and landscape A4 is 1.41, so a ratio cannot separate an
+    old deck from a wide report — only 16:9 at 1.78 sits clearly above both. Given that,
+    the question is which mistake to make, and the two are not the same size: a deck read
+    as a report loses whatever was drawn on it, while a report read as a deck costs almost
+    nothing, because the rule the flag feeds is measured against the document's own pages
+    and a text-dense report has no page thin against its own median.
+    """
+    m = re.search(r"^Page size:\s+([\d.]+) x ([\d.]+)", pdfinfo_meta, re.M)
+    if not m:
+        return False
+    w, h = float(m.group(1)), float(m.group(2))
+    return h > 0 and w / h >= 1.25
+
+
+def thin_against_median(sizes: dict[int, int]) -> list[int]:
+    """Pages carrying less than half the text of the typical page beside them.
+
+    Measured against the document's own pages and not against a constant, which is what
+    makes it need no calibrating: a uniformly dense deck flags nothing, and that is the
+    right answer for one. A fixed threshold cannot do this. On the deck that prompted it,
+    forty characters caught one page of nine while three more were mostly picture — among
+    them the one naming the source systems and promising real time, all of it inside
+    screenshots and none of it in the extracted text.
+    """
+    if not sizes:
+        return []
+    ordered = sorted(sizes.values())
+    median = ordered[len(ordered) // 2]
+    return sorted(n for n, c in sizes.items() if c < median / 2)
+
+
 def on_slide_chars(md: str) -> int:
     """How much text is on the slide, which is not how much text the slide produced.
 
@@ -372,6 +411,12 @@ def extract_pdf(path: Path, out: Path, min_chars: int) -> tuple[list[Block], Doc
     m = re.search(r"^Pages:\s+(\d+)", meta, re.M)
     info.units = int(m.group(1)) if m else 0
 
+    # `pdfinfo` has been reporting the page geometry all along and nothing was listening.
+    # The old signal was "more than 40% of the pages came back thin", which on a wordy deck
+    # never fires: the one that prompted this had one page of nine under the threshold and
+    # three more that were mostly picture.
+    deck = is_deck(meta)
+
     _, fonts = run(["pdffonts", str(path)])
     info.has_text_layer = len(fonts.strip().splitlines()) > 2
     if not info.has_text_layer:
@@ -380,17 +425,24 @@ def extract_pdf(path: Path, out: Path, min_chars: int) -> tuple[list[Block], Doc
         return [], info
 
     blocks = []
+    sizes: dict[int, int] = {}
     for n in range(1, info.units + 1):
         rc, txt = run(["pdftotext", "-layout", "-f", str(n), "-l", str(n), str(path), "-"])
         body = (txt or "").strip()
         info.chars += len(body)
+        sizes[n] = len(body)
         if body:
             blocks.append(Block(src, f"page {n}", body))
         if len(body) < min_chars:
             info.visual_review.append(n)
 
-    # A deck exported to PDF has little text on many pages: treat it as visual.
-    if info.units and len(info.visual_review) > info.units * 0.4:
+    if deck and sizes:
+        info.visual_review = sorted(set(info.visual_review) | set(thin_against_median(sizes)))
+        info.note = ("a presentation exported to PDF, by page geometry. The extracted text "
+                     "has lost the layout, and in a deck the layout carries the claim: the "
+                     "pages listed are thin against the rest of this deck and are probably "
+                     "diagrams. Read them before classifying anything from this document.")
+    elif info.units and len(info.visual_review) > info.units * 0.4:
         info.note = ("many text-poor pages: likely a presentation exported to PDF. The "
                      "extracted text loses the layout, and on a sales deck the layout is "
                      "where the promise lives.")

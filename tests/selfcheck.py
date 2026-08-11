@@ -1037,6 +1037,37 @@ def _extract_keeps_provenance():
     if x.on_slide_chars("Prezzi 2026 per fascia di volume, con sconti a scaglioni") < 40:
         problems.append("a slide with a sentence on it was called text-poor")
 
+    # A deck exported to PDF, told apart by the geometry poppler already reports. Both
+    # halves are pure so a runner with no poppler still checks them, which is where it
+    # matters: the branch only runs on a machine that has it.
+    for meta, want, what in [
+        ("Pages:  9\nPage size:       960 x 540 pts\n", True, "a 16:9 deck"),
+        ("Pages:  9\nPage size:       720 x 540 pts\n", True, "a 4:3 deck"),
+        ("Pages:  5\nPage size:       595.25 x 842 pts (A4)\n", False, "an A4 report"),
+        # Landscape A4 is 1.41 and 4:3 is 1.33, so no ratio separates them. Included on
+        # purpose: the flag feeds a measure taken against the document's own pages, and a
+        # dense report has nothing thin against its own median, so the cost is nil.
+        ("Pages:  5\nPage size:       842 x 595.25 pts\n", True, "a landscape A4"),
+        ("Pages:  5\n", False, "a PDF whose geometry pdfinfo did not report"),
+    ]:
+        if x.is_deck(meta) != want:
+            problems.append(f"{what} was {'not ' if want else ''}read as a presentation: "
+                            "on a slide a thin page is a diagram, and on a report it is a "
+                            "short page, and the two want opposite responses")
+
+    # The distribution measured off the deck that prompted this. Page 7 was the only one a
+    # forty character threshold caught; 1, 5 and 8 are the ones it missed, and 5 is the
+    # slide naming the source systems and promising real time, all of it inside screenshots.
+    got = x.thin_against_median({1: 120, 2: 1589, 3: 1248, 4: 1111, 5: 474,
+                                 6: 1055, 7: 11, 8: 267, 9: 2185})
+    if got != [1, 5, 7, 8]:
+        problems.append(f"the thin pages of a real deck came back as {got}, not [1, 5, 7, 8]")
+    if x.thin_against_median({1: 900, 2: 1000, 3: 1100}):
+        problems.append("a deck with even pages had some of them called thin: the measure "
+                        "is against the document's own pages, so an even one flags nothing")
+    if x.thin_against_median({}):
+        problems.append("an empty page table produced flagged pages")
+
     blocks = x.split_on_headings("req.docx", "intro\n\n# One\n\nalpha\n\n## Two\n\nbeta")
     if (got := [b.locator for b in blocks]) != ["preamble", "§ One", "§ Two"]:
         problems.append(f"sections came back located as {got}: a heading is the only "
