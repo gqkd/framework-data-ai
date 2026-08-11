@@ -74,9 +74,10 @@ reading them is part of the extraction.** On a sales deck the architectural prom
 usually drawn. Three boxes with arrows and the words "one single platform" produce no
 extractable text and are a tenancy constraint.
 
-When it cannot rasterise (pptx and docx with no LibreOffice installed) the script names the
-file and the pages. Ask the user to open them and describe them. Classifying that document
-while skipping this step means ingesting everything except the part that constrains you.
+Only PDF pages are rasterised. For a deck the script names the file and the slide numbers
+and stops there: ask the user to open those slides and describe them. Classifying that
+document while skipping this step means ingesting everything except the part that
+constrains you.
 
 If the script reports that a PDF is an exported presentation, treat the whole document as
 visual: the extracted text has lost the layout, and in a deck the layout carries meaning.

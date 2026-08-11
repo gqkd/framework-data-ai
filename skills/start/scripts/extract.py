@@ -665,12 +665,13 @@ def main() -> int:
             print(f"  Images ready in {args.out / 'render'}/")
         manual = [i for i in need if not i.rendered]
         if manual:
-            print("  Not rasterisable here - open them by hand at the pages listed:")
+            # Only PDF pages are rasterised. This used to say that a deck needed LibreOffice
+            # to be rasterised, which pointed at an install that changes nothing: nothing in
+            # here converts a deck to images. A fix somebody can carry out and that does not
+            # work is worse than no fix, because the next warning gets skipped too.
+            print("  Only PDF pages are rasterised. Open these yourself, at the slides listed:")
             for i in manual:
                 print(f"    - {i.source}")
-            if any(i.kind in {"pptx", "docx"} for i in manual):
-                print("  (rasterising pptx and docx needs LibreOffice: "
-                      "https://www.libreoffice.org/download)")
     return 0
 
 
