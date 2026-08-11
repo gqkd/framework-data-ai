@@ -49,10 +49,21 @@ Create the day one set, and nothing else. The framework's own rule is that an ar
 appears when the thing it documents exists, not before.
 
 ```
-AGENTS.md  OPEN.md  COMMITMENTS.md  GLOSSARY.md  ING.md
+AGENTS.md  OPEN.md  COMMITMENTS.md  GLOSSARY.md  ING.md  ADOPTION.md
 decisions/            empty, numbering started
 products/<p>/         product.yaml, PBR.md
 ```
+
+**`ADOPTION.md` gets its first entry now, and it is this session.** Three fields: the
+minutes this setup took, what the ingestion caught that somebody would not have found, and
+what was noise. It is the only file here that measures the framework instead of the
+product, and it is the only one that can later justify deleting a check or a section. The
+reason it cannot wait for the second cycle is the reason it is written now: nobody
+reconstructs how long the first session took, and the first session is the one the second
+gets compared against.
+
+Write the noise field even on day one, especially on day one. A first entry with an empty
+noise field is an entry written to look good, and the log stops being an instrument.
 
 Copy from `templates/` at the plugin root, fill the **front matter** and leave the body to
 the interview and the corpus. `created` and `last_review` take the real instant, to the

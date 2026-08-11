@@ -236,6 +236,31 @@ types:
     lifecycle: living
     status: [active]
 
+  adoption-log:
+    id: ADOPT
+    name: Adoption log
+    axis: platform
+    born_in: day one, and its first entry is the setup session
+    template: templates/ADOPTION.md
+    path: ADOPTION.md
+    lifecycle: append-only
+    status: [active, abandoned]
+    sections: [cycles, verdict]
+    # The only artifact here that is about the framework rather than about the product, and
+    # the only one that can retire the others. Every check and every template in this
+    # repository was written against a failure somebody imagined; this is where a project
+    # records which of them met a failure that happened. Without it the framework has no
+    # way to shrink, and a framework that can only grow is one people eventually route
+    # around.
+    #
+    # Three fields per cycle and no more. A log that costs an afternoon does not get a
+    # second entry, and one entry is worth nothing: the whole value is in the comparison
+    # between the third cycle and the first.
+    #
+    # `abandoned` is a real status and it is the finding, not the absence of one. A project
+    # that stopped filling this in after two cycles has said something about the framework,
+    # and saying it out loud is better than leaving a file that trails off.
+
   platform-architecture:
     id: PLATFORM
     name: Architecture of the shared substrate

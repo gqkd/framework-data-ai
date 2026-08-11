@@ -272,6 +272,7 @@ One template for each in `templates/`. Every template contains the anti-patterns
 | `OPEN` | Open decisions and known issues | living | platform | day one |
 | `COMMITMENTS` | Commercial commitments made | living | platform | day one |
 | `GLOSSARY` | Glossary and metric dictionary | living | platform | day one |
+| `ADOPT` | Adoption log | append-only | platform | day one, and its first entry is the setup session |
 | `PLATFORM` | Architecture of the shared substrate | living | platform | only if a shared substrate is decided |
 | `product.yaml` | Product manifest | living, partly generated | product | day one |
 | `PBR` | Product brief | living | product | F4 |
@@ -536,6 +537,18 @@ Then, **when the thing to document exists** and not before:
 
 If the answer is "when the company grows", it is not now. A framework at 60% that you use
 beats one at 95% that you abandon in two months.
+
+**`ADOPTION.md` is where that question gets an answer instead of an opinion.** Three fields
+per cycle — minutes spent, what it caught, what was noise — and after three cycles the
+comparison says which parts have prevented a failure that happened rather than one somebody
+imagined. Everything in this document was written against an imagined failure; that is what
+a framework is before anybody uses it. Without a record of the real ones it can only grow,
+because nobody ever has grounds to delete anything, and a structure that only accumulates
+is one people route around rather than argue with.
+
+The field that does the work is the one people leave empty. Findings that were correct and
+changed nothing, questions asked twice, sections written every cycle and opened by nobody:
+those are what earn the right to turn a check off, and they are invisible a month later.
 
 ---
 
