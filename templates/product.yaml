@@ -10,7 +10,7 @@ products: [product-a]            # exactly one: a manifest describes one product
 name: Commercial name
 one_liner: What it does, for whom, in one line.
 owners: [NAME]
-created: YYYY-MM-DD
+created: YYYY-MM-DD HH:MM
 last_review: YYYY-MM-DD HH:MM
 
 # Where the PRODUCT sits in the lifecycle. The field is called stage and not lifecycle

@@ -8,7 +8,7 @@ version: 1.0.0
 products: [product-a]
 consumers: [product-b]
 owners: [NAME]
-created: YYYY-MM-DD
+created: YYYY-MM-DD HH:MM
 last_review: YYYY-MM-DD HH:MM
 classification: internal
 ---

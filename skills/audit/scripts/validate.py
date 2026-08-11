@@ -729,9 +729,17 @@ def check_cross_product(arts: list[Artifact], report: Report) -> None:
                 report.add("XP002", a.rel,
                            f"consumer {c!r} matches no known product")
 
+    # A product still in Block A is not missing its brief, it has not reached it. Discovery
+    # is elastic on purpose (FRAMEWORK.md §5), and a check that reports a product for being
+    # early is the framework asking a project to backfill a document nobody had the grounds
+    # to write. The stage the manifest declares is what tells the two apart; a product with
+    # no manifest at all is reported, because then nothing said which it was.
+    early = {p for a in arts if a.type == "product-manifest"
+             for p in as_list(a.meta.get("products"))
+             if str((a.meta.get("stage") or {}).get("phase", "")).upper() in {"F1", "F2", "F3"}}
     with_pbr = {p for a in arts if a.type == "product-brief"
                 for p in as_list(a.meta.get("products"))}
-    for p in sorted(products - with_pbr):
+    for p in sorted(products - with_pbr - early):
         report.add("XP003", f"products/{p}/",
                    f"product {p!r} has no PBR: its definition exists only somewhere else")
 

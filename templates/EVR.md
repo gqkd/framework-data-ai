@@ -6,7 +6,7 @@ status: active
 id: EVR-NNN
 products: [product-a]
 owners: [NAME]
-created: YYYY-MM-DD
+created: YYYY-MM-DD HH:MM
 derives_from: [EVP]
 evp_version: 1.2.0
 evp_hash: SHA_OF_THE_EVP_FILE

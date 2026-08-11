@@ -55,8 +55,11 @@ products/<p>/         product.yaml, PBR.md
 ```
 
 Copy from `templates/` at the plugin root, fill the **front matter** and leave the body to
-the interview and the corpus. Fill `owners`, `created` and `last_review` with real values:
-a placeholder that survives into a real repository reads as a real value to anything that
+the interview and the corpus. `created` and `last_review` take the real instant, to the
+minute. `owners` takes **the answer to the question the preamble told you to ask** and
+nothing else: this is the first skill to run in a repository, so it is the one that sets
+the name every later document copies, and a name inferred here propagates silently. A
+placeholder that survives into a real repository reads as a real value to anything that
 does not know the template.
 
 **Do not create `PLATFORM.md`.** It is born with the decision to share a technical
@@ -85,6 +88,12 @@ framework's `schemas/artifact-types.yaml`; do not invent one.
 `scan` is the other half, and only when the project holds code. Without it the first run
 reports every dbt model and every Kubernetes manifest as a document with no front matter,
 which is a first impression a tool does not recover from.
+
+**Two keys and no prose.** This file is configuration. Do not write a paragraph explaining
+why there is no `scan:` block, or why some other key is absent: an absence worth acting on
+is an `OPEN.md` entry, where somebody works it, and a comment in a YAML file is neither
+parsed nor worked. The same goes for `product.yaml`. Leaving `framework_version: 1` alone
+on a line is the correct output of this step.
 
 ## Step 3 · Ingest the corpus
 

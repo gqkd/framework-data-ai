@@ -6,7 +6,7 @@ status: proposed
 id: ICG-NNN
 products: [product-a]
 owners: [NAME]
-created: YYYY-MM-DD
+created: YYYY-MM-DD HH:MM
 routing:
   SIG-NNN: architecture
   INC-NNN: none

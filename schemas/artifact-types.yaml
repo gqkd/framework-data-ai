@@ -55,6 +55,12 @@ version: 1
 lifecycles: [living, immutable, append-only]
 
 # Required in the front matter of every artifact, whatever its type.
+#
+# ON `created`. The templates write it to the minute, like `last_review`. No check enforces
+# that and none is added here: a repository written before this carries dates, and turning
+# on a check that reddens correct documents is how a validator stops being read. It is a
+# consistency the templates ask for, not a rule. Two timestamps in the same front matter
+# with different precision invite the reader to wonder which one is approximate.
 base_required: [schema, artifact_type, lifecycle, status, owners, created]
 
 # ON `generated`. A type marked `generated: true` is written by a tool and not by a

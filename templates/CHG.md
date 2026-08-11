@@ -7,7 +7,7 @@ id: CHG-NNN
 products: [product-a]
 owners: [NAME]
 approvers: [NAME]
-created: YYYY-MM-DD
+created: YYYY-MM-DD HH:MM
 icg: ICG-NNN
 derives_from: [SIG-NNN, INC-NNN, DEC-NNN]
 verified_by: null               # the EVR, once there is one. Empty until `status: verified`

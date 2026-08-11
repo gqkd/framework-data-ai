@@ -8,7 +8,7 @@ scope: architecture
 products: [product-a, product-b]
 owners: [NAME]
 approvers: [NAME]
-created: YYYY-MM-DD
+created: YYYY-MM-DD HH:MM
 derives_from: [HYP-NNN, EVD-NNN, SIG-NNN]
 supersedes: null
 classification: internal

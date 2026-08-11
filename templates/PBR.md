@@ -6,7 +6,7 @@ status: active
 version: 1.0.0
 products: [product-a]
 owners: [NAME]
-created: YYYY-MM-DD
+created: YYYY-MM-DD HH:MM
 last_review: YYYY-MM-DD HH:MM
 derives_from: [PRB-NNN, HYP-NNN, CMT-NNN]
 classification: internal
@@ -92,3 +92,11 @@ Reference to `REL` and `RLM`. Generated field.
   decisions are verbal.
 - **Complementarity declared in words without a `DC`.** It is how several products become one
   inseparable product without anyone having decided it.
+- **Opening with the phase it is in.** *"A skeleton on purpose: a `PBR` is normally born at
+  F4 and this product is at F1."* Where the product sits is in `product.yaml`, in a field a
+  check can read. Written here it is an apology, and Block A is elastic precisely so that
+  nobody has to make one. Fill what the evidence supports, say plainly what is not
+  documented, and start with the product.
+- **Repeating the document and page a claim came from.** `ING` owns that. `ING-014` is the
+  whole citation; adding *"`Vision.pdf` page 1"* next to it is the same fact stored twice,
+  and the copy is the one that survives a correction to the register.

@@ -18,11 +18,42 @@ Read, in this order:
 If the project has no `AGENTS.md`, it has not been set up: run the `start` skill instead of
 guessing a structure.
 
+**Then ask who owns what you are about to write, and ask it before the first write of the
+session.** One question, plainly, and the answer goes into `owners`.
+
+Do not deduce it. Not from the git config, not from the email address, not from the corpus,
+not from whoever the last document happened to name. `owners` is who to go to when the
+document turns out to be wrong, and a name recovered from a commit is a guess wearing the
+shape of a fact: the next reader cannot tell the two apart, and the person named never
+agreed to it. Asking costs one line and it is the only field in the front matter that
+commits somebody other than you.
+
 ## The rules that outrank the task
 
 **One authoritative source per fact.** When you are about to write something that already
 exists somewhere else, write a link instead of a copy. Two copies diverge, and then nobody
 knows which to believe.
+
+**Write about the product, not about the framework.** These documents are read by somebody
+who wants to know about the product, and every sentence explaining the framework's own
+process is a sentence they have to get past first. It takes three forms and all three are
+worth deleting on sight:
+
+- **Phase apologetics.** *"This is a skeleton on purpose: a `PBR` is normally born at F4
+  and we are at F1."* Where the product sits is recorded in `product.yaml`, once, in a
+  field. A document that opens by arguing for its own right to exist has not said anything
+  yet, and it teaches the reader that the top of these files can be skipped.
+- **Provenance restated.** `ING` owns where a claim came from. Cite `ING-014` and stop.
+  Writing *"from `Vision.pdf` page 1 (`ING-014`)"* is the same fact in two places, and when
+  the register is corrected it is the copy that stays and gets believed. The whole reason
+  the register exists is so that the artifacts do not have to carry this.
+- **Commentary inside a machine-readable file.** `framework.yaml` and `product.yaml` are
+  configuration. A paragraph explaining why a block you did not write is absent belongs in
+  `OPEN.md`, which is the register for absences and the one place where somebody will
+  actually act on it. In a config file it is prose nobody parses and nobody works.
+
+The test is simple: delete the sentence and ask whether anything true about the product was
+lost. If the answer is no, it was about the framework.
 
 **Respect the class.** It is declared in the front matter and it decides what you may do:
 

@@ -6,7 +6,7 @@ status: active
 id: REL-NNN
 products: [product-a]
 owners: [NAME]
-created: YYYY-MM-DD
+created: YYYY-MM-DD HH:MM
 derives_from: [CHG-NNN, EVR-NNN]
 classification: internal
 ---

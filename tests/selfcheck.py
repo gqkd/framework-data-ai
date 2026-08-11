@@ -832,6 +832,54 @@ def _extract_reports_its_gaps():
     return problems
 
 
+@check("a product in discovery is not reported for lacking what discovery has not reached")
+def _early_products_are_not_findings():
+    # Block A is elastic on purpose. A product at F1 has no brief because it has not got
+    # there, and reporting that is the framework asking somebody to backfill a document
+    # they had no grounds to write. What separates "early" from "undocumented" is the stage
+    # the manifest declares, so a product with no manifest at all still has to be reported:
+    # nothing said which of the two it was.
+    def manifest(phase: str | None) -> str:
+        stage = f"stage:\n  phase: {phase}\n  block: A\n" if phase else ""
+        return ("schema: framework/product-manifest/v1\n"
+                "artifact_type: product-manifest\n"
+                "lifecycle: living\nstatus: active\n"
+                "products: [alpha]\nname: Alpha\n"
+                "one_liner: A thing that does a thing.\n"
+                "owners: [Someone]\ncreated: 2026-01-01 09:00\n"
+                "last_review: 2026-01-01 09:00\n" + stage)
+
+    def codes(files):
+        with tempfile.TemporaryDirectory() as tmp:
+            for rel, text in files.items():
+                f = Path(tmp) / rel
+                f.parent.mkdir(parents=True, exist_ok=True)
+                f.write_text(text)
+            r = subprocess.run([sys.executable, str(VALIDATE), "--root", tmp, "--json",
+                                "--stale-days", "36500"], capture_output=True, text=True)
+            if r.returncode not in (0, 1) or not r.stdout.strip():
+                return None
+            return {f["code"] for f in json.loads(r.stdout)["findings"]}
+
+    problems = []
+    for phase, want, why in [
+        ("F1", False, "a product in signal and framing"),
+        ("F3", False, "a product in solution discovery"),
+        ("F4", True, "a product shaping its MVP, which is where the brief belongs"),
+        ("BUILD", True, "a product being built"),
+        (None, True, "a product whose manifest declares no stage at all"),
+    ]:
+        got = codes({"products/alpha/product.yaml": manifest(phase)})
+        if got is None:
+            problems.append(f"the validator crashed on {why}")
+        elif ("XP003" in got) != want:
+            problems.append(
+                f"{why} {'was not' if want else 'was'} reported for having no PBR"
+                + ("" if want else ": discovery is elastic and this is the check telling a "
+                   "project it is doing it wrong"))
+    return problems
+
+
 @check("the extractor keeps the provenance the converter throws away")
 def _extract_keeps_provenance():
     # anydoc has no slide and no page in its document model: a whole deck comes back as one

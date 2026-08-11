@@ -6,7 +6,7 @@ status: active
 version: 1.0.0
 products: [product-a]
 owners: [NAME]
-created: YYYY-MM-DD
+created: YYYY-MM-DD HH:MM
 last_review: YYYY-MM-DD HH:MM
 derives_from: [PRB-NNN]
 classification: internal

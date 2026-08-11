@@ -5,7 +5,7 @@ lifecycle: append-only
 status: active
 products: [product-a, product-b, product-c]
 owners: [NAME]
-created: YYYY-MM-DD
+created: YYYY-MM-DD HH:MM
 classification: confidential
 ---
 

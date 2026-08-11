@@ -6,7 +6,7 @@ status: active
 id: SD-NNN
 products: [product-a]
 owners: [NAME]
-created: YYYY-MM-DD
+created: YYYY-MM-DD HH:MM
 derives_from: [HYP-NNN, DFB-NNN, PBR]
 classification: internal
 ---

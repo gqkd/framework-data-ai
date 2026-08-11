@@ -152,6 +152,26 @@ The third is continuous and never ends.
 | **F2 · Problem discovery** | `WF §current` · `EVD` evidence brief |
 | **F3 · Solution discovery** | `WF §target` · `CMP` competitor · `DFB` data feasibility · `RSK` risks |
 
+**Block A is elastic, and that is a design choice rather than a gap.** A product often
+begins because people who have worked in a sector for years recognised an inefficiency and
+priced the opportunity. That is a legitimate origin. It is not a missing `EVD`, and a
+framework that treats it as one is asking a consultancy to stage a discovery whose answer
+it already has, which produces documents that look observed and are not.
+
+So through F1 to F3 these artifacts are prompts, not requirements. Write the ones the
+evidence supports, name what you cannot yet support, and move. Nothing here should tell a
+project it is doing discovery wrong for lacking a document nobody had the grounds to write,
+and no document should open by apologising for the phase it is in.
+
+The framework tightens at **G4**, and there deliberately. That is where the money starts
+going into build, where a wrong assumption stops costing a paragraph and starts costing a
+rebuild, and where the documents stop being a record of a conversation and become the input
+an agent constructs from. `SD`, `EVP`, `DC` and `ARC` are not elastic: an evaluation plan
+written after the results is not an evaluation plan.
+
+The line is not between important and unimportant. It is between a phase where being wrong
+is cheap and a phase where it is not.
+
 ### Block B: Construction *(per product)*
 
 | Phase | Produces |

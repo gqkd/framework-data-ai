@@ -4,7 +4,7 @@ artifact_type: agents-control-plane
 lifecycle: living
 status: active
 owners: [NAME]
-created: YYYY-MM-DD
+created: YYYY-MM-DD HH:MM
 last_review: YYYY-MM-DD HH:MM
 classification: internal
 ---
