@@ -242,6 +242,21 @@ checks:
       before the change is authorized: a decision record should already exist by the time
       anybody is allowed to build.
 
+  CHG003:
+    level: warn
+    title: authorized change contract that names no impact classification
+    prevents: >
+      The two checks above being stepped around by leaving a field out. They read what a
+      change touches from the `ICG` it names in `icg`, and a `CHG` with no `icg` clears
+      both without being looked at. The direction is what makes it worth a check of its
+      own: they question whoever filled the field in and say nothing to whoever did not, so
+      the output is not silence, it is a green report. It fires from `approved` onwards and
+      not before, because writing a change proposal ahead of its triage is the normal order
+      and a `draft` with no classification yet is not a defect. There is no exemption for a
+      technical change: one that touches nothing structural is classified `routing: none`,
+      which is what `none` is for, and a field that excused a `CHG` from classification
+      would be a way around the way around.
+
 # ON THE PROSE COUPLED CHECKS. OD002 and OD003 read the body of `OPEN.md`: the `### OD-NNN`
 # headings, and the "Cost to reverse" and "Default in force" lines inside each entry. That
 # is the same fragility the section markers removed, one level down, at the level of fields

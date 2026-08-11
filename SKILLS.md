@@ -189,13 +189,13 @@ filling a document: the skill elicits what you know instead of inventing what it
   still missing is everything that would make the declaration binding: no tag, no
   installable release, no pinned commit, no migration note. A repository can declare
   version 1 and run version 2, get a warning, and still be checked by the rules of 2.
-- **A `CHG` can step around its own checks.** `CHG001` and `CHG002` read the routing from
-  the `ICG` that the `CHG` names in `icg`, and the schema does not require that field. So a
-  change contract with no `icg` clears both, silently. The asymmetry is what makes it worth
-  fixing: the check questions whoever filled the field in and says nothing to whoever left
-  it out, which is backwards, and the result is not silence but a green report. The rule to
-  write is a warning whenever `icg` is absent and an error from `approved` onwards — the
-  point at which somebody is authorised to build.
+- **A baseline for the behaviour evals.** They show what a skill did; they do not show what
+  would have happened without it. The comparison worth running is not one turn against one
+  turn — the claim these skills make is that tomorrow's session does not start over, and a
+  single exchange cannot see that. It needs two: one that writes the documents, one that
+  begins cold and answers a question whose answer lives only in them, with the repository
+  and without. Expensive, and worth designing after a real project has supplied both the
+  documents and the questions.
 
 The rule that protects the framework applies to the skills too: **every skill must save more
 time than it costs to maintain, this week.** A skill is code, and like all code it ages and

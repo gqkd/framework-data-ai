@@ -180,7 +180,7 @@ python3 skills/audit/scripts/validate.py --root ../my-project
 python3 skills/audit/scripts/validate.py --root ../my-project --emit-index
 ```
 
-Twenty six checks, catalogued in `skills/audit/checks.yaml`, each with the failure it
+Twenty seven checks, catalogued in `skills/audit/checks.yaml`, each with the failure it
 prevents written next to it.
 
 Only two block on day one: `FM001`, front matter that parses, and `FM002`, front matter
@@ -278,15 +278,6 @@ without `status` and `owners` for as long as it did. The self check runs in CI h
   `version:` in `schemas/artifact-types.yaml` explains when the number goes up. It is not
   the plugin's version, on purpose: a release that rewords a skill cannot break a
   document.
-- **A change contract can step around the two checks written for it.** `CHG001` and
-  `CHG002` read what a change touches from the `ICG` it names in `icg`, and nothing
-  requires that field. Leave it out and both checks pass without looking.
-
-  What makes this worth naming rather than filing is the direction: the checks question
-  whoever filled the field in and say nothing to whoever left it out. The output is not
-  silence, it is a green report. The rule to write is a warning whenever `icg` is missing
-  and an error from `approved` onwards, which is the point where somebody is authorised to
-  build.
 - **`verified_against` when the code is in several repositories.** `ARC` and `EVR` both
   carry one commit hash, which says what the document was checked against. With the code
   split across five repositories one hash cannot mean that, and the field quietly becomes

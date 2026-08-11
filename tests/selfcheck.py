@@ -449,8 +449,21 @@ def _change_contracts():
         ("draft, no DEC", chg("draft", "[SIG-001]"), set()),
         ("verified_by names something that is not an EVR",
          chg("verified", "[SIG-001, DEC-001]", "DEC-001"), {"CHG001"}),
-        ("no icg, so nothing to look up",
-         chg("verified", "[SIG-001]", icg=None), set()),
+        # The escape, and the case that used to expect silence here. A change that names no
+        # classification cleared both of the checks written for it, and the expectation
+        # recorded in this list was the proof that the hole was deliberate rather than
+        # accidental. CHG003 is what closes it, and the direction is the reason it exists:
+        # without it these checks question whoever filled `icg` in and say nothing at all
+        # to whoever left it out.
+        ("verified with no icg: nothing to look up, and that is the finding",
+         chg("verified", "[SIG-001]", icg=None), {"CHG003"}),
+        ("approved with no icg, which is where authorization starts",
+         chg("approved", "[SIG-001]", icg=None), {"CHG003"}),
+        # A proposal written before its triage is the order the framework prescribes.
+        ("draft with no icg is a change waiting to be classified, not one that dodged it",
+         chg("draft", "[SIG-001]", icg=None), set()),
+        ("icg naming a classification that does not exist",
+         chg("approved", "[SIG-001, DEC-001]", icg="ICG-404"), {"CHG003"}),
     ]
     problems = []
     for what, text, want in cases:

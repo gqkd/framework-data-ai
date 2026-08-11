@@ -582,18 +582,33 @@ def check_change_contracts(arts: list[Artifact], report: Report) -> None:
     so demanding it earlier than `verified` would forbid the order the framework
     prescribes.
 
-    A `CHG` with no `icg` is skipped rather than reported. It is a real gap, and the
-    `cycle` skill already says not to authorize what was not classified, but inventing a
-    finding here would make these two checks about something other than their titles.
+    A `CHG` with no `icg` is not reported by either of them, and is reported by `CHG003`
+    instead. Keeping it separate is what stops the first two from being about something
+    other than their titles, and `CHG003` is a check of its own because the gap it names is
+    not a missing `EVR` or a missing `DEC`: it is the join itself being absent, which is
+    how both of the others come back clean without having looked at anything.
     """
     by_id = {a.id: a for a in arts if a.id}
     icgs = {a.id: a for a in arts if a.type == "impact-classification"}
+    AUTHORIZED = ("approved", "implemented", "verified", "rolled-back")
 
     for a in arts:
         if a.type != "change-contract":
             continue
         icg = icgs.get(a.meta.get("icg"))
         if icg is None:
+            # From `approved` onwards only. Writing the proposal before the triage that
+            # classifies it is the order the framework prescribes, so a `draft` with no
+            # classification is a change waiting for one, not a change that dodged it.
+            if a.meta.get("status") in AUTHORIZED:
+                named = a.meta.get("icg")
+                why = (f"names {named!r}, which is not an impact classification in this "
+                       "repository" if named else "names no impact classification")
+                report.add("CHG003", a.rel,
+                           f"authorized at {a.meta.get('status')!r} and {why}. Nothing "
+                           "says what this change touches, so CHG001 and CHG002 pass "
+                           "without looking: the report is green because the question was "
+                           "never asked. Classify it in an `ICG`, `routing: none` included.")
             continue
         impacts_map = icg.meta.get("impacts")
         if not isinstance(impacts_map, dict):

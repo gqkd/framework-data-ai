@@ -112,10 +112,41 @@ Same, plus a feature store.
 
 The feature store does not exist yet.
 """,
+    # The classification the change below came out of. It is here so that the clean repo
+    # demonstrates the join working rather than avoiding it: CHG003 reports an authorized
+    # change that names no `ICG`, and a fixture that stayed silent by having no `ICG` at
+    # all would be silent for the wrong reason.
+    "products/atlas/cycles/ICG-001.md": fm(
+        schema="framework/impact-classification/v1",
+        artifact_type="impact-classification", id="ICG-001", lifecycle="immutable",
+        status="accepted", products="[atlas]", owners="[maria]", created="2026-03-28 10:00",
+        routing="{DEC-001: architecture}", impacts="{DEC-001: [architecture]}")
+    + """# ICG-001 - Triage of the March cycle
+
+<!-- section: intake -->
+## 1 - What was considered
+
+One candidate: `DEC-001`, the warehouse choice, which leaves the scoring job written
+against a store it no longer runs on.
+
+<!-- section: classification -->
+## 2 - Each candidate, and why
+
+| Candidate | Routing | Impacts | Why, and against which document |
+|---|---|---|---|
+| `DEC-001` | `architecture` | `architecture` | the job's store changes, which `ARC.md#current` describes |
+
+<!-- section: open-questions -->
+## 3 - What is unresolved, and what it blocks
+
+Nothing. The decision was taken before the triage, which is why the routing is a
+consequence and not a judgement.
+""",
+
     "products/atlas/changes/CHG-001-scoring.md": fm(
         schema="framework/change-contract/v1", artifact_type="change-contract",
         id="CHG-001", lifecycle="immutable", status="approved", products="[atlas]",
-        owners="[maria]", derives_from="DEC-001", created="2026-04-01")
+        owners="[maria]", icg="ICG-001", derives_from="DEC-001", created="2026-04-01")
     + """# CHG-001 - Rewrite the scoring job
 
 <!-- section: what-changes -->
@@ -153,6 +184,8 @@ Row counts match for 7 consecutive days.
 # 12. OD003  OD-005 high cost, no default in force
 # 13. RLM002 release manifest with rollback.tested false
 # 14. XP002  data contract consumer `orion` matches no product
+# 15. CHG003 CHG-002 approved and naming no ICG, so CHG001 and CHG002 pass
+#            without looking at it
 #
 # Plus a trap the validator CANNOT see: DEC-002 is an accepted immutable whose
 # body was edited after acceptance (git history shows it). Nothing reports this.
