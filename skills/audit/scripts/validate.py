@@ -749,6 +749,27 @@ def check_cross_product(arts: list[Artifact], report: Report) -> None:
     # early is the framework asking a project to backfill a document nobody had the grounds
     # to write. The stage the manifest declares is what tells the two apart; a product with
     # no manifest at all is reported, because then nothing said which it was.
+    # A repository belongs to one product or to the substrate, never to both and never to
+    # two products. The map is the answer to "where is the code", and two answers to one
+    # question is the state this framework exists to prevent: the copies are written on the
+    # same day and describe the same repository, and then one of them is updated.
+    declared: dict[str, list[str]] = {}
+    for a in arts:
+        if a.type not in ("product-manifest", "platform-architecture"):
+            continue
+        code = a.meta.get("code")
+        if isinstance(code, dict):
+            for key in code:
+                declared.setdefault(key, []).append(a.rel)
+    for key, where in sorted(declared.items()):
+        if len(where) > 1:
+            report.add("XP004", ", ".join(sorted(where)),
+                       f"repository {key!r} is declared in {len(where)} places. A repository "
+                       "shared by several products belongs to `code:` in `PLATFORM.md`, and "
+                       "one that serves a single product to that product's manifest. Two "
+                       "entries are two descriptions of one repository, and only one of them "
+                       "gets corrected.")
+
     early = {p for a in arts if a.type == "product-manifest"
              for p in as_list(a.meta.get("products"))
              if str((a.meta.get("stage") or {}).get("phase", "")).upper() in {"F1", "F2", "F3"}}

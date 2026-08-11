@@ -846,6 +846,78 @@ def _extract_reports_its_gaps():
     return problems
 
 
+@check("a repository shared by two products has one home, and only one")
+def _shared_code_has_one_home():
+    # The case this framework is about to be used on: one product across five repositories,
+    # and two more products sharing the layer everybody signs in through. A per-product map
+    # has nowhere to put the shared one, so the substrate carries `code:` too — and the way
+    # that arrangement fails is a repository written into both, agreeing on the day it is
+    # written and diverging afterwards.
+    def manifest(product: str, code: str) -> str:
+        return ("schema: framework/product-manifest/v1\n"
+                "artifact_type: product-manifest\n"
+                "lifecycle: living\nstatus: active\n"
+                f"products: [{product}]\nname: {product.title()}\n"
+                "one_liner: A thing that does a thing.\n"
+                "owners: [Someone]\ncreated: 2026-01-01 09:00\n"
+                "last_review: 2026-01-01 09:00\n"
+                "stage:\n  phase: F4\n  block: B\n" + code)
+
+    shared = ("code:\n  access:\n    url: git@example.com:org/access.git\n"
+              "    contains: sign-in and tenancy\n")
+    platform = ("---\nschema: framework/platform-architecture/v1\n"
+                "artifact_type: platform-architecture\nlifecycle: living\nstatus: active\n"
+                "products: [alpha, beta]\nowners: [Someone]\n"
+                "created: 2026-01-01 09:00\nlast_review: 2026-01-01 09:00\n"
+                + shared + "---\n\n# Substrate\n")
+
+    def codes(files):
+        with tempfile.TemporaryDirectory() as tmp:
+            for rel, text in files.items():
+                f = Path(tmp) / rel
+                f.parent.mkdir(parents=True, exist_ok=True)
+                f.write_text(text)
+            r = subprocess.run([sys.executable, str(VALIDATE), "--root", tmp, "--json",
+                                "--stale-days", "36500"], capture_output=True, text=True)
+            if r.returncode not in (0, 1) or not r.stdout.strip():
+                return None
+            return {f["code"] for f in json.loads(r.stdout)["findings"]}
+
+    problems = []
+    own = ("code:\n  frontend:\n    url: git@example.com:org/alpha-fe.git\n"
+           "    contains: the app\n")
+
+    # Declared once on the substrate, used by both: the arrangement working.
+    got = codes({"PLATFORM.md": platform,
+                 "products/alpha/product.yaml": manifest("alpha", own),
+                 "products/beta/product.yaml": manifest("beta", "")})
+    if got is None:
+        problems.append("the validator crashed on a substrate declaring shared code")
+    elif "XP004" in got:
+        problems.append("a repository declared once on the platform was reported as a "
+                        "duplicate: the substrate is where a shared repository belongs")
+
+    # The same repository written into a product as well. One question, two answers.
+    got = codes({"PLATFORM.md": platform,
+                 "products/alpha/product.yaml": manifest("alpha", shared),
+                 "products/beta/product.yaml": manifest("beta", "")})
+    if got is None:
+        problems.append("the validator crashed on a repository declared twice")
+    elif "XP004" not in got:
+        problems.append("a repository declared by both the platform and a product was not "
+                        "reported: the two entries agree today and one of them gets fixed")
+
+    # And between two products, with no platform in the repository at all.
+    got = codes({"products/alpha/product.yaml": manifest("alpha", shared),
+                 "products/beta/product.yaml": manifest("beta", shared)})
+    if got is None:
+        problems.append("the validator crashed on two products claiming one repository")
+    elif "XP004" not in got:
+        problems.append("two products declaring the same repository were not reported, "
+                        "which is the duplication the platform map exists to avoid")
+    return problems
+
+
 @check("a product in discovery is not reported for lacking what discovery has not reached")
 def _early_products_are_not_findings():
     # Block A is elastic on purpose. A product at F1 has no brief because it has not got

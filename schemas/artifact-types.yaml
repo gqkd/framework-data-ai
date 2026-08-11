@@ -247,6 +247,24 @@ types:
     status: [active, draft]
     # The shared substrate. Unlike ARC it is born on day one, before the code exists, so
     # it cannot require `verified_against`.
+    #
+    # It carries `code:` for the same reason `product.yaml` does, and for one more. A
+    # repository that serves several products -- the access layer two of them sign in
+    # through, the shared data plane -- has no home in a per-product map. The only two
+    # things a project could do were write it into every `product.yaml` that uses it, which
+    # is one fact in several files and the divergence this framework exists to prevent, or
+    # leave it out, and then neither product knows where its own sign-in lives. This is the
+    # third option, and it is the one consistent with the rest: shared things belong to the
+    # substrate.
+    #
+    # A key belongs to exactly one of the two maps. `XP004` reports a repository claimed
+    # twice, because the copy is what makes the two descriptions of it drift.
+    maps:
+      code:
+        keys: "^[a-z][a-z0-9._-]*$"
+        fields:
+          required: [url, contains]
+          optional: [path, release_relevant]
 
   product-manifest:
     id: product.yaml
@@ -269,13 +287,22 @@ types:
     #
     # Keys are repository names and not framework identifiers, so they get their own
     # pattern. `path` is where it is expected to be checked out, relative to this
-    # repository, because an absolute path is true on one machine.
+    # repository, because an absolute path is true on one machine. `path: .` is the
+    # co-located case, and writing it is what separates "the code is here" from "nobody
+    # recorded where the code is".
+    #
+    # `release_relevant` marks a repository whose commit an evaluation is about. It is
+    # optional and nothing reads it yet: `verified_against` still carries one hash, which
+    # cannot mean what it says once the code is split, and redesigning that field before
+    # any project has an `ARC` or an `EVR` would be guessing at the shape. The flag is here
+    # now because `code:` blocks are being written now, and adding it later means going
+    # back through every manifest.
     maps:
       code:
         keys: "^[a-z][a-z0-9._-]*$"
         fields:
           required: [url, contains]
-          optional: [path]
+          optional: [path, release_relevant]
 
   product-brief:
     id: PBR

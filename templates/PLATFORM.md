@@ -9,6 +9,14 @@ owners: [NAME]
 created: YYYY-MM-DD HH:MM
 last_review: YYYY-MM-DD HH:MM
 classification: internal
+# The repositories that serve more than one product. A product's own code stays in its
+# `product.yaml`; what several products sign in through belongs here, once. `XP004` reports
+# a repository declared in both places, because that is two answers to one question.
+code:
+  access:
+    url: git@github.com:org/platform-access.git
+    contains: sign-in, tenancy and the permission model. Every product goes through it
+    path: ../platform-access
 ---
 
 # Shared substrate architecture

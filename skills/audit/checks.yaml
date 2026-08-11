@@ -183,6 +183,16 @@ checks:
     prevents: >
       The definition of the product exists only in somebody's head or in a sales pitch.
 
+  XP004:
+    level: warn
+    title: one repository declared as the code of more than one thing
+    prevents: >
+      Two descriptions of the same repository drifting apart. `code:` answers where the
+      code is, and it exists on `product.yaml` and on `PLATFORM.md` because a repository
+      two products sign in through belongs to the substrate and not to either of them. The
+      failure it guards is not the duplication itself but what follows: the entries are
+      written on the same day and agree, and then one of them is corrected.
+
   FW001:
     level: warn
     title: the repository was written against a different version of the framework

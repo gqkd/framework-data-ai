@@ -22,6 +22,7 @@ here.
 | Question | Source |
 |---|---|
 | **Where the code is** | `products/<p>/product.yaml` under `code:`, one entry per repository. `path: .` is this one |
+| **Where the code shared by several products is** | `PLATFORM.md` under `code:`. It is not repeated in any product |
 | How the system is built | `products/<p>/ARC.md#current`, plus `PLATFORM.md` if there is one |
 | What shape it is going to have | `products/<p>/ARC.md#target` |
 | What is missing to get there | `products/<p>/ARC.md#delta`, ordered by `RMP.md` |

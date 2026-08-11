@@ -180,7 +180,7 @@ python3 skills/audit/scripts/validate.py --root ../my-project
 python3 skills/audit/scripts/validate.py --root ../my-project --emit-index
 ```
 
-Twenty seven checks, catalogued in `skills/audit/checks.yaml`, each with the failure it
+Twenty eight checks, catalogued in `skills/audit/checks.yaml`, each with the failure it
 prevents written next to it.
 
 Only two block on day one: `FM001`, front matter that parses, and `FM002`, front matter
