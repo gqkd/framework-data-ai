@@ -882,6 +882,18 @@ def _extract_keeps_provenance():
     if "\n# not a heading" not in body:
         problems.append("a comment inside a code fence was rewritten as a heading")
 
+    # Found on a deck built to look like a real one. The slide was the architecture diagram
+    # with the word "Architettura" on it, and it went unflagged because the speaker note
+    # underneath carried it over the threshold. The question the threshold answers is
+    # whether the slide is a picture, and a picture with a talkative presenter is one.
+    drawn = "Architettura\n\n> Nota del relatore che spiega a voce tutta l'architettura."
+    if x.on_slide_chars(drawn) >= 40:
+        problems.append("speaker notes count towards the text on a slide: a diagram with a "
+                        "chatty note under it stops being flagged, and that is the slide "
+                        "the whole visual review exists to catch")
+    if x.on_slide_chars("Prezzi 2026 per fascia di volume, con sconti a scaglioni") < 40:
+        problems.append("a slide with a sentence on it was called text-poor")
+
     blocks = x.split_on_headings("req.docx", "intro\n\n# One\n\nalpha\n\n## Two\n\nbeta")
     if (got := [b.locator for b in blocks]) != ["preamble", "§ One", "§ Two"]:
         problems.append(f"sections came back located as {got}: a heading is the only "

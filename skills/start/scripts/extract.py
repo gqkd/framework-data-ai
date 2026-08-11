@@ -150,6 +150,25 @@ def anydoc_ready() -> str:
     return _READY
 
 
+def on_slide_chars(md: str) -> int:
+    """How much text is on the slide, which is not how much text the slide produced.
+
+    anydoc renders the speaker notes as a blockquote after the slide's own content, and
+    they do not count: the question the threshold answers is whether the slide is a picture,
+    and a picture with a talkative presenter is still a picture. Counting them is how a
+    diagram carrying the whole architectural promise stays unflagged because somebody wrote
+    two sentences of patter under it — which is precisely the slide this is looking for.
+
+    A real quotation in the slide body is counted out too. That costs a glance at a slide
+    that turns out to be fine, against missing the one that is not.
+    """
+    return sum(len(ln) for ln in md.split("\n") if not ln.lstrip().startswith(">"))
+
+
+def _n(count: int, one: str, many: str) -> str:
+    return f"{count} {one}" if count == 1 else f"{count} {many}"
+
+
 def _labelled(msg: str) -> str:
     # The command already prefixes its own name and the module's exceptions do not. Adding
     # one unconditionally produced `anydoc: anydoc: malformed document`, which reads like
@@ -303,12 +322,12 @@ def extract_pptx(path: Path, out: Path, min_chars: int) -> tuple[list[Block], Do
         info.chars += len(body)
         if body:
             blocks.append(Block(src, f"slide {n}", body))
-        if len(body) < min_chars:
+        if on_slide_chars(body) < min_chars:
             info.visual_review.append(n)         # text-poor slide: it is a picture
 
     if info.visual_review and not info.note:
-        info.note = (f"{len(info.visual_review)} slides under {min_chars} characters: "
-                     "likely graphical content. Worth looking at.")
+        info.note = (f"{_n(len(info.visual_review), 'slide', 'slides')} under {min_chars} "
+                     "characters: likely graphical content. Worth looking at.")
     return blocks, info
 
 
@@ -364,7 +383,7 @@ def extract_pdf(path: Path, out: Path, min_chars: int) -> tuple[list[Block], Doc
                      "extracted text loses the layout, and on a sales deck the layout is "
                      "where the promise lives.")
     elif info.visual_review:
-        info.note = f"{len(info.visual_review)} text-poor pages."
+        info.note = f"{_n(len(info.visual_review), 'text-poor page', 'text-poor pages')}."
     return blocks, info
 
 
@@ -449,10 +468,6 @@ def demote(text: str) -> str:
             line = "#" * min(6, len(h.group(1)) + 2) + line[len(h.group(1)):]
         out.append(line)
     return "\n".join(out)
-
-
-def _n(count: int, one: str, many: str) -> str:
-    return f"{count} {one}" if count == 1 else f"{count} {many}"
 
 
 def build_extract_md(n_files: int, blocks: list[Block], silent: list[DocInfo],
@@ -637,7 +652,7 @@ def main() -> int:
         print(f"{len(silent)} of them gave no text, listed at the top of extract.md")
     need = [i for i in infos if i.visual_review]
     if need:
-        print(f"\n{len(need)} documents need visual inspection:")
+        print(f"\n{_n(len(need), 'document needs', 'documents need')} visual inspection:")
         for i in need:
             print(f"  - {i.source}: pages/slides {i.visual_review[:12]}"
                   f"{' ...' if len(i.visual_review) > 12 else ''}")
