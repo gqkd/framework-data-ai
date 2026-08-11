@@ -1,24 +1,44 @@
-%% Documentation framework for Data & AI projects, v1.0
-%%
-%% What this diagram shows: the flow and the gates. Nothing else.
-%% Which artifact each phase produces is in FRAMEWORK.md §5, and what each
-%% artifact answers is in §7. Repeating them here would put the same fact in
-%% two places, which is the one thing the framework forbids. Node labels carry
-%% artifact codes only, as a reminder, never their descriptions.
-%%
-%% The platform artifacts (AGENTS, OPEN, COMMITMENTS, GLOSSARY, PLATFORM,
-%% decisions/, product.yaml) are deliberately absent: they are alive at every
-%% moment and belong to no step, so drawing them here would mean drawing a box
-%% with no edges. See FRAMEWORK.md §4.
-%%
-%% Three things the earlier version had wrong or missing, worth keeping right:
-%% build comes before evaluation, reshaping comes before the cycle plan, and a
-%% failed release gate is rework rather than rollback.
+%% Documentation framework for Data & AI projects, v1.1
+%% .
+%% Layout follows Framework.drawio, because that drawing reads better than the
+%% vertical version this file used to hold: a band of always alive artifacts on
+%% top, then one horizontal row per block, refusals hanging off their gate as
+%% short stubs instead of lengthening the chain.
+%% .
+%% Two mechanical notes, so the next person does not undo them by accident.
+%% The band is held in one row by invisible links (~~~), and the rows keep
+%% their order only because no arrow points from the loop back into block A:
+%% add one and dagre reverses the whole stack. That is why re entry into
+%% discovery is drawn as a labelled exit, RE, rather than as an arrow.
+%% .
+%% What this diagram shows: the flow, the gates, and the artifacts that belong
+%% to no step. Which artifact each phase produces is in FRAMEWORK.md §5, what
+%% each artifact answers is in §7. Node labels carry artifact codes only, as a
+%% reminder, never their descriptions.
+%% .
+%% Three things this version keeps right against the drawio: build comes before
+%% evaluation, reshaping comes before the cycle plan, and a failed release gate
+%% is rework rather than rollback. Three it adds: the F5 and F6 names, the MOR
+%% review after the first period of real use, and the re entry paths. Two it
+%% drops from the top band: RSK.md and product.yaml live per product, not on
+%% the platform. See FRAMEWORK.md §4.
 
-flowchart TD
+flowchart TB
+
+  subgraph CP["CONTROL PLANE AND PLATFORM ARTIFACTS&nbsp;&nbsp;·&nbsp;&nbsp;alive at every moment, owned by no step"]
+    direction LR
+    CP1["<b>README</b><br/>map and entry point"]
+    CP2["<b>AGENTS.md</b><br/>rules for agents"]
+    CP3["<b>GLOSSARY.md</b><br/>terms and metric definitions"]
+    CP4["<b>OPEN.md</b><br/>open decisions, known issues"]
+    CP5["<b>COMMITMENTS.md</b><br/>what has been promised"]
+    CP6["<b>decisions/</b><br/>single DEC register:<br/>product + architecture"]
+    CP7["<b>PLATFORM.md</b><br/>shared substrate,<br/>only if you decided to have one"]
+    CP1 ~~~ CP2 ~~~ CP3 ~~~ CP4 ~~~ CP5 ~~~ CP6 ~~~ CP7
+  end
 
   subgraph A["BLOCK A · DISCOVERY&nbsp;&nbsp;·&nbsp;&nbsp;per initiative, walked once"]
-    direction TB
+    direction LR
 
     F1["<b>F1 · Signal and framing</b><br/>PRB · HYP"]
     G1{"<b>G1</b><br/>Does the signal deserve<br/>investigation time?"}
@@ -42,8 +62,8 @@ flowchart TD
     G3 -->|no| X3
   end
 
-  subgraph B["BLOCK B · SHAPING&nbsp;&nbsp;·&nbsp;&nbsp;per product"]
-    direction TB
+  subgraph B["BLOCK B · CONSTRUCTION&nbsp;&nbsp;·&nbsp;&nbsp;F4, shaping, per product, before any code"]
+    direction LR
 
     F4["<b>F4 · Shaping MVP and MVA</b><br/>PBR · SD · EVP · DC · RMP · DEC"]
     G4{"<b>G4 · Ready to build</b><br/>Are product, architecture and plan<br/>defined enough to start building?"}
@@ -52,58 +72,59 @@ flowchart TD
     G4 -->|"no · finish the shaping"| F4
   end
 
-  subgraph C["BLOCK C · OPERATION AND EVOLUTION&nbsp;&nbsp;·&nbsp;&nbsp;continuous loop, per product"]
-    direction TB
+  subgraph C["BLOCK B · F5 AND F6, THEN BLOCK C · OPERATION AND EVOLUTION&nbsp;&nbsp;·&nbsp;&nbsp;walked once on the first pass, then as a loop, per product"]
+    direction LR
 
-    BUILD["<b>Build · release candidate</b><br/>ARC, alive from here · code"]
+    F5["<b>F5 · Build · release candidate</b><br/>ARC, alive from here · LOG · code"]
     RG{"<b>RG · Release gate</b> <i>(recurring)</i><br/>Are the thresholds of the<br/>frozen EVP met?"}
-    DEPLOY["<b>Deploy</b><br/>EVR · REL · RLM<br/><i>first time round, also RB</i>"]
+    F6["<b>F6 · Controlled go live</b><br/>EVR · REL · RLM<br/><i>first time round, also RB</i>"]
     RUN["<b>Run and observe</b><br/>LOG"]
+    MOR{"<b>MOR · MVP outcome review</b><br/><i>once, after the first period of real use</i><br/>Which assumptions did use<br/>confirm or disprove?"}
     INTAKE["<b>Change intake</b><br/>signals from LOG · increments from RMP"]
     TRIAGE["<b>Triage and impact assessment</b>"]
     ICG{"<b>ICG · Impact classification</b> <i>(recurring)</i><br/>Does it change product, architecture,<br/>data, evaluation or risk?"}
     RESHAPE["<b>Product and architecture reshaping</b><br/>PBR · WF · ARC · EVP · DC · RSK · RMP · DEC"]
     CHG["<b>Change contract</b><br/>CHG"]
     IMP["<b>Cycle implementation plan</b><br/>IMP"]
+    RE["<b>Out of the loop, back into discovery</b><br/>problem or segment invalidated → <b>F2</b><br/>solution hypothesis invalidated → <b>F3</b><br/>signal opening another initiative → <b>F1</b>"]
 
-    BUILD --> RG
-    RG -->|"no · <b>rework</b>, not rollback:<br/>it is not in production yet"| BUILD
-    RG -->|yes| DEPLOY
-    DEPLOY --> RUN
+    F5 --> RG
+    RG -->|"no · <b>rework</b>, not rollback:<br/>it is not in production yet"| F5
+    RG -->|yes| F6
+    F6 --> RUN
     RUN --> INTAKE
+    RUN -->|"production regression:<br/>roll back, then re enter through LOG"| INTAKE
     INTAKE --> TRIAGE
     TRIAGE --> ICG
     ICG -->|"no structural impact"| CHG
     ICG -->|"product · architecture · both"| RESHAPE
     RESHAPE --> CHG
     CHG --> IMP
-    IMP --> BUILD
+    IMP -->|"next lap"| F5
+
+    RUN -.->|once| MOR
+    MOR -.->|continue| INTAKE
+    MOR -.->|invalidated| RE
+    ICG -.->|invalidated| RE
+    RUN -.->|"new initiative"| RE
   end
 
+  CP7 ~~~ F1
   G3 -->|yes| F4
-  G4 -->|yes| BUILD
-
-  MOR{"<b>MOR · MVP outcome review</b><br/><i>once, after the first period of real use</i><br/>Which assumptions did use confirm<br/>or disprove?"}
-
-  %% Re entry paths. Dashed because they leave the loop instead of advancing it,
-  %% and because a solid arrow back into F2 would read as a normal step.
-  RUN -.->|once| MOR
-  MOR -.->|continue| INTAKE
-  MOR -.->|"solution hypothesis invalidated"| F3
-  MOR -.->|"problem invalidated"| F2
-  ICG -.->|"solution hypothesis invalidated"| F3
-  ICG -.->|"problem or segment invalidated"| F2
-  RUN -.->|"production regression:<br/>roll back, then re enter through LOG"| INTAKE
-  RUN -.->|"signal opening a new initiative"| F1
+  G4 -->|yes| F5
 
   classDef phase     fill:#ffffff,stroke:#334155,stroke-width:2px,color:#0f172a
   classDef gate      fill:#fefce8,stroke:#ca8a04,stroke-width:2px,color:#422006
   classDef recurring fill:#faf5ff,stroke:#7e22ce,stroke-width:2px,color:#3b0764
   classDef stop      fill:#fef2f2,stroke:#b91c1c,stroke-width:1.5px,color:#450a0a
+  classDef always    fill:#f8fafc,stroke:#64748b,stroke-width:1.5px,color:#0f172a
+  classDef reentry   fill:#eff6ff,stroke:#1d4ed8,stroke-width:1.5px,stroke-dasharray:4 3,color:#172554
 
-  class F1,F2,F3,F4,BUILD,DEPLOY,RUN,INTAKE,TRIAGE,RESHAPE,CHG,IMP phase
+  class F1,F2,F3,F4,F5,F6,RUN,INTAKE,TRIAGE,RESHAPE,CHG,IMP phase
   class G1,G2,G3,G4,MOR gate
   class RG,ICG recurring
   class X1,X2,X3 stop
+  class RE reentry
+  class CP1,CP2,CP3,CP4,CP5,CP6,CP7 always
 
   %% Every gate leaves a DEC behind. A gate with no written trace is a meeting.

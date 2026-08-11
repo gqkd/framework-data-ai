@@ -14,7 +14,7 @@ decisions, products, initiatives and corpus, live in that project's repository, 
 |---|---|
 | **`FRAMEWORK.md`** | The reference document. Start here |
 | `framework-flow.mermaid` | The lifecycle with its gates. Importable into draw.io: *Arrange → Insert → Advanced → Mermaid* |
-| `Framework.drawio` | An older drawing of the same lifecycle, kept for editing in draw.io |
+| `Framework.drawio` | The same lifecycle in draw.io's own format. Its layout is the one the mermaid file follows; its content is one revision behind |
 | `SKILLS.md` | The six skills that operate the framework, and where their boundaries fall |
 | `templates/` | One template per artifact, each with its anti-patterns at the bottom |
 | `schemas/` | The artifact catalog and what each type is allowed to be. `artifact-types.yaml` is the source; `generate.py` projects it into the JSON Schemas, into `FRAMEWORK.md §7` and into `templates/README.md` |
