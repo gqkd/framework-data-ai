@@ -45,6 +45,7 @@ from __future__ import annotations
 
 import argparse
 import io
+import itertools
 import json
 import os
 import re
@@ -232,8 +233,8 @@ def split_on_headings(src: str, md: str) -> list[Block]:
 
 # ── PPTX ────────────────────────────────────────────────────────────────────
 
-def slice_pptx(data: bytes) -> list[bytes]:
-    """One single-slide package per slide, in presentation order. Empty if it cannot.
+def slice_pptx(data: bytes) -> "Iterator[bytes]":
+    """One single-slide package per slide, in presentation order. Yields nothing if it cannot.
 
     anydoc has no slide in its document model: a whole deck converts to one flat stream
     with nothing marking where slide 3 ended, and the slide number is the entire point of
@@ -243,26 +244,32 @@ def slice_pptx(data: bytes) -> list[bytes]:
     deck, because it *is* the full deck with the running order shortened to one.
 
     Each slice is a copy of the package, stored rather than deflated so the images are not
-    recompressed forty times. One slice exists at a time.
+    recompressed once per slide.
+
+    A generator, and that is the whole reason this is not a list. Every slice holds the
+    entire package, media and all, so returning them together costs deck size times slide
+    count: a forty slide deck of thirty megabytes wanted more than a gigabyte, on a machine
+    with fifteen. Yielded one at a time, the caller converts a slice and drops it, and the
+    peak is one copy. This docstring used to claim that property while the code built the
+    whole list, which is worse than the bug: the next reader believes it.
     """
     try:
         z = zipfile.ZipFile(io.BytesIO(data))
         names = z.namelist()
         if "ppt/presentation.xml" not in names:
-            return []
+            return
         xml = z.read("ppt/presentation.xml").decode("utf-8", "replace")
     except (zipfile.BadZipFile, OSError, KeyError):
-        return []                        # legacy binary .ppt, or a package we cannot read
+        return                           # legacy binary .ppt, or a package we cannot read
 
     m = SLD_LST.search(xml)
     if not m:
-        return []
+        return
     ids = SLD_ONE.findall(m.group(1))
     if len(ids) < 2:
-        return []                        # nothing to split: one slide, or a list we misread
+        return                           # nothing to split: one slide, or a list we misread
 
     head, tail = xml[:m.start(1)], xml[m.end(1):]
-    out = []
     for one in ids:
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w", zipfile.ZIP_STORED) as w:
@@ -272,8 +279,7 @@ def slice_pptx(data: bytes) -> list[bytes]:
                 # unreadable from the second slide on.
                 w.writestr(n, (head + one + tail).encode("utf-8")
                            if n == "ppt/presentation.xml" else z.read(n))
-        out.append(buf.getvalue())
-    return out
+        yield buf.getvalue()
 
 
 def extract_pptx(path: Path, out: Path, min_chars: int) -> tuple[list[Block], DocInfo]:
@@ -283,9 +289,13 @@ def extract_pptx(path: Path, out: Path, min_chars: int) -> tuple[list[Block], Do
         return [], DocInfo(src, "pptx", note=miss)
 
     data = path.read_bytes()
+    # Pulled one at a time out of a generator, so the peak is one copy of the package and
+    # not one per slide. The first is drawn early only to answer "can this be split at all",
+    # which decides between the two branches below, and is put back with `chain`.
     slices = slice_pptx(data)
+    first = next(slices, None)
 
-    if not slices and path.suffix.lower() in LEGACY_PPT and shutil.which("soffice"):
+    if first is None and path.suffix.lower() in LEGACY_PPT and shutil.which("soffice"):
         # anydoc reads a legacy .ppt, but the binary format carries no package to split, so
         # the whole deck would arrive as one block and every claim in it would lose its
         # slide number. Where LibreOffice happens to be installed, converting first buys
@@ -297,8 +307,9 @@ def extract_pptx(path: Path, out: Path, min_chars: int) -> tuple[list[Block], Do
         if rc == 0 and cand.exists():
             data = cand.read_bytes()
             slices = slice_pptx(data)
+            first = next(slices, None)
 
-    if not slices:
+    if first is None:
         md, err = anydoc_markdown(data, ANYDOC_FORMAT[path.suffix.lower()])
         if not (body := md.strip()):
             info.note = err or "anydoc produced no output"
@@ -313,13 +324,14 @@ def extract_pptx(path: Path, out: Path, min_chars: int) -> tuple[list[Block], Do
         return blocks, info
 
     blocks = []
-    info.units = len(slices)
-    for n, chunk in enumerate(slices, 1):
+    for n, chunk in enumerate(itertools.chain([first], slices), 1):
         md, err = anydoc_markdown(chunk, "pptx")
+        del chunk                    # the copy of the package goes now, not at the next loop
         body = md.strip()
         if err and not info.note:
             info.note = err
         info.chars += len(body)
+        info.units = n
         if body:
             blocks.append(Block(src, f"slide {n}", body))
         if on_slide_chars(body) < min_chars:
@@ -534,9 +546,30 @@ def build_extract_md(n_files: int, blocks: list[Block], silent: list[DocInfo],
 
 
 def render_pages(path: Path, pages: list[int], out: Path) -> list[str]:
-    """Rasterise the flagged pages, so the agent can actually look at them."""
-    if not pages or path.suffix.lower() != ".pdf":
+    """Rasterise the flagged pages, so the agent can actually look at them.
+
+    A deck goes through PDF first. This is the case the whole visual review exists for --
+    on a sales deck the architectural constraint is drawn and not written -- and until now
+    it was the one case that was not served: only PDFs were rasterised, so for a `.pptx` the
+    tool named the slides and asked somebody to open them by hand. LibreOffice exports the
+    deck once and slide N lands on page N, which is what makes the numbers already collected
+    from the package usable against the export.
+
+    Without LibreOffice this returns nothing and the caller says so. That is a real gap and
+    not a silent one: the pages stay listed, and reading them stays somebody's job.
+    """
+    if not pages:
         return []
+    if path.suffix.lower() != ".pdf":
+        if not shutil.which("soffice"):
+            return []
+        conv = out / "_conv"
+        rc, _ = run(["soffice", "--headless", "--convert-to", "pdf",
+                     "--outdir", str(conv), str(path)])
+        cand = conv / (path.stem + ".pdf")
+        if rc != 0 or not cand.exists():
+            return []
+        path = cand
     d = out / "render"
     d.mkdir(parents=True, exist_ok=True)
     made = []
@@ -665,13 +698,15 @@ def main() -> int:
             print(f"  Images ready in {args.out / 'render'}/")
         manual = [i for i in need if not i.rendered]
         if manual:
-            # Only PDF pages are rasterised. This used to say that a deck needed LibreOffice
-            # to be rasterised, which pointed at an install that changes nothing: nothing in
-            # here converts a deck to images. A fix somebody can carry out and that does not
-            # work is worse than no fix, because the next warning gets skipped too.
-            print("  Only PDF pages are rasterised. Open these yourself, at the slides listed:")
+            print("  Not rasterised here. Open these yourself, at the pages listed:")
             for i in manual:
                 print(f"    - {i.source}")
+            # Named only when it would actually change the outcome. This line used to be
+            # printed unconditionally and pointed at an install that did nothing, which is
+            # worse than no advice: the next warning from the same tool gets skipped too.
+            if not shutil.which("soffice") and any(i.kind != "pdf" for i in manual):
+                print("  (a deck is rasterised through LibreOffice, which is not installed: "
+                      "https://www.libreoffice.org/download)")
     return 0
 
 

@@ -22,6 +22,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import types
 import zipfile
 from datetime import date, datetime
 from pathlib import Path
@@ -913,7 +914,16 @@ def _extract_keeps_provenance():
                 z.writestr(f"ppt/slides/slide{i}.xml", f"<p:sld>slide {i}</p:sld>")
         return buf.getvalue()
 
-    slices = x.slice_pptx(deck(3))
+    # Lazy, and asserted as lazy. Every slice is a whole copy of the package, so returning
+    # them together costs deck size times slide count: forty slides of a thirty megabyte
+    # deck wanted more than a gigabyte. Checking only the slices would pass again the day
+    # somebody collects them into a list, which is what this used to do while its own
+    # docstring claimed one existed at a time.
+    produced = x.slice_pptx(deck(3))
+    if not isinstance(produced, types.GeneratorType):
+        problems.append("slice_pptx stopped being lazy: each slice is a full copy of the "
+                        "package, and holding all of them is deck size times slide count")
+    slices = list(produced)
     if len(slices) != 3:
         problems.append(f"a three slide deck sliced into {len(slices)} packages: without "
                         "one per slide, every claim in a deck is located to the file and "
@@ -929,7 +939,7 @@ def _extract_keeps_provenance():
         if len(z.namelist()) != 4:
             problems.append(f"slice {i} lost parts of the package: {z.namelist()}")
 
-    if x.slice_pptx(b"PPT legacy binary, not a zip"):
+    if list(x.slice_pptx(b"PPT legacy binary, not a zip")):
         problems.append("something that is not a package was sliced anyway: the caller "
                         "reads an empty list as its cue to convert the file whole")
 

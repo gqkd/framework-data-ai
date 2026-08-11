@@ -29,7 +29,8 @@ establishes how they must be used. Changing an entry requires a `DEC`.
   Mandatory field: this is where the value is.
 - **Banned synonyms:** the other names it gets called and that must not be used.
 - **Used in:** products and artifacts.
-- **Owner of the definition:** who decides if it changes.
+- **Origin of the definition:** the `ING-NNN` it came out of. A name here instead, or
+  beside it, means a person changed the wording by hand and owns the change.
 
 ## §Metrics
 
@@ -41,7 +42,7 @@ establishes how they must be used. Changing an entry requires a `DEC`.
 - **Time window:** days, calendar month, rolling.
 - **Exclusions:** test accounts, returns, cancellations, internal users.
 - **Do not confuse with:** the similar metric it has to be distinguished from.
-- **Owner of the definition:**
+- **Origin of the definition:** the `ING-NNN`, or a name if a person wrote it.
 - **Products that compute it:** if more than one, **they must use this formula**. If they
   cannot, they are two different metrics and need two entries with two different names.
 
@@ -56,7 +57,15 @@ establishes how they must be used. Changing an entry requires a `DEC`.
 - **Different formulas for the same metric in different products.** It is the typical
   failure of a complementary suite, and the most embarrassing one to explain to a
   customer comparing two dashboards.
-- **Adding an entry with no owner.** A definition nobody owns decays at the first
-  argument.
+- **Writing a name where the origin belongs.** Most entries come out of the corpus, and
+  the honest answer to "who decided this" is "nobody, it is what the customer's deck said".
+  An `ING-NNN` records that and stays checkable. A name put there because the field looked
+  like it wanted one attributes a definition to somebody who only transcribed it, and the
+  next reader treats the wording as a decision that was taken.
+- **A definition changed by hand with the origin left as it was.** The moment somebody
+  rewords an entry it stops being what the corpus said, and the `ING` alone now points at a
+  sentence that no longer matches. Put the name there. That is the whole signal this field
+  carries: a definition nobody chose decays at the first argument, and one somebody chose
+  has somebody to argue with.
 - **Treating it as descriptive.** If you record usages instead of establishing them, you
   have written a dictionary of disagreements.
