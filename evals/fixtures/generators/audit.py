@@ -3,11 +3,18 @@
 
 Recipe follows tests/selfcheck.py::_clean_repo, extended.
 """
+import re
 import shutil
 import sys
 from pathlib import Path
 
 BASE = Path(sys.argv[1])   # where to write; see evals/fixtures/make.py
+
+# Read from the registry rather than written as a literal. A `1` frozen here would turn
+# this fixture from silent into FW001 the day the framework moves, and the fixture whose
+# whole job is to report nothing would start reporting a version skew against itself.
+REGISTRY = Path(__file__).resolve().parents[3] / "schemas" / "artifact-types.yaml"
+VERSION = re.search(r"^version:\s*(\d+)", REGISTRY.read_text(encoding="utf-8"), re.M).group(1)
 
 
 def fm(**kw):
@@ -26,6 +33,12 @@ def write(root, files):
 # Dates are recent so LC002 does not fire.
 
 CLEAN = {
+    # The one line that makes this repository silent instead of merely correct. Without it
+    # the validator emits FW002, which is an `info` and is right to be one — but the README
+    # promises that anything reported here is invented, and a fixture that contradicts its
+    # own description teaches you to read past its output.
+    "framework.yaml": f"framework_version: {VERSION}\n",
+
     "OPEN.md": fm(schema="framework/open-register/v1", artifact_type="open-register",
                   lifecycle="living", status="active", owners="[maria]",
                   products="[atlas]",
@@ -145,7 +158,10 @@ Row counts match for 7 consecutive days.
 # body was edited after acceptance (git history shows it). Nothing reports this.
 
 DIRTY = {
-    "framework.yaml": "checks:\n  LC002: warn\n",
+    # Declared here too, so that every line this fixture produces is one of the fourteen
+    # above. An unaccounted finding in a fixture built to have exactly known defects is how
+    # you stop reading its output line by line and start reading the total.
+    "framework.yaml": f"framework_version: {VERSION}\nchecks:\n  LC002: warn\n",
     "CONTRIBUTING.md": "# Contributing\n\nOpen a PR against `main`. Run the tests.\n",
 
     # Hand-maintained, despite the names. Both are in `skip_files`, so the validator

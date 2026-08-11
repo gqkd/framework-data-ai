@@ -21,7 +21,7 @@ here.
 
 | Question | Source |
 |---|---|
-| **Where the code is** | `products/<p>/product.yaml` under `code:`, one entry per repository |
+| **Where the code is** | `products/<p>/product.yaml` under `code:`, one entry per repository. `path: .` is this one |
 | How the system is built | `products/<p>/ARC.md#current`, plus `PLATFORM.md` if there is one |
 | What shape it is going to have | `products/<p>/ARC.md#target` |
 | What is missing to get there | `products/<p>/ARC.md#delta`, ordered by `RMP.md` |
@@ -39,10 +39,13 @@ here.
 1. **Do not take decisions listed in `OPEN.md`.** If you need a choice that is listed
    there as open, stop and ask. Do not fill the gap with a plausible assumption: that is
    the main way an agent causes damage that is hard to trace back.
-2. **The code is not in this repository.** This repository holds the documents. `code:` in
-   each `product.yaml` says which repositories hold the code, what is in each one, and
-   where it is expected to be checked out. Read the code there before describing it: a
-   document is a claim about a system, and the system is somewhere else.
+2. **Find the code before describing it, and do not assume where it is.** `code:` in each
+   `product.yaml` says which repositories hold it, what is in each one, and where each is
+   expected to be checked out; `path: .` means this repository. Read it there before you
+   write about it: a document is a claim about a system, and the claim is checkable only
+   against the system.
+   If `code:` is absent, that is not "the code is here". It is nobody having written it
+   down. Say so and ask, rather than assuming the answer that happens to be convenient.
 3. **Do not implement a signal.** A line in `LOG`, a piece of feedback or an increment in
    `RMP` does not authorize you to build. What you implement is a `CHG` with
    `status: approved`.

@@ -47,6 +47,11 @@ platform:
 # `path` is where it is expected to be checked out, relative to this repository, so that an
 # agent can reach it. Relative and not absolute, because an absolute path is true on one
 # machine. Omit it for a repository nobody clones locally.
+#
+# When the documents live beside the code, write one entry with `path: .`. That case is the
+# reason this block is worth filling even when it looks like it says nothing: an agent that
+# finds no `code:` at all cannot tell "the code is right here" from "nobody wrote it down",
+# and those want opposite next moves. One line settles it.
 code:
   frontend:
     url: git@github.com:org/product-a-frontend.git

@@ -184,11 +184,18 @@ filling a document: the skill elicits what you know instead of inventing what it
   hand, and the template says so at the bottom where somebody will read it. Build it at the
   first `CHG`, not before: with a handful of artifacts the manifest updates in thirty
   seconds and a generator would be a factory built before the product.
-- **Versioning and distribution.** The plugin has a version; a project has no way yet to
-  declare which one it was written against, and no migration note when a rename lands.
-- **Two checks that need structured input.** `CHG001` and `CHG002` want the `ICG` routing as
-  a field on the `CHG` front matter rather than as prose in its body. They stay `off` until
-  the field exists, and the catalog says so in `blocked_by`.
+- **Distribution, not versioning.** A project can now say which framework it was written
+  against, and `FW001`/`FW002` tell "the rules moved" from "we did this wrong". What is
+  still missing is everything that would make the declaration binding: no tag, no
+  installable release, no pinned commit, no migration note. A repository can declare
+  version 1 and run version 2, get a warning, and still be checked by the rules of 2.
+- **A `CHG` can step around its own checks.** `CHG001` and `CHG002` read the routing from
+  the `ICG` that the `CHG` names in `icg`, and the schema does not require that field. So a
+  change contract with no `icg` clears both, silently. The asymmetry is what makes it worth
+  fixing: the check questions whoever filled the field in and says nothing to whoever left
+  it out, which is backwards, and the result is not silence but a green report. The rule to
+  write is a warning whenever `icg` is absent and an error from `approved` onwards — the
+  point at which somebody is authorised to build.
 
 The rule that protects the framework applies to the skills too: **every skill must save more
 time than it costs to maintain, this week.** A skill is code, and like all code it ages and
