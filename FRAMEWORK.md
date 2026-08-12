@@ -136,6 +136,7 @@ repo/
     │   ├── RB.md                runbook + SLO
     │   ├── LOG.md               append-only signal log
     │   ├── contracts/           DC-NNN per dataset or interface
+    │   ├── cycles/              ICG-NNN, one impact classification per cycle
     │   ├── changes/             CHG-NNN
     │   └── releases/            REL-NNN.md + RLM-NNN.yaml + EVR-NNN.md
     ├── product-b/
