@@ -309,14 +309,28 @@ def group_corpus(rows: list[tuple[str, int, int]]) -> list[dict]:
 
 
 def report_corpus(root: Path, as_json: bool = False) -> int:
-    """`--find`: say where the corpus is, or say that somebody has to be asked."""
+    """`--find`: say where the corpus is, or say that somebody has to be asked.
+
+    Ranked on the business formats, and decided on them too -- but only while there are
+    any. A handover is sometimes a folder of `.md` and `.txt`: a requirements analysis
+    exported out of a wiki, a transcript, notes somebody pasted. Counting those as
+    candidates and then answering `none` reported the folder and denied it in the same
+    breath, and `none` is what the skill is told not to scaffold on: it asks, and the answer
+    is "they are in the folder you just listed".
+
+    So the notes are a fallback and not a peer. A folder of PDFs and decks is a corpus and a
+    folder of `.md` might be anything, which is why they never outrank a business document
+    and never join the set when one exists somewhere else.
+    """
     groups = group_corpus(find_corpus(root))
-    strong = [g for g in groups if g["documents"]]
+    strong = [g for g in groups if g["documents"]] or [g for g in groups if g["notes"]]
+    notes_only = bool(strong) and not any(g["documents"] for g in strong)
     verdict = "one" if len(strong) == 1 else ("none" if not strong else "several")
 
     if as_json:
         print(json.dumps({"root": str(root), "verdict": verdict,
                           "corpus": strong[0]["path"] if verdict == "one" else None,
+                          "notes_only": notes_only,
                           "candidates": groups}, indent=2, ensure_ascii=False))
         return 0 if verdict == "one" else 1
 
@@ -339,8 +353,14 @@ def report_corpus(root: Path, as_json: bool = False) -> int:
     print()
 
     if verdict == "none":
-        print("Nothing here looks like a business document. Ask where they are.")
+        print("Nothing here looks like a document somebody handed over. Ask where they are.")
         return 1
+    if notes_only:
+        print("No business format anywhere: what is here is plain text and markdown. That "
+              "is a legitimate handover -- an analysis exported from a wiki, a transcript, "
+              "pasted notes -- and it is also what a folder of somebody's working notes "
+              "looks like. Say which you think it is when you report it.")
+        print()
     if verdict == "one":
         print(f"One candidate: {strong[0]['path']}")
         if len(strong[0]["children"]) > 1:

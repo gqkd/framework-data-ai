@@ -72,6 +72,12 @@ one is current is not something a file count can answer. Getting it wrong here d
 produce an error, it produces a repository built on a superseded offer, and nothing
 downstream will contradict it.
 
+When the answer carries `notes_only`, there is no deck, no PDF and no spreadsheet anywhere:
+what was handed over is plain text and markdown. That happens — an analysis exported from a
+wiki, a transcript, pasted notes — and it looks exactly like a folder of somebody's own
+working notes. Say which you think it is in the one line where you name the folder, and let
+the user correct you before you ingest it.
+
 On `none`: an empty ingestion and a corpus you failed to find leave the same repository
 behind. Scaffolding first and asking later means the answer arrives after the structure has
 been justified by the absence.
