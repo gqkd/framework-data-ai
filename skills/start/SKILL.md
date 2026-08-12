@@ -43,7 +43,38 @@ it actually solves → what happens if it does not*. Call it by that name in the
 Faking a forward discovery when the answer was already promised produces documentation that
 looks true, and it is the fastest way to lose trust in the whole structure.
 
-## Step 2 · Scaffolding
+## Step 2 · Find the corpus before you build anything around it
+
+The user drops the client's documents somewhere in the project and says to start. Where is
+not knowable in advance: `corpus`, `docs`, `documenti`, a folder named after the customer,
+or loose at the root. **Do not guess and do not glob.** Ask the extractor:
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT:?unset: point it at your framework-data-ai checkout}/skills/start/scripts/extract.py" \
+    --find <project>
+```
+
+It counts documents rather than matching folder names, and it does not count the ones this
+framework wrote: front matter is what separates a client's `.md` from an artifact, and a
+corpus dropped at the root beside `AGENTS.md` is exactly the case that breaks a rule based
+on location. `.` in the output means the files are loose at the project root.
+
+| What it says | What you do |
+|---|---|
+| One candidate | say which folder you are using, in one line, and go on |
+| More than one | **ask.** Do not take the largest |
+| No documents | **ask.** Do not scaffold |
+
+On more than one: the second folder is very often an older version of the same deck, and
+which one is current is not something a file count can answer. Getting it wrong here does
+not produce an error, it produces a repository built on a superseded offer, and nothing
+downstream will contradict it.
+
+On none: an empty ingestion and a corpus you failed to find leave the same repository
+behind. Scaffolding first and asking later means the answer arrives after the structure has
+been justified by the absence.
+
+## Step 3 · Scaffolding
 
 Create the day one set, and nothing else. The framework's own rule is that an artifact
 appears when the thing it documents exists, not before.
@@ -56,9 +87,10 @@ _meta/                README.md, ADOPTION.md, corpus/<p>/, extract/
 ```
 
 **`_meta/` holds what is about the framework rather than about the product**, and the root
-holds documents only. Move the corpus into `_meta/corpus/<product>/` as your first act: it
-is the one thing in the repository that cannot be regenerated, and it belongs in one place
-rather than in two conventions. `_meta/extract/` is where the extractor writes, and it can
+holds documents only. Move the folder you identified in step 2 into `_meta/corpus/<product>/`
+before anything else, and say that you moved it and from where. It is the one thing in the
+repository that cannot be regenerated, so it moves rather than being copied and left in two
+places, and it goes in one convention rather than the two this framework used to have. `_meta/extract/` is where the extractor writes, and it can
 be deleted and rebuilt at any time.
 
 Write `_meta/README.md`, three lines, saying exactly that:
@@ -126,7 +158,7 @@ is an `OPEN.md` entry, where somebody works it, and a comment in a YAML file is 
 parsed nor worked. The same goes for `product.yaml`. Leaving `framework_version: 1` alone
 on a line is the correct output of this step.
 
-## Step 3 · Ingest the corpus
+## Step 4 · Ingest the corpus
 
 Only if there is one. See `references/ingest-bulk.md` for the procedure and
 `scripts/extract.py` for the extractor.
@@ -146,7 +178,7 @@ them all in one go. They go in `ING.md#contradictions`. If two versions of the s
 went to two different customers, that is not a technical problem, it is a commitment to
 renegotiate, and sooner is cheaper.
 
-## Step 4 · Seed `OPEN.md`
+## Step 5 · Seed `OPEN.md`
 
 This is the step that makes the rest of the project possible, and the one most likely to be
 skipped because it feels like admitting ignorance.

@@ -13,6 +13,7 @@ it is drawn. Three boxes with arrows saying "one single platform" produce no
 extractable text at all and are a tenancy constraint.
 
 Usage:
+  python3 extract.py --find .                       where is the corpus
   python3 extract.py <file-or-folder> [...] -o out/
   python3 extract.py _meta/corpus/<p> -o _meta/extract/<p> --jsonl
   python3 extract.py corpus/ -o out/ --min-chars 40 threshold for "text-poor page"
@@ -149,6 +150,84 @@ def anydoc_ready() -> str:
         _READY = "" if (os.environ.get("ANYDOC_BIN") or shutil.which("anydoc")) \
                  else ANYDOC_INSTALL
     return _READY
+
+
+def wrote_by_framework(path: Path) -> bool:
+    """A Markdown file this framework produced, rather than one the business handed over.
+
+    Both are `.md` and both sit in the project. The front matter is what separates them, and
+    it has to be read rather than guessed from the location: a corpus dropped at the root
+    next to `AGENTS.md` is exactly the case this is for.
+    """
+    try:
+        head = path.read_text(encoding="utf-8", errors="replace")[:400]
+    except OSError:
+        return False
+    return head.startswith("---") and "schema: framework/" in head
+
+
+def find_corpus(root: Path) -> list[tuple[str, int, int]]:
+    """Directories holding documents somebody handed over, most likely first.
+
+    The skill has to know where the corpus is before it can move it, and the answer is not
+    knowable from here: people drop client files in `corpus`, in `docs`, in `documenti`, in
+    a folder named after the customer, or loose at the project root. Guessing by name would
+    work for the first three and fail silently on the others, so this counts documents
+    instead: a directory holding files in a business format, none of which this framework
+    wrote.
+
+    Returns (relative directory, business documents, plain notes). Ranked by the first
+    count, because a folder of PDFs and decks is a corpus and a folder of `.md` files might
+    be anything.
+    """
+    found: dict[str, list[int]] = {}
+    for p in sorted(root.rglob("*")):
+        suffix = p.suffix.lower()
+        if p.is_dir() or suffix not in SUPPORTED:
+            continue
+        parts = p.relative_to(root).parts
+        if any(x.startswith(".") for x in parts):
+            continue
+        if any(x in {"node_modules", "__pycache__", "build", "render", "_conv"}
+               for x in parts[:-1]):
+            continue
+        rel_dir = "/".join(parts[:-1])
+        # This framework's own output, not somebody's documents. Named as a path so a
+        # project keeping an ETL step in `extract/` is not quietly skipped over.
+        if rel_dir == "_meta/extract" or rel_dir.startswith("_meta/extract/"):
+            continue
+        if suffix in {".md", ".txt"} and wrote_by_framework(p):
+            continue
+        counts = found.setdefault(rel_dir or ".", [0, 0])
+        counts[0 if suffix in ANYDOC_FORMAT else 1] += 1
+    return sorted(((d, b, n) for d, (b, n) in found.items()),
+                  key=lambda r: (-r[1], -r[2], r[0]))
+
+
+def report_corpus(root: Path) -> int:
+    """`--find`: say where the corpus is, or say that somebody has to be asked."""
+    rows = find_corpus(root)
+    if not rows:
+        print(f"No business documents under {root}.")
+        print("Ask where they are. Do not scaffold a repository around a corpus you have "
+              "not found: an empty ingestion looks the same as a corpus with nothing in it.")
+        return 1
+    print(f"{_n(len(rows), 'candidate directory', 'candidate directories')} under {root}:\n")
+    for d, business, notes in rows:
+        detail = _n(business, "business document", "business documents")
+        if notes:
+            detail += f", {_n(notes, 'plain note', 'plain notes')}"
+        print(f"  {d:<40} {detail}")
+    print()
+    strong = [r for r in rows if r[1]]
+    if len(strong) == 1:
+        print(f"One candidate: {strong[0][0]}")
+        return 0
+    print("More than one candidate. Ask which of these holds the documents the business "
+          "handed over, and do not pick the largest: the other one is often an earlier "
+          "version of the same deck, and which is current is not something a file count "
+          "can tell you.")
+    return 1
 
 
 def is_deck(pdfinfo_meta: str) -> bool:
@@ -644,6 +723,10 @@ def main() -> int:
 
     ap = argparse.ArgumentParser(description="Extract a business corpus, preserving provenance")
     ap.add_argument("inputs", nargs="+", type=Path)
+    ap.add_argument("--find", action="store_true",
+                    help="do not extract: say which directory under the given path holds "
+                         "the documents the business handed over, or say that somebody has "
+                         "to be asked")
     ap.add_argument("-o", "--out", type=Path, default=Path("_meta/extract"),
                     help="output DIRECTORY, created if absent")
     ap.add_argument("--jsonl", action="store_true")
@@ -653,6 +736,9 @@ def main() -> int:
                          ".txt is a short claim, not a suspect one, and is kept whole")
     ap.add_argument("--no-render", action="store_true")
     args = ap.parse_args()
+
+    if args.find:
+        return report_corpus(args.inputs[0])
 
     files: list[Path] = []
     for i in args.inputs:

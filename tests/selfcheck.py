@@ -846,6 +846,64 @@ def _extract_reports_its_gaps():
     return problems
 
 
+@check("the corpus is found by what is in a folder, not by what the folder is called")
+def _corpus_is_found_by_content():
+    # `start` has to know where the client's documents are before it can move them, and the
+    # answer is not knowable in advance: corpus, docs, documenti, a folder named after the
+    # customer, or loose at the root. Matching names works for the first two and fails
+    # silently on the rest, and a silent failure here builds a repository around a corpus
+    # nobody read.
+    x = _load(EXTRACT, "extract")
+    problems = []
+
+    def build(tmp: Path, files: dict[str, str]):
+        for rel, text in files.items():
+            f = tmp / rel
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_text(text, encoding="utf-8")
+
+    artifact = ("---\nschema: framework/glossary/v1\nartifact_type: glossary\n"
+                "lifecycle: living\nstatus: active\nowners: [o]\n"
+                "created: 2026-01-01 09:00\n---\n\n# Glossary\n")
+
+    cases = [
+        ("a folder nobody would have guessed the name of",
+         {"Materiale Cliente 2026/offerta.pdf": "%PDF-1.4\n",
+          "Materiale Cliente 2026/note.txt": "appunti"},
+         [("Materiale Cliente 2026", 1, 1)]),
+        # The case a location rule cannot survive: the corpus sits beside the artifacts.
+        ("a corpus loose at the root of a scaffolded repository",
+         {"GLOSSARY.md": artifact, "OPEN.md": artifact,
+          "products/alpha/PBR.md": artifact, "deck.pdf": "%PDF-1.4\n"},
+         [(".", 1, 0)]),
+        # Output of a previous run. Counting it would make every second run find a corpus.
+        ("the extractor's own output",
+         {"_meta/corpus/alpha/deck.pdf": "%PDF-1.4\n",
+          "_meta/extract/extract.md": "# Business corpus extraction\n",
+          "_meta/extract/alpha/extract.md": "# Business corpus extraction\n"},
+         [("_meta/corpus/alpha", 1, 0)]),
+        ("a project with code and no documents", {"src/app.py": "x = 1\n"}, []),
+    ]
+    for what, files, want in cases:
+        with tempfile.TemporaryDirectory() as tmp:
+            build(Path(tmp), files)
+            got = x.find_corpus(Path(tmp))
+        if got != want:
+            problems.append(f"{what}: found {got}, expected {want}")
+
+    # Two folders of documents is the one case that has to stop and ask. The runner-up is
+    # usually last quarter's version of the same deck, and which is current is not a thing
+    # a file count knows.
+    with tempfile.TemporaryDirectory() as tmp:
+        build(Path(tmp), {"corpus/a.pdf": "%PDF-1.4\n", "corpus/b.pdf": "%PDF-1.4\n",
+                          "vecchi/c.pptx": "PK\x03\x04"})
+        strong = [r for r in x.find_corpus(Path(tmp)) if r[1]]
+    if len(strong) != 2:
+        problems.append(f"two folders of documents came back as {len(strong)} candidate(s): "
+                        "the skill decides whether to ask on this count")
+    return problems
+
+
 @check("an exclusion names a path when a bare name would be too blunt")
 def _skips_are_scoped():
     # `_meta/extract` holds the extractor's output and no source document. Written as
