@@ -88,7 +88,14 @@ CLEAN = {
         "products: [atlas]\n"
         "owners: [maria]\n"
         "created: 2026-01-01\n"
-        "last_review: 2026-08-01 09:00\n"),
+        "last_review: 2026-08-01 09:00\n"
+        # Declared, so the commit the ARC attests resolves to a repository. Without it the
+        # attestation names something no map knows and VER001 is right to say so.
+        "code:\n"
+        "  backend:\n"
+        "    url: git@github.com:org/atlas-backend.git\n"
+        "    contains: the scoring job and the dbt models\n"
+        "    release_relevant: 'true'\n"),
     "products/atlas/PBR.md": fm(
         schema="framework/product-brief/v1", artifact_type="product-brief",
         lifecycle="living", status="active", products="[atlas]", owners="[maria]",
@@ -97,7 +104,7 @@ CLEAN = {
     "products/atlas/ARC.md": fm(
         schema="framework/architecture/v1", artifact_type="architecture",
         lifecycle="living", status="active", products="[atlas]", owners="[maria]",
-        verified_against="9f2ab41", created="2026-03-01",
+        verified_code="\n  product.backend: 9f2ab41", created="2026-03-01",
         last_review="2026-08-01 09:00")
     + """# Atlas - architecture
 
@@ -190,6 +197,8 @@ Row counts match for 7 consecutive days.
 # 14. XP002  data contract consumer `orion` matches no product
 # 15. CHG003 CHG-002 approved and naming no ICG, so CHG001 and CHG002 pass
 #            without looking at it
+# 16. VER001 ARC attests `product.backend` and this manifest declares no `code:`,
+#            so the commit points at a repository nothing here can resolve
 #
 # Plus a trap the validator CANNOT see: DEC-002 is an accepted immutable whose
 # body was edited after acceptance (git history shows it). Nothing reports this.
@@ -329,7 +338,7 @@ each decision still matters, which no generator can produce.
     "products/atlas/ARC.md": fm(
         schema="framework/architecture/v1", artifact_type="architecture-doc",
         lifecycle="living", status="active", products="[atlas]", owners="[maria]",
-        verified_against="9f2ab41", created="2026-03-01",
+        verified_code="\n  product.backend: 9f2ab41", created="2026-03-01",
         last_review="2026-08-01 09:00")
     + """# Atlas - architecture
 

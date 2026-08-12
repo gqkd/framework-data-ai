@@ -65,7 +65,8 @@ python3 tools/hash_evp.py # prints sha256 of products/atlas/EVP.md
 
 - `evp_hash` on an `EVR` is the **sha256 of the whole `products/<p>/EVP.md` file** as it
   stood when the release candidate was cut: `sha256sum products/atlas/EVP.md`.
-- `verified_against` is the full 40-char git commit sha the evaluation ran on.
+- `frozen_at` is the commit of this repository holding the frozen EVP; `verified_code`
+  carries the commits of the code the evaluation ran on, one per repository.
 - Release artifacts are numbered per product and share the number: `EVR-007` /
   `REL-007` / `RLM-007` are the same release.
 """
@@ -224,6 +225,12 @@ one_liner: Drafts the first reply to a support ticket, with citations.
 owners: [g.quaglia]
 created: 2026-01-12
 last_review: 2026-07-28 17:40
+
+code:
+  backend:
+    url: git@github.com:org/atlas-backend.git
+    contains: the service and its models
+    release_relevant: 'true'
 
 stage:
   block: C
@@ -424,7 +431,9 @@ created: 2026-06-13
 derives_from: [EVP]
 evp_version: 2.0.0
 evp_hash: d1f0a9c73b5e28460f1c9ab3d7e5620481cf3a2b96d0e7148c53fba209e6d417
-verified_against: 1b9f3c0d2e7a45f8c6b1d0e9a3f7c2b8d4e6a10f
+frozen_at: 1b9f3c0d2e7a45f8c6b1d0e9a3f7c2b8d4e6a10f
+verified_code:
+  product.backend: 1b9f3c0d2e7a45f8c6b1d0e9a3f7c2b8d4e6a10f
 classification: internal
 ---
 
@@ -572,13 +581,15 @@ created: 2026-08-04
 derives_from: [EVP, CHG-041, CHG-042]
 evp_version: 2.0.0
 evp_hash: {HASH}
-verified_against: {COMMIT}
+frozen_at: {COMMIT}
+verified_code:
+  product.backend: {COMMIT}
 classification: internal
 ---
 
 # EVR-007 · Evaluation report
 
-Release candidate `v1.7.0-rc.2`, built from the commit in `verified_against`.
+Release candidate `v1.7.0-rc.2`, built from the commits in `verified_code`.
 
 ## Version evaluated
 

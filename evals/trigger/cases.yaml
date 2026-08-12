@@ -310,7 +310,7 @@ cases:
     know what it wants from me
   expect: audit
 - prompt: the json schema at schemas/framework/architecture/v1.json is too permissive, add a pattern constraint
-    so verified_against has to look like a git sha
+    so verified_code has to look like a git sha
   expect: none
   why: editing the framework's own schema
 - prompt: the nightly batch failed again on a malformed row and nobody got scores yesterday, write it

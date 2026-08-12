@@ -179,7 +179,7 @@ scan:
   # validator reads its own config as an artifact and reports it for having no front
   # matter, which is the kind of first impression a tool does not recover from.
   skip_files: [README.md, FRAMEWORK.md, SKILLS.md, INDEX.md, TRACEABILITY.md,
-               framework.yaml]
+               framework.yaml, product.index.yaml]
 
 # ON `sections`. A value here is the id of a marker in the body, not a heading:
 #
@@ -313,7 +313,7 @@ types:
     lifecycle: living
     status: [active, draft]
     # The shared substrate. Unlike ARC it is born on day one, before the code exists, so
-    # it cannot require `verified_against`.
+    # it cannot require `verified_code`.
     #
     # It carries `code:` for the same reason `product.yaml` does, and for one more. A
     # repository that serves several products -- the access layer two of them sign in
@@ -359,11 +359,10 @@ types:
     # recorded where the code is".
     #
     # `release_relevant` marks a repository whose commit an evaluation is about. It is
-    # optional and nothing reads it yet: `verified_against` still carries one hash, which
-    # cannot mean what it says once the code is split, and redesigning that field before
-    # any project has an `ARC` or an `EVR` would be guessing at the shape. The flag is here
-    # now because `code:` blocks are being written now, and adding it later means going
-    # back through every manifest.
+    # `release_relevant` marks a repository whose commit an evaluation is about, and
+    # `VER002` reads it: an `ARC` or an `EVR` that attests some of the release-relevant
+    # repositories and not all of them is reported, because a partial attestation reads
+    # exactly like a complete one.
     maps:
       code:
         keys: "^[a-z][a-z0-9._-]*$"
@@ -512,13 +511,27 @@ types:
     # MVA is not a fourth section: it is what §current is at the end of the MVP, recorded
     # as designed in the `SD`, and the target is not the MVA plus more.
     sections: [current, target, delta]
-    # `verified_against` is a commit, and at design time there is no commit to verify
+    # `verified_code` is a commit map, and at design time there is no commit to verify
     # against: demanding it from `draft` would forbid designing before implementing,
     # which is the order the framework prescribes. From `active` it is mandatory again,
     # because an architecture declared current and unverified describes what somebody
     # hopes was built, and at a glance it is indistinguishable from one that describes
     # the real system.
-    required_if_active: [verified_against]
+    required_if_active: [verified_code]
+    # ON `verified_code`. One field per repository, keyed the way `code:` is keyed and
+    # qualified by where that key lives, because a product and the platform may each have a
+    # `backend` and an attestation must not be ambiguous about which one it measured.
+    #
+    # It replaces `verified_against`, which carried one hash and was being asked two
+    # different questions. `skills/release/SKILL.md` had both, twenty lines apart: line 45
+    # recovers the frozen plan with `git show <verified_against>:products/<p>/EVP.md`, which
+    # is a commit of the documentation, and line 66 said it "names the commit the evaluation
+    # actually ran on", which is a commit of the code. One repository made those the same
+    # thing. Five do not.
+    maps:
+      verified_code:
+        keys: "^(product|platform)\\.[a-z][a-z0-9._-]*$"
+        scalar: "^([0-9a-f]{7,40}|COMMIT_HASH)$"
 
   runbook:
     id: RB
@@ -539,10 +552,30 @@ types:
     path: products/<p>/releases/EVR-NNN.md
     lifecycle: immutable
     status: [active]
-    # The three fields that make an evaluation report an evidence document rather than a
+    # The four fields that make an evaluation report an evidence document rather than a
     # claim: which version of the plan it was measured against, the hash proving that
-    # version was frozen before the results were seen, and the commit it ran on.
-    required: [evp_version, evp_hash, verified_against]
+    # version was frozen before the results were seen, the commit of *this* repository that
+    # holds that frozen plan, and the commits of the code that was measured.
+    #
+    # `frozen_at` and `verified_code` were one field. They answer different questions and
+    # only looked like one question while the documents and the code shared a repository:
+    # `git show` needs the first and the attestation is the second.
+    required: [evp_version, evp_hash, frozen_at, verified_code]
+    # ON `verified_code`. One field per repository, keyed the way `code:` is keyed and
+    # qualified by where that key lives, because a product and the platform may each have a
+    # `backend` and an attestation must not be ambiguous about which one it measured.
+    #
+    # It replaces `verified_against`, which carried one hash and was being asked two
+    # different questions. `skills/release/SKILL.md` had both, twenty lines apart: line 45
+    # recovers the frozen plan with `git show <verified_against>:products/<p>/EVP.md`, which
+    # is a commit of the documentation, and line 66 said it "names the commit the evaluation
+    # actually ran on", which is a commit of the code. One repository made those the same
+    # thing. Five do not.
+    maps:
+      verified_code:
+        keys: "^(product|platform)\\.[a-z][a-z0-9._-]*$"
+        scalar: "^([0-9a-f]{7,40}|COMMIT_HASH)$"
+
 
   release-note:
     id: REL

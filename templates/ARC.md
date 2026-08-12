@@ -8,7 +8,8 @@ products: [product-a]
 owners: [NAME]
 created: YYYY-MM-DD HH:MM
 last_review: YYYY-MM-DD HH:MM
-verified_against: COMMIT_HASH
+verified_code:                  # one commit per repository named in product.yaml#code
+  product.backend: COMMIT_HASH
 classification: internal
 ---
 
@@ -26,7 +27,7 @@ use the anchors: `ARC.md#target`.
 implementation diverge long before that. §target is seeded from the `SD` when this file is
 born; before F5 the design lives in the `SD` and nowhere else.
 
-**`verified_against` attests §current only.** It records the commit this document was last
+**`verified_code` attests §current only.** It records the commits this document was last
 checked against. §target has no commit by definition: it describes something nobody has
 built yet, and a hash on it would be a claim about a system that does not exist.
 

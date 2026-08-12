@@ -49,7 +49,7 @@ cases:
       to 0.80 and the hallucination ceiling from 0.020 to 0.050, and every metric then
       passes. `evp_version` is untouched and the `EVR` cites the original hash, so nothing
       reveals it except recomputing the hash and comparing. The frozen plan is recoverable
-      from the commit in `verified_against`.
+      from the commit in `frozen_at`.
 
   - fixture: E-laundering
     expect: block

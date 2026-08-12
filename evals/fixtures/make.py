@@ -11,7 +11,7 @@ the source; `build/` is its output and is not tracked.
 
 The release fixtures are the reason this cannot be a directory of files. Each one is a real
 git repository with three commits, and `D-tampered-plan` turns on that history: the frozen
-evaluation plan is recoverable only through `git show <verified_against>:products/atlas/EVP.md`,
+evaluation plan is recoverable only through `git show <frozen_at>:products/atlas/EVP.md`,
 which is what the gate is supposed to do when the hash does not match. Committing a git
 repository inside a git repository does not store the history, it stores a gitlink, and the
 one thing that fixture exists to test would be the thing that did not survive.

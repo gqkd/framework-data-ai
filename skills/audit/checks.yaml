@@ -171,6 +171,26 @@ checks:
       somebody was hoping for. The two fields they need live in `entries:` now, and their
       absence is a finding rather than a silence.
 
+  # ── Attestation ────────────────────────────────────────────────────────────
+  VER001:
+    level: warn
+    title: verified_code names a repository no code map declares
+    prevents: >
+      An attestation pointing at a repository this project cannot resolve. Either nobody
+      recorded where that code lives, so the commit cannot be checked, or the key is a typo
+      and a repository that really was measured has no entry -- and both read as a complete
+      attestation.
+
+  VER002:
+    level: warn
+    title: a release relevant repository carries no commit in verified_code
+    prevents: >
+      An attestation that covers part of the system and reads as covering all of it. That
+      is the failure the single `verified_against` hash had once the code was split across
+      repositories, and it is the whole reason the field became a map. It fires only against
+      repositories that declared themselves `release_relevant`, so a project that has not
+      marked any is not measured against a list it never wrote.
+
   # ── Across products ────────────────────────────────────────────────────────
   XP001:
     level: warn

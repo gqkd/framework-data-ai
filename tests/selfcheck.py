@@ -652,7 +652,8 @@ def _maps_are_constrained():
             # of nickname meant the check broke the first time a map keyed its rows on
             # identifiers instead.
             pattern = rule.get("keys")
-            candidates = ["SIG-001", "OD-001", "frontend", "query-engine"]
+            candidates = ["SIG-001", "OD-001", "frontend", "query-engine",
+                          "product.backend", "platform.access"]
             if pattern:
                 accepted = [k for k in candidates if re.match(pattern, k)]
                 if not accepted:
@@ -669,6 +670,11 @@ def _maps_are_constrained():
                 ok_val, bad_vals = rule["one_of"][0], ["not-a-real-outcome"]
             elif "any_of" in rule:
                 ok_val, bad_vals = [rule["any_of"][0]], [["not-a-real-outcome"], []]
+            elif "scalar" in rule:
+                # One constrained string per key. The commit map needs it: a hash is a
+                # value, not a record.
+                ok_val = "9a734ce" if rule["scalar"] else "anything"
+                bad_vals = ["", "not a commit at all"] if rule["scalar"] else [""]
             elif "fields" in rule:
                 req = list(rule["fields"]["required"])
                 enums = rule["fields"].get("enums") or {}
@@ -694,6 +700,13 @@ def _maps_are_constrained():
                     "owners": ["someone"], "created": "2026-01-01"}
             if spec.get("products") == "exactly-one":
                 base["products"] = ["alpha"]
+            # The type's own required fields, or the document under test fails on those
+            # instead of on the map, and the check stops being about the map.
+            for f2 in spec.get("required", []):
+                if f2 not in base and f2 not in spec["maps"]:
+                    base[f2] = "something"
+            for f2, values in (spec.get("enums") or {}).items():
+                base[f2] = values[0]
             for f2, r2 in spec["maps"].items():
                 if not r2.get("required"):
                     continue
@@ -973,6 +986,134 @@ def _skips_are_scoped():
                 f"{what} ({'/'.join(parts)}) was {'not ' if want else ''}excluded"
                 + ("" if want else ": an exclusion that protects the framework's "
                    "convenience is paid for by everyone using it"))
+    return problems
+
+
+@check("an attestation names repositories that exist, and leaves none of them out")
+def _attestation_is_complete():
+    # `verified_against` was one hash answering two questions, and the release skill had
+    # both twenty lines apart: `git show <verified_against>:.../EVP.md` needs a commit of
+    # this repository, and "the commit the evaluation actually ran on" is a commit of the
+    # code. One repository made those the same thing. Five do not.
+    def manifest(code: str) -> str:
+        return ("schema: framework/product-manifest/v1\n"
+                "artifact_type: product-manifest\nlifecycle: living\nstatus: active\n"
+                "products: [alpha]\nname: Alpha\none_liner: A thing.\n"
+                "owners: [o]\ncreated: 2026-01-01 09:00\nlast_review: 2026-01-01 09:00\n"
+                "stage:\n  phase: F5\n  block: B\n" + code)
+
+    def arc(attested: str) -> str:
+        return ("---\nschema: framework/architecture/v1\nartifact_type: architecture\n"
+                "lifecycle: living\nstatus: active\nproducts: [alpha]\nowners: [o]\n"
+                "created: 2026-01-01 09:00\nlast_review: 2026-01-01 09:00\n"
+                + attested + "---\n\n# Alpha\n\n"
+                "<!-- section: current -->\n## Current\n\n"
+                "<!-- section: target -->\n## Target\n\n"
+                "<!-- section: delta -->\n## Delta\n")
+
+    def codes(files):
+        with tempfile.TemporaryDirectory() as tmp:
+            for rel, text in files.items():
+                f = Path(tmp) / rel
+                f.parent.mkdir(parents=True, exist_ok=True)
+                f.write_text(text)
+            r = subprocess.run([sys.executable, str(VALIDATE), "--root", tmp, "--json",
+                                "--stale-days", "36500"], capture_output=True, text=True)
+            if r.returncode not in (0, 1) or not r.stdout.strip():
+                return None
+            return {f["code"] for f in json.loads(r.stdout)["findings"]}
+
+    two = ("code:\n  backend:\n    url: git@e.com:o/be.git\n    contains: api\n"
+           "    release_relevant: 'true'\n"
+           "  frontend:\n    url: git@e.com:o/fe.git\n    contains: ui\n"
+           "    release_relevant: 'true'\n")
+    problems = []
+    for attested, want, what in [
+        ("verified_code:\n  product.backend: 9a734ce\n  product.frontend: 2b8d5a1\n",
+         set(), "both release-relevant repositories attested"),
+        ("verified_code:\n  product.backend: 9a734ce\n",
+         {"VER002"}, "one release-relevant repository left out"),
+        ("verified_code:\n  product.backend: 9a734ce\n  product.database: 711dc90\n",
+         {"VER001", "VER002"}, "a repository no code map declares"),
+    ]:
+        got = codes({"products/alpha/product.yaml": manifest(two),
+                     "products/alpha/ARC.md": arc(attested)})
+        if got is None:
+            problems.append(f"the validator crashed on {what}")
+        elif {c for c in got if c.startswith("VER")} != want:
+            problems.append(
+                f"{what}: reported {sorted(c for c in got if c.startswith('VER'))}, "
+                f"expected {sorted(want)}"
+                + ("" if want else ". A complete attestation must be silent")
+                + (". An attestation covering part of the system reads as covering all of "
+                   "it, which is the failure a single hash had" if "VER002" in want else ""))
+
+    # Nothing declared release-relevant means nothing is owed: the framework does not get to
+    # invent the standard it then enforces.
+    one = "code:\n  backend:\n    url: git@e.com:o/be.git\n    contains: api\n"
+    got = codes({"products/alpha/product.yaml": manifest(one),
+                 "products/alpha/ARC.md": arc("verified_code:\n  product.backend: 9a734ce\n")})
+    if got and "VER002" in got:
+        problems.append("a project that marked no repository `release_relevant` was told its "
+                        "attestation was incomplete against a list it never wrote")
+    return problems
+
+
+@check("the derived view of a product is generated, and its drift is reported")
+def _manifest_is_derived():
+    # `product.yaml` carried sections marked GENERATED and kept by hand, so "which decisions
+    # are open" had two answers: the register, and a list beside it. The stale one is what an
+    # agent reads first, because AGENTS.md sends it to the manifest.
+    #
+    # A separate generated file rather than sections rewritten inside `product.yaml`, which
+    # is authoritative and full of comments carrying the reasoning behind each field.
+    base = {
+        "framework.yaml": f"framework_version: {REGISTRY['version']}\n",
+        "products/alpha/product.yaml": (
+            "schema: framework/product-manifest/v1\n"
+            "artifact_type: product-manifest\nlifecycle: living\nstatus: active\n"
+            "products: [alpha]\nname: Alpha\none_liner: A thing.\n"
+            "owners: [o]\ncreated: 2026-01-01 09:00\nlast_review: 2026-01-01 09:00\n"
+            "stage:\n  phase: F1\n  block: A\n"),
+        "OPEN.md": ("---\nschema: framework/open-register/v1\n"
+                    "artifact_type: open-register\nlifecycle: living\nstatus: active\n"
+                    "owners: [o]\ncreated: 2026-01-01 09:00\n"
+                    "last_review: 2026-01-01 09:00\n"
+                    "entries:\n  OD-001:\n    status: open\n    cost_to_reverse: low\n"
+                    "  OD-002:\n    status: decided\n    cost_to_reverse: low\n"
+                    "    closed_by: DEC-001\n---\n\n# Open\n"),
+    }
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        for rel, text in base.items():
+            f = Path(tmp) / rel
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_text(text)
+        out = Path(tmp) / "products" / "alpha" / "product.index.yaml"
+
+        r = subprocess.run([sys.executable, str(VALIDATE), "--root", tmp, "--emit-index",
+                            "--stale-days", "36500"], capture_output=True, text=True)
+        if not out.exists():
+            return [f"--emit-index wrote no derived view: {r.stdout.strip()[-160:]}"]
+        text = out.read_text()
+        if GENERATED_MARK not in text:
+            problems.append("the derived view carries no generated marker, so nothing "
+                            "protects a hand-written file at that path from being replaced")
+        if "OD-001" not in text or "OD-002" in text:
+            problems.append("`open_decisions` is not what the register says is open: "
+                            f"{[l for l in text.splitlines() if 'open_decisions' in l]}")
+
+        # Drift has to be reported without writing, or CI cannot tell a stale file from a
+        # fresh one, and a generated file nobody regenerates is worse than a hand-written
+        # one because everybody assumes something keeps it true.
+        out.write_text(text.replace("OD-001", "OD-999"))
+        r = subprocess.run([sys.executable, str(VALIDATE), "--root", tmp, "--emit-index",
+                            "--check", "--stale-days", "36500"], capture_output=True, text=True)
+        if r.returncode == 0:
+            problems.append("--emit-index --check exited 0 on a derived view that had been "
+                            "edited by hand")
+        if out.read_text() == text:
+            problems.append("--check rewrote the file it was asked only to compare")
     return problems
 
 

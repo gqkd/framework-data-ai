@@ -112,7 +112,7 @@ Propose a diff and wait for everything else. In particular:
 
 ## What you must never do
 
-- **Fill in a field with a plausible value.** `verified_against`, `evp_hash`,
+- **Fill in a field with a plausible value.** `verified_code`, `evp_hash`,
   `evp_version` are facts about the world: a commit that exists, a file that was hashed. If
   you cannot establish the real value, the finding stays open and you say so. An invented
   hash passes the validator and turns an evidence document into a decoration.

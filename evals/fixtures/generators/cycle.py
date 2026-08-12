@@ -156,8 +156,10 @@ listed in DC-001.
 F["products/atlas/product.yaml"] = fm(schema="framework/product-manifest/v1",
     artifact_type="product-manifest", lifecycle="living", status="active",
     products="[atlas]", owners="[gq]", created="2026-01-12", last_review=NOW,
+    code="\n  backend:\n    url: git@github.com:org/atlas-backend.git\n    contains: the service and its models\n    release_relevant: 'true'",
     classification="internal") + """\
 # Atlas · churn risk scoring for the CS team
+
 
 name: atlas
 one_liner: nightly churn risk scores and drivers for every active account
@@ -202,7 +204,7 @@ unflagged baseline.
 F["products/atlas/ARC.md"] = fm(schema="framework/architecture/v1",
     artifact_type="architecture", lifecycle="living", status="active",
     products="[atlas]", owners="[gq]", created="2026-02-20", last_review=NOW,
-    verified_against="9f2c1ab", classification="internal") + """\
+    verified_code="\n  product.backend: 9f2c1ab", classification="internal") + """\
 # Atlas · architecture
 
 <!-- section: current -->

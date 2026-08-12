@@ -338,7 +338,7 @@ and recorded as designed in the `SD`. The target is **not** the MVA plus more, b
 MVA legitimately contains things the target discards: it was built to be sufficient now,
 not to be the destination. `§delta` is what separates the two, and it is **structural**,
 never temporal: it enumerates what is missing, while the `RMP` says in what order and on
-what evidence. `verified_against` attests `§current` alone, since `§target` describes
+what evidence. `verified_code` attests `§current` alone, since `§target` describes
 something nobody has built.
 
 **`REL` + `RLM`.** The ten-line release note serves a person; it is not enough for an agent
@@ -380,7 +380,8 @@ created: 2026-07-27
 last_review: 2026-07-29 18:40   # required only for lifecycle: living
 derives_from: [HYP-001, EVD-003]
 supersedes: DEC-009
-verified_against: a1b2c3d       # commit or tag, where applicable
+verified_code:                  # one commit per repository in product.yaml#code
+  product.backend: a1b2c3d
 classification: internal
 ---
 ```

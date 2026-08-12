@@ -70,7 +70,7 @@ not an authorization to build. What gets implemented is a `CHG` with `status: ap
 with a plausible assumption does more damage than one that stops, because the assumption is
 indistinguishable from a fact to whoever reads it next.
 
-**Never invent a field that attests something.** `verified_against`, `evp_hash`,
+**Never invent a field that attests something.** `verified_code`, `frozen_at`, `evp_hash`,
 `evp_version` are claims about the world: a commit that exists, a file that was hashed. If
 you cannot establish the real value, leave it and say so. An invented hash turns an
 evidence document into a decoration and passes every check.

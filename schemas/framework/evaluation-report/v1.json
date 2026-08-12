@@ -24,6 +24,18 @@
       "minItems": 1
     },
     "created": {},
+    "verified_code": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^(product|platform)\\.[a-z][a-z0-9._-]*$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^([0-9a-f]{7,40}|COMMIT_HASH)$"
+      }
+    },
     "evp_version": {
       "type": "string",
       "minLength": 1,
@@ -44,7 +56,7 @@
         ]
       }
     },
-    "verified_against": {
+    "frozen_at": {
       "type": "string",
       "minLength": 1,
       "not": {
@@ -64,6 +76,7 @@
     "created",
     "evp_version",
     "evp_hash",
-    "verified_against"
+    "frozen_at",
+    "verified_code"
   ]
 }

@@ -39,10 +39,10 @@ Check, in order:
 
    If it differs, the `EVP` on disk is not the one this candidate was measured against, and
    the thresholds in front of you are not the ones that count. Do not judge against them.
-   Recover the frozen plan from the commit in `verified_against` and use that:
+   Recover the frozen plan from the commit in `frozen_at` and use that:
 
    ```bash
-   git show <verified_against>:products/<p>/EVP.md
+   git show <frozen_at>:products/<p>/EVP.md
    ```
 
    A mismatch is not by itself dishonest: a review that only touched `last_review` moves the
@@ -63,7 +63,14 @@ Check, in order:
    that the gate is noise. Report every breach; block on the ones the plan says to.
 6. **Slices matter as much as aggregates.** A model that clears the overall threshold while
    failing on one segment is a model that fails for the people in that segment.
-7. **`verified_against`** names the commit the evaluation actually ran on.
+7. **`verified_code`** names the commit of each repository the evaluation ran on, keyed
+   the way `code:` is keyed. `frozen_at` is not the same field and does not answer this: it
+   is the commit of *this* repository holding the plan, which is what the `git show` above
+   needs. They were one field, and the two lines of this document that used it disagreed
+   about which it was — which only looked like one question while documents and code shared
+   a repository. Every repository marked `release_relevant` has to carry a commit here:
+   `VER002` reports the ones that do not, because an attestation covering part of a system
+   reads exactly like one covering all of it.
 
 If any of these is missing or below threshold, the outcome is **rework, not rollback**, and
 use that word. Nothing has been deployed yet, so there is nothing to roll back. Rollback

@@ -182,7 +182,7 @@ python3 skills/audit/scripts/validate.py --root ../my-project
 python3 skills/audit/scripts/validate.py --root ../my-project --emit-index
 ```
 
-Twenty eight checks, catalogued in `skills/audit/checks.yaml`, each with the failure it
+Thirty one checks, catalogued in `skills/audit/checks.yaml`, each with the failure it
 prevents written next to it.
 
 Only two block on day one: `FM001`, front matter that parses, and `FM002`, front matter
@@ -280,15 +280,6 @@ without `status` and `owners` for as long as it did. The self check runs in CI h
   `version:` in `schemas/artifact-types.yaml` explains when the number goes up. It is not
   the plugin's version, on purpose: a release that rewords a skill cannot break a
   document.
-- **`verified_against` when the code is in several repositories.** `ARC` and `EVR` both
-  carry one commit hash, which says what the document was checked against. With the code
-  split across five repositories one hash cannot mean that, and the field quietly becomes
-  a claim about one of them. Left alone deliberately: the release gate recovers a frozen
-  plan with `git show <verified_against>:...`, which is the sharpest thing here, and
-  redesigning it before anybody has an `ARC` to attest would be guessing at the shape.
-  `code:` in `product.yaml` now says which repositories exist, so the map has somewhere to
-  key off when it is time.
-
 - **A reference implementation.** Nothing here has been used on a real project for a full
   cycle. Every fixture in `evals/` was written by somebody who already understood the
   framework, which is the one limit more fixtures cannot fix.

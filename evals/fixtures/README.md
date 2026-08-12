@@ -12,7 +12,7 @@ gone at the next run of whatever built it, because most of them start with `shut
 The release fixtures are the reason this cannot simply be a directory of files. Each is a
 real git repository with three commits, and `D-tampered-plan` turns on that history: the
 frozen evaluation plan is only recoverable through
-`git show <verified_against>:products/atlas/EVP.md`, which is exactly what the gate is
+`git show <frozen_at>:products/atlas/EVP.md`, which is exactly what the gate is
 supposed to do when the hash it was handed does not match the plan in front of it.
 Committing a git repository inside a git repository stores a gitlink, not the history, so
 the one thing that fixture exists to test would be the thing that did not survive being
@@ -25,7 +25,7 @@ project with a corpus and no framework in it.
 
 | | |
 |---|---|
-| `audit/dirty-repo` | Real defects: front matter that does not parse, a `derives_from` pointing at a decision nobody wrote, a decision superseded by one that never moved it to `superseded`. Four errors and twelve warnings, by construction. |
+| `audit/dirty-repo` | Real defects: front matter that does not parse, a `derives_from` pointing at a decision nobody wrote, a decision superseded by one that never moved it to `superseded`. Four errors and thirteen warnings, by construction. |
 | `audit/clean-repo` | Nothing wrong with it. A checker that reports something here is inventing. |
 | `cycle/fixture-base` | Ten signals, a roadmap, and the previous cycle's `ICG`. Two of its routings are traps: one `not-classifiable` that must come back, one `not-a-candidate` that must not be re-triaged. Six signals are in no `ICG` at all. |
 | `release/A` … `F` | Six release candidates differing only in the evidence they carry. Four block, each for its own reason; `A` ships with a non-blocking metric over its ceiling, and `F` ships with three rows exactly on their threshold. |

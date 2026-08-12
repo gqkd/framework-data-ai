@@ -62,7 +62,7 @@ def non_placeholder(placeholders: list[str]) -> dict:
     """A field that is present but still carries its template placeholder is missing.
 
     A placeholder that reaches a real repository reads as a real value to anything that
-    does not know the template, and `verified_against: COMMIT_HASH` is the worst case of
+    does not know the template, and `verified_code: {backend: COMMIT_HASH}` is the worst case of
     it: a document that claims to have been checked against a commit.
     """
     return {"type": "string", "minLength": 1, "not": {"enum": list(placeholders)}}
@@ -138,8 +138,17 @@ def build(name: str, spec: dict, registry: dict) -> dict:
             value = {"type": "object", "properties": props,
                      "required": list(f.get("required", [])),
                      "additionalProperties": False}
+        elif "scalar" in rule:
+            # One string per key, optionally constrained. `verified_code` wants this: a
+            # commit is a value, not a record, and wrapping it in `{commit: ...}` to fit
+            # the record shape would make the field harder to write than the thing it
+            # replaces, which is how a field stops being filled in.
+            value = {"type": "string", "minLength": 1}
+            if rule["scalar"]:
+                value["pattern"] = rule["scalar"]
         else:
-            raise SystemExit(f"{name}.maps.{field}: needs `one_of`, `any_of` or `fields`")
+            raise SystemExit(
+                f"{name}.maps.{field}: needs `one_of`, `any_of`, `fields` or `scalar`")
         # The keys are constrained as well as the values, and the keys are the part that
         # matters more: they are the identifiers the rest of the framework joins on. With
         # them open, `routing: {banana: none}` validated, and a mistyped candidate then
@@ -164,7 +173,12 @@ def build(name: str, spec: dict, registry: dict) -> dict:
             required.append(field)
 
     for field in spec.get("required", []):
-        properties[field] = non_placeholder(placeholders)
+        # A field already shaped by `maps` keeps that shape. Listing it under `required` says
+        # it must be present, not that it is a string, and overwriting it here turned the
+        # commit map back into a scalar -- quietly, since the schema still validated
+        # everything that was not a map.
+        if field not in (spec.get("maps") or {}):
+            properties[field] = non_placeholder(placeholders)
         if field not in required:
             required.append(field)
 
@@ -187,7 +201,8 @@ def build(name: str, spec: dict, registry: dict) -> dict:
             "if": {"properties": {"status": {"const": "active"}}, "required": ["status"]},
             "then": {
                 "required": list(conditional),
-                "properties": {f: non_placeholder(placeholders) for f in conditional},
+                "properties": {f: non_placeholder(placeholders) for f in conditional
+                               if f not in (spec.get("maps") or {})},
             },
         }]
 

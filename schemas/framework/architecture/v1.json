@@ -24,7 +24,19 @@
       "type": "array",
       "minItems": 1
     },
-    "created": {}
+    "created": {},
+    "verified_code": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^(product|platform)\\.[a-z][a-z0-9._-]*$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^([0-9a-f]{7,40}|COMMIT_HASH)$"
+      }
+    }
   },
   "required": [
     "schema",
@@ -48,20 +60,9 @@
       },
       "then": {
         "required": [
-          "verified_against"
+          "verified_code"
         ],
-        "properties": {
-          "verified_against": {
-            "type": "string",
-            "minLength": 1,
-            "not": {
-              "enum": [
-                "COMMIT_HASH",
-                "SHA_OF_THE_EVP_FILE"
-              ]
-            }
-          }
-        }
+        "properties": {}
       }
     }
   ]

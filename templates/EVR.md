@@ -10,7 +10,9 @@ created: YYYY-MM-DD HH:MM
 derives_from: [EVP]
 evp_version: 1.2.0
 evp_hash: SHA_OF_THE_EVP_FILE
-verified_against: COMMIT_HASH
+frozen_at: COMMIT_HASH          # commit of THIS repository holding the frozen EVP
+verified_code:                  # commits of the code that was measured
+  product.backend: COMMIT_HASH
 classification: internal
 ---
 

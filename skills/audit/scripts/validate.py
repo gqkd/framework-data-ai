@@ -847,6 +847,46 @@ def check_cross_product(arts: list[Artifact], report: Report) -> None:
                        "and the remote does not, which is how this arises: each side calls "
                        "it what it calls it.")
 
+    # What `verified_code` is allowed to name, and what it must not leave out. Built from
+    # both maps and qualified the way the field is keyed, because a product and the platform
+    # may each own a `backend` and an attestation cannot be ambiguous about which it ran on.
+    known: set[str] = set()
+    must_cover: set[str] = set()
+    for a in arts:
+        if a.type == "product-manifest":
+            scope = "product"
+        elif a.type == "platform-architecture":
+            scope = "platform"
+        else:
+            continue
+        code = a.meta.get("code")
+        if not isinstance(code, dict):
+            continue
+        for key, entry in code.items():
+            known.add(f"{scope}.{key}")
+            if isinstance(entry, dict) and str(entry.get("release_relevant")).lower() == "true":
+                must_cover.add(f"{scope}.{key}")
+
+    for a in arts:
+        attested = a.meta.get("verified_code")
+        if not isinstance(attested, dict):
+            continue
+        for key in sorted(set(attested) - known):
+            report.add("VER001", a.rel,
+                       f"{key!r} is attested here and is in no `code:` map. Either the "
+                       "repository is not recorded anywhere, in which case the commit "
+                       "points at something this repository cannot resolve, or the key is a "
+                       "typo and a repository that was measured is not represented.")
+        # Only when something declares itself relevant. A project that has not marked
+        # anything is not being told its attestation is incomplete against a list it never
+        # wrote: that would be the framework inventing the standard it then enforces.
+        for key in sorted(must_cover - set(attested)):
+            report.add("VER002", a.rel,
+                       f"{key!r} is marked `release_relevant` and carries no commit here. "
+                       "The attestation covers part of the system and reads as covering all "
+                       "of it, which is the failure a single hash had and the reason this "
+                       "field became a map.")
+
     early = {p for a in arts if a.type == "product-manifest"
              for p in as_list(a.meta.get("products"))
              if str((a.meta.get("stage") or {}).get("phase", "")).upper() in {"F1", "F2", "F3"}}
@@ -890,6 +930,44 @@ def build_indices(root: Path, arts: list[Artifact]) -> dict[Path, str]:
                 f"{', '.join(as_list(d.meta.get('products')))} | {title} | "
                 f"{d.meta.get('supersedes') or ''} |")
         out[target] = "\n".join(rows) + "\n"
+
+    # The derived half of `product.yaml`, in a file of its own rather than as sections
+    # rewritten inside it. `product.yaml` is authoritative and full of comments carrying the
+    # reasoning behind each field; rewriting parts of it while preserving those is a swamp,
+    # and the sections marked GENERATED there were being kept by hand and going stale. A
+    # separate file is the same answer the decision index already uses.
+    #
+    # Only what is derivable without judgement. `open_decisions` comes from the register's
+    # own `entries:`, not from a list somebody maintains beside it, which is the duplication
+    # this removes: two answers to "what is still open", and the stale one is the one an
+    # agent reads first because `AGENTS.md` sends it to the manifest.
+    open_now = sorted({od for a in arts if a.type == "open-register"
+                       for od, row in (a.meta.get("entries") or {}).items()
+                       if isinstance(row, dict) and row.get("status") == "open"})
+    for man in (a for a in arts if a.type == "product-manifest"):
+        prod = next(iter(as_list(man.meta.get("products"))), None)
+        if not prod:
+            continue
+        mine = [a for a in arts if prod in as_list(a.meta.get("products"))]
+        changes = sorted(a.id for a in mine if a.type == "change-contract"
+                         and a.meta.get("status") in ("approved", "implemented") and a.id)
+        releases = sorted(a.id for a in mine if a.type == "release-note" and a.id)
+        living = sorted(f"{a.rel} ({a.meta.get('last_review') or 'never reviewed'})"
+                        for a in mine if a.meta.get("lifecycle") == "living")
+        lines = [f"# {GENERATED_MARK}. Do not edit by hand.",
+                 "#",
+                 "# The derived view of this product. `product.yaml` beside it is authoritative",
+                 "# and hand written; everything here is recomputed from the artifacts, so a",
+                 "# disagreement between the two is this file being out of date and never the",
+                 "# other way round.",
+                 "generated_by: validate.py --emit-index",
+                 f"product: {prod}",
+                 f"current_release: {releases[-1] if releases else 'null'}",
+                 "open_decisions: [" + ", ".join(open_now) + "]",
+                 "active_changes: [" + ", ".join(changes) + "]",
+                 "living_artifacts:"]
+        lines += [f"  - {x}" for x in living] or ["  []"]
+        out[man.path.parent / "product.index.yaml"] = "\n".join(lines) + "\n"
 
     edges = sorted({(ref, a.id or a.rel)
                     for a in arts
