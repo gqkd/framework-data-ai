@@ -991,6 +991,49 @@ def _skips_are_scoped():
     return problems
 
 
+@check("nothing anybody copies writes a scalar where the schema wants a list")
+def _examples_agree_with_the_schema():
+    # A template's front matter is validated against its own schema by the check above. Its
+    # *body* is not, and neither is a fenced example in a skill, and both get copied: an
+    # agent following `used_by: product-a` in a snippet produces a document that fails
+    # `FM002`, and the failure surfaces in somebody's project rather than here.
+    #
+    # It happened. `depends_on` and `used_by` became lists in the registry and the templates
+    # kept writing them as scalars for the minutes between the two edits, and a real run
+    # landed in that window -- the plugin is a symlink to this working tree, so there is no
+    # copy to be stale. Eighteen findings in a project because of a shape written in a file
+    # that no check reads.
+    want_list: set[str] = set()
+    for spec in REGISTRY["types"].values():
+        for field, rule in (spec.get("maps") or {}).items():
+            want_list.update(rule.get("fields", {}).get("lists") or [])
+            if "any_of" in rule:
+                want_list.add(field)
+    if not want_list:
+        return ["no field is declared as a list: this check is no longer running"]
+
+    # `key: value` where value is neither a flow sequence, a block sequence, nor a comment.
+    scalar = re.compile(r"^\s*([a-z_]+):[ \t]*([^\s\[#][^#]*?)\s*$")
+    problems = []
+    for p in sorted(ROOT.rglob("*")):
+        rel = p.relative_to(ROOT)
+        # `schemas/` states the constraints rather than demonstrating them:
+        # `products: exactly-one` in the registry is a cardinality declaration and not
+        # a field somebody copies into a document.
+        if p.suffix not in (".md", ".yaml", ".yml") or "build" in rel.parts:
+            continue
+        if rel.parts[0] in ("schemas", "tests"):
+            continue
+        if any(part.startswith(".") for part in rel.parts):
+            continue
+        for i, line in enumerate(p.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+            m = scalar.match(line)
+            if m and m.group(1) in want_list:
+                problems.append(f"{rel}:{i}: `{line.strip()}` — the schema wants a list here, "
+                                "and whoever copies this line gets an FM002 in their project")
+    return problems
+
+
 @check("a document that says it was decided has to name the decision")
 def _claims_carry_their_record():
     # Two documents make the same claim in a field and used to make it unbacked. A stack row

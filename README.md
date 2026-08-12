@@ -61,6 +61,21 @@ claude plugin details framework-data-ai        # should list all six
 Use this while you are still changing the skills. Edit a skill and the change is live in
 the next session. Remove it with `rm ~/.claude/skills/framework-data-ai`.
 
+**There is no copy, and that cuts both ways.** A skill reads these files as they are on
+disk, so a run started while somebody is halfway through a change to the framework sees
+half of it. That has happened: a registry that had begun to want lists, templates that had
+not caught up yet, and eighteen findings in a real project from a shape written in a file
+that was correct ten minutes later. Before a run that matters, ask the framework whether it
+currently agrees with itself:
+
+```bash
+python3 tests/selfcheck.py      # green means the tree is consistent right now
+```
+
+Installing it as a plugin, below, takes a copy at install time and has the opposite
+problem: your edits do not reach it until you reinstall. Neither is wrong; know which one
+you are running.
+
 **2. Install it as a plugin.** Also local. A marketplace can be a directory on your own
 disk, so this publishes nothing either:
 
