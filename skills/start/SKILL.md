@@ -51,28 +51,58 @@ or loose at the root. **Do not guess and do not glob.** Ask the extractor:
 
 ```bash
 python3 "${CLAUDE_PLUGIN_ROOT:?unset: point it at your framework-data-ai checkout}/skills/start/scripts/extract.py" \
-    --find <project>
+    --find <project> --json
 ```
 
 It counts documents rather than matching folder names, and it does not count the ones this
 framework wrote: front matter is what separates a client's `.md` from an artifact, and a
 corpus dropped at the root beside `AGENTS.md` is exactly the case that breaks a rule based
-on location. `.` in the output means the files are loose at the project root.
+on location. `.` in the output means the files are loose at the project root. Sibling
+folders of one corpus are gathered, so `docs/contracts`, `docs/decks` and
+`docs/spreadsheets` come back as `docs`.
 
-| What it says | What you do |
+| `verdict` | What you do |
 |---|---|
-| One candidate | say which folder you are using, in one line, and go on |
-| More than one | **ask.** Do not take the largest |
-| No documents | **ask.** Do not scaffold |
+| `one` | say which folder, in one line, and go on. Name its subdirectories if it has more than one |
+| `several` | **ask.** Do not take the largest |
+| `none` | **ask.** Do not scaffold |
 
-On more than one: the second folder is very often an older version of the same deck, and
-which one is current is not something a file count can answer. Getting it wrong here does
-not produce an error, it produces a repository built on a superseded offer, and nothing
+On `several`: the second folder is very often an older version of the same deck, and which
+one is current is not something a file count can answer. Getting it wrong here does not
+produce an error, it produces a repository built on a superseded offer, and nothing
 downstream will contradict it.
 
-On none: an empty ingestion and a corpus you failed to find leave the same repository
+On `none`: an empty ingestion and a corpus you failed to find leave the same repository
 behind. Scaffolding first and asking later means the answer arrives after the structure has
 been justified by the absence.
+
+### Then propose the move. Do not perform it.
+
+`_meta/corpus/<product>/` is where the corpus belongs, and moving it is still a write like
+any other: **show it and wait.** The preamble applies here more than anywhere, because this
+is the one thing in the repository that cannot be regenerated, and a folder that has been
+moved out from under a link somebody sent the customer, a script, or Git LFS is not a
+problem you find out about today.
+
+Offer both, and take the second answer without arguing:
+
+- **Import it.** `git mv` where the repository is under git, plain `mv` otherwise. Then
+  check that nothing was lost, before you touch anything else:
+
+  ```bash
+  before=$(find <source> -type f -exec sha256sum {} + | awk '{print $1}' | sort | sha256sum)
+  # ... move ...
+  after=$(find _meta/corpus/<p> -type f -exec sha256sum {} + | awk '{print $1}' | sort | sha256sum)
+  [ "$before" = "$after" ] && echo "same files" || echo "STOP: the corpus changed"
+  ```
+
+  Count and content, not count alone. If they differ, stop and say so: a corpus short of
+  two files reads exactly like a corpus that never had them.
+
+- **Leave it where it is.** Then add its folder to `scan.skip_dirs` in `framework.yaml` and
+  say you did. Without that line every `.md` in it comes back as `FM001`, which is a first
+  impression the tool does not recover from. `scan` already exists for precisely this: no
+  new field is needed, and the corpus keeps working where the client's links point.
 
 ## Step 3 · Scaffolding
 
@@ -87,11 +117,10 @@ _meta/                README.md, ADOPTION.md, corpus/<p>/, extract/
 ```
 
 **`_meta/` holds what is about the framework rather than about the product**, and the root
-holds documents only. Move the folder you identified in step 2 into `_meta/corpus/<product>/`
-before anything else, and say that you moved it and from where. It is the one thing in the
-repository that cannot be regenerated, so it moves rather than being copied and left in two
-places, and it goes in one convention rather than the two this framework used to have. `_meta/extract/` is where the extractor writes, and it can
-be deleted and rebuilt at any time.
+holds documents only. Where the corpus ended up is whatever step 2 settled: under
+`_meta/corpus/<product>/` if it was imported, or where it was with its folder named in
+`scan.skip_dirs`. Say which, in the handover. `_meta/extract/` is where the extractor
+writes, and it can be deleted and rebuilt at any time.
 
 Write `_meta/README.md`, three lines, saying exactly that:
 
@@ -106,16 +135,25 @@ question about what we are building.
 - `ADOPTION.md` records what this framework costs and what it caught.
 ```
 
-**`ADOPTION.md` gets its first entry now, and it is this session.** Three fields: the
-minutes this setup took, what the ingestion caught that somebody would not have found, and
-what was noise. It is the only file here that measures the framework instead of the
-product, and it is the only one that can later justify deleting a check or a section. The
-reason it cannot wait for the second cycle is the reason it is written now: nobody
-reconstructs how long the first session took, and the first session is the one the second
-gets compared against.
+**`ADOPTION.md` gets its first entry now, and it is this session.** It is the only file
+here that measures the framework instead of the product, and the only one that can later
+justify switching a check off. It cannot wait for the second cycle: nobody reconstructs how
+long the first session took, and the first session is what the second gets compared against.
 
-Write the noise field even on day one, especially on day one. A first entry with an empty
-noise field is an entry written to look good, and the log stops being an instrument.
+**Record what you measured and ask for what you cannot know.** You do not have a reliable
+clock across a session, so do not write a number as though you had one:
+
+| Field | Where the value comes from |
+|---|---|
+| minutes | `date` at the start and at the end if you have both, labelled `measured`. Otherwise ask, and label the answer `estimated`. If neither, write `not measured` |
+| what it caught | yours to write: the contradictions, the undocumented decisions, the unreadable documents. Name them |
+| what was noise | **the user's, not yours.** Ask once, at the end |
+
+The question at the end is one sentence: *is there anything in this that you already think
+was wasted work?* If the answer does not come, write `not assessed`. **Do not write "no
+noise".** An invented zero in the field that exists to retire parts of this framework is
+worse than an empty one, because it will be compared against a real number next cycle and
+it will look like an improvement.
 
 Copy from `templates/` at the plugin root, fill the **front matter** and leave the body to
 the interview and the corpus. `created` and `last_review` take the real instant, to the

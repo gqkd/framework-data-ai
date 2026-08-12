@@ -897,10 +897,24 @@ def _corpus_is_found_by_content():
     with tempfile.TemporaryDirectory() as tmp:
         build(Path(tmp), {"corpus/a.pdf": "%PDF-1.4\n", "corpus/b.pdf": "%PDF-1.4\n",
                           "vecchi/c.pptx": "PK\x03\x04"})
-        strong = [r for r in x.find_corpus(Path(tmp)) if r[1]]
+        strong = [g for g in x.group_corpus(x.find_corpus(Path(tmp))) if g["documents"]]
     if len(strong) != 2:
         problems.append(f"two folders of documents came back as {len(strong)} candidate(s): "
                         "the skill decides whether to ask on this count")
+
+    # One corpus filed by kind. Reported as three candidates it forces a question with no
+    # right answer, and the answer to it would be wrong however it was given: they are all
+    # the corpus. The extractor reads a directory recursively, so the group is usable as-is.
+    with tempfile.TemporaryDirectory() as tmp:
+        build(Path(tmp), {"docs/contracts/a.pdf": "%PDF", "docs/contracts/b.pdf": "%PDF",
+                          "docs/decks/c.pptx": "PK", "docs/spreadsheets/d.xlsx": "PK"})
+        got = x.group_corpus(x.find_corpus(Path(tmp)))
+    if len(got) != 1 or got[0]["path"] != "docs" or got[0]["documents"] != 4:
+        problems.append(f"a corpus split across docs/contracts, docs/decks and "
+                        f"docs/spreadsheets came back as {[g['path'] for g in got]}")
+    elif len(got[0]["children"]) != 3:
+        problems.append("the group hid the subdirectories it gathered: one of them being an "
+                        "older version of another is exactly what a person has to be shown")
     return problems
 
 
@@ -941,6 +955,27 @@ def _shared_code_has_one_home():
     # has nowhere to put the shared one, so the substrate carries `code:` too — and the way
     # that arrangement fails is a repository written into both, agreeing on the day it is
     # written and diverging afterwards.
+    # The key of a `code:` entry is what this file calls the repository; the URL is which
+    # repository it is. Keyed on the key, the check fired on two products that each own a
+    # `backend` and stayed silent on one repository entered as `identity` here and `auth`
+    # there -- and the second is how the duplication actually arises, because two teams
+    # naming the same thing each use their own word.
+    problems = []
+    v = _load(VALIDATE, "validate")
+    same = "github.com/org/repo"
+    for url, want in [
+        ("git@github.com:org/repo.git", same),
+        ("ssh://git@github.com/org/repo.git", same),
+        ("https://github.com/org/repo.git", same),
+        ("https://GitHub.com/org/repo/", same),
+        ("git@github.com:org/repo", same),
+        # A port belongs to the address. Converted as if it were an scp-style path it became
+        # a directory, and a self-hosted GitLab stopped comparing equal to itself.
+        ("https://gitlab.self.hosted:8443/grp/repo.git", "gitlab.self.hosted:8443/grp/repo"),
+    ]:
+        if v.canonical_repo(url) != want:
+            problems.append(f"{url} canonicalised to {v.canonical_repo(url)!r}, not {want!r}")
+
     def manifest(product: str, code: str) -> str:
         return ("schema: framework/product-manifest/v1\n"
                 "artifact_type: product-manifest\n"
@@ -971,7 +1006,6 @@ def _shared_code_has_one_home():
                 return None
             return {f["code"] for f in json.loads(r.stdout)["findings"]}
 
-    problems = []
     own = ("code:\n  frontend:\n    url: git@example.com:org/alpha-fe.git\n"
            "    contains: the app\n")
 
@@ -1003,6 +1037,35 @@ def _shared_code_has_one_home():
     elif "XP004" not in got:
         problems.append("two products declaring the same repository were not reported, "
                         "which is the duplication the platform map exists to avoid")
+
+    # The two cases that separate an identity from a nickname, and the reason the check was
+    # rewritten. Without them a version keyed on the map key passes this whole block, which
+    # is what it did.
+    def entry(key: str, url: str) -> str:
+        return f"code:\n  {key}:\n    url: {url}\n    contains: stuff\n"
+
+    got = codes({"products/alpha/product.yaml":
+                 manifest("alpha", entry("backend", "git@example.com:org/alpha-be.git")),
+                 "products/beta/product.yaml":
+                 manifest("beta", entry("backend", "git@example.com:org/beta-be.git"))})
+    if got is None:
+        problems.append("the validator crashed on two products that each own a `backend`")
+    elif "XP004" in got:
+        problems.append("two products that each call their own repository `backend` were "
+                        "reported as sharing one: the key is what a file calls a repository, "
+                        "not which repository it is")
+
+    got = codes({"products/alpha/product.yaml":
+                 manifest("alpha", entry("identity", "git@example.com:org/access.git")),
+                 "products/beta/product.yaml":
+                 manifest("beta", entry("auth", "https://example.com/org/access.git"))})
+    if got is None:
+        problems.append("the validator crashed on one repository under two nicknames")
+    elif "XP004" not in got:
+        problems.append("one repository entered as `identity` under one product and `auth` "
+                        "under another was not reported. This is how the duplication "
+                        "actually arises: each side calls it what it calls it, and a check "
+                        "keyed on the name catches only the tidy case")
     return problems
 
 

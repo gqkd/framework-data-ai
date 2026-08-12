@@ -288,6 +288,38 @@ def load_config(project: dict) -> tuple[dict, int]:
     return checks, stale_days
 
 
+def canonical_repo(url: str) -> str:
+    """One repository, one string, whichever way somebody wrote the remote.
+
+    The three forms below are the same repository and compare unequal as text:
+
+        git@github.com:org/repo.git
+        ssh://git@github.com/org/repo.git
+        https://github.com/org/repo.git
+
+    This matters because the key of a `code:` entry is a local nickname and not an identity.
+    Two products calling their own repository `backend` are not sharing one; the same
+    repository entered as `identity` under one product and `auth` under another is. Keyed on
+    the nickname, a check meant to catch a repository described twice reports the first case
+    and passes the second -- and the second is how the duplication actually arises, because
+    two teams naming the same thing each use their own word for it.
+
+    An address this cannot parse comes back stripped and lowercased rather than empty. Two
+    identical unparseable strings are still one repository, and losing that would trade a
+    wrong answer for no answer.
+    """
+    s = str(url).strip().rstrip("/")
+    s = re.sub(r"^[a-z+]+://", "", s, flags=re.I)      # scheme, if any
+    s = re.sub(r"^[^/@]+@", "", s)                     # user, git@ and the rest
+    # scp-style `host:path`, but not `host:port/path`: a port is part of the address and a
+    # self-hosted GitLab on 8443 would otherwise have it turned into a directory.
+    if re.match(r"^[^/]+:(?!\d+(?:/|$))[^/]", s):
+        s = s.replace(":", "/", 1)
+    s = re.sub(r"\.git$", "", s, flags=re.I)
+    host, _, path = s.partition("/")
+    return f"{host.lower()}/{path}" if path else s.lower()
+
+
 def skipped_dir(parts: tuple[str, ...], skip_dirs: set[str]) -> bool:
     """Whether a document sitting in these directories is excluded from the scan.
 
@@ -773,22 +805,29 @@ def check_cross_product(arts: list[Artifact], report: Report) -> None:
     # two products. The map is the answer to "where is the code", and two answers to one
     # question is the state this framework exists to prevent: the copies are written on the
     # same day and describe the same repository, and then one of them is updated.
+    # Keyed on the canonicalised remote, never on the entry's key: the key is what this file
+    # calls the repository and the URL is which repository it is.
     declared: dict[str, list[str]] = {}
     for a in arts:
         if a.type not in ("product-manifest", "platform-architecture"):
             continue
         code = a.meta.get("code")
-        if isinstance(code, dict):
-            for key in code:
-                declared.setdefault(key, []).append(a.rel)
-    for key, where in sorted(declared.items()):
+        if not isinstance(code, dict):
+            continue
+        for key, entry in code.items():
+            url = entry.get("url") if isinstance(entry, dict) else None
+            if isinstance(url, str) and url.strip():
+                declared.setdefault(canonical_repo(url), []).append(f"{a.rel} as {key!r}")
+    for repo, where in sorted(declared.items()):
         if len(where) > 1:
-            report.add("XP004", ", ".join(sorted(where)),
-                       f"repository {key!r} is declared in {len(where)} places. A repository "
-                       "shared by several products belongs to `code:` in `PLATFORM.md`, and "
-                       "one that serves a single product to that product's manifest. Two "
-                       "entries are two descriptions of one repository, and only one of them "
-                       "gets corrected.")
+            report.add("XP004", repo,
+                       f"one repository declared in {len(where)} places: {'; '.join(sorted(where))}. "
+                       "A repository shared by several products belongs to `code:` in "
+                       "`PLATFORM.md`, and one that serves a single product to that "
+                       "product's manifest. Two entries are two descriptions of one "
+                       "repository, and only one of them gets corrected. The names differ "
+                       "and the remote does not, which is how this arises: each side calls "
+                       "it what it calls it.")
 
     early = {p for a in arts if a.type == "product-manifest"
              for p in as_list(a.meta.get("products"))

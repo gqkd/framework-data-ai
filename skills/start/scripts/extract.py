@@ -204,24 +204,76 @@ def find_corpus(root: Path) -> list[tuple[str, int, int]]:
                   key=lambda r: (-r[1], -r[2], r[0]))
 
 
-def report_corpus(root: Path) -> int:
+def group_corpus(rows: list[tuple[str, int, int]]) -> list[dict]:
+    """Sibling directories of one corpus, gathered under the folder that holds them.
+
+    `docs/contracts`, `docs/decks` and `docs/spreadsheets` are one corpus filed by kind, and
+    reported as three candidates they force a question with no right answer. Grouped by the
+    first path component they are one, and the extractor reads a directory recursively so
+    the group is directly usable as the corpus root.
+
+    Grouping is by first component and nothing cleverer, because the alternatives are worse.
+    Names cannot be trusted -- that is what `--find` exists to avoid -- and file dates say
+    when a file was copied, not which version is current. `corpus/` beside `vecchi-deck/`
+    stays two groups, which is the case that has to be asked about.
+
+    The children are kept and printed. When a group has more than one, the skill says so:
+    `client-files/2025` and `client-files/2026` group correctly and are still worth a
+    sentence, and no rule here can tell which year is the offer that was signed.
+    """
+    groups: dict[str, dict] = {}
+    for d, business, notes in rows:
+        head = d.split("/", 1)[0]
+        g = groups.setdefault(head, {"path": head, "documents": 0, "notes": 0,
+                                     "children": []})
+        g["documents"] += business
+        g["notes"] += notes
+        if d != head:
+            g["children"].append({"path": d, "documents": business, "notes": notes})
+    for g in groups.values():
+        g["children"].sort(key=lambda c: (-c["documents"], c["path"]))
+    return sorted(groups.values(), key=lambda g: (-g["documents"], -g["notes"], g["path"]))
+
+
+def report_corpus(root: Path, as_json: bool = False) -> int:
     """`--find`: say where the corpus is, or say that somebody has to be asked."""
-    rows = find_corpus(root)
-    if not rows:
+    groups = group_corpus(find_corpus(root))
+    strong = [g for g in groups if g["documents"]]
+    verdict = "one" if len(strong) == 1 else ("none" if not strong else "several")
+
+    if as_json:
+        print(json.dumps({"root": str(root), "verdict": verdict,
+                          "corpus": strong[0]["path"] if verdict == "one" else None,
+                          "candidates": groups}, indent=2, ensure_ascii=False))
+        return 0 if verdict == "one" else 1
+
+    if not groups:
         print(f"No business documents under {root}.")
         print("Ask where they are. Do not scaffold a repository around a corpus you have "
               "not found: an empty ingestion looks the same as a corpus with nothing in it.")
         return 1
-    print(f"{_n(len(rows), 'candidate directory', 'candidate directories')} under {root}:\n")
-    for d, business, notes in rows:
-        detail = _n(business, "business document", "business documents")
-        if notes:
-            detail += f", {_n(notes, 'plain note', 'plain notes')}"
-        print(f"  {d:<40} {detail}")
+
+    print(f"{_n(len(groups), 'candidate', 'candidates')} under {root}:\n")
+    for g in groups:
+        detail = _n(g["documents"], "business document", "business documents")
+        if g["notes"]:
+            detail += f", {_n(g['notes'], 'plain note', 'plain notes')}"
+        if g["children"]:
+            detail += f", across {_n(len(g['children']), 'directory', 'directories')}"
+        print(f"  {g['path']:<40} {detail}")
+        for c in g["children"]:
+            print(f"    {c['path']:<38} {c['documents']}")
     print()
-    strong = [r for r in rows if r[1]]
-    if len(strong) == 1:
-        print(f"One candidate: {strong[0][0]}")
+
+    if verdict == "none":
+        print("Nothing here looks like a business document. Ask where they are.")
+        return 1
+    if verdict == "one":
+        print(f"One candidate: {strong[0]['path']}")
+        if len(strong[0]["children"]) > 1:
+            print("It holds several subdirectories. Name them when you report which folder "
+                  "you are using: one of them being an older version of another is not "
+                  "something this can see.")
         return 0
     print("More than one candidate. Ask which of these holds the documents the business "
           "handed over, and do not pick the largest: the other one is often an earlier "
@@ -730,6 +782,9 @@ def main() -> int:
     ap.add_argument("-o", "--out", type=Path, default=Path("_meta/extract"),
                     help="output DIRECTORY, created if absent")
     ap.add_argument("--jsonl", action="store_true")
+    ap.add_argument("--json", action="store_true",
+                    help="with --find: machine-readable, so the skill reads a verdict "
+                         "instead of parsing a sentence written for a person")
     ap.add_argument("--min-chars", type=int, default=40,
                     help="a page or slide under this many characters is text-poor and gets "
                          "flagged for you to look at. Pages and slides only: a short .md or "
@@ -738,7 +793,7 @@ def main() -> int:
     args = ap.parse_args()
 
     if args.find:
-        return report_corpus(args.inputs[0])
+        return report_corpus(args.inputs[0], args.json)
 
     files: list[Path] = []
     for i in args.inputs:

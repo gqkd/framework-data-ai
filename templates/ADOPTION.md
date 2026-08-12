@@ -43,13 +43,18 @@ and a corrected number tells you nothing about whether the framework is improvin
 ### YYYY-MM · what the cycle was about
 
 - **Minutes on the framework:** time spent writing and updating documents, not time spent
-  building. Count the interviews. If you cannot separate the two, say so and estimate.
+  building. Count the interviews. **Label where the number came from** — `measured`,
+  `estimated`, or `not measured` — and never leave that off. An agent has no reliable clock
+  across a session and a person does not remember, so an unlabelled number is a guess that
+  will be compared against a real one later.
 - **What it caught:** findings that changed what somebody did. A contradiction between two
   documents, a decision nobody had taken, an assumption an agent was about to make. Name
   them; a count is not evidence.
 - **What was noise:** findings that were correct and did not matter, questions asked twice,
-  documents nobody opened, fields filled in out of duty. This is the field people skip, and
-  it is the one that makes the log worth keeping.
+  documents nobody opened, fields filled in out of duty. **This is the user's answer, not
+  the agent's**, and if nobody has answered it the value is `not assessed`. Never `none`: an
+  invented zero in the one field that exists to retire parts of this framework will look
+  like an improvement next cycle.
 
 ### 2026-MM · example, delete it
 
@@ -73,13 +78,24 @@ Do not fill this in during the first cycle. It needs at least three.
 
 Something that has done none of the three in three cycles is not neutral. It costs
 attention every time somebody reads these instructions, and it teaches that parts of this
-structure are ceremony — which is what makes the next rule get skipped too. Turn it off in
-`framework.yaml`, or delete the section, and record here which and why.
+structure are ceremony — which is what makes the next rule get skipped too.
 
-| What | Cycles observed | Kept, or removed and why |
+**What a project can decide by itself, and what it can only propose.** Not everything here
+is local, and this file is evidence rather than a second registry: a section that a type
+must carry is defined centrally, and deleting it produces `SEC001` rather than a leaner
+repository. Three verdicts, and they are not interchangeable:
+
+| Verdict | What it means | Where it takes effect |
+|---|---|---|
+| **turned off** | a check that has cost more attention than it has caught | `checks:` in this project's `framework.yaml`. Yours to decide |
+| **stopped writing** | an artifact this project never needed. Nothing forces one to exist before the thing it documents | here, and nowhere else. Nothing breaks: an absent artifact is not a finding |
+| **proposed** | a required section or field that has earned nothing in three cycles | an issue on the framework, quoting the rows below. Not something this repository can change |
+
+| What | Cycles observed | Verdict, and the evidence |
 |---|---|---|
 | `OD003` | 3 | kept: found two undecided high-cost entries in cycle 2 |
-| `WF §target` | 3 | removed: written every cycle, opened by nobody |
+| `CMP` | 3 | stopped writing: no competitor was ever named in a decision |
+| `WF §target` | 3 | proposed: written every cycle, opened by nobody. Cannot be removed here |
 
 ---
 
@@ -87,15 +103,20 @@ structure are ceremony — which is what makes the next rule get skipped too. Tu
 
 - **Counting instead of naming.** "Four findings" says nothing. Which four, and what
   changed because of them. A count can only go up, so it always reads as success.
-- **Leaving `What was noise` empty.** It is never empty. An empty one means the entry was
-  written to look good, and then the log has become another thing to maintain rather than
-  the instrument that decides what to stop maintaining.
+- **Answering `What was noise` on the user's behalf.** The agent is the last one who can
+  see it: what it produced looks necessary from where it is standing. Ask, and write `not
+  assessed` if no answer comes. `none` is the one value that must never be written here,
+  because next cycle it will be read as a baseline that got worse.
 - **Editing a past entry.** This file is append-only for the same reason `LOG` is: the
   point is the trend, and a trend made of numbers you have gone back and improved is not
   one.
 - **Recording minutes you did not measure.** An estimate labelled as an estimate is useful.
   An invented number that reads as measured is worse than no entry, because it will be
-  compared against a real one later.
+  compared against a real one later. `not measured` is a legitimate value and the only
+  honest one when nobody looked at a clock.
+- **Writing a verdict this repository cannot carry out.** "Removed `WF §target`" reads as
+  done and produces `SEC001` on the next run, and then the finding gets explained away
+  rather than acted on. A section the framework requires can only be `proposed` from here.
 - **Keeping the log after the project stopped keeping the framework.** Set
   `status: abandoned` and write the last entry saying what happened. Two cycles of silence
   is a result — it is the strongest one this file can record — and a file that just trails
