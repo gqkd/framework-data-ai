@@ -102,6 +102,13 @@ Then the entry **moves** from `OPEN.md` §1 to §4 with a cross reference to the
 does not get deleted. An entry deleted outright takes with it the fact that the question was
 ever asked, and the next person re-derives it from scratch.
 
+The row in `entries:` moves with it rather than going away: `status: decided` and
+`closed_by: DEC-NNN`, keeping whatever else it carried. That is what the `depends_on` of
+other entries resolve against, and it is the half of the register a check can read. Deleting
+the row leaves every entry that depended on this one pointing at nothing, which reports as a
+stale dependency and reads as a typo — the register saying somebody is waiting on a question
+that no longer exists, when in fact it was answered.
+
 ## Defining the product for the first time
 
 At the beginning, most of what has to be written is blocked by an open decision, which is

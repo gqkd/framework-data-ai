@@ -686,10 +686,17 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
                                f"{od} is open and names no `default_in_force`. Something is "
                                "happening in the absence of this decision; write it, and "
                                "write `none` when the honest answer is that nothing is.")
-                if not row.get("cost_to_reverse"):
+                # While it is open, and not after. `cost_to_reverse` is what orders §1, and
+                # an entry that has been decided is not in that queue any more: the field
+                # was already spent. Asked of a `decided` row it made the documented
+                # closure -- write the `DEC`, move the entry to §4 -- report a finding for
+                # having been carried out, which is the one direction a check must never
+                # fail in.
+                if row.get("status") == "open" and not row.get("cost_to_reverse"):
                     report.add("OD005", a.rel,
-                               f"{od} declares no `cost_to_reverse`. It is what orders this "
-                               "register, and an entry without it is filed nowhere.")
+                               f"{od} is open and declares no `cost_to_reverse`. It is what "
+                               "orders this register, and an entry without it is filed "
+                               "nowhere.")
             if row.get("status") == "decided" and not row.get("closed_by"):
                 report.add("OD005", a.rel,
                            f"{od} is `decided` and names no `closed_by`. The decision exists "

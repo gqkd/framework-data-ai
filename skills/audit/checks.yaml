@@ -197,9 +197,12 @@ checks:
       `OD003` looked at it and only on a high cost entry: a medium one with no default
       passed, and that is the field the whole file is built around. Also catches a `decided`
       entry naming no `closed_by`, which leaves the reasoning to be found again, a
-      `depends_on` pointing at an entry the register does not declare, and an `OD` with no
-      cost to reverse, which is what orders the file. `KI-` entries are exempt from the
+      `depends_on` pointing at an entry the register does not declare, and an open `OD` with
+      no cost to reverse, which is what orders the file. `KI-` entries are exempt from the
       default and the cost: those are properties of a choice and a known issue is not one.
+      The default and the cost are asked of an entry while it is `open` and not after: they
+      order §1, and an entry that has been decided has left it. Asked of a `decided` row
+      they reported the documented closure for having been carried out.
 
   # ── STACK ──────────────────────────────────────────────────────────────────
   STK001:

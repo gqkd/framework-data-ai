@@ -44,6 +44,11 @@ assumption and implements it with conviction.
 the entry leaves `§1` and becomes a `DEC-NNN`, leaving one cross-reference line in `§4`. If
 the file never gets shorter, you are accumulating instead of deciding.
 
+That is about the **body**. The row in `entries:` stays, moved to `status: decided` with its
+`closed_by`, because it is what the `depends_on` of other entries resolve against and
+because the front matter is the only part of this file a check can read. Drop the row when
+nothing depends on it any more.
+
 **One per repository, at the root.** If a product needs its own technical register (because
 it already had one before adopting the framework, or because its entries are too many and
 too specific) it can live in `products/<p>/OPEN.md`, but then `AGENTS.md` must say
@@ -61,8 +66,10 @@ registers that diverge.
 3. **The cost to reverse drives urgency, not importance.** High-cost entries have to be
    decided even on incomplete information, because the cost of waiting exceeds the cost of
    getting it wrong. Low-cost ones can be deferred as long as you like.
-4. **When you decide:** write the `DEC`, replace the entry with a cross-reference line in
-   `§4`, delete the rest.
+4. **When you decide:** write the `DEC`, replace the entry in `§1` with a cross-reference
+   line in `§4`, delete the rest of the prose. In `entries:`, set `status: decided` and
+   `closed_by`, and leave the row: deleting it turns every `depends_on` pointing at it into
+   a dangling reference, which reads as a typo rather than as a decision taken.
 
 ---
 
