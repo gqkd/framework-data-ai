@@ -13,7 +13,7 @@ they describe the concrete ways that document becomes useless.
 | `OPEN.md` | Open decisions and known issues | living | `OPEN.md` |
 | `COMMITMENTS.md` | Commercial commitments made | living | `COMMITMENTS.md` |
 | `GLOSSARY.md` | Glossary and metric dictionary | living | `GLOSSARY.md` |
-| `ADOPTION.md` | Adoption log | append-only | `_meta/ADOPTION.md` |
+| `STACK.md` | Operational stack | living | `STACK.md` |
 | `PLATFORM.md` | Architecture of the shared substrate | living | `PLATFORM.md` |
 | `product.yaml` | Product manifest | living, partly generated | `products/<p>/product.yaml` |
 | `PBR.md` | Product brief | living | `products/<p>/PBR.md` |

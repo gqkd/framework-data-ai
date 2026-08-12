@@ -113,7 +113,7 @@ appears when the thing it documents exists, not before.
 AGENTS.md  OPEN.md  COMMITMENTS.md  GLOSSARY.md  ING.md  framework.yaml
 decisions/            empty, numbering started
 products/<p>/         product.yaml, PBR.md
-_meta/                README.md, ADOPTION.md, corpus/<p>/, extract/
+_meta/                README.md, corpus/<p>/, extract/
 ```
 
 **`_meta/` holds what is about the framework rather than about the product**, and the root
@@ -132,28 +132,7 @@ question about what we are building.
 
 - `corpus/` is what the business gave us. **Irreplaceable: never delete it.**
 - `extract/` is what `extract.py` produced from it. Delete it and rerun; nothing is lost.
-- `ADOPTION.md` records what this framework costs and what it caught.
 ```
-
-**`ADOPTION.md` gets its first entry now, and it is this session.** It is the only file
-here that measures the framework instead of the product, and the only one that can later
-justify switching a check off. It cannot wait for the second cycle: nobody reconstructs how
-long the first session took, and the first session is what the second gets compared against.
-
-**Record what you measured and ask for what you cannot know.** You do not have a reliable
-clock across a session, so do not write a number as though you had one:
-
-| Field | Where the value comes from |
-|---|---|
-| minutes | `date` at the start and at the end if you have both, labelled `measured`. Otherwise ask, and label the answer `estimated`. If neither, write `not measured` |
-| what it caught | yours to write: the contradictions, the undocumented decisions, the unreadable documents. Name them |
-| what was noise | **the user's, not yours.** Ask once, at the end |
-
-The question at the end is one sentence: *is there anything in this that you already think
-was wasted work?* If the answer does not come, write `not assessed`. **Do not write "no
-noise".** An invented zero in the field that exists to retire parts of this framework is
-worse than an empty one, because it will be compared against a real number next cycle and
-it will look like an improvement.
 
 Copy from `templates/` at the plugin root, fill the **front matter** and leave the body to
 the interview and the corpus. `created` and `last_review` take the real instant, to the
@@ -162,6 +141,18 @@ nothing else: this is the first skill to run in a repository, so it is the one t
 the name every later document copies, and a name inferred here propagates silently. A
 placeholder that survives into a real repository reads as a real value to anything that
 does not know the template.
+
+**Create `STACK.md` if the corpus named a single tool, and it almost certainly did.** Every
+tool on an architecture slide goes into **§unratified**, never into §chosen: it was chosen by
+whoever drew the slide, and a `DEC` for it does not exist. On the corpus this framework was
+first used against, one slide named eleven — React, FastAPI, Apache NiFi, Iceberg, S3,
+LangGraph, Azure OpenAI, Kubernetes, an OIDC provider — and before this file there was
+nowhere to record that they were decisions nobody had taken. They would have gone into
+`ARC#current` looking chosen, or nowhere at all.
+
+Give each row where it came from, as an `ING`, and what it would cost to change. That second
+column is the agenda: the expensive ones are the decisions to take first, and a project
+about to work on its architecture is looking for exactly that list.
 
 **Do not create `PLATFORM.md`.** It is born with the decision to share a technical
 substrate, and that decision does not have to be taken now. Until it is, the question lives

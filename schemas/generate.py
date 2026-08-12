@@ -128,6 +128,13 @@ def build(name: str, spec: dict, registry: dict) -> dict:
             f = rule["fields"]
             props = {k: {"type": "string", "minLength": 1}
                      for k in list(f.get("required", [])) + list(f.get("optional", []))}
+            # A field of the record can carry a closed vocabulary. Without this a typo in a
+            # status is a string like any other, and the map that was supposed to be the
+            # checkable half of the document goes back to being prose with colons in it.
+            for k, values in (f.get("enums") or {}).items():
+                if k not in props:
+                    raise SystemExit(f"{name}.maps.{field}.enums: {k!r} is not a field")
+                props[k] = {"enum": list(values)}
             value = {"type": "object", "properties": props,
                      "required": list(f.get("required", [])),
                      "additionalProperties": False}

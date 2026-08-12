@@ -245,30 +245,40 @@ types:
     lifecycle: living
     status: [active]
 
-  adoption-log:
-    id: ADOPT
-    name: Adoption log
+  operational-stack:
+    id: STK
+    name: Operational stack
     axis: platform
-    born_in: day one, and its first entry is the setup session
-    template: templates/ADOPTION.md
-    path: _meta/ADOPTION.md
-    lifecycle: append-only
-    status: [active, abandoned]
-    sections: [cycles, verdict]
-    # The only artifact here that is about the framework rather than about the product, and
-    # the only one that can retire the others. Every check and every template in this
-    # repository was written against a failure somebody imagined; this is where a project
-    # records which of them met a failure that happened. Without it the framework has no
-    # way to shrink, and a framework that can only grow is one people eventually route
-    # around.
+    born_in: the first time a tool is named, which is usually earlier than anybody thinks
+    template: templates/STACK.md
+    path: STACK.md
+    lifecycle: living
+    status: [active]
+    sections: [chosen, unratified, ruled-out]
+    # The fact with no other home: which tool is used for which job, and whether anybody
+    # decided it. `ARC#current` describes the system that exists; a `DEC` records one
+    # decision and its reasoning. Neither answers the question an agent asks before writing
+    # a line of code -- what do we reach for here, and what must I not introduce -- and
+    # answering it today means reading every decision in the register.
     #
-    # Three fields per cycle and no more. A log that costs an afternoon does not get a
-    # second entry, and one entry is worth nothing: the whole value is in the comparison
-    # between the third cycle and the first.
+    # It exists because of what a real corpus turned up. The architecture slide of a sales
+    # deck named React, FastAPI, Apache NiFi, Iceberg, S3, LangGraph, Azure OpenAI,
+    # Kubernetes and OIDC. Eleven tools, chosen by whoever drew the slide, with no `DEC`
+    # behind any of them and nowhere in this framework to say so. `unratified` is that state,
+    # and it is the most useful section here: it is `OPEN.md`'s `Default in force` applied
+    # to tooling, and naming it is what turns a slide into a decision somebody can take.
     #
-    # `abandoned` is a real status and it is the finding, not the absence of one. A project
-    # that stopped filling this in after two cycles has said something about the framework,
-    # and saying it out loud is better than leaving a file that trails off.
+    # The map is the checkable half and the body is where the reason goes, the same split
+    # the `ICG` uses. A row names the `DEC` that chose it; it does not restate the argument,
+    # because the copy is what survives when the decision is revisited.
+    maps:
+      stack:
+        keys: "^[a-z][a-z0-9-]*$"
+        fields:
+          required: [tool, status]
+          optional: [decided_in, used_by, version, note]
+          enums:
+            status: [chosen, unratified, ruled-out]
 
   platform-architecture:
     id: PLATFORM

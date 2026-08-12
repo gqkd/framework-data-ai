@@ -109,10 +109,10 @@ repo/
 ├── COMMITMENTS.md               what has been promised commercially
 ├── GLOSSARY.md                  single, shared by every product
 ├── PLATFORM.md                  only if you share a substrate. See §9
+├── STACK.md                     which tool for which job, and who decided
 ├── framework.yaml               validator configuration, at the root like any other
 ├── _meta/                       about the framework, not about the product
 │   ├── README.md                which of these can be deleted and which cannot
-│   ├── ADOPTION.md              is this paying for itself. See §10
 │   ├── corpus/                  every business document, by product. IRREPLACEABLE
 │   │   └── product-a/
 │   └── extract/                 what extract.py produced. Regenerable
@@ -277,7 +277,7 @@ One template for each in `templates/`. Every template contains the anti-patterns
 | `OPEN` | Open decisions and known issues | living | platform | day one |
 | `COMMITMENTS` | Commercial commitments made | living | platform | day one |
 | `GLOSSARY` | Glossary and metric dictionary | living | platform | day one |
-| `ADOPT` | Adoption log | append-only | platform | day one, and its first entry is the setup session |
+| `STK` | Operational stack | living | platform | the first time a tool is named, which is usually earlier than anybody thinks |
 | `PLATFORM` | Architecture of the shared substrate | living | platform | only if a shared substrate is decided |
 | `product.yaml` | Product manifest | living, partly generated | product | day one |
 | `PBR` | Product brief | living | product | F4 |
@@ -543,17 +543,16 @@ Then, **when the thing to document exists** and not before:
 If the answer is "when the company grows", it is not now. A framework at 60% that you use
 beats one at 95% that you abandon in two months.
 
-**`ADOPTION.md` is where that question gets an answer instead of an opinion.** Three fields
-per cycle — minutes spent, what it caught, what was noise — and after three cycles the
-comparison says which parts have prevented a failure that happened rather than one somebody
-imagined. Everything in this document was written against an imagined failure; that is what
-a framework is before anybody uses it. Without a record of the real ones it can only grow,
-because nobody ever has grounds to delete anything, and a structure that only accumulates
-is one people route around rather than argue with.
+There was an artifact here for measuring that — an adoption log, three fields a cycle — and
+it was removed a day after it was written. It failed its own test. Its purpose was to
+accumulate evidence for deleting things against a repository somebody had already committed
+to, and no such repository exists yet: while the framework has no installed base, anything
+that has not earned its place can simply be taken out, which is what happened to the log
+itself. It also broke the rule directly above it, by being a document about the framework
+sitting among the documents about the product.
 
-The field that does the work is the one people leave empty. Findings that were correct and
-changed nothing, questions asked twice, sections written every cycle and opened by nobody:
-those are what earn the right to turn a check off, and they are invisible a month later.
+It comes back when more than one person is maintaining these files, because that is when
+"this section is never read" stops being something one person can just act on.
 
 ---
 

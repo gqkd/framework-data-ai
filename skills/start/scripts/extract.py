@@ -567,12 +567,25 @@ def extract_pdf(path: Path, out: Path, min_chars: int) -> tuple[list[Block], Doc
         if len(body) < min_chars:
             info.visual_review.append(n)
 
-    if deck and sizes:
-        info.visual_review = sorted(set(info.visual_review) | set(thin_against_median(sizes)))
-        info.note = ("a presentation exported to PDF, by page geometry. The extracted text "
-                     "has lost the layout, and in a deck the layout carries the claim: the "
-                     "pages listed are thin against the rest of this deck and are probably "
-                     "diagrams. Read them before classifying anything from this document.")
+    if deck:
+        # Every page, and no threshold. Counting characters cannot find a diagram, because a
+        # diagram's labels are text: on a real deck this flagged the title slide, the thanks
+        # slide and the contacts page, and missed the one page carrying the entire target
+        # architecture -- which had more extracted text than most, being fifteen boxes with
+        # names in them. There is no character count that separates fifteen labels from a
+        # paragraph, and the vector drawing they sit on leaves no trace `pdfimages` can see.
+        #
+        # `ingest-bulk.md` has said for months that an exported presentation should be
+        # treated as visual throughout. The code was doing something cleverer and worse.
+        info.visual_review = list(range(1, min(info.units, 40) + 1))
+        info.note = ("a presentation exported to PDF, by page geometry. Every page is listed "
+                     "for review, deliberately and not by a threshold: the extracted text "
+                     "has lost the layout, and in a deck the layout carries the claim. A "
+                     "diagram's labels are text, so no character count can find one -- the "
+                     "page holding the architecture reads as one of the wordiest.")
+        if info.units > 40:
+            info.note += (f" Capped at 40 of {info.units} pages: read the rest by hand, "
+                          "starting where the architecture is.")
     elif info.units and len(info.visual_review) > info.units * 0.4:
         info.note = ("many text-poor pages: likely a presentation exported to PDF. The "
                      "extracted text loses the layout, and on a sales deck the layout is "

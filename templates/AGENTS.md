@@ -24,6 +24,7 @@ here.
 | **Where the code is** | `products/<p>/product.yaml` under `code:`, one entry per repository. `path: .` is this one |
 | **Where the code shared by several products is** | `PLATFORM.md` under `code:`. It is not repeated in any product |
 | How the system is built | `products/<p>/ARC.md#current`, plus `PLATFORM.md` if there is one |
+| **Which tool to use, and which not to** | `STACK.md`. A row with no `DEC` was never decided |
 | What shape it is going to have | `products/<p>/ARC.md#target` |
 | What is missing to get there | `products/<p>/ARC.md#delta`, ordered by `RMP.md` |
 | Why it is built that way | `decisions/DEC-NNN.md` |

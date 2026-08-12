@@ -653,10 +653,20 @@ def _maps_are_constrained():
                 ok_val, bad_vals = [rule["any_of"][0]], [["not-a-real-outcome"], []]
             elif "fields" in rule:
                 req = list(rule["fields"]["required"])
-                ok_val = {k: "x" for k in req}
-                bad_vals = [{}, dict({k: "x" for k in req}, surprise="x")]
+                enums = rule["fields"].get("enums") or {}
+                # A field of the record may carry its own closed vocabulary, so the legal
+                # entry cannot be built out of a filler string for every key.
+                def legal(k, _e=enums):
+                    return _e[k][0] if k in _e else "x"
+                ok_val = {k: legal(k) for k in req}
+                bad_vals = [{}, dict(ok_val, surprise="x")]
                 if len(req) > 1:
-                    bad_vals.append({req[0]: "x"})          # one required key missing
+                    bad_vals.append({req[0]: legal(req[0])})   # one required key missing
+                for k, values in enums.items():
+                    if k in req:
+                        bad_vals.append(dict(ok_val, **{k: "not-in-the-vocabulary"}))
+                    if not values:
+                        problems.append(f"{name}.{field}.enums.{k}: empty vocabulary")
             else:
                 problems.append(f"{name}.{field}: declares no value shape")
                 continue
@@ -937,7 +947,7 @@ def _skips_are_scoped():
         (("pipelines", "extract"), False, "an extract step nested in a project's pipelines"),
         (("_meta", "corpus"), True, "the corpus under _meta"),
         (("products", "alpha", "corpus"), True, "a corpus left where older repos keep it"),
-        (("_meta",), False, "_meta itself, which holds ADOPTION.md and must be scanned"),
+        (("_meta",), False, "_meta itself, which can hold artifacts and must be scanned"),
         (("products", "alpha"), False, "an ordinary product directory"),
     ]:
         if x.skipped_dir(parts, skips) != want:
