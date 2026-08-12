@@ -99,6 +99,14 @@ Propose a diff and wait for everything else. In particular:
   opposites: change the declaration, or change the document to match it. An `immutable`
   declared `living` might be a typo in the front matter, or it might be a document somebody
   has been editing in place for months. Find out which before touching it.
+- **`FM004`**, a field still holding the template's placeholder. Almost always a scaffold
+  that was never finished, and almost never something you can fill by reading: `owners`
+  is the one field in the front matter that commits a person other than you, and the
+  preamble is explicit that it is asked and never deduced — not from the git config, not
+  from the last document that named somebody. `created` is a fact about when, and
+  `derives_from: [PRB-NNN]` is either a document to write or a line to delete. Ask, or
+  propose the deletion. Filling these from what is lying around is how the finding
+  disappears and the fiction stays.
 - **`REF001` / `REF002`**, a reference to something that does not exist. Deleting the
   reference silences the check and destroys the only surviving trace that the thing was
   supposed to exist. Look for what it pointed at, including in git history. If it never

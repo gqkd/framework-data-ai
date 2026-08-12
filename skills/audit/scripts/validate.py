@@ -426,6 +426,64 @@ def check_sections(a: Artifact, registry: dict, report: Report) -> None:
                        "reworded the title the marker should still be above it.")
 
 
+def check_placeholders(a: Artifact, registry: dict, report: Report) -> None:
+    """A field still holding the value the template shipped with.
+
+    The schemas reject the two `enforced` sentinels, and that is as far as they reach: they
+    reject a plain string in a required field, and the fields this actually happens to are
+    not that. `owners` is a list, so `[NAME]` clears its `minItems`. `created` carries no
+    format on purpose, so `YYYY-MM-DD HH:MM` clears it too. `derives_from: [PRB-NNN]` is
+    not something `REF001` can report, because `PRB-NNN` never matched the identifier
+    pattern that check resolves against. A `verified_code: {backend: COMMIT_HASH}` sits
+    inside a map, where the value rule is the map's and not `non_placeholder`.
+
+    So the whole day one set copied out of `templates/` validates, and the registry says
+    two lines above its own list what that costs: a placeholder that reaches a real
+    repository reads as a real value to anything that does not know the template. `owners`
+    names somebody to ask, `derives_from` names a document that exists, and neither is
+    true.
+
+    It cannot be fixed in the schemas. Every template ships `owners: [NAME]`, and the
+    templates have to validate against their own schemas -- they are the thing people copy,
+    and one that fails the check it teaches is worse than a permissive pattern. So this is
+    a check on repositories, where `templates/` is not looked at anyway.
+
+    At `warn`, and deliberately: a half filled scaffold is a normal state to be in for an
+    hour. It is the state nobody comes back to that costs, and a warning is what says so.
+
+    `last_review` is left to `LC004`, which already reports the same value and says more
+    about it. Two findings on one field is how both get skimmed.
+    """
+    sentinels = set(registry["placeholders"]["enforced"])
+    sentinels |= set(registry["placeholders"].get("other") or [])
+    # `NNN` reaches a front matter attached to a prefix, never on its own: the templates
+    # carry `derives_from: [PRB-NNN]` and `id: DEC-NNN`, and matching the bare sentinel
+    # found neither. Built from the registry's own prefixes rather than from any `-NNN`,
+    # which is the same shape the generated schemas already allow as a map key.
+    unfilled_id = re.compile(r"^(?:%s)-NNN$" % "|".join(registry["id_prefixes"]))
+
+    def walk(value, where: str) -> None:
+        if isinstance(value, str):
+            v = value.strip()
+            if v in sentinels or unfilled_id.match(v):
+                report.add("FM004", a.rel,
+                           f"{where} is still the template's {v!r}. In a repository that "
+                           "reads as a filled field to anything that did not copy the "
+                           "template: a person to ask, a date, a document that exists. "
+                           "Fill it, or delete the field if it does not apply here.")
+        elif isinstance(value, dict):
+            for k, v in value.items():
+                walk(v, f"{where}/{k}")
+        elif isinstance(value, list):
+            for i, v in enumerate(value):
+                walk(v, f"{where}[{i}]")
+
+    for field, value in a.meta.items():
+        if field == "last_review":
+            continue
+        walk(value, str(field))
+
+
 MOMENT_FORMATS = ("%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M",
                   "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S",
                   "%Y-%m-%d")
@@ -1140,6 +1198,7 @@ def main() -> int:
     arts = discover(root, scan, registry, report)
     for a in arts:
         check_front_matter(a, registry, report)
+        check_placeholders(a, registry, report)
         check_sections(a, registry, report)
         check_lifecycle(a, stale_days, now, report)
     check_references(arts, registry, report)

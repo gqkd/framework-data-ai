@@ -166,8 +166,9 @@ def build(name: str, spec: dict, registry: dict) -> dict:
         # against their own schemas, and a template cannot carry a real identifier. That
         # rule is worth more than closing this hole: the template is the thing people copy,
         # and one that fails the check it teaches is worse than a permissive pattern. `NNN`
-        # is in the registry's placeholder list and not in the enforced one, so the
-        # framework already decided it reaching a repository is not a blocking error.
+        # is in the registry's `other` placeholder list and not in the enforced one, so it
+        # is not a blocking error here -- and `FM004` reports it in a repository, which is
+        # where the same value stops being a template and starts being a claim.
         #
         # `keys` overrides the pattern for a map whose keys are not framework identifiers.
         # Repository names are the case: they are somebody's slugs, not `SIG-001`, and

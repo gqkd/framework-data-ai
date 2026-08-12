@@ -85,10 +85,21 @@ base_required: [schema, artifact_type, lifecycle, status, owners, created]
 # not present: a template placeholder that reaches a real repository reads as a real
 # value to anything that does not know the template.
 #
-# The deleted validator enforced only the first two, and only on the fields listed under
-# `required` / `required_if_active`. The rest are recorded here as the sentinels the
-# templates actually use. Whether the validator rejects all of them is a decision for the
-# validator, not a fact recovered from it.
+# The two lists are enforced in two different places, and the split is not about which
+# sentinels matter. It is about where a rule can live.
+#
+# `enforced` is rejected by the generated schemas, wherever a required field is a plain
+# string: `FM002`, which blocks. It cannot hold more than this, because the templates have
+# to validate against their own schemas -- they are the thing people copy, and one that
+# fails the check it teaches is worse than a permissive pattern -- and every template ships
+# `owners: [NAME]` and `created: YYYY-MM-DD HH:MM`.
+#
+# `other` is reported by `FM004` at `warn`, on repositories only, where `templates/` is not
+# looked at. That check exists because the schemas reached none of these: `owners` is a
+# list, so `[NAME]` clears `minItems`; `created` carries no format on purpose;
+# `derives_from: [PRB-NNN]` is not a reference `REF001` can resolve; a `COMMIT_HASH` inside
+# `verified_code` is a map value. The whole day one set validated with an owner who does not
+# exist and a document nobody wrote.
 placeholders:
   enforced: [COMMIT_HASH, SHA_OF_THE_EVP_FILE]
   other: [NAME, NNN, "YYYY-MM-DD", "YYYY-MM-DD HH:MM", "YYYY-MM-DDTHH:MM:SSZ"]

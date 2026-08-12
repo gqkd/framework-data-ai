@@ -52,6 +52,24 @@ checks:
       check. It is not an error because a new template legitimately arrives before the
       registry knows about it.
 
+  FM004:
+    level: warn
+    title: a front matter field still holds its template placeholder
+    prevents: >
+      The whole day one set copied out of `templates/` reading as filled in. The schemas
+      reject `COMMIT_HASH` and `SHA_OF_THE_EVP_FILE` in a required string field, and that is
+      as far as they reach: `owners: [NAME]` clears `minItems` because it is a list,
+      `created: YYYY-MM-DD HH:MM` clears a field that carries no format on purpose,
+      `derives_from: [PRB-NNN]` is not a reference `REF001` can resolve, and a
+      `COMMIT_HASH` inside `verified_code` is a map value and not a required string. So a
+      scaffold went into a real repository with zero errors while naming an owner who does
+      not exist and a document that was never written. It cannot be closed in the schemas:
+      every template ships `owners: [NAME]`, and a template that fails the check it teaches
+      is worse than a permissive pattern. It warns rather than blocking because a half
+      filled scaffold is a normal state to be in for an hour; it is the one nobody returns
+      to that costs. `last_review` is left to `LC004`, which reports the same value and says
+      more about it.
+
   # ── Sections ───────────────────────────────────────────────────────────────
   SEC001:
     level: warn
