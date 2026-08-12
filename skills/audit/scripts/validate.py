@@ -613,6 +613,36 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
         for od, row in sorted(entries.items()):
             if not isinstance(row, dict):
                 continue
+
+            # The register's own instructions call `Default in force` mandatory, and until
+            # now only `OD003` looked at it and only on a high cost entry. A medium one with
+            # no default passed, which is the field the whole file is built around: a
+            # decision not taken does not mean nothing is happening, and naming what is
+            # happening is what turns a worry into a decidable question.
+            #
+            # `OD-` only. A known issue has no default in force and no cost to reverse:
+            # those are properties of a choice, and a `KI` is not one.
+            if od.startswith("OD-"):
+                if row.get("status") == "open" and not str(row.get("default_in_force") or "").strip():
+                    report.add("OD005", a.rel,
+                               f"{od} is open and names no `default_in_force`. Something is "
+                               "happening in the absence of this decision; write it, and "
+                               "write `none` when the honest answer is that nothing is.")
+                if not row.get("cost_to_reverse"):
+                    report.add("OD005", a.rel,
+                               f"{od} declares no `cost_to_reverse`. It is what orders this "
+                               "register, and an entry without it is filed nowhere.")
+            if row.get("status") == "decided" and not row.get("closed_by"):
+                report.add("OD005", a.rel,
+                           f"{od} is `decided` and names no `closed_by`. The decision exists "
+                           "somewhere and nothing here points at it, so the reasoning has to "
+                           "be found again by whoever asks next.")
+            for dep in as_list(row.get("depends_on")):
+                if dep not in entries:
+                    report.add("OD005", a.rel,
+                               f"{od} depends on {dep!r}, which this register does not "
+                               "declare. Either it was decided and the dependency is stale, "
+                               "or it is a typo and this entry is waiting for nothing.")
             if od in closed_by and row.get("status") == "open":
                 report.add("OD002", a.rel,
                            f"{od} is still `status: open` but {closed_by[od]} derives from "
@@ -797,6 +827,54 @@ def check_triage(arts: list[Artifact], report: Report) -> None:
                    "`not-a-candidate`, which is what stops the next cycle re-reading them.")
 
 
+def check_stack(arts: list[Artifact], report: Report) -> None:
+    """What a stack entry's `status` claims, against what it carries.
+
+    The template says a `chosen` row names the decision that chose it and an `unratified`
+    row is one nobody decided. The schema requires neither, so `status: chosen` with nothing
+    behind it validates -- which is the ambiguity this artifact was added to remove, arriving
+    back through the field that was supposed to remove it.
+    """
+    accepted = {a.id for a in arts
+                if a.type == "decision-record" and a.meta.get("status") == "accepted" and a.id}
+    known_dec = {a.id for a in arts if a.type == "decision-record" and a.id}
+    products = {p for a in arts for p in as_list(a.meta.get("products"))}
+
+    for a in arts:
+        if a.type != "operational-stack":
+            continue
+        for cap, row in sorted((a.meta.get("stack") or {}).items()):
+            if not isinstance(row, dict):
+                continue
+            status, dec = row.get("status"), row.get("decided_in")
+            if status in ("chosen", "ruled-out") and not dec:
+                report.add("STK001", a.rel,
+                           f"{cap!r} is {status!r} and names no `decided_in`. It reads as a "
+                           "decision and there is no record of one, which is what "
+                           "`unratified` is for: a tool in use that nobody chose.")
+            elif status == "unratified" and dec:
+                report.add("STK001", a.rel,
+                           f"{cap!r} is `unratified` and names {dec!r}. If the decision "
+                           "exists the row is `chosen`; leaving it unratified hides a "
+                           "decision that was taken.")
+            if dec and dec not in known_dec:
+                report.add("STK001", a.rel,
+                           f"{cap!r} names {dec!r}, which is not a decision in this "
+                           "repository. The tool is presented as chosen and the reasoning "
+                           "cannot be reached.")
+            elif dec and dec not in accepted:
+                report.add("STK001", a.rel,
+                           f"{cap!r} names {dec!r}, which is not accepted. A tool chosen on "
+                           "a decision still in draft or already superseded is a tool whose "
+                           "reason has moved.")
+            for p in as_list(row.get("used_by")):
+                if products and p not in products:
+                    report.add("STK001", a.rel,
+                               f"{cap!r} says it is used by {p!r}, which matches no product "
+                               "here. Either the product is undocumented or the name is a "
+                               "typo, and both leave the row addressed to nobody.")
+
+
 def check_cross_product(arts: list[Artifact], report: Report) -> None:
     products = {p for a in arts for p in as_list(a.meta.get("products"))}
 
@@ -851,7 +929,10 @@ def check_cross_product(arts: list[Artifact], report: Report) -> None:
     # both maps and qualified the way the field is keyed, because a product and the platform
     # may each own a `backend` and an attestation cannot be ambiguous about which it ran on.
     known: set[str] = set()
-    must_cover: set[str] = set()
+    # Per product, never global. Built globally, this asked the `ARC` of one product to
+    # attest another product's backend -- a false positive on every repository holding more
+    # than one product, which is the arrangement the code map exists for.
+    owed: dict[str, set[str]] = {}
     for a in arts:
         if a.type == "product-manifest":
             scope = "product"
@@ -863,9 +944,29 @@ def check_cross_product(arts: list[Artifact], report: Report) -> None:
         if not isinstance(code, dict):
             continue
         for key, entry in code.items():
-            known.add(f"{scope}.{key}")
-            if isinstance(entry, dict) and str(entry.get("release_relevant")).lower() == "true":
-                must_cover.add(f"{scope}.{key}")
+            qualified = f"{scope}.{key}"
+            known.add(qualified)
+            if not isinstance(entry, dict) or str(entry.get("release_relevant")).lower() != "true":
+                continue
+            if scope == "product":
+                for p in as_list(a.meta.get("products")):
+                    owed.setdefault(p, set()).add(qualified)
+            else:
+                # A shared repository has to say whose release it is part of. Nothing else
+                # can: the substrate serves several products and only some of them may ship
+                # against a given change. `used_by` is that statement, and without it no
+                # attestation can be required -- which is a hole, so it is reported rather
+                # than left to be discovered by the release it failed to cover.
+                users = as_list(entry.get("used_by"))
+                if not users:
+                    report.add("VER003", a.rel,
+                               f"{key!r} is `release_relevant` and names no `used_by`. No "
+                               "product claims it, so no evaluation can be required to "
+                               "attest it, and a shared component ships unmeasured while "
+                               "every report reads as complete. List the products that go "
+                               "through it.")
+                for p in users:
+                    owed.setdefault(p, set()).add(qualified)
 
     for a in arts:
         attested = a.meta.get("verified_code")
@@ -877,15 +978,18 @@ def check_cross_product(arts: list[Artifact], report: Report) -> None:
                        "repository is not recorded anywhere, in which case the commit "
                        "points at something this repository cannot resolve, or the key is a "
                        "typo and a repository that was measured is not represented.")
-        # Only when something declares itself relevant. A project that has not marked
-        # anything is not being told its attestation is incomplete against a list it never
-        # wrote: that would be the framework inventing the standard it then enforces.
-        for key in sorted(must_cover - set(attested)):
+        # Only what this document's own products owe. A project that has marked nothing
+        # `release_relevant` owes nothing: the framework does not get to invent the standard
+        # it then enforces.
+        mine: set[str] = set()
+        for p in as_list(a.meta.get("products")):
+            mine |= owed.get(p, set())
+        for key in sorted(mine - set(attested)):
             report.add("VER002", a.rel,
-                       f"{key!r} is marked `release_relevant` and carries no commit here. "
-                       "The attestation covers part of the system and reads as covering all "
-                       "of it, which is the failure a single hash had and the reason this "
-                       "field became a map.")
+                       f"{key!r} is marked `release_relevant` for this product and carries "
+                       "no commit here. The attestation covers part of the system and reads "
+                       "as covering all of it, which is the failure a single hash had and "
+                       "the reason this field became a map.")
 
     early = {p for a in arts if a.type == "product-manifest"
              for p in as_list(a.meta.get("products"))
@@ -941,13 +1045,22 @@ def build_indices(root: Path, arts: list[Artifact]) -> dict[Path, str]:
     # own `entries:`, not from a list somebody maintains beside it, which is the duplication
     # this removes: two answers to "what is still open", and the stale one is the one an
     # agent reads first because `AGENTS.md` sends it to the manifest.
-    open_now = sorted({od for a in arts if a.type == "open-register"
-                       for od, row in (a.meta.get("entries") or {}).items()
-                       if isinstance(row, dict) and row.get("status") == "open"})
+    # Scoped per product. There is one register at the root and it holds entries of
+    # different scope, so collecting every open entry once put a decision about one product
+    # into the derived view of another -- and this file is what `AGENTS.md` sends an agent to
+    # first. An entry naming no product concerns all of them, which is the common case: "do
+    # these products share a substrate" belongs to every one of them.
+    open_entries = [(od, row) for a in arts if a.type == "open-register"
+                    for od, row in (a.meta.get("entries") or {}).items()
+                    if isinstance(row, dict) and row.get("status") == "open"]
+
     for man in (a for a in arts if a.type == "product-manifest"):
         prod = next(iter(as_list(man.meta.get("products"))), None)
         if not prod:
             continue
+        open_now = sorted(od for od, row in open_entries
+                          if prod in as_list(row.get("products"))
+                          or not as_list(row.get("products")))
         mine = [a for a in arts if prod in as_list(a.meta.get("products"))]
         changes = sorted(a.id for a in mine if a.type == "change-contract"
                          and a.meta.get("status") in ("approved", "implemented") and a.id)
@@ -1035,6 +1148,7 @@ def main() -> int:
     check_framework_version(root, project, registry, report)
     check_open_register(arts, report)
     check_triage(arts, report)
+    check_stack(arts, report)
     check_cross_product(arts, report)
 
     index_written: list[str] = []

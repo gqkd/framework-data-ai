@@ -16,20 +16,20 @@ entries:
   OD-001:
     status: open
     cost_to_reverse: high
-    default_in_force: none
+    default_in_force: none            # `none` is a legitimate value. Absent is not
     deadline: YYYY-MM-DD
+    products: [product-a]             # omit when the entry concerns every product
   OD-002:
     status: open
     cost_to_reverse: medium
     default_in_force: whatever is already happening today
-    depends_on: OD-001
+    depends_on: [OD-001]
   OD-003:
     status: open
     cost_to_reverse: low
     default_in_force: whatever is already happening today
-  KI-001:
-    status: open
-    cost_to_reverse: low
+  KI-001:                             # a known issue has no default and no cost to reverse:
+    status: open                      # those are properties of a choice, and this is not one
 ---
 
 # Open decisions and known issues

@@ -171,6 +171,30 @@ checks:
       somebody was hoping for. The two fields they need live in `entries:` now, and their
       absence is a finding rather than a silence.
 
+  OD005:
+    level: warn
+    title: an entry of the open register is not filled in enough to be read
+    prevents: >
+      The register's own instructions call `Default in force` mandatory, and until this only
+      `OD003` looked at it and only on a high cost entry: a medium one with no default
+      passed, and that is the field the whole file is built around. Also catches a `decided`
+      entry naming no `closed_by`, which leaves the reasoning to be found again, a
+      `depends_on` pointing at an entry the register does not declare, and an `OD` with no
+      cost to reverse, which is what orders the file. `KI-` entries are exempt from the
+      default and the cost: those are properties of a choice and a known issue is not one.
+
+  # ── STACK ──────────────────────────────────────────────────────────────────
+  STK001:
+    level: warn
+    title: a stack entry contradicts what its status claims
+    prevents: >
+      The document going back to being the thing it replaced. `chosen` means somebody
+      decided, so it has to name the `DEC`; `unratified` means nobody did, so it must not;
+      and a `decided_in` pointing at a decision that does not exist or was never accepted
+      says a choice was made when the record of it is missing. Without this the schema
+      accepts `status: chosen` with nothing behind it, which is exactly the ambiguity the
+      artifact exists to remove.
+
   # ── Attestation ────────────────────────────────────────────────────────────
   VER001:
     level: warn
@@ -190,6 +214,16 @@ checks:
       repositories, and it is the whole reason the field became a map. It fires only against
       repositories that declared themselves `release_relevant`, so a project that has not
       marked any is not measured against a list it never wrote.
+
+  VER003:
+    level: warn
+    title: a shared release relevant repository names no product that uses it
+    prevents: >
+      A component of the substrate shipping unmeasured while every report reads as complete.
+      A repository in `PLATFORM.md` is used by some products and not others, and only
+      `used_by` says which: without it no evaluation can be required to attest it, so the
+      hole is silent. Requiring it of every product instead would ask one product's
+      evaluation to account for a component it does not ship.
 
   # ── Across products ────────────────────────────────────────────────────────
   XP001:

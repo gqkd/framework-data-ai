@@ -13,6 +13,7 @@ it is drawn. Three boxes with arrows saying "one single platform" produce no
 extractable text at all and are a tenancy constraint.
 
 Usage:
+  python3 extract.py --doctor                       what is installed
   python3 extract.py --find .                       where is the corpus
   python3 extract.py <file-or-folder> [...] -o out/
   python3 extract.py _meta/corpus/<p> -o _meta/extract/<p> --jsonl
@@ -150,6 +151,78 @@ def anydoc_ready() -> str:
         _READY = "" if (os.environ.get("ANYDOC_BIN") or shutil.which("anydoc")) \
                  else ANYDOC_INSTALL
     return _READY
+
+
+def toolchain() -> dict:
+    """What is installed, at which version, and what is lost without each.
+
+    Recorded as well as printed. Two machines with different poppler versions produce
+    different text from one PDF, and without a stamp in the inventory a corpus extracted
+    last month cannot be compared with the same corpus extracted today: the difference reads
+    as the documents having changed.
+    """
+    def version(cmd: list[str], pattern: str = r"(\d+[\d.]+)") -> str | None:
+        if not shutil.which(cmd[0]):
+            return None
+        # Both streams. Poppler prints its version to stderr, which is why the first
+        # version of this reported every one of its four tools as "present, version
+        # unknown" -- a diagnostic that says nothing is worse than no diagnostic, because
+        # it looks like it looked.
+        try:
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=30,
+                               encoding="utf-8", errors="replace")
+        except (subprocess.TimeoutExpired, OSError):
+            return "present, would not answer"
+        m = re.search(pattern, (r.stdout or "") + (r.stderr or ""))
+        return m.group(1) if m else "present, version unknown"
+
+    mod = None
+    try:
+        import anydoc                                          # type: ignore
+        mod = getattr(anydoc, "__version__", "present, version unknown")
+    except ImportError:
+        pass
+    exe = os.environ.get("ANYDOC_BIN") or shutil.which("anydoc")
+
+    return {
+        "anydoc": {"module": mod, "command": version([exe, "-V"]) if exe else None,
+                   "needed_for": "every office format. Without it they produce no blocks"},
+        "poppler": {k: version([k, "-v"] if k != "pdftotext" else ["pdftotext", "-v"])
+                    for k in ("pdfinfo", "pdftotext", "pdffonts", "pdftoppm")},
+        "libreoffice": {"soffice": version(["soffice", "--version"]),
+                        "needed_for": "rasterising a deck, and slide numbers in a legacy .ppt"},
+    }
+
+
+def report_doctor(as_json: bool) -> int:
+    """`--doctor`: say what is installed and what each absence costs."""
+    t = toolchain()
+    anydoc_ok = bool(t["anydoc"]["module"] or t["anydoc"]["command"])
+    poppler_ok = all(t["poppler"].values())
+    if as_json:
+        print(json.dumps(t, indent=2, ensure_ascii=False))
+        return 0 if anydoc_ok and poppler_ok else 1
+
+    rows = [("anydoc (module)", t["anydoc"]["module"]),
+            ("anydoc (command)", t["anydoc"]["command"])]
+    rows += [(k, v) for k, v in t["poppler"].items()]
+    rows += [("soffice", t["libreoffice"]["soffice"])]
+    for name, v in rows:
+        print(f"  {name:<20} {v or 'ABSENT'}")
+    print()
+    if not anydoc_ok:
+        print(f"! {ANYDOC_INSTALL}")
+        print("  Without it every office document produces zero blocks.")
+    if not poppler_ok:
+        print("! poppler is incomplete: `apt install poppler-utils`.")
+        print("  Without it a PDF has no page numbers, a scanned PDF cannot be told from an "
+              "unreadable one, and no page is rasterised.")
+    if not t["libreoffice"]["soffice"]:
+        print("- LibreOffice absent, which is allowed: a deck's flagged slides are not "
+              "rasterised and a legacy .ppt loses its slide numbers. Everything else works.")
+    if anydoc_ok and poppler_ok:
+        print("Nothing degraded.")
+    return 0 if anydoc_ok and poppler_ok else 1
 
 
 def wrote_by_framework(path: Path) -> bool:
@@ -787,7 +860,10 @@ def main() -> int:
             stream.reconfigure(errors="replace")
 
     ap = argparse.ArgumentParser(description="Extract a business corpus, preserving provenance")
-    ap.add_argument("inputs", nargs="+", type=Path)
+    ap.add_argument("inputs", nargs="*", type=Path)
+    ap.add_argument("--doctor", action="store_true",
+                    help="do not extract: say which converters are installed, at which "
+                         "version, and what each absence costs")
     ap.add_argument("--find", action="store_true",
                     help="do not extract: say which directory under the given path holds "
                          "the documents the business handed over, or say that somebody has "
@@ -805,6 +881,12 @@ def main() -> int:
     ap.add_argument("--no-render", action="store_true")
     args = ap.parse_args()
 
+    if args.doctor:
+        return report_doctor(args.json)
+    if not args.inputs:
+        print("Nothing to extract. Pass a file or a folder, or --doctor, or --find <project>.",
+              file=sys.stderr)
+        return 2
     if args.find:
         return report_corpus(args.inputs[0], args.json)
 
@@ -881,8 +963,12 @@ def main() -> int:
             for b in all_blocks:
                 fh.write(json.dumps(asdict(b), ensure_ascii=False) + "\n")
 
+    # The toolchain is stamped into the inventory. The same corpus read on a machine with a
+    # different poppler produces different text, and without this the difference reads as the
+    # documents having changed rather than the reader.
     (args.out / "inventory.json").write_text(
-        json.dumps({"documents": [asdict(i) for i in infos],
+        json.dumps({"toolchain": toolchain(),
+                    "documents": [asdict(i) for i in infos],
                     "blocks": len(all_blocks)}, indent=2, ensure_ascii=False),
         encoding="utf-8")
 

@@ -242,8 +242,9 @@ types:
       entries:
         keys: "^(OD|KI)-(\\d{3,}|NNN)$"
         fields:
-          required: [status, cost_to_reverse]
-          optional: [default_in_force, depends_on, deadline, closed_by]
+          required: [status]
+          optional: [cost_to_reverse, default_in_force, deadline, closed_by]
+          lists: [depends_on, products]
           enums:
             status: [open, decided, superseded, parked]
             cost_to_reverse: [high, medium, low]
@@ -299,7 +300,8 @@ types:
         keys: "^[a-z][a-z0-9-]*$"
         fields:
           required: [tool, status]
-          optional: [decided_in, used_by, version, note]
+          optional: [decided_in, version, note]
+          lists: [used_by]
           enums:
             status: [chosen, unratified, ruled-out]
 
@@ -332,6 +334,7 @@ types:
         fields:
           required: [url, contains]
           optional: [path, release_relevant]
+          lists: [used_by]
 
   product-manifest:
     id: product.yaml
@@ -369,6 +372,7 @@ types:
         fields:
           required: [url, contains]
           optional: [path, release_relevant]
+          lists: [used_by]
 
   product-brief:
     id: PBR

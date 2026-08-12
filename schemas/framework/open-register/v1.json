@@ -52,10 +52,6 @@
             "type": "string",
             "minLength": 1
           },
-          "depends_on": {
-            "type": "string",
-            "minLength": 1
-          },
           "deadline": {
             "type": "string",
             "minLength": 1
@@ -63,11 +59,26 @@
           "closed_by": {
             "type": "string",
             "minLength": 1
+          },
+          "depends_on": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
+          },
+          "products": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
           }
         },
         "required": [
-          "status",
-          "cost_to_reverse"
+          "status"
         ],
         "additionalProperties": false
       }

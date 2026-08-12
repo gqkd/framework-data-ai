@@ -127,7 +127,8 @@ def build(name: str, spec: dict, registry: dict) -> dict:
             # it, and an agent told only a name still cannot go and read anything.
             f = rule["fields"]
             props = {k: {"type": "string", "minLength": 1}
-                     for k in list(f.get("required", [])) + list(f.get("optional", []))}
+                     for k in list(f.get("required", [])) + list(f.get("optional", []))
+                     + list(f.get("lists", []))}
             # A field of the record can carry a closed vocabulary. Without this a typo in a
             # status is a string like any other, and the map that was supposed to be the
             # checkable half of the document goes back to being prose with colons in it.
@@ -135,6 +136,14 @@ def build(name: str, spec: dict, registry: dict) -> dict:
                 if k not in props:
                     raise SystemExit(f"{name}.maps.{field}.enums: {k!r} is not a field")
                 props[k] = {"enum": list(values)}
+            # A field of the record that holds several values. `used_by` needs it: a shared
+            # repository serves more than one product, and a scalar there would force the
+            # one thing the map exists to record into a comma separated string.
+            for k in (f.get("lists") or []):
+                if k not in props:
+                    raise SystemExit(f"{name}.maps.{field}.lists: {k!r} is not a field")
+                props[k] = {"type": "array", "items": {"type": "string", "minLength": 1},
+                            "minItems": 1}
             value = {"type": "object", "properties": props,
                      "required": list(f.get("required", [])),
                      "additionalProperties": False}

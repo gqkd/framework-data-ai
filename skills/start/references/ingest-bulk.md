@@ -31,16 +31,17 @@ the only thing in this repository that cannot be regenerated. **You run the extr
 one folder at a time. The user does not run commands.
 
 ```bash
-anydoc -V || python3 -c "import anydoc"     # first: without it every office file is empty
+python3 "${CLAUDE_PLUGIN_ROOT:?unset}/skills/start/scripts/extract.py" --doctor
 python3 "${CLAUDE_PLUGIN_ROOT:?unset: point it at your framework-data-ai checkout}/skills/start/scripts/extract.py" \
     _meta/corpus/<p> -o _meta/extract/<p> --jsonl
 ```
 
-Either of the two forms passing is enough: `npm install -g @firecrawl/anydoc` gives the
-command, `pip install firecrawl-anydoc` gives the module, and the script takes whichever it
-finds. PDFs also want `poppler-utils`, which is what gives a page a number and what tells a
-scanned PDF from a readable one. The script says so itself when either is missing, at the
-top of `extract.md` and not only on the terminal.
+`--doctor` names every converter, its version, and what each absence costs. Run it first:
+without anydoc every office file comes back empty, and without poppler a PDF has no page
+numbers and a scanned one cannot be told from an unreadable one. It exits non-zero when
+something is degraded, and the same snapshot is written into `inventory.json`, so a corpus
+extracted today can be compared with the same corpus extracted last month instead of the
+difference reading as the documents having changed.
 
 `python3` and the `:?` are both load bearing: `python` is not on PATH on most systems, and
 an unset `CLAUDE_PLUGIN_ROOT` collapses the path to `/skills/...` and fails with a message

@@ -20,11 +20,11 @@ entries:
     status: open
     cost_to_reverse: high
     default_in_force: a single Postgres instance one engineer set up for the pilot, which
-    depends_on: OD-008
+    depends_on: [OD-008]
   OD-004:
     status: open
     cost_to_reverse: high
-    depends_on: OD-007
+    depends_on: [OD-007]
   OD-007:
     status: open
     cost_to_reverse: high
@@ -49,7 +49,7 @@ entries:
     status: open
     cost_to_reverse: high
     default_in_force: none, because there is no retraining at all yet
-    depends_on: OD-011
+    depends_on: [OD-011]
   KI-001:
     status: open
     cost_to_reverse: low

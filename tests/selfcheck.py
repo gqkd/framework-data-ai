@@ -250,7 +250,9 @@ def _clean_repo():
                       lifecycle="living", status="active", owners="[owner]",
                       created="2026-01-01", last_review="2026-01-01 09:00",
                       entries="\n  OD-001:\n    status: open\n"
-                              "    cost_to_reverse: low\n") + "# Open\n",
+                              "    cost_to_reverse: low\n"
+                              "    default_in_force: nothing is scheduled\n")
+        + "# Open\n",
         "decisions/DEC-001-slug.md": fm(
             schema="framework/decision-record/v1", artifact_type="decision-record",
             id="DEC-001", lifecycle="immutable", status="accepted", scope="architecture",
@@ -986,6 +988,92 @@ def _skips_are_scoped():
                 f"{what} ({'/'.join(parts)}) was {'not ' if want else ''}excluded"
                 + ("" if want else ": an exclusion that protects the framework's "
                    "convenience is paid for by everyone using it"))
+    return problems
+
+
+@check("a document that says it was decided has to name the decision")
+def _claims_carry_their_record():
+    # Two documents make the same claim in a field and used to make it unbacked. A stack row
+    # saying `chosen` with no `decided_in` reads as a decision nobody can find, which is the
+    # ambiguity the stack was added to remove, arriving back through the field meant to
+    # remove it. An open register entry with no `default_in_force` is the same shape: the file
+    # calls that field mandatory in its own instructions and nothing was reading it except
+    # OD003, and only on a high cost entry.
+    def repo(files):
+        with tempfile.TemporaryDirectory() as tmp:
+            for rel, text in files.items():
+                f = Path(tmp) / rel
+                f.parent.mkdir(parents=True, exist_ok=True)
+                f.write_text(text)
+            r = subprocess.run([sys.executable, str(VALIDATE), "--root", tmp, "--json",
+                                "--stale-days", "36500"], capture_output=True, text=True)
+            if r.returncode not in (0, 1) or not r.stdout.strip():
+                return None
+            return {f["code"] for f in json.loads(r.stdout)["findings"]}
+
+    def stack(rows: str) -> str:
+        return ("---\nschema: framework/operational-stack/v1\n"
+                "artifact_type: operational-stack\nlifecycle: living\nstatus: active\n"
+                "owners: [o]\ncreated: 2026-01-01 09:00\nlast_review: 2026-01-01 09:00\n"
+                + rows + "---\n\n# Stack\n\n<!-- section: chosen -->\n## Chosen\n"
+                "<!-- section: unratified -->\n## Unratified\n"
+                "<!-- section: ruled-out -->\n## Ruled out\n")
+
+    dec = ("---\nschema: framework/decision-record/v1\nartifact_type: decision-record\n"
+           "id: DEC-001\nlifecycle: immutable\nstatus: accepted\nscope: architecture\n"
+           "owners: [o]\ncreated: 2026-01-01 09:00\n---\n\n# DEC-001\n")
+    draft = dec.replace("id: DEC-001", "id: DEC-002").replace("accepted", "proposed")
+
+    problems = []
+    for rows, want, what in [
+        ("stack:\n  db:\n    tool: PostgreSQL\n    status: chosen\n    decided_in: DEC-001\n",
+         False, "a chosen tool naming an accepted decision"),
+        ("stack:\n  db:\n    tool: PostgreSQL\n    status: chosen\n",
+         True, "a chosen tool naming no decision at all"),
+        ("stack:\n  db:\n    tool: PostgreSQL\n    status: unratified\n    decided_in: DEC-001\n",
+         True, "an unratified tool that names a decision, hiding one that was taken"),
+        ("stack:\n  db:\n    tool: PostgreSQL\n    status: chosen\n    decided_in: DEC-404\n",
+         True, "a decision that does not exist"),
+        ("stack:\n  db:\n    tool: PostgreSQL\n    status: chosen\n    decided_in: DEC-002\n",
+         True, "a decision that was never accepted"),
+        ("stack:\n  db:\n    tool: PostgreSQL\n    status: unratified\n",
+         False, "an unratified tool, which is the honest state and must stay quiet"),
+    ]:
+        got = repo({"STACK.md": stack(rows), "decisions/DEC-001.md": dec,
+                    "decisions/DEC-002.md": draft})
+        if got is None:
+            problems.append(f"the validator crashed on {what}")
+        elif ("STK001" in got) != want:
+            problems.append(f"{what} was {'not ' if want else ''}reported")
+
+    def register(entries: str) -> str:
+        return ("---\nschema: framework/open-register/v1\nartifact_type: open-register\n"
+                "lifecycle: living\nstatus: active\nowners: [o]\n"
+                "created: 2026-01-01 09:00\nlast_review: 2026-01-01 09:00\n"
+                + entries + "---\n\n# Open\n")
+
+    for entries, want, what in [
+        ("entries:\n  OD-001:\n    status: open\n    cost_to_reverse: medium\n"
+         "    default_in_force: the nightly job, unasked\n",
+         False, "an entry with a cost and a default"),
+        ("entries:\n  OD-001:\n    status: open\n    cost_to_reverse: medium\n",
+         True, "a medium cost entry with no default, which used to pass"),
+        ("entries:\n  OD-001:\n    status: open\n    default_in_force: none\n",
+         True, "an entry with no cost to reverse, which is what orders the file"),
+        ("entries:\n  OD-001:\n    status: decided\n    cost_to_reverse: low\n"
+         "    default_in_force: none\n",
+         True, "a decided entry naming no closed_by"),
+        ("entries:\n  OD-001:\n    status: open\n    cost_to_reverse: low\n"
+         "    default_in_force: none\n    depends_on: [OD-404]\n",
+         True, "a dependency on an entry the register does not declare"),
+        # A known issue is not a choice: it has no default in force and no cost to reverse.
+        ("entries:\n  KI-001:\n    status: open\n", False, "a known issue"),
+    ]:
+        got = repo({"OPEN.md": register(entries)})
+        if got is None:
+            problems.append(f"the validator crashed on {what}")
+        elif ("OD005" in got) != want:
+            problems.append(f"{what} was {'not ' if want else ''}reported")
     return problems
 
 

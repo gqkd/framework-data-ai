@@ -12,10 +12,10 @@ stack:
     tool: DuckDB
     status: chosen
     decided_in: DEC-004
-    used_by: product-a
+    used_by: [product-a]
   table-format:
     tool: Apache Iceberg
-    status: unratified
+    status: unratified                # so it must NOT name a decided_in: nobody decided
     note: named on the architecture slide of the sales deck. Nobody decided it
   orchestration:
     tool: Airflow
