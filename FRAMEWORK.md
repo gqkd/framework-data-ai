@@ -109,7 +109,13 @@ repo/
 ├── COMMITMENTS.md               what has been promised commercially
 ├── GLOSSARY.md                  single, shared by every product
 ├── PLATFORM.md                  only if you share a substrate. See §9
-├── corpus/                      business documents covering more than one product
+├── framework.yaml               validator configuration, at the root like any other
+├── _meta/                       about the framework, not about the product
+│   ├── README.md                which of these can be deleted and which cannot
+│   ├── ADOPTION.md              is this paying for itself. See §10
+│   ├── corpus/                  every business document, by product. IRREPLACEABLE
+│   │   └── product-a/
+│   └── extract/                 what extract.py produced. Regenerable
 ├── decisions/                   single DEC-NNN register (product + architecture)
 │   ├── DEC-001-decision-slug.md
 │   ├── DEC-002-decision-slug.md
@@ -120,7 +126,6 @@ repo/
 │       └── CMP-001.md  DFB-001.md  SD-001.md
 └── products/
     ├── product-a/
-    │   ├── corpus/              business documents about this product
     │   ├── product.yaml         machine-readable manifest
     │   ├── PBR.md               product brief (living)
     │   ├── ARC.md               architecture: §current §target §delta

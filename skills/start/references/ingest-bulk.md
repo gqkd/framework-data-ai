@@ -25,14 +25,15 @@ to be separated because they end up in five places.
 
 ### 1 · Extract
 
-Files live in `products/<p>/corpus/` when they concern one product, and in `corpus/` at the
-root when they concern more than one. **You run the extraction**, one folder at a time. The
-user does not run commands.
+Every business document lives under `_meta/corpus/<product>/`, one folder per product, and
+directly in `_meta/corpus/` when it concerns more than one. One place, because the corpus is
+the only thing in this repository that cannot be regenerated. **You run the extraction**,
+one folder at a time. The user does not run commands.
 
 ```bash
 anydoc -V || python3 -c "import anydoc"     # first: without it every office file is empty
 python3 "${CLAUDE_PLUGIN_ROOT:?unset: point it at your framework-data-ai checkout}/skills/start/scripts/extract.py" \
-    products/<p>/corpus -o ingest-out/<p> --jsonl
+    _meta/corpus/<p> -o _meta/extract/<p> --jsonl
 ```
 
 Either of the two forms passing is enough: `npm install -g @firecrawl/anydoc` gives the
@@ -69,15 +70,15 @@ differently, knowing which corpus each version came from is half the reconciliat
 ### 2 · Look at the flagged pages
 
 The script lists the slides and pages with little text and, when it can, rasterises them
-into `ingest-out/<p>/render/`. **Open those with the file reading tool: they are images, and
+into `_meta/extract/<p>/render/`. **Open those with the file reading tool: they are images, and
 reading them is part of the extraction.** On a sales deck the architectural promise is
 usually drawn. Three boxes with arrows and the words "one single platform" produce no
 extractable text and are a tenancy constraint.
 
-Only PDF pages are rasterised. For a deck the script names the file and the slide numbers
-and stops there: ask the user to open those slides and describe them. Classifying that
-document while skipping this step means ingesting everything except the part that
-constrains you.
+A `.pptx` is rasterised too, through LibreOffice. Where that is not installed the script
+names the file and the slide numbers and stops: ask the user to open those slides and
+describe them. Classifying that document while skipping this step means ingesting
+everything except the part that constrains you.
 
 If the script reports that a PDF is an exported presentation, treat the whole document as
 visual: the extracted text has lost the layout, and in a deck the layout carries meaning.

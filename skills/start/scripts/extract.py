@@ -14,7 +14,7 @@ extractable text at all and are a tenancy constraint.
 
 Usage:
   python3 extract.py <file-or-folder> [...] -o out/
-  python3 extract.py corpus/ -o out/ --jsonl        one line per block
+  python3 extract.py _meta/corpus/<p> -o _meta/extract/<p> --jsonl
   python3 extract.py corpus/ -o out/ --min-chars 40 threshold for "text-poor page"
 
 Output in out/:
@@ -644,7 +644,7 @@ def main() -> int:
 
     ap = argparse.ArgumentParser(description="Extract a business corpus, preserving provenance")
     ap.add_argument("inputs", nargs="+", type=Path)
-    ap.add_argument("-o", "--out", type=Path, default=Path("ingest-out"),
+    ap.add_argument("-o", "--out", type=Path, default=Path("_meta/extract"),
                     help="output DIRECTORY, created if absent")
     ap.add_argument("--jsonl", action="store_true")
     ap.add_argument("--min-chars", type=int, default=40,

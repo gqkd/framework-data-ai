@@ -49,9 +49,29 @@ Create the day one set, and nothing else. The framework's own rule is that an ar
 appears when the thing it documents exists, not before.
 
 ```
-AGENTS.md  OPEN.md  COMMITMENTS.md  GLOSSARY.md  ING.md  ADOPTION.md
+AGENTS.md  OPEN.md  COMMITMENTS.md  GLOSSARY.md  ING.md  framework.yaml
 decisions/            empty, numbering started
 products/<p>/         product.yaml, PBR.md
+_meta/                README.md, ADOPTION.md, corpus/<p>/, extract/
+```
+
+**`_meta/` holds what is about the framework rather than about the product**, and the root
+holds documents only. Move the corpus into `_meta/corpus/<product>/` as your first act: it
+is the one thing in the repository that cannot be regenerated, and it belongs in one place
+rather than in two conventions. `_meta/extract/` is where the extractor writes, and it can
+be deleted and rebuilt at any time.
+
+Write `_meta/README.md`, three lines, saying exactly that:
+
+```markdown
+# Not documentation
+
+This directory is about the framework, not about the product. Nothing here answers a
+question about what we are building.
+
+- `corpus/` is what the business gave us. **Irreplaceable: never delete it.**
+- `extract/` is what `extract.py` produced from it. Delete it and rerun; nothing is lost.
+- `ADOPTION.md` records what this framework costs and what it caught.
 ```
 
 **`ADOPTION.md` gets its first entry now, and it is this session.** Three fields: the

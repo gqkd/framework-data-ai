@@ -288,6 +288,26 @@ def load_config(project: dict) -> tuple[dict, int]:
     return checks, stale_days
 
 
+def skipped_dir(parts: tuple[str, ...], skip_dirs: set[str]) -> bool:
+    """Whether a document sitting in these directories is excluded from the scan.
+
+    An entry with no slash matches a directory of that name at any depth, which is what
+    `corpus` and `node_modules` want: they mean the same thing wherever they turn up.
+
+    An entry with a slash is a path from the root, and exists because a bare name is
+    sometimes too blunt to be safe. `_meta/extract` is the extractor's output and holds no
+    source document; `extract` on its own would silently exclude the extraction step of
+    every ETL project that keeps one in a directory of that name. The registry already
+    states the principle it took a mistake to learn -- an exclusion that protects the
+    framework's convenience is paid for by everyone using it -- and until now it could only
+    be honoured by choosing awkward names.
+    """
+    if any(part in skip_dirs for part in parts):
+        return True
+    rel = "/".join(parts)
+    return any("/" in s and (rel == s or rel.startswith(s + "/")) for s in skip_dirs)
+
+
 def discover(root: Path, scan: dict, registry: dict, report: Report) -> list[Artifact]:
     skip_dirs = scan["skip_dirs"]
     skip_files = scan["skip_files"]
@@ -301,7 +321,7 @@ def discover(root: Path, scan: dict, registry: dict, report: Report) -> list[Art
         parts = p.relative_to(root).parts
         if skip_hidden and any(part.startswith(".") for part in parts):
             continue
-        if any(part in skip_dirs for part in parts[:-1]):
+        if skipped_dir(parts[:-1], skip_dirs):
             continue
         if p.name in skip_files:
             continue

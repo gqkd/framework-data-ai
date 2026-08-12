@@ -114,7 +114,7 @@ understand Italian and English equally.
 
 | What is true right now | What you say | What answers |
 |---|---|---|
-| No documentation yet, or a folder of client documents | *"let's start, the documents are in corpus/"* | `start` |
+| No documentation yet, or a folder of client documents | *"let's start, the client documents are in that folder"* | `start` |
 | Somebody said something worth writing down | *"we decided to use Airflow"* | `requirement` |
 | Work is stuck on a choice nobody made | *"let's work through the open decisions"* | `resolve` |
 | Choosing what to build next | *"what do we build this cycle?"* | `cycle` |
@@ -123,12 +123,14 @@ understand Italian and English equally.
 
 ### A first session
 
-A project with client documents in `corpus/` and no framework in it:
+A folder of client documents and no framework in it:
 
-**You:** *"let's start with this project, the client documents are in corpus/"*
+**You:** *"let's start with this project, the client documents are in docs-in/"*
 
-`start` reads the documents. It creates `AGENTS.md`, `OPEN.md`, `GLOSSARY.md` and a folder
-for the product. It writes `ING.md`, which records where each claim came from. It tells you
+`start` asks who owns what it is about to write, then reads the documents. It creates
+`AGENTS.md`, `OPEN.md`, `GLOSSARY.md` and a folder for the product, and moves the corpus
+under `_meta/`, which is where everything that is about the framework rather than about the
+product lives. It writes `ING.md`, which records where each claim came from. It tells you
 which documents it could not read and what each one needs. It writes no decisions, because
 at this point nothing has been decided.
 

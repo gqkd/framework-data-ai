@@ -846,6 +846,36 @@ def _extract_reports_its_gaps():
     return problems
 
 
+@check("an exclusion names a path when a bare name would be too blunt")
+def _skips_are_scoped():
+    # `_meta/extract` holds the extractor's output and no source document. Written as
+    # `extract` it would also exclude the extraction step of every ETL project that keeps
+    # one in a directory of that name, which is the mistake the registry already warns
+    # about in the paragraph above the list. Bare names still work, and have to: `corpus`
+    # means the same thing wherever it turns up.
+    x = _load(VALIDATE, "validate")
+    skips = set(x.REGISTRY_SCAN["skip_dirs"]) if hasattr(x, "REGISTRY_SCAN") \
+        else set(yaml.safe_load((ROOT / "schemas" / "artifact-types.yaml")
+                                .read_text())["scan"]["skip_dirs"])
+    problems = []
+    for parts, want, what in [
+        (("_meta", "extract"), True, "the extractor's own output directory"),
+        (("_meta", "extract", "gamma"), True, "a per-product folder inside it"),
+        (("extract",), False, "an ETL directory called extract at the root"),
+        (("pipelines", "extract"), False, "an extract step nested in a project's pipelines"),
+        (("_meta", "corpus"), True, "the corpus under _meta"),
+        (("products", "alpha", "corpus"), True, "a corpus left where older repos keep it"),
+        (("_meta",), False, "_meta itself, which holds ADOPTION.md and must be scanned"),
+        (("products", "alpha"), False, "an ordinary product directory"),
+    ]:
+        if x.skipped_dir(parts, skips) != want:
+            problems.append(
+                f"{what} ({'/'.join(parts)}) was {'not ' if want else ''}excluded"
+                + ("" if want else ": an exclusion that protects the framework's "
+                   "convenience is paid for by everyone using it"))
+    return problems
+
+
 @check("a repository shared by two products has one home, and only one")
 def _shared_code_has_one_home():
     # The case this framework is about to be used on: one product across five repositories,

@@ -129,8 +129,16 @@ inline_id_declarations:
 # blocks. It extends and does not replace, for the reason each entry below states.
 scan:
   # `corpus` is source material, not an artifact: those are the documents the business
-  # handed over, and we cannot correct front matter we did not write. `ingest-out` is the
-  # intermediate product of extraction, regenerable.
+  # handed over, and we cannot correct front matter we did not write. It is matched by bare
+  # name because it means the same thing wherever it turns up, including under `_meta/`
+  # where the structure now puts it and under `products/<p>/` where older repositories
+  # still keep it.
+  #
+  # `_meta/extract` is the extractor's output, regenerable, and it is written as a path
+  # rather than as a name on purpose. `extract` alone would exclude the extraction step of
+  # every ETL project that keeps one in a directory of that name, which is the mistake this
+  # block already warns about two paragraphs down. `ingest-out` is the name that directory
+  # had before and stays here so repositories written against it keep working.
   #
   # `templates` is skipped for a reason worth stating, because it has already cost
   # something: it is why `templates/RLM.yaml` has been missing two base-required fields
@@ -162,7 +170,8 @@ scan:
   # `evals/**/*.yaml` are the correct signal that `--root` is wrong, and the `audit` skill
   # already says a clean report on the wrong repository is worse than an error. An
   # exclusion that protects the framework's convenience is paid for by everyone using it.
-  skip_dirs: [templates, skills, schemas, references, corpus, ingest-out,
+  skip_dirs: [templates, skills, schemas, references, corpus,
+              "_meta/extract", ingest-out,
               build, node_modules, __pycache__]
 
   # Documents that speak *about* the framework rather than being produced *by* it.
@@ -242,7 +251,7 @@ types:
     axis: platform
     born_in: day one, and its first entry is the setup session
     template: templates/ADOPTION.md
-    path: ADOPTION.md
+    path: _meta/ADOPTION.md
     lifecycle: append-only
     status: [active, abandoned]
     sections: [cycles, verdict]
