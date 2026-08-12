@@ -42,7 +42,11 @@ CLEAN = {
     "OPEN.md": fm(schema="framework/open-register/v1", artifact_type="open-register",
                   lifecycle="living", status="active", owners="[maria]",
                   products="[atlas]",
-                  created="2026-01-01", last_review="2026-08-01 09:00")
+                  created="2026-01-01", last_review="2026-08-01 09:00",
+                  entries="\n  OD-004:\n    status: open\n    cost_to_reverse: medium\n"
+                          "    default_in_force: BigQuery, the landing zone is already there\n"
+                          "  OD-001:\n    status: decided\n    cost_to_reverse: medium\n"
+                          "    closed_by: DEC-001\n")
     + """# Open decisions and known issues
 
 # §1 · Open decisions
@@ -226,7 +230,11 @@ each decision still matters, which no generator can produce.
     "OPEN.md": fm(schema="framework/open-register/v1", artifact_type="open-register",
                   lifecycle="living", status="active", owners="[maria]",
                   products="[atlas]",
-                  created="2026-01-01", last_review="2026-08-01 09:00")
+                  created="2026-01-01", last_review="2026-08-01 09:00",
+                  entries="\n  OD-005:\n    status: open\n    cost_to_reverse: high\n"
+                          "    default_in_force: none\n"
+                          "  OD-004:\n    status: open\n    cost_to_reverse: medium\n"
+                          "    default_in_force: BigQuery, already there\n")
     + """# Open decisions and known issues
 
 # §1 · Open decisions

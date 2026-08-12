@@ -224,6 +224,29 @@ types:
     path: OPEN.md
     lifecycle: living
     status: [active]
+    # `OD002` and `OD003` used to read the body: `### OD-NNN` headings and lines like
+    # `- **Cost to reverse:** high`. Rename that label, translate it, or reformat the bullet,
+    # and both checks stop working -- reporting nothing, which reads as "no high-cost entry
+    # is undecided". The flattering failure again, on the register a person edits by hand
+    # more often than any other file here.
+    #
+    # The fields two checks need are front matter now. The body keeps the prose, because
+    # `OPEN.md` is an interview surface: context, alternatives and consequences are what a
+    # person reads while deciding, and no field replaces them. This is the `ICG` split for
+    # the third time -- the verdict where a check can read it, the argument where a reader
+    # can.
+    #
+    # No fallback parser, and no transition. Nothing runs on this framework yet, so an
+    # old-format register does not exist to protect.
+    maps:
+      entries:
+        keys: "^(OD|KI)-(\\d{3,}|NNN)$"
+        fields:
+          required: [status, cost_to_reverse]
+          optional: [default_in_force, depends_on, deadline, closed_by]
+          enums:
+            status: [open, decided, superseded, parked]
+            cost_to_reverse: [high, medium, low]
 
   commitments:
     id: COMMITMENTS

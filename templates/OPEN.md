@@ -8,6 +8,28 @@ owners: [NAME]
 created: YYYY-MM-DD HH:MM
 last_review: YYYY-MM-DD HH:MM
 classification: internal
+# The two facts a check needs, per entry. The body below is where the reasoning goes: the
+# question, the alternatives and what the default costs are what somebody reads while
+# deciding, and no field replaces them. `OD002` and `OD003` read this map and nothing else,
+# because they used to match the prose and went quiet the first time a label was reworded.
+entries:
+  OD-001:
+    status: open
+    cost_to_reverse: high
+    default_in_force: none
+    deadline: YYYY-MM-DD
+  OD-002:
+    status: open
+    cost_to_reverse: medium
+    default_in_force: whatever is already happening today
+    depends_on: OD-001
+  OD-003:
+    status: open
+    cost_to_reverse: low
+    default_in_force: whatever is already happening today
+  KI-001:
+    status: open
+    cost_to_reverse: low
 ---
 
 # Open decisions and known issues
@@ -54,11 +76,10 @@ at first.
 ### OD-001 · Title of the decision, in the form of a choice
 
 - **Question:** the actual choice, phrased as a question with at least two answers.
-- **Cost to reverse:** high.
-- **Default in force:** what is already happening, today, in the absence of a decision. If
-  nothing really is happening, write `none`, but together with a high cost that is the most
-  expensive combination there is, and the validator flags it for you.
-- **The problem the default introduces:** why leaving it open costs something.
+- **The problem the default introduces:** why leaving it open costs something. The default
+  itself is a field in `entries:` above, not a line here: when nothing really is happening
+  it is `none`, and together with a high cost that is the most expensive combination there
+  is, which the validator flags for you.
 - **Depends on:** other `OD-NNN` entries that have to be decided first, if there are any.
 - **Leaning:** the direction we lean toward, and why. Optional, and it is not a decision:
   it is there so you do not start the reasoning over from scratch in two weeks.
@@ -69,8 +90,6 @@ at first.
 ### OD-002 · Title
 
 - **Question:**
-- **Cost to reverse:** medium.
-- **Default in force:**
 - **The problem the default introduces:**
 - **Deadline:**
 
@@ -79,8 +98,6 @@ at first.
 ### OD-003 · Title
 
 - **Question:**
-- **Cost to reverse:** low.
-- **Default in force:**
 - **Trigger:** the condition that makes it urgent. On a low-cost entry the trigger replaces
   the deadline: there is no date by which to decide it, there is an event after which it
   can no longer be deferred.

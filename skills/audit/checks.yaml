@@ -159,8 +159,17 @@ checks:
     prevents: >
       The most expensive combination there is. It has to be decided even on incomplete
       information, because the cost of waiting exceeds the cost of getting it wrong.
-      Reads the prose of the entry, so it is coupled to the wording of the template: see
-      the note at the bottom of this file.
+
+  OD004:
+    level: warn
+    title: open register with no structured entries
+    prevents: >
+      OD002 and OD003 having nothing to read while the register looks full. Both used to
+      match prose in the body -- `### OD-NNN`, and a line saying the cost to reverse -- so
+      renaming that label or translating it switched them off without a word. Reporting
+      nothing then read as "no high-cost decision is outstanding", which is the answer
+      somebody was hoping for. The two fields they need live in `entries:` now, and their
+      absence is a finding rather than a silence.
 
   # ── Across products ────────────────────────────────────────────────────────
   XP001:
@@ -267,11 +276,14 @@ checks:
       which is what `none` is for, and a field that excused a `CHG` from classification
       would be a way around the way around.
 
-# ON THE PROSE COUPLED CHECKS. OD002 and OD003 read the body of `OPEN.md`: the `### OD-NNN`
-# headings, and the "Cost to reverse" and "Default in force" lines inside each entry. That
-# is the same fragility the section markers removed, one level down, at the level of fields
-# inside an entry rather than of sections inside a file. It has not been solved here
-# because the fix is not the same one: an entry is not a section, and marking every field
-# of every entry would cost more than the check is worth today. If `OPEN.md` gets reworded
-# or translated, these two go quiet without failing. That is why they are `warn` and not
-# `error`: a check that can silently stop working must not be one that blocks a merge.
+# ON THE PROSE COUPLED CHECKS. There are none left. OD002 and OD003 used to read the body
+# of `OPEN.md` -- the `### OD-NNN` headings and the "Cost to reverse" and "Default in force"
+# lines inside each entry -- which is the fragility the section markers removed, one level
+# down: at the level of fields inside an entry rather than sections inside a file. Rewording
+# or translating the register switched both off, silently, and reporting nothing read as "no
+# high-cost decision is outstanding".
+#
+# They read `entries:` in the front matter now, and `OD004` reports a register that does not
+# carry it, because the absence has to be louder than the silence it used to produce. The
+# body keeps the prose: `OPEN.md` is where somebody decides something, and the alternatives
+# and consequences that make an entry decidable are not fields.

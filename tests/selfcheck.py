@@ -244,9 +244,13 @@ def _skill_references():
 def _clean_repo():
     fm = lambda **kw: "---\n" + "\n".join(f"{k}: {v}" for k, v in kw.items()) + "\n---\n\n"
     files = {
+        # `entries:` is what OD002 and OD003 read. Without it the register is reported by
+        # OD004, which is the point: a register they cannot read used to report clean.
         "OPEN.md": fm(schema="framework/open-register/v1", artifact_type="open-register",
                       lifecycle="living", status="active", owners="[owner]",
-                      created="2026-01-01", last_review="2026-01-01 09:00") + "# Open\n",
+                      created="2026-01-01", last_review="2026-01-01 09:00",
+                      entries="\n  OD-001:\n    status: open\n"
+                              "    cost_to_reverse: low\n") + "# Open\n",
         "decisions/DEC-001-slug.md": fm(
             schema="framework/decision-record/v1", artifact_type="decision-record",
             id="DEC-001", lifecycle="immutable", status="accepted", scope="architecture",
@@ -643,9 +647,23 @@ def _maps_are_constrained():
                             .read_text(encoding="utf-8"))
         v = Draft202012Validator(schema)
         for field, rule in spec["maps"].items():
-            # A key the pattern accepts, and three it must not.
-            good_key = "SIG-001" if not rule.get("keys") else "frontend"
-            bad_keys = ["banana", "SIG_001"] if not rule.get("keys") else ["Frontend", "1x"]
+            # A key the pattern accepts, and some it must not. The accepted one is found
+            # rather than assumed: `keys` is an arbitrary pattern, and hardcoding one shape
+            # of nickname meant the check broke the first time a map keyed its rows on
+            # identifiers instead.
+            pattern = rule.get("keys")
+            candidates = ["SIG-001", "OD-001", "frontend", "query-engine"]
+            if pattern:
+                accepted = [k for k in candidates if re.match(pattern, k)]
+                if not accepted:
+                    problems.append(f"{name}.{field}: the `keys` pattern accepts none of "
+                                    f"{candidates}. Add one this check can use, or the map "
+                                    "is not being checked at all")
+                    continue
+                good_key = accepted[0]
+                bad_keys = [k for k in candidates if k not in accepted][:2] + ["Frontend"]
+            else:
+                good_key, bad_keys = "SIG-001", ["banana", "SIG_001"]
 
             if "one_of" in rule:
                 ok_val, bad_vals = rule["one_of"][0], ["not-a-real-outcome"]

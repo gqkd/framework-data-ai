@@ -8,6 +8,51 @@ owners: [g.quaglia]
 created: 2026-03-02
 last_review: 2026-07-30 11:20
 classification: internal
+# Derived from the entries below, so the two cannot disagree about anything a
+# check reads. Where a heading and a cost contradict each other, that is the
+# defect this fixture is built around and it is preserved.
+entries:
+  OD-002:
+    status: open
+    cost_to_reverse: high
+    default_in_force: none
+  OD-005:
+    status: open
+    cost_to_reverse: high
+    default_in_force: a single Postgres instance one engineer set up for the pilot, which
+    depends_on: OD-008
+  OD-004:
+    status: open
+    cost_to_reverse: high
+    depends_on: OD-007
+  OD-007:
+    status: open
+    cost_to_reverse: high
+    default_in_force: none
+  OD-001:
+    status: open
+    cost_to_reverse: medium
+    default_in_force: a CSV dropped on an SFTP server by hand every Monday by an analyst
+  OD-008:
+    status: open
+    cost_to_reverse: medium
+    default_in_force: a crontab on the pilot VM, edited over SSH
+  OD-003:
+    status: open
+    cost_to_reverse: medium
+    default_in_force: whatever the first dbt model happened to do, which is grain first
+  OD-006:
+    status: open
+    cost_to_reverse: low
+    default_in_force: a Metabase trial one of us started
+  OD-009:
+    status: open
+    cost_to_reverse: high
+    default_in_force: none, because there is no retraining at all yet
+    depends_on: OD-011
+  KI-001:
+    status: open
+    cost_to_reverse: low
 ---
 
 # Open decisions and known issues

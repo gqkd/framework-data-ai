@@ -8,6 +8,26 @@ owners: [l.bianchi]
 created: 2026-07-28
 last_review: 2026-07-28 16:40
 classification: internal
+# Derived from the entries below, so the two cannot disagree about anything a
+# check reads. Where a heading and a cost contradict each other, that is the
+# defect this fixture is built around and it is preserved.
+entries:
+  OD-001:
+    status: open
+    cost_to_reverse: high
+    default_in_force: none
+  OD-002:
+    status: open
+    cost_to_reverse: high
+    default_in_force: none
+  OD-003:
+    status: open
+    cost_to_reverse: medium
+    default_in_force: the nightly export, because it is the only one that exists
+  OD-004:
+    status: open
+    cost_to_reverse: low
+    default_in_force: Italian only
 ---
 
 # Open decisions and known issues

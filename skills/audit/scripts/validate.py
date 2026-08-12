@@ -575,9 +575,6 @@ def check_release(arts: list[Artifact], report: Report) -> None:
                        "a procedure, it is an intention")
 
 
-OD_BLOCK = re.compile(r"^###\s+(OD-\d{3,})(.*?)(?=^#{1,3}\s|\Z)", re.M | re.S)
-COST_HIGH = re.compile(r"\*\*Cost to reverse:\*\*\s*high", re.I)
-NO_DEFAULT = re.compile(r"\*\*Default in force:\*\*\s*none", re.I)
 
 
 def check_open_register(arts: list[Artifact], report: Report) -> None:
@@ -600,14 +597,35 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
                 closed_by[ref] = d.id or d.rel
 
     for a in opens:
+        # Read out of `entries:` in the front matter, not out of the prose. Both of these
+        # used to match `- **Cost to reverse:** high` in the body, so translating the label
+        # or reformatting the bullet switched them off silently -- and a silent OD003 reads
+        # as "nothing high-cost is undecided", which is the answer somebody wanted.
+        entries = a.meta.get("entries")
+        if not isinstance(entries, dict):
+            report.add("OD004", a.rel,
+                       "no `entries:` in the front matter. The body may say anything it "
+                       "likes and OD002 and OD003 have nothing to read, so this register "
+                       "reports clean however it is filled in.")
+            continue
+
         undecided = []
-        for m in OD_BLOCK.finditer(a.body):
-            od, block = m.group(1), m.group(2)
-            if od in closed_by:
+        for od, row in sorted(entries.items()):
+            if not isinstance(row, dict):
+                continue
+            if od in closed_by and row.get("status") == "open":
                 report.add("OD002", a.rel,
-                           f"{od} is still listed as open but {closed_by[od]} derives "
-                           "from it: move the entry to §4 with a cross reference")
-            if COST_HIGH.search(block) and NO_DEFAULT.search(block):
+                           f"{od} is still `status: open` but {closed_by[od]} derives from "
+                           "it: set it `decided`, name the decision in `closed_by`, and "
+                           "move the entry to §4 with a cross reference")
+            # `none` however it is qualified: an entry saying "none, because there is no
+            # retraining yet" states that nothing is happening, with its reason. Reading only
+            # an exact match let that one through, and it is the entry this check exists for.
+            # The looseness errs towards reporting an entry that does have a default, which is
+            # the cheap direction: the other one hides the most expensive combination there is.
+            default = str(row.get("default_in_force") or "none").strip().lower()
+            if (row.get("status") == "open" and row.get("cost_to_reverse") == "high"
+                    and (not default or re.match(r"none\b", default))):
                 undecided.append(od)
         if undecided:
             report.add("OD003", a.rel,
