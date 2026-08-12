@@ -166,5 +166,6 @@ checks:
 ```
 
 `skills/audit/checks.yaml` is the catalog: every check carries the failure it
-prevents, which is what you read to decide. Two checks are `off` and cannot simply be
-switched on, and the catalog says why in `blocked_by`.
+prevents, which is what you read to decide. A check sitting at `off` there is one the
+validator cannot run yet, and it carries `blocked_by` saying what has to exist first — so
+read that before proposing to switch one on. None is `off` today.
