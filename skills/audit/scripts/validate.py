@@ -647,8 +647,13 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
     # three different reasons, and inferring closure from the mere mention would flag all
     # three the same way. A warning that is usually wrong teaches people to dismiss it.
     closed_by: dict[str, str] = {}
+    decisions: dict[str, Artifact] = {}
     for d in arts:
-        if d.type != "decision-record" or d.meta.get("status") != "accepted":
+        if d.type != "decision-record":
+            continue
+        if d.id:
+            decisions[d.id] = d
+        if d.meta.get("status") != "accepted":
             continue
         for ref in as_list(d.meta.get("derives_from")):
             if isinstance(ref, str) and ref.startswith("OD-"):
@@ -697,11 +702,49 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
                                f"{od} is open and declares no `cost_to_reverse`. It is what "
                                "orders this register, and an entry without it is filed "
                                "nowhere.")
-            if row.get("status") == "decided" and not row.get("closed_by"):
-                report.add("OD005", a.rel,
-                           f"{od} is `decided` and names no `closed_by`. The decision exists "
-                           "somewhere and nothing here points at it, so the reasoning has to "
-                           "be found again by whoever asks next.")
+            if row.get("status") == "decided":
+                # Resolved, and not only present. A `closed_by` naming a decision that does
+                # not exist has the identical consequence to naming none -- the reasoning
+                # cannot be reached -- and it reads better, which makes it worse. Same shape
+                # `STK001` already applies to `decided_in`: the record has to exist and be
+                # accepted.
+                #
+                # `OD-` only. The register's own template says a `KI` links a `CHG`, a `DEC`
+                # or a `SIG`, so resolving a known issue's closer as a decision record would
+                # report the two thirds of that sentence that are not one.
+                named = row.get("closed_by")
+                dec = decisions.get(named) if isinstance(named, str) else None
+                if not named:
+                    report.add("OD005", a.rel,
+                               f"{od} is `decided` and names no `closed_by`. The decision "
+                               "exists somewhere and nothing here points at it, so the "
+                               "reasoning has to be found again by whoever asks next.")
+                elif not od.startswith("OD-"):
+                    pass
+                elif dec is None:
+                    report.add("OD005", a.rel,
+                               f"{od} is `decided` and names {named!r}, which is not a "
+                               "decision in this repository. The entry reads as settled and "
+                               "the reasoning cannot be reached, which is the state naming "
+                               "nothing at all would have left it in.")
+                elif dec.meta.get("status") != "accepted":
+                    report.add("OD005", a.rel,
+                               f"{od} is `decided` and names {named!r}, whose status is "
+                               f"{dec.meta.get('status')!r}. An entry closed on a decision "
+                               "still in draft, or on one already superseded, is not closed.")
+                elif od not in as_list(dec.meta.get("derives_from")):
+                    # The two checks disagree about one fact, and one of them is silent.
+                    # `OD002` reads closure off `derives_from` and nothing else, on purpose,
+                    # so a `decided` entry whose decision does not name it is one `OD002`
+                    # could never have caught had the status been left `open`. The chain in
+                    # `TRACEABILITY.md` is built from the same field, so the closure is
+                    # missing from the graph too.
+                    report.add("OD005", a.rel,
+                               f"{od} says it was closed by {named}, and {named} does not "
+                               f"name {od} in `derives_from`. Closure is read off that field "
+                               "everywhere else here -- by `OD002`, and by the traceability "
+                               "chain -- so as written this entry is closed in one direction "
+                               "only, and invisible in the other.")
             for dep in as_list(row.get("depends_on")):
                 if dep not in entries:
                     report.add("OD005", a.rel,
@@ -1031,6 +1074,21 @@ def check_cross_product(arts: list[Artifact], report: Report) -> None:
                                "every report reads as complete. List the products that go "
                                "through it.")
                 for p in users:
+                    # The names, not only their presence. A typo here reproduces exactly the
+                    # failure `VER002` was written to prevent, and it arrives through the
+                    # field that feeds `VER002`: `owed` gets a key no document will ever
+                    # claim, so nothing is required of anybody and the report comes back
+                    # clean. `STK001` already applies this test to `used_by` on a stack row,
+                    # which is the same field answering the same question -- it was checked
+                    # in one file and not in the other.
+                    if products and p not in products:
+                        report.add("VER003", a.rel,
+                                   f"{key!r} says it is used by {p!r}, which matches no "
+                                   "product here. Either that product is undocumented or "
+                                   "the name is a typo, and in both cases nothing owes this "
+                                   "repository an attestation: it ships unmeasured while "
+                                   "every report reads as complete, which is what "
+                                   "`release_relevant` was supposed to prevent.")
                     owed.setdefault(p, set()).add(qualified)
 
     for a in arts:
