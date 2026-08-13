@@ -18,7 +18,10 @@ entries:
     cost_to_reverse: high
     default_in_force: none            # `none` is a legitimate value. Absent is not
     deadline: YYYY-MM-DD
-    products: [product-a]             # omit when the entry concerns every product
+    products: [product-a]             # only in the register at the root, and only when the
+                                      # entry binds some products and not all. In a
+                                      # product's own register the directory already said
+                                      # it, and naming another product there is `OD008`
   OD-002:
     status: open
     cost_to_reverse: medium
@@ -49,11 +52,43 @@ That is about the **body**. The row in `entries:` stays, moved to `status: decid
 because the front matter is the only part of this file a check can read. Drop the row when
 nothing depends on it any more.
 
-**One per repository, at the root.** If a product needs its own technical register (because
-it already had one before adopting the framework, or because its entries are too many and
-too specific) it can live in `products/<p>/OPEN.md`, but then `AGENTS.md` must say
-explicitly which of the two answers which question. Two registers without that line are two
-registers that diverge.
+**One per product, and the entry lives in the register of the thing it is about.** There
+are three placements and one rule:
+
+| The entry is about | It is filed in |
+|---|---|
+| one product | `products/<p>/OPEN.md` — **mandatory**, one per product. `OD006` |
+| the shared substrate | `platform/OPEN.md`, if you decided to have one. See `PLATFORM.md` |
+| no single product | `OPEN.md` at the root — including "do we share a substrate at all" |
+
+The reason it is per product and not per repository: this is the file an agent reads before
+deciding anything, and an agent working on one product has to find it beside that product.
+It is also how you read it yourself. Sitting down to work through what is open on one
+product should not mean filtering out three other products first, and a register you have
+to filter is a register you skim.
+
+The reason the root still exists: the entries that name no product do not belong to any of
+them, and filed per product they end up in whichever register you happened to have open
+that day. "Do these products share a substrate" is the clearest case — it cannot live in
+`platform/OPEN.md`, because whether that file exists is what the entry is about.
+
+**Scope is read off the directory, not off `products:`.** In `products/<p>/OPEN.md` the
+field is left off: the entry is about `p` by virtue of sitting there. An entry that names a
+different product is filed under the wrong heading — `OD008` — and one that binds several
+belongs at the root, where naming them is what the field is for.
+
+**Numbering is one sequence across all three.** `depends_on` and the `derives_from` of a
+`DEC` name an entry by its id and nothing else, so two registers that both start at
+`OD-001` make every reference to either one ambiguous, and the ambiguity resolves itself
+silently. `OD007` reports it. A register adopted from before the framework continues the
+numbering and keeps its old labels in the prose beside the heading — `### OD-033 · (was
+K7) Title` — because the id is what a check resolves and the label is what a person
+recognises.
+
+**`§5` at the root is generated, and it is the only part of any of these files that is.**
+Three registers ordered by cost to reverse do not compose into one ordered list, and
+nothing else composes them: without that view there is no such thing as "the most expensive
+thing still open", there are three of them and nothing says which comes first.
 
 ## How to use it
 
@@ -146,6 +181,27 @@ content across: it lives in the `DEC`.
 
 ---
 
+# §5 · Everything open, by product
+
+**Only in the register at the root, and only between the markers.** Delete this whole
+section from a product's register and from the substrate's: it is the composition, and a
+composition inside one of the things being composed is a second copy that goes stale.
+
+Written by `validate.py --emit-index`. The markers are the boundary and they are also the
+permission: everything outside them is yours, and a file that does not carry them is not
+written to at all. Do not edit between them — the next run overwrites it, and the last
+column of every row says which register owns the entry.
+
+It holds no `entries:` of its own, and that is deliberate rather than an omission. A second
+copy of a row is a second thing for `OD002`, `OD003` and `OD005` to report, and two rows
+with the same id for a `depends_on` to resolve against.
+
+<!-- generated: open-union -->
+Run `validate.py --emit-index` to fill this in.
+<!-- /generated -->
+
+---
+
 ## Anti-patterns
 
 - **Omitting `Default in force`.** This is the error that makes the whole file useless.
@@ -167,3 +223,9 @@ content across: it lives in the `DEC`.
   two possible answers, it does not belong in this file.
 - **Letting it grow.** A register that gets longer at every session and never gets shorter
   is not a decision register: it is the proof that no decisions are being taken.
+- **Restarting the numbering in each register.** It is the one thing that looks tidier and
+  breaks the references. Three `OD-001` make every `depends_on` naming one of them
+  ambiguous, and nothing raises its voice: whichever file was read last wins.
+- **Editing `§5` instead of the register it names.** The edit survives until the next
+  `--emit-index` and disappears without anybody being told, which is worse than not having
+  made it. The last column exists so there is never a reason to.

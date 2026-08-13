@@ -41,7 +41,10 @@ cases:
       exactly two files written, `decisions/DEC-001-warehouse.md` and
       `products/atlas/ARC.md`, and nothing silenced
     because: >
-      Four errors and eleven warnings are there to be found.
+      Four errors and thirteen warnings are there to be found. The count was written as
+      eleven and as thirteen in two places while the fixture produced twelve, which is the
+      drift these documents exist to prevent, committed against a fixture. It is thirteen
+      now because `atlas` has no register of its own and `OD006` says so.
 
       The write set is exact, and it is exact because the skill now states a test rather
       than a list: apply a repair when the repository already holds the correct value,

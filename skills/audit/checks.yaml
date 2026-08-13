@@ -204,6 +204,39 @@ checks:
       order §1, and an entry that has been decided has left it. Asked of a `decided` row
       they reported the documented closure for having been carried out.
 
+  OD006:
+    level: warn
+    title: product with no open register of its own
+    prevents: >
+      The open questions of a product being filed under another product's heading, or
+      nowhere. The register is the file an agent reads before deciding anything, and an
+      agent working on one product reads the one beside that product: a directory with no
+      register tells it nothing is open, which is the assumption it then implements. One
+      per product is not a convenience, it is what makes "read `OPEN.md` first" a rule with
+      a single answer.
+
+  OD007:
+    level: warn
+    title: the same entry id declared by two registers
+    prevents: >
+      An ambiguous `depends_on`. Entry ids are one sequence across every register in the
+      repository, because a dependency and the `derives_from` of a `DEC` name an entry by
+      its id and nothing else. Two registers that both start at `OD-001` do not collide
+      loudly: whichever file was read last wins, and the chain in `TRACEABILITY.md` records
+      the wrong end. A register adopted from before the framework continues the numbering
+      and keeps its old labels in the prose.
+
+  OD008:
+    level: warn
+    title: an entry declares a product its register contradicts
+    prevents: >
+      Two answers to who an entry is about. A register under `products/<p>/` is about `p`
+      by virtue of sitting there, which is why the field is normally left off; an entry
+      that names a different product is read as this product's by a person opening the
+      directory and attributed elsewhere by the derived view, and neither is told about the
+      other. An entry binding several products belongs in the register at the root, where
+      naming them is exactly what the field is for.
+
   # ── STACK ──────────────────────────────────────────────────────────────────
   STK001:
     level: warn

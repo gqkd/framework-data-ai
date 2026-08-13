@@ -50,7 +50,16 @@
 # An integer and not a semantic version, deliberately. The only question a project has is
 # "do I have to do something", and three components invite an argument about which one
 # moved instead of an answer.
-version: 1
+#
+# 1 -> 2. The open register became one per product, and that is the second half of the rule
+# above rather than the first: nothing stops validating, but a document starts meaning
+# something else. An entry in `products/<p>/OPEN.md` that named no product used to bind
+# every product in the repository and now binds that one, so `open_decisions` in every
+# `product.index.yaml` changes without the register being touched. Only repositories that
+# already kept a register under a product are affected -- the older arrangement, a single
+# register at the root, means exactly what it meant. `OD006`, `OD007` and `OD008` are all
+# `warn` and would not have moved this on their own.
+version: 2
 
 lifecycles: [living, immutable, append-only]
 
@@ -231,10 +240,22 @@ types:
     name: Open decisions and known issues
     axis: platform
     born_in: day one
+    path: products/<p>/OPEN.md · platform/OPEN.md · OPEN.md
     template: templates/OPEN.md
-    path: OPEN.md
     lifecycle: living
     status: [active]
+    # Three placements and one rule: an entry lives in the register of the thing it is
+    # about. One per product, mandatory, beside the product -- `OD006` -- because the file
+    # an agent reads before deciding anything has to be the one beside what it is working
+    # on. `platform/OPEN.md` for the substrate, if a substrate was decided. The register at
+    # the root for what belongs to no single product, which includes the question of
+    # whether to have a substrate at all, and it also carries the parking lot and the
+    # generated union of all the others.
+    #
+    # Scope is read off the directory and not off `products:`, so in a product's register
+    # the field is left off and `OD008` reports one that contradicts where it sits.
+    # Numbering stays one sequence across all three -- `OD007` -- because `depends_on` and
+    # the `derives_from` of a `DEC` name an entry by its id and nothing else.
     # `OD002` and `OD003` used to read the body: `### OD-NNN` headings and lines like
     # `- **Cost to reverse:** high`. Rename that label, translate it, or reformat the bullet,
     # and both checks stop working -- reporting nothing, which reads as "no high-cost entry

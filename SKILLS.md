@@ -10,9 +10,9 @@ covers both. They are examples of what somebody types, not a syntax.
 
 | Skill | What you actually say | What it does |
 |---|---|---|
-| **`start`** | *"partiamo, ecco i documenti"* · *"where do I start"* | entry assessment, scaffolding, corpus ingestion, seeds `OPEN.md` |
+| **`start`** | *"partiamo, ecco i documenti"* · *"where do I start"* | entry assessment, scaffolding, corpus ingestion, seeds an `OPEN.md` per product and one at the root |
 | **`requirement`** | *"abbiamo deciso"*, *"il cliente vuole"* · *"the customer wants"*, *"add that"* | classifies, routes to the one authoritative source, propagates, flags contradictions |
-| **`resolve`** | *"risolviamo gli open"* · *"what do I need to decide"* | works `OPEN.md` in cost-to-reverse order, produces `DEC` and the cascade |
+| **`resolve`** | *"risolviamo gli open"* · *"what do I need to decide"* | works one open register in cost-to-reverse order, produces `DEC` and the cascade |
 | **`cycle`** | *"cosa facciamo in questo ciclo"* · *"what do we build next"* | intake, `ICG`, reshaping, `CHG`, `IMP`, and the brief per change |
 | **`release`** | *"possiamo rilasciare?"* · *"are we ready to ship"* | the `RG` gate, `RLM`, `REL` |
 | **`audit`** | *"è tutto a posto?"* · *"check the docs are consistent"* | runs the validator, judges what to do with each finding, and on request reads both ends of the pairs that have to agree |
@@ -51,7 +51,7 @@ it. `cycle` sends authorization out. The boundary is the one rule of the framewo
 breaks most easily: *a request is not a mandate*. "The customer wants Excel export" is a
 `SIG` in `LOG`. It becomes buildable only after intake, triage and the `ICG`.
 
-**Deciding, versus recording a decision.** `resolve` closes an entry in `OPEN.md` and takes
+**Deciding, versus recording a decision.** `resolve` closes an entry in an `OPEN.md` and takes
 the decision with the user. `requirement` records a decision already taken. If `requirement`
 finds it would close an open entry, it says so and stops: closing it is `resolve`'s job,
 because closing an open decision is itself a decision.
@@ -101,7 +101,9 @@ breaking its own single rule against itself. Counted in prose the number would g
 next time one was added, which is how the sentence about two switched-off checks survived
 their being switched back on.
 
-**`references/preamble.md`** — read `AGENTS.md`, `OPEN.md` and the `product.yaml` first; the
+**`references/preamble.md`** — read `AGENTS.md`, the open registers that bind the work
+(`products/<p>/OPEN.md`, `platform/OPEN.md`, and the root one) and the `product.yaml`
+first; the
 class rules; never invent a field that attests something; never write `last_review` without
 having read the document.
 
@@ -116,12 +118,12 @@ document:
 |---|---|
 | `decisions/DEC-012-postgres.md` | new · datastore chosen, closes OD-003 |
 | `products/alpha/ARC.md` | §current · store component added |
-| `OPEN.md` | OD-003 moves from §1 to §4 |
+| `products/alpha/OPEN.md` | OD-003 moves from §1 to §4 |
 
 Then, after the user agrees and the write has happened, it prints the document. A wall of
 generated document is not reviewable, so nobody reviews it and the approval becomes a
 formality. Two things are applied without asking, because they destroy nothing: appending a
-`SIG` to `LOG`, and adding to the parking lot of `OPEN.md`.
+`SIG` to `LOG`, and adding to the parking lot in `§3` of the root `OPEN.md`.
 
 **Close with the validator.** Not only `audit`. The cascade is where a write goes wrong, and
 the validator is what notices that a `DEC` moved and its `ARC` did not.
@@ -163,7 +165,8 @@ brief already exists in the repository. The brief assembles, it does not compose
 
 ```
 Mandate       CHG-NNN §what-changes
-Guardrails    CHG-NNN §what-must-not-change · OPEN.md, what it may not decide
+Guardrails    CHG-NNN §what-must-not-change · the product's OPEN.md and platform/OPEN.md,
+              what it may not decide
 Context       AGENTS.md authoritative sources · ARC#current · the relevant DC · GLOSSARY
 Done when     CHG-NNN §how-we-know-it-worked · mandatory updates · validator clean
               a new EVR, if an AI component was touched

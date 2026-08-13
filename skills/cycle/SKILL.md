@@ -157,7 +157,7 @@ compose.
 ```
 Mandate            CHG-NNN §what-changes
 Guardrails         CHG-NNN §what-must-not-change
-                   OPEN.md, the decisions it may not take
+                   products/<p>/OPEN.md and platform/OPEN.md, the decisions it may not take
 Context            AGENTS.md authoritative sources, resolved for this product
                    ARC#current, the relevant DC, GLOSSARY
 Done when          CHG-NNN §how-we-know-it-worked

@@ -118,9 +118,20 @@ appears when the thing it documents exists, not before.
 ```
 AGENTS.md  OPEN.md  COMMITMENTS.md  GLOSSARY.md  ING.md  framework.yaml
 decisions/            empty, numbering started
-products/<p>/         product.yaml, PBR.md
+products/<p>/         product.yaml, PBR.md, OPEN.md
 _meta/                README.md, corpus/<p>/, extract/
 ```
+
+**One `OPEN.md` per product, from the first day, and one at the root.** It is the only
+document in the day one set that is not single, and `OD006` reports a product without one.
+The product's register holds what is undecided about that product; the root holds what
+belongs to no product in particular, which on day one is most of it — including whether the
+products share a substrate, which cannot be filed under any of them. Numbering is a single
+sequence across all of them: `OD-001` exists once in the repository, wherever it sits.
+
+The root register also carries the `§5` region that `validate.py --emit-index` fills with
+the union of every register under a heading per product. Copy it from the template with the
+markers in place; a root register created without them simply never gets the view.
 
 **`_meta/` holds what is about the framework rather than about the product**, and the root
 holds documents only. Where the corpus ended up is whatever step 2 settled: under
@@ -162,7 +173,9 @@ about to work on its architecture is looking for exactly that list.
 
 **Do not create `PLATFORM.md`.** It is born with the decision to share a technical
 substrate, and that decision does not have to be taken now. Until it is, the question lives
-in `OPEN.md` as an entry with its cost to reverse. An empty `PLATFORM.md` waiting to be
+in the **root** `OPEN.md` as an entry with its cost to reverse — the root and not a
+product's register, because it is about no single product, and not `platform/OPEN.md`,
+because whether that directory exists is what the entry is asking. An empty `PLATFORM.md` waiting to be
 filled collects whatever has not found a home yet, and the substrate ends up defined by
 what accumulated in it rather than by a choice.
 
@@ -227,15 +240,21 @@ would cost to change your mind later.
 something is happening by default, and naming it is what turns a vague worry into a
 decidable question.
 
-Seed it with the questions the framework knows you will face:
+Seed it with the questions the framework knows you will face, each in the register of what
+it is about:
 
-- What is in the MVP, and what is explicitly out
-- Which datastore, which integration style
-- Whether the products share a technical substrate, if there is more than one
-- Every commitment that looked out of technical reach during ingestion
+| Question | Register |
+|---|---|
+| What is in the MVP, and what is explicitly out | the product's |
+| Which datastore, which integration style | the product's, unless it is already shared |
+| Every commitment that looked out of technical reach during ingestion | the product it was promised for |
+| Whether the products share a technical substrate | the **root** — it is about no single product, and `platform/OPEN.md` may not exist yet |
+| Anything that came out of the corpus without a product attached | the root, until somebody attaches one |
 
-The `resolve` skill works this register afterwards. A thin `OPEN.md` does not mean few open
-questions, it means they are still in somebody's head.
+The `resolve` skill works these registers afterwards. A thin `OPEN.md` does not mean few
+open questions, it means they are still in somebody's head — and a product whose register
+is empty while the root one is long usually means the entries were filed by whoever wrote
+them rather than by what they are about.
 
 ## What you must not do
 

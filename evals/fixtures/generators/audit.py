@@ -39,14 +39,35 @@ CLEAN = {
     # own description teaches you to read past its output.
     "framework.yaml": f"framework_version: {VERSION}\n",
 
+    # The arrangement the framework asks for, in its smallest form: the entries live in the
+    # register of the product they are about, and the root holds the parking lot and the
+    # region `--emit-index` fills with the union. A root register with no `entries:` is
+    # legal only in that shape -- marker present, another register to unite -- which is why
+    # this fixture carries both halves and not just one.
     "OPEN.md": fm(schema="framework/open-register/v1", artifact_type="open-register",
                   lifecycle="living", status="active", owners="[maria]",
                   products="[atlas]",
-                  created="2026-01-01", last_review="2026-08-01 09:00",
-                  entries="\n  OD-004:\n    status: open\n    cost_to_reverse: medium\n"
-                          "    default_in_force: BigQuery, the landing zone is already there\n"
-                          "  OD-001:\n    status: decided\n    cost_to_reverse: medium\n"
-                          "    closed_by: DEC-001\n")
+                  created="2026-01-01", last_review="2026-08-01 09:00")
+    + """# Open decisions and known issues
+
+# §3 · Parking lot
+
+- Nothing qualified yet.
+
+# §5 · Everything open, by product
+
+<!-- generated: open-union -->
+Run `validate.py --emit-index` to fill this in.
+<!-- /generated -->
+""",
+    "products/atlas/OPEN.md": fm(
+        schema="framework/open-register/v1", artifact_type="open-register",
+        lifecycle="living", status="active", owners="[maria]", products="[atlas]",
+        created="2026-01-01", last_review="2026-08-01 09:00",
+        entries="\n  OD-004:\n    status: open\n    cost_to_reverse: medium\n"
+                "    default_in_force: BigQuery, the landing zone is already there\n"
+                "  OD-001:\n    status: decided\n    cost_to_reverse: medium\n"
+                "    closed_by: DEC-001\n")
     + """# Open decisions and known issues
 
 # §1 · Open decisions

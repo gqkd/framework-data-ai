@@ -10,10 +10,18 @@ Read, in this order:
 
 1. **`AGENTS.md`** at the project root. It is the control plane: the table of authoritative
    sources, the non negotiable rules, and the project's real commands.
-2. **`OPEN.md`**. If a choice you need is listed there as open, you do not take it. You
-   raise it. This is the rule that stops an agent from inventing a decision and then
-   implementing it with conviction.
-3. **`products/<p>/product.yaml`** for the product you are working on, if the task names one.
+2. **The open registers that bind the work.** There are one to three of them and which
+   ones is not a judgement call: `products/<p>/OPEN.md` for the product the task names,
+   `platform/OPEN.md` if the project has a substrate, and `OPEN.md` at the root, whose
+   `§1` holds what belongs to no product in particular. If the task names no product, the
+   root's `§5` is the generated union of all of them under a heading per product.
+   If a choice you need is listed as open in any of them, you do not take it. You raise it.
+   This is the rule that stops an agent from inventing a decision and then implementing it
+   with conviction.
+3. **`products/<p>/product.yaml`** for the product you are working on, if the task names
+   one — and `product.index.yaml` beside it, whose `open_decisions` is the generated list
+   of every entry binding that product, wherever it is filed. It is the cheap way to
+   check you have not missed a register.
 
 If the project has no `AGENTS.md`, it has not been set up: run the `start` skill instead of
 guessing a structure.
@@ -90,14 +98,16 @@ not reviewable, so nobody reviews it, and the approval becomes a formality.
 |---|---|
 | `decisions/DEC-012-postgres.md` | new · datastore chosen, closes OD-003 |
 | `products/alpha/ARC.md` | §current · store component added |
-| `OPEN.md` | OD-003 moves from §1 to §4 |
+| `products/alpha/OPEN.md` | OD-003 moves from §1 to §4 |
 
 **Then**, once the user agrees and you have written, print the document, or the section of
 it that changed when the file is long.
 
 Two things you apply without asking, because they destroy nothing and asking would only
-make them annoying: appending a `SIG` to `LOG`, and adding an entry to the parking lot of
-`OPEN.md`. Everything else is proposed. The project's `AGENTS.md` says when the second one
+make them annoying: appending a `SIG` to `LOG`, and adding an entry to the parking lot in
+`§3` of `OPEN.md` at the root — the root and not a product's register, because what goes in
+the parking lot has not been qualified yet, and deciding which product it belongs to is
+part of qualifying it. Everything else is proposed. The project's `AGENTS.md` says when the second one
 applies even though nobody asked you to write anything, and it says it there rather than
 here because that rule has to reach an agent answering a question with no skill running,
 which never reaches this file.

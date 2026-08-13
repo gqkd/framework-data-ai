@@ -1417,6 +1417,116 @@ def _early_products_are_not_findings():
     return problems
 
 
+@check("every product owns its register, and the root composes them without copying them")
+def _registers_are_per_product():
+    # The arrangement the framework now asks for: one register per product, one for the
+    # substrate, one at the root for what belongs to no single product, and a generated
+    # union under the last. Six things have to hold at once and each of them used to fail
+    # in the direction that reads as "nothing is open".
+    fm = lambda body: ("---\nschema: framework/open-register/v1\n"
+                       "artifact_type: open-register\nlifecycle: living\nstatus: active\n"
+                       "owners: [o]\ncreated: 2026-01-01 09:00\n"
+                       "last_review: 2026-01-01 09:00\n" + body + "---\n\n# Open\n")
+    man = lambda p: ("schema: framework/product-manifest/v1\n"
+                     "artifact_type: product-manifest\nlifecycle: living\nstatus: active\n"
+                     f"products: [{p}]\nname: {p}\none_liner: A thing.\n"
+                     "owners: [o]\ncreated: 2026-01-01 09:00\nlast_review: 2026-01-01 09:00\n"
+                     "stage:\n  phase: F5\n  block: A\n")
+    base = {
+        "framework.yaml": f"framework_version: {REGISTRY['version']}\n",
+        "products/alpha/product.yaml": man("alpha"),
+        "products/beta/product.yaml": man("beta"),
+        # No `entries:`, and that is legal here and nowhere else: the root of a repository
+        # that files per product is a view plus a parking lot. The marker is what says so.
+        "OPEN.md": fm("") + "\n<!-- generated: open-union -->\nx\n<!-- /generated -->\n",
+        "platform/OPEN.md": fm("entries:\n  OD-001:\n    status: open\n"
+                               "    cost_to_reverse: high\n"
+                               "    default_in_force: one database for everyone\n"),
+        # `depends_on` reaches into the substrate's register, which is the ordinary case
+        # once the entries are filed per product and used to be reported as dangling.
+        "products/alpha/OPEN.md": fm("entries:\n  OD-002:\n    status: open\n"
+                                     "    cost_to_reverse: low\n"
+                                     "    default_in_force: three retries\n"
+                                     "    depends_on: [OD-001]\n"),
+    }
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        for rel, text in base.items():
+            f = root / rel
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_text(text)
+
+        run = lambda *extra: subprocess.run(
+            [sys.executable, str(VALIDATE), "--root", str(root), "--json",
+             "--stale-days", "36500", *extra], capture_output=True, text=True)
+        r = run("--emit-index")
+        if r.returncode not in (0, 1):
+            return [f"the validator crashed: {r.stderr.strip().splitlines()[-1]}"]
+        codes = [f["code"] for f in json.loads(r.stdout)["findings"]]
+
+        if "OD006" not in codes:
+            problems.append("a product directory with no register of its own was not "
+                            "reported: an agent sent to work there reads no register and "
+                            "concludes nothing is open")
+        if "OD004" in codes:
+            problems.append("the register at the root was reported for holding no "
+                            "`entries:` while carrying the union marker, and the reliable "
+                            "way to clear that is to paste the entries back in")
+        if "OD005" in codes:
+            problems.append("a `depends_on` reaching another register was reported as "
+                            f"dangling: {[f['message'] for f in json.loads(r.stdout)['findings'] if f['code'] == 'OD005']}")
+
+        # Attribution comes from the directory. Reading it off `products:` -- absent in a
+        # product's own register, because the directory already said it -- put alpha's
+        # entries into beta's derived view, and that view is where AGENTS.md sends an agent.
+        beta = (root / "products" / "beta" / "product.index.yaml").read_text()
+        if "OD-002" in beta:
+            problems.append("an entry filed in alpha's register reached beta's derived "
+                            "view: scope is being read off `products:` and not off where "
+                            "the register sits")
+        if "OD-001" not in beta:
+            problems.append("a substrate entry is missing from a product's derived view: "
+                            "the decisions that bind every product are the ones a product "
+                            "cannot see it is waiting on")
+
+        union = (root / "OPEN.md").read_text()
+        if "## alpha" not in union or "## beta" not in union:
+            problems.append("the union at the root has no heading per product")
+        if "OD-001" not in union or "OD-002" not in union:
+            problems.append("the union does not hold every open entry")
+        if "entries:" in union.split("---")[1]:
+            problems.append("the union grew an `entries:` map, so every check that reads "
+                            "one now reports each entry twice and `depends_on` has two "
+                            "rows with the same id to resolve against")
+
+        # The prose outside the markers is not the generator's to touch.
+        (root / "OPEN.md").write_text(union.replace("# Open", "# Open\n\nMine, by hand."))
+        run("--emit-index")
+        if "Mine, by hand." not in (root / "OPEN.md").read_text():
+            problems.append("--emit-index rewrote prose outside the region markers")
+
+        # A duplicate id is the failure a per-product register invites: each one starts at
+        # 001 unless something says otherwise, and the collision resolves itself silently.
+        (root / "products" / "beta" / "OPEN.md").write_text(
+            fm("entries:\n  OD-002:\n    status: open\n    cost_to_reverse: low\n"
+               "    default_in_force: three retries\n"))
+        codes = [f["code"] for f in json.loads(run().stdout)["findings"]]
+        if "OD007" not in codes:
+            problems.append("two registers declaring the same entry id were not reported, "
+                            "so a `depends_on` naming it resolves to whichever was read last")
+
+        (root / "products" / "beta" / "OPEN.md").write_text(
+            fm("entries:\n  OD-003:\n    status: open\n    cost_to_reverse: low\n"
+               "    default_in_force: three retries\n    products: [alpha]\n"))
+        codes = [f["code"] for f in json.loads(run().stdout)["findings"]]
+        if "OD008" not in codes:
+            problems.append("an entry in beta's register naming alpha was not reported: a "
+                            "person reading the directory and the derived view disagree "
+                            "about who it is about, and neither is told")
+    return problems
+
+
 @check("the extractor keeps the provenance the converter throws away")
 def _extract_keeps_provenance():
     # anydoc has no slide and no page in its document model: a whole deck comes back as one

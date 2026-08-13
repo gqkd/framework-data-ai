@@ -43,7 +43,7 @@ import re
 import sys
 from dataclasses import dataclass, field
 from datetime import date, datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 try:
     import yaml
@@ -635,6 +635,29 @@ def check_release(arts: list[Artifact], report: Report) -> None:
 
 
 
+UNION_MARK = "<!-- generated: open-union -->"
+
+
+def product_dirs(arts: list[Artifact]) -> dict[Path, tuple[str, str]]:
+    """Where each product's documents live, read off its manifest: dir -> (product, rel).
+
+    The directory and not the `products:` field, because that is how a register declares
+    its scope now. In `products/<p>/OPEN.md` the field is redundant and nobody writes it:
+    the entry is about that product by virtue of where it was filed, the same way an entry
+    in `platform/OPEN.md` is about the substrate. Reading scope off the field instead put
+    every unlabelled entry of every register into every product's derived view, which is
+    the one direction this must not fail in: `AGENTS.md` sends an agent to that view first.
+    """
+    out: dict[Path, tuple[str, str]] = {}
+    for m in arts:
+        if m.type != "product-manifest":
+            continue
+        p = next(iter(as_list(m.meta.get("products"))), None)
+        if p:
+            out[m.path.parent] = (p, str(PurePosixPath(m.rel).parent))
+    return out
+
+
 def check_open_register(arts: list[Artifact], report: Report) -> None:
     opens = [a for a in arts if a.type == "open-register"]
     if not opens:
@@ -642,6 +665,38 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
                    "no open register: an agent has no way to know what has not been "
                    "decided, and will fill the gaps itself")
         return
+
+    # One register per product, at the product's own root. It is not a convenience: the
+    # register is the file an agent reads before deciding anything, and an agent working on
+    # one product reads the one beside the product. A product without one has its open
+    # questions filed under somebody else's heading, or nowhere.
+    dirs = product_dirs(arts)
+    held = {a.path.parent for a in opens}
+    for d, (prod, rel) in sorted(dirs.items(), key=lambda kv: kv[1][0]):
+        if d not in held:
+            report.add("OD006", f"{rel}/OPEN.md",
+                       f"product {prod!r} has no open register of its own. Whatever is "
+                       "undecided about it is filed in another product's register or in "
+                       "none, and an agent sent to work on this product finds a directory "
+                       "that says nothing is open.")
+
+    # Numbering is one sequence across every register in the repository. `depends_on` and
+    # the `derives_from` of a `DEC` resolve an entry by its id alone, so two registers that
+    # both start at `OD-001` make those references ambiguous, and the ambiguity resolves
+    # itself silently: whichever file was read last wins.
+    where: dict[str, str] = {}
+    for a in opens:
+        rows = a.meta.get("entries")
+        for od in rows if isinstance(rows, dict) else ():
+            if od in where:
+                report.add("OD007", a.rel,
+                           f"{od} is also declared by {where[od]}. Entry ids are one "
+                           "sequence across every register here, because `depends_on` and "
+                           "the `derives_from` of a `DEC` name an entry by its id and "
+                           "nothing else. Continue the numbering instead of restarting it, "
+                           "and keep the old label in the prose beside the heading.")
+            else:
+                where[od] = a.rel
 
     # Only a `DEC` that *derives from* an entry closes it. A `DEC` names an open entry for
     # three different reasons, and inferring closure from the mere mention would flag all
@@ -666,11 +721,25 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
         # as "nothing high-cost is undecided", which is the answer somebody wanted.
         entries = a.meta.get("entries")
         if not isinstance(entries, dict):
-            report.add("OD004", a.rel,
-                       "no `entries:` in the front matter. The body may say anything it "
-                       "likes and OD002 and OD003 have nothing to read, so this register "
-                       "reports clean however it is filled in.")
+            # One register is allowed to hold no entries, and only one: the union at the
+            # root of a repository that files its entries per product. It carries the
+            # marker that says so, the marker is what `--emit-index` writes into, and a
+            # repository with a single register does not qualify however it is marked.
+            # Without this the file that gathers every other register would be reported for
+            # being what it is, and the reliable way to clear that finding is to paste the
+            # entries back in, which is the divergence the union exists to remove.
+            if not (UNION_MARK in a.body and len(opens) > 1):
+                report.add("OD004", a.rel,
+                           "no `entries:` in the front matter. The body may say anything "
+                           "it likes and OD002 and OD003 have nothing to read, so this "
+                           "register reports clean however it is filled in.")
             continue
+
+        # What this register is about, read off where it sits. An entry in a product's
+        # register that names a different product is filed under the wrong heading: a
+        # person reading that directory takes it for the directory's, and the derived view
+        # attributes it elsewhere, so the two disagree with nobody being told.
+        scope = dirs.get(a.path.parent, (None, None))[0]
 
         undecided = []
         for od, row in sorted(entries.items()):
@@ -745,12 +814,28 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
                                "everywhere else here -- by `OD002`, and by the traceability "
                                "chain -- so as written this entry is closed in one direction "
                                "only, and invisible in the other.")
+            # Against every register and not against this one. Once the entries are filed
+            # per product, an entry waiting on a substrate decision is the ordinary case
+            # and its `depends_on` points at another file by design. Resolving it locally
+            # reported each of those as a dangling reference -- a check firing on the
+            # arrangement the framework asks for, which is how a check gets switched off.
             for dep in as_list(row.get("depends_on")):
-                if dep not in entries:
+                if dep not in where:
                     report.add("OD005", a.rel,
-                               f"{od} depends on {dep!r}, which this register does not "
-                               "declare. Either it was decided and the dependency is stale, "
-                               "or it is a typo and this entry is waiting for nothing.")
+                               f"{od} depends on {dep!r}, which no register in this "
+                               "repository declares. Either it was decided and the "
+                               "dependency is stale, or it is a typo and this entry is "
+                               "waiting for nothing.")
+
+            stray = [p for p in as_list(row.get("products")) if p != scope]
+            if scope and stray:
+                report.add("OD008", a.rel,
+                           f"{od} sits in the register of {scope!r} and declares "
+                           f"{', '.join(map(repr, stray))}. A register scoped to a product "
+                           "is about that product: an entry belonging to another one goes "
+                           "in that product's register, and one belonging to several goes "
+                           "in the register at the root, where naming them is what the "
+                           "field is for.")
             if od in closed_by and row.get("status") == "open":
                 report.add("OD002", a.rel,
                            f"{od} is still `status: open` but {closed_by[od]} derives from "
@@ -1133,6 +1218,89 @@ def check_cross_product(arts: list[Artifact], report: Report) -> None:
 # main().
 GENERATED_MARK = "Generated by `validate.py --emit-index`"
 
+# A region inside a document somebody else writes, rather than a file of its own. The
+# markers are the boundary and they are also the permission: outside them the prose is
+# untouched, and a file without them is not written to at all. `schemas/generate.py` reads
+# the same shape for the catalog tables in `FRAMEWORK.md`, and the two agree on purpose --
+# a second marker convention is a second thing to learn before you can trust either.
+REGION = re.compile(r"(?P<open><!-- generated: (?P<name>[a-z-]+) -->\n)"
+                    r".*?"
+                    r"(?P<close>\n<!-- /generated -->)", re.S)
+
+# `§1` is grouped by this and by nothing else, because it is the cost that says which entry
+# to look at first. A view that reordered them would be a different file with the same
+# content, and the ordering is the content.
+COST_ORDER = {"high": 0, "medium": 1, "low": 2}
+
+
+def binds(prod: str, row: dict, scope: str | None) -> bool:
+    """Whether an open entry is one `prod` has to care about."""
+    if scope is not None:
+        return scope == prod
+    named = as_list(row.get("products"))
+    return prod in named or not named
+
+
+def build_regions(root: Path, arts: list[Artifact]) -> dict[Path, dict[str, str]]:
+    """The generated regions, by the file that holds them and the name of the region.
+
+    One region so far. The register at the root gathers every other one under a heading per
+    product, because three registers ordered by cost to reverse do not compose into one
+    ordered list and nothing else composes them: without this view there is no such thing
+    as "the most expensive decision still open", there are three of them and nothing says
+    which comes first. It is a view and not a register -- no `entries:`, no second copy of
+    a row for a check to report twice -- and every line names the file that owns it.
+    """
+    opens = [a for a in arts if a.type == "open-register"]
+    target = root / "OPEN.md"
+    if not any(a.path == target for a in opens):
+        return {}
+
+    dirs = product_dirs(arts)
+    rows = [(od, row, dirs.get(a.path.parent, (None, None))[0], a.rel)
+            for a in opens
+            for od, row in (a.meta.get("entries") or {}).items()
+            if isinstance(row, dict) and row.get("status") == "open"]
+
+    def cell(v) -> str:
+        # An absent field reads as an em dash and never as `None`. A table saying a
+        # deadline is `None` is a table nobody trusts the rest of.
+        v = " ".join(str(v).split()).replace("|", "\\|") if v is not None else ""
+        return (v[:57] + "...") if len(v) > 60 else (v or "—")
+
+    def table(sel) -> list[str]:
+        chosen = sorted((r for r in rows if sel(r)),
+                        key=lambda r: (COST_ORDER.get(r[1].get("cost_to_reverse"), 3), r[0]))
+        if not chosen:
+            return ["Nothing open.", ""]
+        out = ["| Entry | Cost to reverse | Default in force | Deadline | Register |",
+               "|---|---|---|---|---|"]
+        out += [f"| `{od}` | {cell(row.get('cost_to_reverse'))} "
+                f"| {cell(row.get('default_in_force'))} | {cell(row.get('deadline'))} "
+                f"| [`{rel}`]({rel}) |" for od, row, _, rel in chosen]
+        return out + [""]
+
+    products = sorted({scope for _, _, scope, _ in rows if scope} |
+                      {p for _, row, scope, _ in rows if not scope
+                       for p in as_list(row.get("products"))} |
+                      {p for p, _ in dirs.values()})
+
+    lines = [f"*{GENERATED_MARK}. Edit the register named in the last column, never this "
+             "table: the next run overwrites whatever is between the markers.*", "",
+             "One heading per product, holding **everything that binds it** wherever it is "
+             "filed — its own register, the substrate's, and the entries below that name "
+             "no product in particular. A shared entry appears under every product it "
+             "binds, once per product, and the last column says which single file owns it. "
+             "Ordered by cost to reverse, which is the order they have to be decided in.",
+             ""]
+    for p in products:
+        lines += [f"## {p}", ""] + table(lambda r, p=p: binds(p, r[1], r[2]))
+    lines += ["## Bound to no single product", "",
+              "The substrate, and everything above the products: they appear under every "
+              "heading above as well, and this is where they are counted once.", ""]
+    lines += table(lambda r: r[2] is None and not as_list(r[1].get("products")))
+    return {target: {"open-union": "\n".join(lines).rstrip()}}
+
 
 def build_indices(root: Path, arts: list[Artifact]) -> dict[Path, str]:
     out: dict[Path, str] = {}
@@ -1168,12 +1336,15 @@ def build_indices(root: Path, arts: list[Artifact]) -> dict[Path, str]:
     # own `entries:`, not from a list somebody maintains beside it, which is the duplication
     # this removes: two answers to "what is still open", and the stale one is the one an
     # agent reads first because `AGENTS.md` sends it to the manifest.
-    # Scoped per product. There is one register at the root and it holds entries of
-    # different scope, so collecting every open entry once put a decision about one product
-    # into the derived view of another -- and this file is what `AGENTS.md` sends an agent to
-    # first. An entry naming no product concerns all of them, which is the common case: "do
-    # these products share a substrate" belongs to every one of them.
-    open_entries = [(od, row) for a in arts if a.type == "open-register"
+    # Scoped per product, and the scope comes from two places because the registers do.
+    # An entry in `products/<p>/OPEN.md` is about `p` by virtue of sitting there, and the
+    # `products:` field is left off: reading only the field put every entry of every
+    # product's register into every product's view. Elsewhere -- the root, the substrate --
+    # the field is what says who is bound, and naming nobody means all of them, which is
+    # the common case: "do these products share a substrate" belongs to every one of them.
+    dirs = product_dirs(arts)
+    open_entries = [(od, row, dirs.get(a.path.parent, (None, None))[0])
+                    for a in arts if a.type == "open-register"
                     for od, row in (a.meta.get("entries") or {}).items()
                     if isinstance(row, dict) and row.get("status") == "open"]
 
@@ -1181,9 +1352,8 @@ def build_indices(root: Path, arts: list[Artifact]) -> dict[Path, str]:
         prod = next(iter(as_list(man.meta.get("products"))), None)
         if not prod:
             continue
-        open_now = sorted(od for od, row in open_entries
-                          if prod in as_list(row.get("products"))
-                          or not as_list(row.get("products")))
+        open_now = sorted(od for od, row, scope in open_entries
+                          if binds(prod, row, scope))
         mine = [a for a in arts if prod in as_list(a.meta.get("products"))]
         changes = sorted(a.id for a in mine if a.type == "change-contract"
                          and a.meta.get("status") in ("approved", "implemented") and a.id)
@@ -1296,6 +1466,29 @@ def main() -> int:
             else:
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(text, encoding="utf-8")
+                index_written.append(rel)
+
+        # Regions, not files. There is no refusal to make here and no `hand_maintained`
+        # list: the markers are the opt in, and a document without them is left exactly as
+        # it is. That asymmetry with the files above is the point -- a whole generated file
+        # exists because a generator made it, and a region exists because somebody wrote
+        # the two markers into a document that is theirs.
+        for path, regions in build_regions(root, arts).items():
+            if not path.exists():
+                continue
+            current = path.read_text(encoding="utf-8")
+            if not REGION.search(current):
+                continue
+            rewritten = REGION.sub(
+                lambda m: (m.group("open") + regions[m.group("name")] + m.group("close"))
+                if m.group("name") in regions else m.group(0), current)
+            if rewritten == current:
+                continue
+            rel = str(path.relative_to(root))
+            if args.check:
+                index_stale.append(rel)
+            else:
+                path.write_text(rewritten, encoding="utf-8")
                 index_written.append(rel)
 
     errors = [f for f in report.findings if f.level == "error"]

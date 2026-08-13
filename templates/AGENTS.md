@@ -11,8 +11,11 @@ classification: internal
 
 # Instructions for agents
 
-Read this file first. Then `OPEN.md`. Then the `product.yaml` of the product you are
-working on.
+Read this file first. Then the `OPEN.md` of the product you are working on, and
+`platform/OPEN.md` if it sits on the shared substrate. Then that product's `product.yaml`.
+
+If you do not yet know which product it is, read `OPEN.md` at the root: its `§5` is every
+open entry in the repository under a heading per product, ordered by cost to reverse.
 
 ## Authoritative sources
 
@@ -33,14 +36,19 @@ here.
 | What a piece of data guarantees | `products/<p>/contracts/DC-NNN.md` |
 | How to operate it in production | `products/<p>/RB.md` |
 | What was promised to a customer | `COMMITMENTS.md` |
-| **What is NOT decided** | `OPEN.md` |
+| **What is NOT decided, about the product you are on** | `products/<p>/OPEN.md`. One per product, and it is the one you read |
+| What is not decided about the shared substrate | `platform/OPEN.md` |
+| What is not decided above the products | `OPEN.md` at the root. Its `§5` is the generated union of all three, ordered by cost to reverse |
 | What you are authorized to build right now | `products/<p>/changes/CHG-NNN.md` |
 
 ## Non negotiable rules
 
-1. **Do not take decisions listed in `OPEN.md`.** If you need a choice that is listed
+1. **Do not take decisions listed in an `OPEN.md`.** If you need a choice that is listed
    there as open, stop and ask. Do not fill the gap with a plausible assumption: that is
-   the main way an agent causes damage that is hard to trace back.
+   the main way an agent causes damage that is hard to trace back. Two registers bind the
+   work: the product's own and, if there is a substrate, `platform/OPEN.md`. The product's
+   `product.index.yaml` lists both under `open_decisions`, and it is generated, so it is
+   the cheap way to check you have not missed one.
 2. **Find the code before describing it, and do not assume where it is.** `code:` in each
    `product.yaml` says which repositories hold it, what is in each one, and where each is
    expected to be checked out; `path: .` means this repository. Read it there before you
@@ -51,8 +59,10 @@ here.
 3. **Do not implement a signal.** A line in `LOG`, a piece of feedback or an increment in
    `RMP` does not authorize you to build. What you implement is a `CHG` with
    `status: approved`.
-4. **A contradiction you find while answering a question goes in the parking lot of
-   `OPEN.md`, one line, before you answer.** Most of what these documents get read for is
+4. **A contradiction you find while answering a question goes in the parking lot at the
+   root — `OPEN.md §3` — one line, before you answer.** The root and not a product's
+   register: what is in the parking lot has not been qualified yet, and deciding which
+   product it belongs to is part of qualifying it. Most of what these documents get read for is
    questions, and reading them turns things up: two signed commitments that cannot both
    hold, a term the glossary defines the way no artifact uses it, an accepted risk resting
    on a fact that has changed. Answer and write nothing and the finding lasts as long as
@@ -105,7 +115,8 @@ make test
 
 ## Escalation, stop and ask
 
-The decision is listed in `OPEN.md` · no approved `CHG` covers the requested work · the
+The decision is listed as open in the product's `OPEN.md` or in `platform/OPEN.md` · no
+approved `CHG` covers the requested work · the
 work would require modifying an `immutable` · an `EVP` threshold would have to be lowered
 to clear the gate · a `DC` would be broken without warning its consumers.
 

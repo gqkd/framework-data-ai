@@ -77,7 +77,7 @@ The decision is listed in `OPEN.md` - no approved `CHG` covers the work - the wo
 require modifying an `immutable`.
 """
 
-FILES["OPEN.md"] = fm(
+FILES["products/riconciliazione/OPEN.md"] = fm(
     schema="framework/open-register/v1", artifact_type="open-register",
     lifecycle="living", status="active", products="[riconciliazione]",
     owners="[g.quaglia]", created=D, last_review=T,

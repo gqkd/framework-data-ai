@@ -913,7 +913,7 @@ def build(name: str, evr_key: str, tamper: bool):
 
     # --- commit 1: the corpus, with the EVP as it was frozen -----------------
     write(root, "AGENTS.md", AGENTS)
-    write(root, "OPEN.md", OPEN)
+    write(root, "products/atlas/OPEN.md", OPEN)
     write(root, "framework.yaml", FRAMEWORK_YAML)
     write(root, "Makefile", MAKEFILE)
     write(root, "decisions/DEC-014-reranker.md", DEC)

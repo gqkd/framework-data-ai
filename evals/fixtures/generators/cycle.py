@@ -68,7 +68,7 @@ python skills/audit/scripts/validate.py --root .
 ```
 """
 
-F["OPEN.md"] = fm(schema="framework/open-register/v1", artifact_type="open-register",
+F["products/atlas/OPEN.md"] = fm(schema="framework/open-register/v1", artifact_type="open-register",
     lifecycle="living", status="active", owners="[gq]", created="2026-01-12",
     last_review=NOW, classification="internal") + """\
 # Open decisions and known issues

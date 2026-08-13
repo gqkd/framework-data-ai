@@ -10,7 +10,7 @@ they describe the concrete ways that document becomes useless.
 | File | Artifact | Class | Naming |
 |---|---|---|---|
 | `AGENTS.md` | Control plane for agents | living | `AGENTS.md` |
-| `OPEN.md` | Open decisions and known issues | living | `OPEN.md` |
+| `OPEN.md` | Open decisions and known issues | living | `products/<p>/OPEN.md · platform/OPEN.md · OPEN.md` |
 | `COMMITMENTS.md` | Commercial commitments made | living | `COMMITMENTS.md` |
 | `GLOSSARY.md` | Glossary and metric dictionary | living | `GLOSSARY.md` |
 | `STACK.md` | Operational stack | living | `STACK.md` |

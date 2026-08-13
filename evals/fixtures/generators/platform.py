@@ -24,7 +24,7 @@ in a signed commitment. Making it opaque reaches, at least:
     GLOSSARY       what "cliente" identifies stops being a number
     COMMITMENTS    CMT-002 promises the id in a customer-facing export
     vega RSK       an accepted risk was accepted on the old identifier
-    OPEN.md        OD-002 asks this question and would close
+    platform/OPEN.md  OD-002 asks this question and would close
     atlas LOG      the signal itself
 
 Eleven documents, three of them owned by different products. The skill under test has to
@@ -37,11 +37,18 @@ which is what a real project is forced to do. That makes one product the owner o
 something shared, and it is visible in the fixture rather than argued about here.
 """
 
+import re
 import sys
 from pathlib import Path
 
 D = Path(sys.argv[1])
 NOW, TODAY = "2026-08-09 09:00", "2026-08-09"
+
+# Read from the registry rather than written as a literal, for the reason `audit.py` states
+# and this fixture has now demonstrated: a `1` frozen here became an `FW001` the day the
+# framework moved to 2, on the fixture whose baseline is zero warnings.
+REGISTRY = Path(__file__).resolve().parents[3] / "schemas" / "artifact-types.yaml"
+VERSION = re.search(r"^version:\s*(\d+)", REGISTRY.read_text(encoding="utf-8"), re.M).group(1)
 
 
 def fm(**kw):
@@ -50,8 +57,8 @@ def fm(**kw):
 
 F = {}
 
-F["framework.yaml"] = """\
-framework_version: 1
+F["framework.yaml"] = f"""\
+framework_version: {VERSION}
 
 scan:
   skip_dirs: [dbt, infra]
@@ -155,15 +162,44 @@ F["COMMITMENTS.md"] = fm(
 | CMT-003 | Personal data of EU subjects is processed in the EU and pseudonymised at rest | Group DPA §4, countersigned | all EU customers | the DPA names pseudonymisation; today only residency is implemented |
 """
 
+# The registers, and the reason this fixture is where the arrangement shows. Both open
+# entries here are about the substrate -- a shared identity, a shared table -- so they live
+# in `platform/OPEN.md` and bind all three products without naming any of them. Each
+# product keeps a register of its own for what is only its, and the root holds the parking
+# lot and the region `--emit-index` fills with the union.
+#
+# `platform/` is beside `products/` and not inside it. Inside, the substrate would become a
+# product: the list of products is the union of every `products:` field in the repository,
+# so one `products: [platform]` earns it an `XP003` asking for a `PBR` and a `stage.phase`
+# saying which phase of discovery a substrate is in. And `products:` absent on an entry
+# means every product, which is what a substrate decision is.
 F["OPEN.md"] = fm(
     schema="framework/open-register/v1", artifact_type="open-register", lifecycle="living",
     status="active", owners="[g.quaglia]", created="2026-01-08", last_review=NOW,
+    classification="internal") + """\
+# Open decisions and known issues
+
+# §3 · Parking lot
+
+- Somebody suggested a per-product identity. Nothing decided.
+
+# §5 · Everything open, by product
+
+<!-- generated: open-union -->
+Run `validate.py --emit-index` to fill this in.
+<!-- /generated -->
+"""
+
+F["platform/OPEN.md"] = fm(
+    schema="framework/open-register/v1", artifact_type="open-register", lifecycle="living",
+    status="active", owners="[g.quaglia]", created="2026-01-08", last_review=NOW,
+    products="[atlas, orion, vega]",
     entries="\n  OD-002:\n    status: open\n    cost_to_reverse: high\n"
             "    default_in_force: customer_id is shown in the orion UI today\n"
             "  OD-003:\n    status: open\n    cost_to_reverse: medium\n"
             "    default_in_force: the atlas team maintains it, unasked",
     classification="internal") + """\
-# Open decisions and known issues
+# Open decisions and known issues of the substrate
 
 # §1 · Open decisions
 
@@ -196,14 +232,41 @@ F["OPEN.md"] = fm(
   the point of `CMT-002`.
 - **Reopens if:** the identifier stops being the CRM integer.
 
-# §3 · Parking lot
-
-- Somebody suggested a per-product identity. Nothing decided.
-
 # §4 · Closed decisions
 
-- **2026-01-22 · OD-001** -> [`DEC-001`](decisions/DEC-001-shared-warehouse.md) · one warehouse
+- **2026-01-22 · OD-001** -> [`DEC-001`](../decisions/DEC-001-shared-warehouse.md) · one warehouse
 """
+
+# One each, and the numbering continues from the substrate's rather than restarting: three
+# registers that each began at OD-001 would make every `depends_on` naming one of them
+# resolve to whichever file was read last. `OD007` reports the restart.
+def _product_open(prod: str, num: str, title: str, body: str, cost: str, default: str):
+    F[f"products/{prod}/OPEN.md"] = fm(
+        schema="framework/open-register/v1", artifact_type="open-register",
+        lifecycle="living", status="active", owners="[g.quaglia]", created="2026-01-08",
+        last_review=NOW, products=f"[{prod}]",
+        entries=f"\n  {num}:\n    status: open\n    cost_to_reverse: {cost}\n"
+                f"    default_in_force: {default}",
+        classification="internal") + (
+        f"# Open decisions and known issues · {prod}\n\n"
+        f"# §1 · Open decisions\n\n### {num} · {title}\n\n{body}\n")
+
+
+_product_open("atlas", "OD-004", "Whether the nightly batch moves to hourly",
+              "- **Question:** `CMT-001` promises 07:00 CET. Hourly would make the promise "
+              "cheap to keep and the warehouse bill three times larger.\n"
+              "- **Default in force:** nightly, and it has met 07:00 every day this year.",
+              "medium", "nightly, and it has met 07:00 every day this year")
+_product_open("orion", "OD-005", "Which of the two dashboards is the product",
+              "- **Question:** the operations view and the executive view were built for "
+              "two buyers and only one is sold.\n"
+              "- **Default in force:** both are maintained.",
+              "low", "both are maintained")
+_product_open("vega", "OD-006", "Whether the export is a file or an API",
+              "- **Question:** customers pull a CSV today. Three have asked for an "
+              "endpoint.\n"
+              "- **Default in force:** the nightly CSV drop.",
+              "medium", "the nightly CSV drop")
 
 F["decisions/DEC-001-shared-warehouse.md"] = fm(
     schema="framework/decision-record/v1", artifact_type="decision-record",

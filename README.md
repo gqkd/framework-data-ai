@@ -143,7 +143,7 @@ A folder of client documents and no framework in it:
 **You:** *"let's start with this project, the client documents are in docs-in/"*
 
 `start` asks who owns what it is about to write, then reads the documents. It creates
-`AGENTS.md`, `OPEN.md`, `GLOSSARY.md` and a folder for the product, and moves the corpus
+`AGENTS.md`, `GLOSSARY.md`, an `OPEN.md` for the product and one at the root, and moves the corpus
 under `_meta/`, which is where everything that is about the framework rather than about the
 product lives. It writes `ING.md`, which records where each claim came from. It tells you
 which documents it could not read and what each one needs. It writes no decisions, because
@@ -151,8 +151,10 @@ at this point nothing has been decided.
 
 **You:** *"let's work through the open decisions, which one first?"*
 
-`resolve` sorts `OPEN.md` by how expensive each choice is to undo, and takes one at a time.
-Expect a question back, not a decision.
+`resolve` sorts the open register of the product you name by how expensive each choice is to
+undo, and takes one at a time. Expect a question back, not a decision. There is one register
+per product, plus one for the substrate and one at the root for what belongs to no product:
+name none and it reads the union the root keeps generated, across all of them.
 
 **You:** *"what do we build now?"*
 
@@ -170,7 +172,8 @@ command is yours.
 Read this before the first session. A tool that surprises you once gets switched off.
 
 **They propose, then wait.** Two things happen without asking, because neither can destroy
-anything: adding a signal to `LOG`, and adding a line to the parking lot in `OPEN.md`.
+anything: adding a signal to `LOG`, and adding a line to the parking lot in the `OPEN.md` at
+the root.
 Everything else comes back as a diff and a question.
 
 **They will not overwrite a definition.** In a test, the glossary said a customer is active

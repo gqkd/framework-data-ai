@@ -17,9 +17,26 @@ description: >
 Read `references/preamble.md`, which sits at `${CLAUDE_PLUGIN_ROOT}`, first, and
 `references/routing-table.md` for the cascade each decision triggers.
 
-`OPEN.md` is the work queue and it is already ordered. §1 groups entries by cost to reverse:
-HIGH decide before the first line of code, MEDIUM within the first month, LOW defer as long
-as you like. You do not need to invent a priority.
+The open register is the work queue and it is already ordered. §1 groups entries by cost to
+reverse: HIGH decide before the first line of code, MEDIUM within the first month, LOW defer
+as long as you like. You do not need to invent a priority.
+
+## Which register you are working
+
+There is one per product, one for the substrate if there is one, and one at the root for
+what belongs to no product in particular. **Ask, or take it from the request**, and say
+which one you are working before the first entry:
+
+- The user named a product → `products/<p>/OPEN.md`, plus `platform/OPEN.md` if that
+  product sits on the substrate, because a decision the substrate has not taken blocks the
+  product just as hard as one of its own.
+- The user named none → `§5` of the root register is the generated union of all of them
+  under a heading per product, ordered by cost. Read it, and offer the most expensive tier
+  across the whole repository rather than picking a product for them.
+
+Say it out loud at the start: *"working `products/alpha/OPEN.md`, eleven open, three
+HIGH"*. Working a register the user did not have in mind produces decisions they were not
+ready to take, and the `DEC` is written by then.
 
 ## The order to work in
 
@@ -98,7 +115,10 @@ self-checking.
 | `architecture` | how the system is built | `ARC#current` if it is already built, `#target` if it moves the destination, `#delta` either way |
 | `platform` | what constrains every product | every product listed in `products`, and `PLATFORM.md` if one exists |
 
-Then the entry **moves** from `OPEN.md` §1 to §4 with a cross reference to the `DEC`. It
+Then the entry **moves** from §1 to §4 **of the register it was already in**, with a cross
+reference to the `DEC`. Closing a decision is not the moment to refile it: an entry that
+changes register on the way out breaks every `depends_on` a reader follows to find out why
+it closed. It
 does not get deleted. An entry deleted outright takes with it the fact that the question was
 ever asked, and the next person re-derives it from scratch.
 

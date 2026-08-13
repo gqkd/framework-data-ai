@@ -33,7 +33,15 @@ apart, **ask**: it is the question that pays best in the whole skill.
 | **Numeric target** | "a 30% reduction", "under 2 seconds" | `EVP.md` threshold, **and** `COMMITMENTS` if it was promised | living |
 | **Promised capability** | "the system will do", "it includes the module" | `PBR.md` capability | living |
 | **Correction of something written** | "actually no", "that changed" | depends on the document holding it → §3 | — |
-| **Unfinished reasoning** | "maybe", "I am thinking", "we could look at" | `OPEN.md` §3 parking lot, or nothing | living |
+| **Unfinished reasoning** | "maybe", "I am thinking", "we could look at" | `OPEN.md` §3 parking lot **at the root**, or nothing | living |
+
+**Which open register.** `OPEN.md` is the one destination in this table that is not a single
+file: one per product, one for the substrate, one at the root. The entry goes in the
+register of the thing it is about — `products/<p>/OPEN.md` when it concerns one product,
+`platform/OPEN.md` when it concerns the substrate, the root when it concerns no single one.
+The parking lot is the exception and it is always at the root: what sits there has not been
+qualified yet, and deciding whose it is is part of qualifying it. Numbering continues across
+all of them, never restarts.
 
 **The one most often got wrong.** A request is not a mandate. "The customer wants Excel
 export" goes into `LOG` as a `SIG`, and at most produces a conditional increment in `RMP`.
@@ -59,7 +67,7 @@ mandatory, and the validator verifies some of them.
 | `DEC` with `scope: architecture` | update `ARC.md#current` in the same pass, and `#target` if the destination moved |
 | `DEC` with `scope: product` | update `PBR.md` if capability, scope or outcome change |
 | `DEC` with `scope: platform` | list **every** product in `products`, and update `PLATFORM.md` |
-| a `DEC` that closes an `OPEN.md` entry | move the entry to `OPEN.md` §4 with the cross reference, and carry `derives_from: [OD-NNN]` on the `DEC` |
+| a `DEC` that closes an `OPEN.md` entry | move the entry to §4 **of the register it is already in**, with the cross reference, and carry `derives_from: [OD-NNN]` on the `DEC` |
 | a `GLOSSARY` entry for a term that is also a field of a `DC` | update the semantics of that `DC` and bump its version |
 | a `GLOSSARY` metric used by more than one product | check every product computes it with that formula. If they cannot, they are two metrics and need two names |
 | a `CMT` that is out of technical reach | open a row in `RSK#state` **and** an entry in `OPEN.md`, and tell the user it is the most urgent thing in the project |
@@ -123,7 +131,8 @@ the sales deck, which is the least reliable one about facts.
 
 **Apply directly**, without asking: one destination, append-only class, no interpretation,
 no conflict. In practice that is recording a `SIG` in `LOG`, or an entry in the parking lot
-of `OPEN.md`. These destroy nothing, and asking would only make them annoying.
+in `§3` of the root `OPEN.md`. These destroy nothing, and asking would only make them
+annoying.
 
 **Propose and wait** in every other case, and in particular: the cascade touches more than
 one file · an immutable is involved · you detected a conflict · the classification was

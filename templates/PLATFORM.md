@@ -57,6 +57,29 @@ because they say what has not been decided yet.
 > While it is open, name the `OD-NNN` entry here, and let this document list the candidates
 > rather than treat them as assigned.
 
+**This file is the architecture. `platform/` is where it is worked on.** A substrate has a
+repository and people in it, and they need what a product's team needs: a register of what
+is undecided, a runbook, the changes they are authorized to build. Those go in `platform/`,
+a directory beside `products/` and not inside it:
+
+```
+platform/
+├── OPEN.md          what is undecided about the substrate
+├── RB.md            how to operate it, and its SLOs
+└── changes/         CHG-NNN against the substrate
+```
+
+**Beside `products/` and not inside it, and this is not a matter of taste.** The list of
+products in this repository is the union of every `products:` field in it, so a single
+`products: [platform]` anywhere makes the platform a product: it is then asked for a `PBR`
+by `XP003`, and for a `stage.phase` between F1 and F5, which asks which phase of discovery
+a substrate is in — a question with no answer. Worse, `products:` absent on an entry means
+*every product*, which is exactly what a substrate decision is. Label one `[platform]` and
+it disappears from the derived view of every product it binds.
+
+So the artifacts under `platform/` carry the products they serve, the way this file does:
+`products: [product-a, product-b, product-c]`. There is no such product as `platform`.
+
 ## Scope
 
 What is platform and what is not. There is a single boundary line:

@@ -97,15 +97,21 @@ maintained: `PRB` `HYP` `EVD` `CMP` `DFB` `SD`
 different initiatives: `PBR` `WF` `ARC` `EVP` `DC` `RB` `RMP` `RSK` `LOG`
 
 **Platform artifacts.** Shared across every product: `GLOSSARY.md` `DEC-ADR` (single
-register) `OPEN.md` `COMMITMENTS.md`. And `PLATFORM.md`, but only if you decided to build a
-shared substrate: see §9.
+register) `COMMITMENTS.md`. And `PLATFORM.md`, but only if you decided to build a shared
+substrate: see §9.
+
+`OPEN.md` is the one that is not single, and the one exception is worth stating here rather
+than in a footnote: **one per product, mandatory**, plus one at the root for what belongs to
+no product in particular. It is the file an agent reads before deciding anything, so it has
+to be beside the thing being worked on. See §9.
 
 The folder structure follows from this:
 
 ```
 repo/
 ├── AGENTS.md                    control plane for agents
-├── OPEN.md                      open decisions and known issues
+├── OPEN.md                      what is open above the products, the parking lot,
+│                                and §5: the generated union of every register below
 ├── COMMITMENTS.md               what has been promised commercially
 ├── GLOSSARY.md                  single, shared by every product
 ├── PLATFORM.md                  only if you share a substrate. See §9
@@ -124,9 +130,14 @@ repo/
 │   └── 2026-07-churn-scoring/
 │       ├── PRB-001.md  HYP-001.md  EVD-001.md
 │       └── CMP-001.md  DFB-001.md  SD-001.md
+├── platform/                    only if you share a substrate. Beside products/, never
+│   ├── OPEN.md                  inside it: there is no such product as "platform"
+│   ├── RB.md                    how to operate the substrate
+│   └── changes/                 CHG-NNN against the substrate
 └── products/
     ├── product-a/
     │   ├── product.yaml         machine-readable manifest
+    │   ├── OPEN.md              what is undecided about THIS product. Mandatory
     │   ├── PBR.md               product brief (living)
     │   ├── ARC.md               architecture: §current §target §delta
     │   ├── WF.md                workflow: §current §target §delta
@@ -435,8 +446,8 @@ nobody decided to build.
 
 N products managed in the same framework with nothing technical in common is a perfectly
 normal configuration, and the framework supports it as it stands: one `GLOSSARY.md`, one
-`decisions/`, one `OPEN.md`, one `COMMITMENTS.md`, and a full `ARC` per product. No
-`PLATFORM.md`, because there is no platform.
+`decisions/`, one `COMMITMENTS.md`, an `OPEN.md` per product, and a full `ARC` per product.
+No `PLATFORM.md`, because there is no platform.
 
 **Do not create `PLATFORM.md` in advance.** An empty file waiting to be filled collects
 whatever has not found a home yet, and the substrate ends up defined by what accumulated in
@@ -445,7 +456,7 @@ with its cost to reverse, not as an empty document.
 
 ### If there is more than one product
 
-Three rules, and they hold whether or not you share a substrate.
+Four rules, and they hold whether or not you share a substrate.
 
 1. **One `GLOSSARY.md` only.** It is the file where complementarity is either defined or
    lost. If the same concept has two names in two products, the complementarity is already
@@ -458,16 +469,43 @@ Three rules, and they hold whether or not you share a substrate.
 3. **The data contracts *between* your own products come before the ones facing outward.**
    They are contracts with yourself six months from now, and they are the ones you will
    break in silence.
+4. **One `OPEN.md` per product, and this is the register that does *not* follow rule 2.**
+   The difference from `decisions/` is which question each file answers. A decision is
+   consulted by whoever asks *why*, from anywhere, so one register keeps the answer in one
+   place. The open register is consulted by whoever is about to *act*, on one product, and
+   it is read under time pressure: filed together, the entries of three products have to be
+   filtered before they can be used, and a register you filter is a register you skim.
+   `§1` being ordered by cost to reverse is the whole of its value, and that ordering only
+   means something within one scope — "the most expensive thing still open" is a question
+   about a product, or about the substrate, not about a directory.
+
+   What is left over is real, and it is what the root register keeps: entries that belong
+   to no single product, starting with whether to share a substrate at all — that one
+   cannot live in `platform/OPEN.md`, because whether that file exists is what the entry is
+   about. The composition you lose by splitting comes back generated, in `§5` of the root
+   register, ordered by cost across every register at once. `OD006` reports a product with
+   no register of its own, `OD007` a numbering that restarted, `OD008` an entry filed under
+   the wrong product.
 
 ### If, and only if, you decide to share a substrate
 
-A fourth rule joins them, and `PLATFORM.md` is born with the decision that creates it, not
+Two more rules join them, and `PLATFORM.md` is born with the decision that creates it, not
 before.
 
-4. **`PLATFORM.md` plus one short `ARC` per product.** Not one full architecture per
+5. **`PLATFORM.md` plus one short `ARC` per product.** Not one full architecture per
    product: one shared substrate (identity, data access, deploy, observability,
    conventions) plus the domain delta of each. Without `PLATFORM.md` the `ARC` files are
    full architectures and there is no delta to speak of.
+6. **The substrate gets a directory, `platform/`, beside `products/` and never inside it.**
+   A substrate has a repository and people in it, so it needs what a product's team needs:
+   `OPEN.md`, `RB.md`, `changes/`. What it must not become is a product. The list of
+   products in a repository is the union of every `products:` field in it, so one
+   `products: [platform]` makes it one: `XP003` then asks it for a `PBR`, and the manifest
+   asks which phase of discovery between F1 and F5 a substrate is in, which is a question
+   with no answer. And `products:` absent on an open entry means *every product* — exactly
+   what a substrate decision is — so labelling one `[platform]` would remove it from the
+   derived view of every product it binds. Artifacts under `platform/` name the products
+   they serve, the way `PLATFORM.md` already does.
 
 The condition that makes the decision worth taking is not the number of products. It is the
 ratio between people and products. With one team per product the binding constraint is the
@@ -512,7 +550,9 @@ Before writing a line of code, in this order:
    at the worst possible moment. The extraction and the classification still have to be
    done, and the tooling for them is still to be built.
 2. `OPEN.md`: the decisions you have to take before you can write code, with the cost to
-   reverse each one.
+   reverse each one. One per product from the start — the numbering is a single sequence
+   across all of them — plus the one at the root for what belongs to no product in
+   particular, which on day one is most of it.
 3. `GLOSSARY.md`: even just ten entries. If you have more than one product, the first ones
    are the entities they share.
 4. `decisions/`: empty, with the numbering started.
@@ -563,14 +603,16 @@ It comes back when more than one person is maintaining these files, because that
 These are also in `AGENTS.md`, which is the file an agent reads first. Here for
 completeness of the picture.
 
-1. **`OPEN.md` before deciding anything.** If a necessary choice is listed there as open,
-   the agent does not take it: it raises it. This is the rule that stops an agent from
-   inventing a decision and implementing it with conviction.
+1. **`OPEN.md` before deciding anything.** The product's own, and `platform/OPEN.md` if it
+   sits on the substrate. If a necessary choice is listed there as open, the agent does not
+   take it: it raises it. This is the rule that stops an agent from inventing a decision
+   and implementing it with conviction.
 2. **Do not implement a signal.** A `LOG` line, a feedback or an `RMP` increment are not
    authorizations to build. What you implement is an approved `CHG`.
 3. **Authoritative source by kind of question:** how it is built → `ARC` · why →
    `decisions/` · what a term means → `GLOSSARY` · what a piece of data guarantees → `DC`
-   · what has been promised → `COMMITMENTS` · what is not decided → `OPEN`.
+   · what has been promised → `COMMITMENTS` · what is not decided → the `OPEN` of the
+   product, and `platform/OPEN.md` for the substrate.
 4. **Respect the class.** Do not modify the body of an `immutable`: create a new one that
    supersedes it. The `status` field is the exception. It follows the transitions declared
    in the schema of the type and is updated in place. Do not rewrite an `append-only` line:

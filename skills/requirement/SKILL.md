@@ -61,7 +61,7 @@ unmaintainable. Route by what the requirement *is*:
 | a quality threshold | `EVP.md`, and `COMMITMENTS` too if it was promised |
 | a structural property of the system | `ARC.md#target`, and `#delta` if it is not there yet |
 | a thing we must not do | `PBR` out of scope, or `RSK#state` if it is a constraint |
-| something nobody has decided | `OPEN.md` as an `OD`, with its cost to reverse |
+| something nobody has decided | an `OD` with its cost to reverse, in the register of what it is about: `products/<p>/OPEN.md`, `platform/OPEN.md`, or the root when it is neither |
 
 If a statement does not fit any row, that is information: it is probably reasoning rather
 than a requirement, and it belongs in the parking lot or nowhere.
