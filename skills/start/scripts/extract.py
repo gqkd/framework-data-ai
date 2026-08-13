@@ -109,6 +109,16 @@ class DocInfo:
     visual_review: list[int] = field(default_factory=list)
     rendered: int = 0              # how many flagged pages were rasterised
     note: str = ""
+    image_pages: list[int] = field(default_factory=list)
+    # What was concluded about this document's visual content, and on what basis. Filled
+    # for everything that has pages or slides, *including when the answer is nothing to
+    # look at*. That case is the whole reason the field exists: a document absent from the
+    # review list used to be indistinguishable from one that had been examined and cleared,
+    # and on the first real corpus the two documents named "architettura" were both in it.
+    # Their extraction turned out to be complete, and nobody could have known that from the
+    # report: it takes a person running `pdfimages` by hand to find out that a silence was
+    # good news.
+    visual_basis: str = ""
 
 
 def run(cmd: list[str]) -> tuple[int, str]:
@@ -187,8 +197,12 @@ def toolchain() -> dict:
     return {
         "anydoc": {"module": mod, "command": version([exe, "-V"]) if exe else None,
                    "needed_for": "every office format. Without it they produce no blocks"},
+        # `pdfimages` is here because a character count cannot tell a page of vector drawing
+        # from a page holding a screenshot, and only the second is worth rasterising. It
+        # ships in the same package as the other four, so requiring it costs nothing that
+        # was not already required.
         "poppler": {k: version([k, "-v"] if k != "pdftotext" else ["pdftotext", "-v"])
-                    for k in ("pdfinfo", "pdftotext", "pdffonts", "pdftoppm")},
+                    for k in ("pdfinfo", "pdftotext", "pdffonts", "pdftoppm", "pdfimages")},
         "libreoffice": {"soffice": version(["soffice", "--version"]),
                         "needed_for": "rasterising a deck, and slide numbers in a legacy .ppt"},
     }
@@ -414,6 +428,31 @@ def thin_against_median(sizes: dict[int, int]) -> list[int]:
     return sorted(n for n, c in sizes.items() if c < median / 2)
 
 
+def embedded_images(path: Path) -> dict[int, int]:
+    """How many raster images each page carries, from `pdfimages -list`.
+
+    Character counting answers "is there little text here". It cannot answer "is there
+    something here that is not text", and those are different questions: a page of vector
+    drawing and a page holding a screenshot both read as thin, and only the second is
+    recoverable by looking at an image of it.
+
+    Ships with the same poppler package as the rest, so it costs no new dependency. Absent
+    or unreadable, it returns nothing and the caller says the count was not available
+    rather than reporting zero, because zero is a claim.
+    """
+    if not shutil.which("pdfimages"):
+        return {}
+    rc, out = run(["pdfimages", "-list", str(path)])
+    if rc != 0:
+        return {}
+    counts: dict[int, int] = {}
+    for line in out.splitlines():
+        head = line.split()[0] if line.split() else ""
+        if head.isdigit():
+            counts[int(head)] = counts.get(int(head), 0) + 1
+    return counts
+
+
 def on_slide_chars(md: str) -> int:
     """How much text is on the slide, which is not how much text the slide produced.
 
@@ -580,6 +619,9 @@ def extract_pptx(path: Path, out: Path, min_chars: int) -> tuple[list[Block], Do
         info.note = ("converted whole: no slide list to split on, so every claim from this "
                      "deck is located to the file and not to a slide. Checking one means "
                      "reading the deck.")
+        info.visual_basis = ("no slide boundary to split on, so the per-slide check did not "
+                            "run at all: nothing here has been examined for graphical "
+                            "content, and an empty review list means only that. Open it.")
         if path.suffix.lower() in LEGACY_PPT and not shutil.which("soffice"):
             info.note += " LibreOffice would convert it to .pptx first and restore them."
         blocks = split_on_headings(src, body)
@@ -587,6 +629,7 @@ def extract_pptx(path: Path, out: Path, min_chars: int) -> tuple[list[Block], Do
         return blocks, info
 
     blocks = []
+    sizes: dict[int, int] = {}
     for n, chunk in enumerate(itertools.chain([first], slices), 1):
         md, err = anydoc_markdown(chunk, "pptx")
         del chunk                    # the copy of the package goes now, not at the next loop
@@ -597,12 +640,28 @@ def extract_pptx(path: Path, out: Path, min_chars: int) -> tuple[list[Block], Do
         info.units = n
         if body:
             blocks.append(Block(src, f"slide {n}", body))
-        if on_slide_chars(body) < min_chars:
-            info.visual_review.append(n)         # text-poor slide: it is a picture
+        sizes[n] = on_slide_chars(body)
+
+    # Both thresholds here too, for the same reason as the PDF path: the absolute one finds
+    # an empty slide, the relative one finds the thin slide among dense ones.
+    info.visual_review = sorted(
+        {n for n, c in sizes.items() if c < min_chars} | set(thin_against_median(sizes)))
 
     if info.visual_review and not info.note:
         info.note = (f"{_n(len(info.visual_review), 'slide', 'slides')} under {min_chars} "
                      "characters: likely graphical content. Worth looking at.")
+
+    counted = (f"{_n(len(info.visual_review), 'slide', 'slides')} under one of the two "
+               f"thresholds -- below {min_chars} characters on the slide itself, or below "
+               f"half the text of the typical slide here"
+               if info.visual_review else
+               f"nothing listed: every slide carries at least {min_chars} characters and "
+               "none is thin against the others here")
+    info.visual_basis = (
+        f"{counted}. Speaker notes were not counted towards it. There is no image count for "
+        "a deck the way there is for a PDF, so a slide that is one large picture with a "
+        "caption over it is only found by the character count -- if this deck is where the "
+        "architecture was drawn, open it whatever this says.")
     return blocks, info
 
 
@@ -645,6 +704,8 @@ def extract_pdf(path: Path, out: Path, min_chars: int) -> tuple[list[Block], Doc
     info.has_text_layer = len(fonts.strip().splitlines()) > 2
     if not info.has_text_layer:
         info.note = "no text layer: scanned PDF. Look at it page by page, or run OCR."
+        info.visual_basis = ("no text layer at all, so every page is an image of a page. "
+                             "Nothing here was read by anything.")
         info.visual_review = list(range(1, min(info.units, 40) + 1))
         return [], info
 
@@ -657,8 +718,17 @@ def extract_pdf(path: Path, out: Path, min_chars: int) -> tuple[list[Block], Doc
         sizes[n] = len(body)
         if body:
             blocks.append(Block(src, f"page {n}", body))
-        if len(body) < min_chars:
-            info.visual_review.append(n)
+
+    # Two thresholds, and the second one had been written and never called. `min_chars` is
+    # absolute and finds a page with almost nothing on it. `thin_against_median` is relative
+    # to this document and finds the one thin page among dense ones, which is the case the
+    # absolute rule cannot see and the one that prompted it being written. Its docstring has
+    # claimed since the day it was added that it is "what makes it need no calibrating"; it
+    # was dead code, and the only rule running was the constant it was written to replace.
+    imgs = embedded_images(path)
+    info.image_pages = sorted(n for n, c in imgs.items() if c)
+    info.visual_review = sorted(
+        {n for n, c in sizes.items() if c < min_chars} | set(thin_against_median(sizes)))
 
     if deck:
         # Every page, and no threshold. Counting characters cannot find a diagram, because a
@@ -685,6 +755,40 @@ def extract_pdf(path: Path, out: Path, min_chars: int) -> tuple[list[Block], Doc
                      "where the promise lives.")
     elif info.visual_review:
         info.note = f"{_n(len(info.visual_review), 'text-poor page', 'text-poor pages')}."
+
+    # A sentence for this document, always, and the negative case is the one it was added
+    # for. A document missing from the review list read exactly like one that had been
+    # examined and cleared, and on the first real corpus the two files named "architettura"
+    # were both in that position. Their extraction was in fact complete -- and finding that
+    # out took somebody running `pdfimages` by hand, which is not a report, it is a rescue.
+    if not shutil.which("pdfimages"):
+        images = ("embedded images were not counted: `pdfimages` is absent, so this says "
+                  "nothing about what is drawn here")
+    elif info.image_pages:
+        images = (f"embedded raster images on {_n(len(info.image_pages), 'page', 'pages')} "
+                  f"({', '.join(map(str, info.image_pages[:12]))}"
+                  f"{' ...' if len(info.image_pages) > 12 else ''})")
+    else:
+        images = "no embedded raster image anywhere in the file"
+
+    if deck:
+        info.visual_basis = (f"a presentation by page geometry, so every page is listed "
+                             f"rather than thresholded; {images}.")
+    elif info.visual_review:
+        info.visual_basis = (
+            f"{_n(len(info.visual_review), 'page', 'pages')} under one of the two "
+            f"thresholds -- below {min_chars} characters, or below half the text of the "
+            f"typical page here; {images}.")
+    else:
+        info.visual_basis = (
+            f"nothing listed: no page is under {min_chars} characters and none carries "
+            f"less than half the text of the typical page here; {images}. "
+            + ("Those image pages are not thin, and a diagram whose labels are text has as "
+               "many characters as a paragraph, so no count can find one: worth opening "
+               "them." if info.image_pages else
+               "The extracted text is all there is to have. A drawing made of vector lines "
+               "would still be invisible to both checks, so if this document is supposed to "
+               "carry a diagram, open it anyway."))
     return blocks, info
 
 
@@ -805,15 +909,37 @@ def build_extract_md(n_files: int, blocks: list[Block], silent: list[DocInfo],
     # matters is drawn rather than written. On a sales deck the architectural constraint is
     # almost always a diagram. This warning used to go to stdout and nowhere else, so it
     # survived exactly as long as the terminal did.
+    #
+    # Every document with pages or slides appears here, including the ones with nothing to
+    # look at, and that is the point rather than a completeness habit. The table used to
+    # hold only the documents that had been flagged, so a document that was never examined
+    # and one that was examined and cleared were both absent from it, and no reader could
+    # tell them apart. On the first real corpus the two files named "architettura" sat in
+    # that gap: their extraction turned out to be complete, and establishing that took
+    # somebody running `pdfimages` by hand afterwards. A row that says "nothing listed, and
+    # here is what was measured" costs one line and answers it in advance.
+    # `or visual_review`, and not `visual_basis` alone. A handler that flags pages without
+    # recording why is a path that forgot to say something, and filtering it out of the table
+    # would drop the row instead of showing the omission -- which is the exact failure this
+    # table was added to remove, committed by the table. It gets listed, and the basis column
+    # says the basis was not recorded.
+    paged = [i for i in infos if i.visual_basis or i.visual_review]
     need = [i for i in infos if i.visual_review]
-    if need:
-        md += [f"## {_n(len(need), 'document has', 'documents have')} pages you have to look at", "",
-               "These gave text, and the text is not the whole claim: a page this thin "
-               "usually carries a diagram. Read the pages listed before classifying "
-               "anything that came from these documents.", "",
-               "| Document | Pages or slides |", "|---|---|"]
-        md += [f"| {i.source} | {', '.join(str(p) for p in i.visual_review[:12])}"
-               f"{' ...' if len(i.visual_review) > 12 else ''} |" for i in need]
+    if paged:
+        md += [f"## Visual inspection: {_n(len(need), 'document', 'documents')} of "
+               f"{len(paged)} with pages to look at", "",
+               "Every document that has pages or slides is listed, including the ones with "
+               "nothing to review. A blank in the middle column is a measurement that was "
+               "made, not one that was skipped: the basis says which. Read the pages listed "
+               "before classifying anything that came from those documents.", "",
+               "| Document | Pages or slides to look at | On what basis |", "|---|---|---|"]
+        for i in sorted(paged, key=lambda x: (not x.visual_review, x.source)):
+            pages = (", ".join(str(p) for p in i.visual_review[:12])
+                     + (" ..." if len(i.visual_review) > 12 else "")) or "none"
+            basis = i.visual_basis.replace("|", "/") or (
+                "no basis recorded: these pages were flagged and nothing said on what "
+                "measurement, which is a gap in the extractor and not in the document")
+            md += [f"| {i.source} | {pages} | {basis} |"]
         md += [""]
 
     # A document converted whole when it should have been split still gives text, so it
