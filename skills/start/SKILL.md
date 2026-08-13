@@ -183,8 +183,9 @@ what accumulated in it rather than by a choice.
 line in it is not configuration:
 
 ```yaml
-framework_version: N          # read N from `version:` at the top of the framework's
-                              # schemas/artifact-types.yaml. Do not copy a number from here
+framework_version: N.N.N      # read it from `version:` at the top of the framework's
+                              # schemas/artifact-types.yaml. All three parts, and do not
+                              # copy a number from here
 
 scan:                         # only if the project holds code as well as documents
   skip_dirs: [dbt, infra, notebooks]
@@ -197,12 +198,19 @@ opposite responses, one is a migration and one is a repair, and a team that gues
 at it twice stops reading the validator. Copy the number from `version:` at the top of the
 framework's `schemas/artifact-types.yaml`; do not invent one, and do not copy the `N` above.
 
-**The example says `N` and not a number on purpose.** It said `1` until the framework moved
-to 2, and a skill that writes new repositories was seeding every one of them with a version
-that was already wrong — an `FW001` on day one, on the file whose entire job is to tell a
-migration from a mistake. A literal here is a count in prose with a longer fuse. If the `N`
-does reach a `framework.yaml` by accident, `FW001` says so in as many words: *"is `'N'`,
-which is str and not a whole number"*. A stale number produces no such sentence.
+**The example says `N.N.N` and not a version on purpose.** It carried a literal until the
+framework moved, and a skill that writes new repositories was seeding every one of them
+with a version that was already wrong — an `FW001` on day one, on the file whose entire job
+is to tell a migration from a mistake. A literal here is a count in prose with a longer
+fuse, and there is a selfcheck against it now. If the `N.N.N` does reach a `framework.yaml`
+by accident, `FW001` says so: it is not three numbers separated by dots. A stale version
+produces no such sentence, which is the whole difference.
+
+**All three parts.** The version is the plugin's version too, so it is a three part string
+and the two shortenings anybody reaches for are both wrong in a way YAML hides: a bare
+`1.1` comes back a decimal and a bare `2` comes back a whole number, and neither can be
+compared with a version at all. `FW001` names both cases rather than reporting a skew,
+because a skew tells you to migrate and there is nothing to migrate to.
 
 `scan` is the other half, and only when the project holds code. Without it the first run
 reports every dbt model and every Kubernetes manifest as a document with no front matter,

@@ -38,28 +38,42 @@
 # the key, so it is not repeated on every entry.
 
 # The number a project pins in its own `framework.yaml` as `framework_version`, and the
-# only version here that means anything to one. It is not the plugin's: a plugin release
-# that rewords a skill changes nothing about whether a document still validates, and a
-# project should not be asked to care.
+# same number the plugin ships under. One version and not two, by decision: this repository
+# is the framework and the plugin both, and two numbers on one artifact means somebody has
+# to be told which of them answers "what am I running".
 #
-# It goes up when a document that validated stops validating, or starts meaning something
-# else: a new required field, a narrowed enum, a type removed, a check promoted to error in
-# the catalog. Adding a type, adding an optional field or adding a check at `warn` leaves it
-# alone, because none of those can break a repository that was correct yesterday.
+# This reverses what stood here, and the reversal is the interesting half. The note said an
+# integer, deliberately, because "the only question a project has is do I have to do
+# something, and three components invite an argument about which one moved". It also said
+# the number was not the plugin's, because a release that rewords a skill changes nothing
+# about whether a document still validates. Both arguments were sound and both are now
+# paid for: with one number, a reworded skill does move the version a project reads, and
+# the middle and last components are where that lands. Which is what the components are
+# for -- MAJOR is the answer to "do I have to do something", and the other two are the
+# answer to "no".
 #
-# An integer and not a semantic version, deliberately. The only question a project has is
-# "do I have to do something", and three components invite an argument about which one
-# moved instead of an answer.
+#   MAJOR   a document that validated stops validating, or starts meaning something else:
+#           a new required field, a narrowed enum, a type removed, a check promoted to
+#           error. This is the one that asks a project to migrate.
+#   MINOR   something arrived and nothing broke: a new type, an optional field, a check at
+#           `warn`, a skill that does more than it did.
+#   PATCH   wording, a message, a fixture. Nothing about the framework moved.
 #
-# 1 -> 2. The open register became one per product, and that is the second half of the rule
-# above rather than the first: nothing stops validating, but a document starts meaning
-# something else. An entry in `products/<p>/OPEN.md` that named no product used to bind
-# every product in the repository and now binds that one, so `open_decisions` in every
-# `product.index.yaml` changes without the register being touched. Only repositories that
-# already kept a register under a product are affected -- the older arrangement, a single
-# register at the root, means exactly what it meant. `OD006`, `OD007` and `OD008` are all
-# `warn` and would not have moved this on their own.
-version: 2
+# A three part string, so `1.10.0` sorts after `1.9.0` rather than before it. Quoted here
+# because YAML reads a bare `1.1` as a decimal and a bare `2` as a whole number, and both
+# of those stop being comparable with a version -- which `FW001` says in as many words when
+# it finds one in a project.
+#
+# 1 -> 1.1.0. The open register became one per product. Under the old integer that was a 2,
+# because an entry in `products/<p>/OPEN.md` naming no product used to bind every product
+# and now binds that one, so `open_decisions` changes in every `product.index.yaml` without
+# the register being touched. Under three components it is a MINOR: nothing stops
+# validating, and the only repositories whose documents change meaning are the ones that
+# already kept a register under a product -- which the framework asked for as an exception
+# and which is the arrangement being made standard, not one being taken away. `OD006`,
+# `OD007` and `OD008` are all `warn`. A repository that kept a single register at the root
+# means exactly what it meant.
+version: "1.1.0"
 
 lifecycles: [living, immutable, append-only]
 

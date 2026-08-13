@@ -14,7 +14,7 @@ BASE = Path(sys.argv[1])   # where to write; see evals/fixtures/make.py
 # this fixture from silent into FW001 the day the framework moves, and the fixture whose
 # whole job is to report nothing would start reporting a version skew against itself.
 REGISTRY = Path(__file__).resolve().parents[3] / "schemas" / "artifact-types.yaml"
-VERSION = re.search(r"^version:\s*(\d+)", REGISTRY.read_text(encoding="utf-8"), re.M).group(1)
+VERSION = re.search(r"^version:\s*[\"']?([\d.]+)", REGISTRY.read_text(encoding="utf-8"), re.M).group(1)
 
 
 def fm(**kw):

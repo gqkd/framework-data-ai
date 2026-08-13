@@ -938,6 +938,23 @@ def check_change_contracts(arts: list[Artifact], report: Report) -> None:
                            "which is the question a `DEC` exists to answer.")
 
 
+SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
+
+
+def semver(v) -> tuple[int, int, int] | None:
+    """`"1.2.3"` as a comparable triple, or None when it is not one.
+
+    A string and never a number, which is the whole reason this exists. The framework's
+    version and the plugin's are one number now, so it carries the plugin's shape: YAML
+    turns `2` into an int and `1.1` into a float, and comparing either with `"1.1.0"` is
+    either a crash or a silent False. Parsing to a triple makes `1.10.0` sort after
+    `1.9.0`, which string comparison gets backwards and which is the first place this would
+    have gone wrong without being noticed.
+    """
+    m = SEMVER.match(v.strip()) if isinstance(v, str) else None
+    return (int(m.group(1)), int(m.group(2)), int(m.group(3))) if m else None
+
+
 def check_framework_version(root: Path, project: dict, registry: dict,
                             report: Report) -> None:
     """Which version of the framework this repository was written against.
@@ -961,19 +978,24 @@ def check_framework_version(root: Path, project: dict, registry: dict,
                    f"change nothing here will distinguish a migration from a mistake. "
                    f"The framework is at {current}.")
         return
-    # A quoted number in YAML is a string, and `"1" != 1`. Reported as a version skew it
-    # sends somebody looking for a migration that does not exist, which is the confusion
-    # this check was added to remove rather than cause.
-    if not isinstance(declared, int):
+    # Three numbers separated by dots, and YAML has a trap on each side of that. `2` comes
+    # back an int and `1.1` comes back a float, so both of the shapes somebody reaches for
+    # when shortening it stop being comparable to the registry's value -- and a version that
+    # cannot be compared is reported as a skew, which sends somebody looking for a migration
+    # that does not exist. That is the confusion this check exists to remove rather than
+    # cause, so the shape is stated and the two near misses are named.
+    want, got = semver(current), semver(declared)
+    if got is None:
         report.add("FW001", "framework.yaml",
-                   f"framework_version is {declared!r}, which is "
-                   f"{type(declared).__name__} and not a whole number. In YAML a quoted "
-                   f"value is a string: write `framework_version: {current}` without "
-                   f"quotes. Until it is a number this says nothing about which framework "
-                   f"the repository was written against.")
+                   f"framework_version is {declared!r}, which is not three numbers "
+                   f"separated by dots. Write `framework_version: {current}`. In YAML a "
+                   f"bare {current.split('.')[0]} reads as a whole number and a bare "
+                   f"{'.'.join(current.split('.')[:2])} reads as a decimal, and neither can "
+                   f"be compared with a version: until this line has all three parts it "
+                   f"says nothing about which framework the repository was written against.")
         return
-    if declared != current:
-        direction = "behind" if declared < current else "ahead of"
+    if got != want:
+        direction = "behind" if got < want else "ahead of"
         report.add("FW001", "framework.yaml",
                    f"declares framework_version {declared!r} and the framework is at "
                    f"{current!r}, so this repository is {direction} it. Findings below "

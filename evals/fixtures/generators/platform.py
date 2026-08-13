@@ -45,10 +45,11 @@ D = Path(sys.argv[1])
 NOW, TODAY = "2026-08-09 09:00", "2026-08-09"
 
 # Read from the registry rather than written as a literal, for the reason `audit.py` states
-# and this fixture has now demonstrated: a `1` frozen here became an `FW001` the day the
-# framework moved to 2, on the fixture whose baseline is zero warnings.
+# and this fixture has now demonstrated twice: a version frozen here became an `FW001` the
+# day the framework moved, on the fixture whose baseline is zero warnings, and it would have
+# done it again the day the version stopped being a single number.
 REGISTRY = Path(__file__).resolve().parents[3] / "schemas" / "artifact-types.yaml"
-VERSION = re.search(r"^version:\s*(\d+)", REGISTRY.read_text(encoding="utf-8"), re.M).group(1)
+VERSION = re.search(r"^version:\s*[\"']?([\d.]+)", REGISTRY.read_text(encoding="utf-8"), re.M).group(1)
 
 
 def fm(**kw):

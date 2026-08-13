@@ -518,12 +518,25 @@ def _framework_version():
             return {(f["code"], f["level"]) for f in json.loads(r.stdout)["findings"]
                     if f["code"].startswith("FW")}, None
 
+    major, minor, _ = current.split(".")
     problems = []
     cases = [
         (None, {("FW002", "info")}, "no framework.yaml at all"),
         ("checks:\n  LC002: warn\n", {("FW002", "info")}, "a config with no version"),
         (f"framework_version: {current}\n", set(), "the current version"),
-        (f"framework_version: {current + 1}\n", {("FW001", "warn")}, "a version ahead"),
+        (f'framework_version: "{current}"\n', set(), "the current version, quoted"),
+        (f"framework_version: {int(major) + 1}.0.0\n", {("FW001", "warn")},
+         "a major ahead"),
+        (f"framework_version: {major}.{int(minor) + 1}.0\n", {("FW001", "warn")},
+         "a minor ahead"),
+        # The two YAML traps, and they are the reason the version is a string. `1.1` is a
+        # decimal and `2` is a whole number, so neither is comparable with a version, and
+        # both are what somebody reaches for when shortening it. Quoting, which used to be
+        # the trap, is now fine: the value was always meant to be a string.
+        (f"framework_version: {major}.{minor}\n", {("FW001", "warn")},
+         "two components, which YAML reads as a decimal"),
+        (f"framework_version: {major}\n", {("FW001", "warn")},
+         "one component, which YAML reads as a whole number"),
     ]
     for config, want, what in cases:
         got, crash = codes(config)
@@ -533,27 +546,32 @@ def _framework_version():
             problems.append(f"{what}: expected {sorted(want) or 'nothing'}, got "
                             f"{sorted(got) or 'nothing'}")
 
-    # A quoted number in YAML is a string. Reported as a version skew it sends somebody
-    # looking for a migration that does not exist, which is the confusion this check was
-    # added to remove rather than cause.
-    got, crash = codes(f'framework_version: "{current}"\n')
-    if crash:
-        problems.append(f"a quoted version crashed the validator: {crash}")
-    elif got != {("FW001", "warn")}:
-        problems.append(f"a quoted version reported {sorted(got) or 'nothing'}, and has to "
-                        "be told apart from a real mismatch")
-    else:
-        with tempfile.TemporaryDirectory() as tmp:
-            for rel, text in base.items():
-                (Path(tmp) / rel).write_text(text)
-            (Path(tmp) / "framework.yaml").write_text(f'framework_version: "{current}"\n')
-            r = subprocess.run([sys.executable, str(VALIDATE), "--root", tmp, "--json",
-                                "--stale-days", "36500"], capture_output=True, text=True)
-            msg = next(f["message"] for f in json.loads(r.stdout)["findings"]
-                       if f["code"] == "FW001")
-            if "quoted" not in msg and "string" not in msg:
-                problems.append("a quoted version is reported as a version mismatch "
-                                f"rather than as a quoted number: {msg[:80]}")
+    # A malformed version has to be told apart from a real skew in the text, not only in
+    # the code: reported as a mismatch it sends somebody looking for a migration that does
+    # not exist, which is the confusion this check was added to remove rather than cause.
+    with tempfile.TemporaryDirectory() as tmp:
+        for rel, text in base.items():
+            (Path(tmp) / rel).write_text(text)
+        (Path(tmp) / "framework.yaml").write_text(f"framework_version: {major}.{minor}\n")
+        r = subprocess.run([sys.executable, str(VALIDATE), "--root", tmp, "--json",
+                            "--stale-days", "36500"], capture_output=True, text=True)
+        msg = next((f["message"] for f in json.loads(r.stdout)["findings"]
+                    if f["code"] == "FW001"), "")
+        if "three" not in msg and "dots" not in msg:
+            problems.append("a version with two components is reported as a version "
+                            f"mismatch rather than as a malformed one: {msg[:80]}")
+
+    # `1.10.0` is after `1.9.0`, and string comparison says the opposite. It is the first
+    # place a version made of three parts goes wrong quietly, and it goes wrong in the
+    # flattering direction: a repository nine minors behind reads as ahead of the framework,
+    # which nobody migrates.
+    v = _load(VALIDATE, "validate")
+    if not (v.semver("1.9.0") < v.semver("1.10.0")):
+        problems.append("1.10.0 does not sort after 1.9.0: the version is being compared "
+                        "as text, so a repository behind reads as one ahead")
+    for bad in ("2", "1.1", "", "v1.1.0", "1.1.0-rc1"):
+        if v.semver(bad) is not None:
+            problems.append(f"{bad!r} parses as a version and should not")
 
     # An unrecognised key stops the validator, by design, so the new one has to be on the
     # allowed list or every project that adopts it cannot run the checks at all.
@@ -1417,6 +1435,32 @@ def _early_products_are_not_findings():
     return problems
 
 
+@check("the plugin and the framework ship one version, and it is the same number")
+def _one_version():
+    # They are one number by decision, reversing a note in the registry that said the
+    # framework's version was not the plugin's. The decision only holds if something keeps
+    # them equal: two files that are supposed to agree and are edited by hand are two files
+    # that disagree, which is the failure this whole framework is a set of arguments about.
+    # `claude plugin validate` already refuses a `plugin.json` and a marketplace entry that
+    # disagree; this is the third corner of that triangle, which it has no way to see.
+    problems = []
+    registry = REGISTRY["version"]
+    for rel, read in (
+        (".claude-plugin/plugin.json", lambda d: d["version"]),
+        (".claude-plugin/marketplace.json", lambda d: d["plugins"][0]["version"]),
+    ):
+        declared = read(json.loads((ROOT / rel).read_text()))
+        if declared != registry:
+            problems.append(
+                f"{rel} declares {declared!r} and schemas/artifact-types.yaml declares "
+                f"{registry!r}. One artifact, one version: whichever is right, the other "
+                "answers 'what am I running' with a number nobody set")
+    if not re.fullmatch(r"\d+\.\d+\.\d+", str(registry)):
+        problems.append(f"the registry version is {registry!r}, which is not three numbers "
+                        "separated by dots: a plugin manifest cannot carry it")
+    return problems
+
+
 @check("nothing states the framework's version except the registry that defines it")
 def _version_is_not_restated():
     # `start` wrote a literal version into every repository it set up, in an example whose
@@ -1434,7 +1478,7 @@ def _version_is_not_restated():
     # rule is the flat one -- no literal anywhere but the registry. An example writes `N`,
     # and an `N` that reaches a real `framework.yaml` is an `FW001` saying it is a string
     # and not a whole number, which is a sentence a stale number never produces.
-    literal = re.compile(r"framework_version:\s*['\"]?(\d+)")
+    literal = re.compile(r"framework_version:\s*['\"]?(\d[\d.]*)")
     skip = {"build", "__pycache__", ".git", "node_modules"}
     problems = []
     for path in sorted(ROOT.rglob("*")):
