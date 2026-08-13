@@ -96,8 +96,10 @@ duplicate all of it.
 
 ## 3 · What every skill shares
 
-Four things live once, at the plugin root, because six copies of them would be the framework
-breaking its own single rule against itself.
+These live once, at the plugin root, because six copies of them would be the framework
+breaking its own single rule against itself. Counted in prose the number would go stale the
+next time one was added, which is how the sentence about two switched-off checks survived
+their being switched back on.
 
 **`references/preamble.md`** — read `AGENTS.md`, `OPEN.md` and the `product.yaml` first; the
 class rules; never invent a field that attests something; never write `last_review` without
@@ -123,6 +125,17 @@ formality. Two things are applied without asking, because they destroy nothing: 
 
 **Close with the validator.** Not only `audit`. The cascade is where a write goes wrong, and
 the validator is what notices that a `DEC` moved and its `ARC` did not.
+
+**End with the short version and the next steps.** Every run closes with two blocks, last:
+what changed in one plain line per file, and two to four things to do next with what each one
+buys and what it costs, the recommended one at the top and marked. The reasoning above them
+earns its place — what was classified, what was left alone, what the validator found — but
+somebody who has just read four hundred words of it cannot tell what to do tomorrow morning,
+and a report you have to re-read to extract one action from gets skimmed, taking the sentence
+that mattered with it. The steps are derived and never composed: the register in
+cost-to-reverse order, the half of a cascade left undone, a finding not fixed, a command that
+is the user's to run. Stopping is a row whenever it is really an option, with the honest cost
+of what gets worse while nothing happens.
 
 ---
 

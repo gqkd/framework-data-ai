@@ -113,3 +113,17 @@ decision, and it belongs to `resolve`.
 **Do not edit an immutable to correct it.** A `PRB` that turned out wrong still records what
 we believed then, and that is the only thing that makes it reconstructible why a decision
 looked sensible. Write a new one that supersedes it.
+
+## Handing back
+
+Say where each thing went and why that destination, what the cascade obliged beyond the file
+you were asked about, **what you found that contradicts something already written**, and what
+you deliberately did not record. Then run the validator: the cascade is where a write goes
+wrong, and it is what notices that a `DEC` moved and its `ARC` did not.
+
+**Then the two closing blocks the preamble describes, and they go last:** what changed in
+plain words, one line per file, and what to do next with what each option buys and costs. The
+rows are derived — a conflict you could not resolve is an `OPEN.md` entry somebody has to
+work, a statement that would close an open entry is `resolve`'s to take, and a request filed
+as a `SIG` is not authorized to be built until a cycle classifies it. If the whole write was
+one appended `SIG`, one row is the correct length.

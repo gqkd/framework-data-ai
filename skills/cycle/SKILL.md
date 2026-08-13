@@ -186,3 +186,18 @@ premise that was already disproved.
 **Do not leave "what must NOT change" thin because it is hard.** It is the section that
 stops an agent from optimising what you asked for and breaking what you did not name, and
 it is the most expensive gap in the framework.
+
+## Handing back
+
+Say what was classified and how each candidate was routed, including the ones routed
+`not-a-candidate` and the ones that came back `not-classifiable` with the measurement that
+would settle them. Then which documents the reshaping moved, which `CHG` are `approved` and
+which are still `draft` waiting on the user, and what is excluded from this cycle. Then run
+the validator.
+
+**Then the two closing blocks the preamble describes, and they go last:** what changed in
+plain words, one line per file, and what to do next with what each option buys and costs. The
+first row is normally handing a brief to a coding agent, and it is only a row for a `CHG` the
+user has actually approved: a `draft` in that position is this skill authorizing its own work.
+A candidate routed back into discovery belongs in the table too, and its cost is the honest
+one — building on a premise that was just disproved is more expensive than the re-entry.

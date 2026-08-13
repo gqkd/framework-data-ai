@@ -141,3 +141,8 @@ outcome. A register emptied in one session usually means somebody decided things
 not theirs to decide.
 
 Close by running the validator. If `OD002` fires, an entry you closed did not move to §4.
+
+**Then the two closing blocks the preamble describes, and they go last:** what changed in
+plain words, one line per file, and what to do next with what each option buys and costs. The
+next rows are derived and not invented — the next entry the register's own order puts in
+front of you, and any part of the cascade this decision left undone.

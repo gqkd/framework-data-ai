@@ -143,3 +143,8 @@ and what has to change.
 Say whether the gate passed, on which evidence, what was generated, and what is left for the
 user to run. If the gate did not pass, lead with that and with the specific metric and slice
 that failed. Then run the validator.
+
+**Then the two closing blocks the preamble describes, and they go last:** what changed in
+plain words, one line per file, and what to do next with what each option buys and costs. Here
+the top row is a command that is yours to run and not mine — the deploy — and on a failed gate
+it is the rework, with the threshold that was missed written next to it.

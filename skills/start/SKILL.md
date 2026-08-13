@@ -259,3 +259,8 @@ high cost ones first, and what you deliberately did not write and why.
 Then run the validator and say what it found. At this point `OD003` firing on a high cost
 entry with no default in force is the correct outcome, not a failure: it is the register
 telling you which decision cannot wait.
+
+**Then the two closing blocks the preamble describes, and they go last:** what changed in
+plain words, one line per file, and what to do next with what each option buys and costs. On
+a first run the top row is almost always working the register with `resolve`, and the honest
+cost of stopping here is that the corpus has been read and nothing has been decided.

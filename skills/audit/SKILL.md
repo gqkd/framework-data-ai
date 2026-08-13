@@ -204,6 +204,11 @@ could not read. Name it. A capability whose truth lives in the code and not in a
 the same case: this pass reads documents, and where the answer is in a repository it says
 which repository and stops.
 
+## Reading the report
+
+Order the findings by what they cost, not by the order they were printed. A useful
+sequence:
+
 1. `error` level: they block the merge.
 2. Anything on a **living** document, because it is being read as current truth right now.
 3. Anything that breaks a **chain**: `REF*`, `ID001`. A traceability graph with holes reads
@@ -219,6 +224,12 @@ And say whether the second pass ran. A clean validator means the structure holds
 resolve, the fields are legal, nothing is stale by date. It does not mean the documents agree
 with each other, and handing back "nothing to report" without that sentence lets it be read
 as though it did.
+
+**Then the two closing blocks the preamble describes, and they go last:** what changed in
+plain words, one line per file, and what to do next with what each option buys and costs. The
+rows come from the findings you did not fix, one per finding worth acting on, with the cost of
+leaving it standing stated rather than implied — and if the second pass has not run, that is a
+row of its own.
 
 ## Turning a check on
 

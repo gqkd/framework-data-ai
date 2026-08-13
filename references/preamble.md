@@ -118,3 +118,61 @@ This is not ceremony. The cascade is where a write goes wrong, and the validator
 notices that a `DEC` moved and its `ARC` did not. If it reports something you caused, fix
 it before handing back. If it reports something that was already there, say so and leave
 it: it is not yours to silence.
+
+## The last two blocks, and they come after everything else
+
+Everything a skill here says is reasoning, and there is a lot of it: what was classified and
+why, what was left alone and why, what the validator found. It is worth saying. But somebody
+who has just read four hundred words of it cannot tell what to do tomorrow morning, and a
+report you have to re-read to extract one action from is a report that gets skimmed — after
+which the sentence that mattered goes with the rest.
+
+So every run ends with these two blocks, in this order, **last**: after whatever the skill's
+own handing-back section asks for, and after the validator. Write them **in the language the
+user is speaking**, whatever language you did the reasoning in.
+
+### 1 · What changed, in the words somebody would actually use
+
+One line per file. What is now *true*, not which section moved:
+
+| File | In parole semplici |
+|---|---|
+| `GLOSSARY.md` | «cliente attivo» ora vuol dire login negli ultimi 30 giorni, non 90 |
+| `decisions/DEC-012-postgres.md` | scritta la decisione sul datastore, e chiude OD-003 |
+| `products/alpha/ARC.md` | l'architettura corrente adesso nomina Postgres |
+
+No section anchors, no field names, no identifier the reader has to go and resolve. If a line
+only makes sense to somebody who has already read the body, it is one of the body's lines and
+not one of these.
+
+### 2 · What to do next, with what it buys and what it costs
+
+Two to four rows, never more. The one you would do first goes at the top and is marked as
+such: the user asked for the trade-offs, not for a menu with no recommendation in it.
+
+| Prossimo passo | Cosa dà | Cosa costa |
+|---|---|---|
+| **Decidere OD-001** (consigliato) | sblocca le tre voci che dipendono da essa | mezz'ora, e serve la risposta di chi amministra l'account AWS |
+| Scrivere il `PBR` di beta | `XP003` smette di suonare | un'ora, e oggi non esiste un documento di business da cui scriverlo |
+| Fermarsi qui | niente da fare adesso | OD-001 è ad alto costo e senza default in forza: il conto cresce ogni giorno |
+
+**Four rules, because this is the easiest place in the framework to write something that
+looks helpful and is not.**
+
+**Derive the steps, do not compose them.** They are already in the repository: the register in
+cost-to-reverse order, the half of the cascade this write left undone, the findings you did
+not fix, the artifact a classification obliges, the command that is the user's to run. A step
+that cannot be traced to one of those is a suggestion, and a suggestion does not belong in a
+table that reads as an agenda.
+
+**One row is a legitimate number.** A table padded to four with two invented rows teaches the
+reader to skim the block, and the row that mattered is skimmed with them.
+
+**Stopping is a row whenever it is genuinely an option**, and its cost is the honest one: what
+gets worse while nothing happens. The framework is built on cost-to-reverse and the cost of
+waiting; this is where that arithmetic is handed to the person who has to do the waiting.
+
+**Nothing appears here that is not above.** These blocks restate. They do not decide, and they
+do not introduce: a finding that exists only in the summary is a finding nobody argued for,
+and the propose-then-wait rule applies to a row in this table exactly as it applies to a
+write.
