@@ -46,6 +46,7 @@ still reads as complete.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import io
 import itertools
 import json
@@ -109,6 +110,20 @@ class DocInfo:
     visual_review: list[int] = field(default_factory=list)
     rendered: int = 0              # how many flagged pages were rasterised
     note: str = ""
+    # Which file this was, and not only what it was called. The toolchain is already stamped
+    # in the inventory because the same corpus read on a machine with a different poppler
+    # produces different text, and without the stamp that difference reads as the documents
+    # having changed. This is the same argument one step further in: a client sends a
+    # corrected deck under the name it had before, and three things then look identical --
+    # a new version of the document, a difference the converter introduced, and a page
+    # somebody reviewed that no longer exists.
+    #
+    # No `mtime`. On a corpus copied out of Windows it is the moment of the copy, and a
+    # field that reads as the document's date and means the file's arrival is the trap this
+    # framework spends most of its rules on. The hash is the identity; the size is there
+    # because it is free and makes a truncated copy obvious at a glance.
+    sha256: str = ""
+    size: int = 0
     image_pages: list[int] = field(default_factory=list)
     # What was concluded about this document's visual content, and on what basis. Filled
     # for everything that has pages or slides, *including when the answer is nothing to
@@ -237,6 +252,74 @@ def report_doctor(as_json: bool) -> int:
     if anydoc_ok and poppler_ok:
         print("Nothing degraded.")
     return 0 if anydoc_ok and poppler_ok else 1
+
+
+def stamp_source(path: Path, info: DocInfo) -> None:
+    """Record which bytes were read, on every path including the one that failed.
+
+    Called from the caller and not from the handlers, because there are eight places a
+    `DocInfo` is built -- one of them the fallback for a document that raised -- and a stamp
+    that is missing exactly on the documents that went wrong is worse than no stamp.
+    """
+    try:
+        h = hashlib.sha256()
+        with path.open("rb") as fh:
+            for chunk in iter(lambda: fh.read(1 << 20), b""):
+                h.update(chunk)
+        info.sha256 = h.hexdigest()
+        info.size = path.stat().st_size
+    except OSError:
+        return
+
+
+def compare_to_previous(out: Path, infos: list[DocInfo]) -> list[str]:
+    """What changed since the last extraction into this directory.
+
+    The hash is only worth carrying if something reads it, and this is what reads it. A
+    field written for a purpose nothing consumes is how `thin_against_median` sat in this
+    file for weeks describing a property the code did not have.
+
+    Compared against the inventory already on disk, before it is overwritten. A document
+    whose bytes moved is the one case that matters: every claim extracted from it, every
+    page somebody reviewed and every `ING` row pointing at a slide number was read from
+    a file that is no longer the file. Nothing here can tell you which of those survived,
+    and it does not guess -- it says which documents moved and leaves the judgement where
+    it belongs.
+    """
+    old = out / "inventory.json"
+    if not old.exists():
+        return []
+    try:
+        was = {d["source"]: d.get("sha256", "")
+               for d in json.loads(old.read_text(encoding="utf-8")).get("documents", [])}
+    except (json.JSONDecodeError, OSError, AttributeError):
+        return []
+    if not any(was.values()):          # written before the hash existed: nothing to compare
+        return []
+
+    now = {i.source: i.sha256 for i in infos}
+    changed = sorted(s for s, h in now.items() if was.get(s) and h and was[s] != h)
+    added = sorted(s for s in now if s not in was)
+    gone = sorted(s for s in was if s not in now)
+
+    notes = []
+    if changed:
+        notes.append(
+            f"**{_n(len(changed), 'document has', 'documents have')} changed since the last "
+            f"extraction into this directory: {', '.join(changed)}.** Everything already "
+            "classified from them was read from different bytes: the claims, the page "
+            "numbers cited in `ING`, and any page somebody reviewed. Re-read those rows "
+            "before trusting them.")
+    if added:
+        notes.append(f"{_n(len(added), 'document is', 'documents are')} new since the last "
+                     f"extraction: {', '.join(added)}.")
+    if gone:
+        notes.append(
+            f"**{_n(len(gone), 'document is', 'documents are')} no longer in the corpus: "
+            f"{', '.join(gone)}.** Rows in `ING` still cite them. A document that leaves is "
+            "not a claim that was withdrawn, and the corpus is the one thing here that "
+            "cannot be regenerated: find out whether it was moved or lost.")
+    return notes
 
 
 def wrote_by_framework(path: Path) -> bool:
@@ -1089,6 +1172,7 @@ def main() -> int:
             blocks, info = h(f, args.out, args.min_chars)
         except Exception as e:                        # one broken document must not stop the batch
             blocks, info = [], DocInfo(f.name, f.suffix.lstrip("."), note=f"error: {e}")
+        stamp_source(f, info)
         if not args.no_render and info.visual_review:
             rendered = render_pages(f, info.visual_review, args.out)
             info.rendered = len(rendered)
@@ -1101,8 +1185,16 @@ def main() -> int:
         print(f"- {f.name}: {len(blocks)} blocks, {info.units} units"
               + (f" - {info.note}" if info.note else ""))
 
+    # Read before the inventory below overwrites it, and reported at the top of the extract
+    # with the rest of what went wrong, not on stdout: a warning that lives only in the
+    # terminal survives exactly as long as the terminal.
+    drift = compare_to_previous(args.out, infos)
+    for line in drift:
+        print(f"\n! {line}\n", file=sys.stderr)
+
     (args.out / "extract.md").write_text(
-        build_extract_md(len(files), all_blocks, silent, infos, notes), encoding="utf-8")
+        build_extract_md(len(files), all_blocks, silent, infos, notes + drift),
+        encoding="utf-8")
 
     if args.jsonl:
         with (args.out / "extract.jsonl").open("w", encoding="utf-8") as fh:
