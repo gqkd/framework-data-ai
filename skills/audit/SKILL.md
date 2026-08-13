@@ -2,11 +2,17 @@
 name: audit
 description: >
   Check a Data & AI framework repository against its own rules: run the validator,
-  interpret what it found, and fix what is safe to fix. Use when asked to audit, check or
-  validate the documentation, when asked whether the docs are consistent or whether
-  something is out of date, when the framework check is failing in CI, before merging a
-  change to the artifacts, or when asked to regenerate `decisions/INDEX.md` or
-  `TRACEABILITY.md`.
+  interpret what it found, and fix what is safe to fix. When asked whether the documents
+  agree with each other, it goes a step further and reads both ends of the pairs that have
+  to say the same thing, which no script can decide. Use when asked to audit, check or
+  validate the documentation, when asked whether the docs are consistent, whether they
+  contradict each other, or whether something is out of date, when the framework check is
+  failing in CI, before merging a change to the artifacts, or when asked to regenerate
+  `decisions/INDEX.md` or `TRACEABILITY.md`. Triggers on "è tutto a posto", "controlla i
+  documenti", "i documenti sono coerenti", "controlla la coerenza", "verifica che i
+  documenti non si contraddicano", "fai un audit della documentazione", "il check in CI è
+  rosso", "check the docs", "are the docs consistent", "do these documents contradict each
+  other", "audit the documentation", "the framework check is failing".
 ---
 
 # audit
@@ -138,10 +144,65 @@ Propose a diff and wait for everything else. In particular:
   the framework: an agent optimises what it was asked for and breaks what nobody named. The
   repair is to write the section, and only a person knows what belongs in it.
 
-## Reading the report
+## The second pass: do the documents still agree with each other
 
-Order the findings by what they cost, not by the order they were printed. A useful
-sequence:
+Everything above is the validator and what to do with what it says. The validator checks
+that **the link exists**: that `derives_from` points at something, that the `DEC` is there,
+that the section is there, that the `status` is in its enumeration. It cannot check that
+**the two ends say the same thing**, and that is a different question with a different
+failure: a `DEC` that decided Postgres and an `ARC#current` that still describes the queue
+it replaced both validate, are both linked correctly, and contradict each other.
+
+This pass is that question. **Run it when asked, not on every invocation.** It costs a read
+of the artifact set, and a skill that costs more than it saves gets switched off, which is
+the framework's own rule about itself. But when it has not run, **say so** — a clean
+validator report read as "the documents agree" is exactly the silence this pass exists to
+remove.
+
+### Do not invent the checklist
+
+The pairs are already written down: `references/routing-table.md §2` is the cascade, and
+this pass is that table **read backwards**. Where the cascade says *if you write A you must
+also update B*, this asks *does B still reflect A*. One source, not two, and the same reason
+as everywhere else here: a second list drifts from the first and nobody notices.
+
+Enumerate from what is generated, not from what you remember reading. `decisions/INDEX.md`
+carries every `DEC` with its scope, status and products; `products/<p>/product.index.yaml`
+carries that product's living artifacts and open entries. Run `--emit-index --check` first:
+if the indices are stale, the enumeration you are about to build from them is stale too.
+
+| These have to agree | The question |
+|---|---|
+| accepted `DEC scope: architecture` → `ARC#current` | does the architecture describe what the decision decided, and did `#target` move with it |
+| accepted `DEC scope: product` → `PBR` | does the brief carry the capability, the scope or the outcome the decision changed |
+| accepted `DEC scope: platform` → `PLATFORM.md`, and `products:` | does the substrate document reflect it, and does the decision list **every** product |
+| `GLOSSARY` term that is also a field of a `DC` → that `DC` | the same definition on both sides, and did the contract's version bump |
+| a `GLOSSARY` metric used by more than one product → each product | does each compute it with that formula. If they cannot, they are two metrics and need two names |
+| `CMT` out of technical reach → `RSK#state` **and** `OPEN.md` | is the row there, and the entry |
+| a numeric promise in `COMMITMENTS` → an `EVP` threshold | the two must not come apart: a promise with no threshold is unmeasured, a threshold with no promise is unowned |
+| `ARC#delta` → `#current` and `#target` | is the delta still the difference between them. A stale delta is a silent lie |
+| `WF#delta` → `#current` and `#target` | the same |
+| a `PBR` capability that depends on another product → an internal `DC` | does the contact point have a contract |
+| `OPEN.md` open entries → the accepted `DEC` set | is a question still listed as open that a decision already answers. `OD002` catches this only when the `DEC` names the entry in `derives_from`, which is the minority of the cases: the rest are here |
+
+### The three rules of this pass
+
+**It proposes, it never applies.** A structural finding can sometimes be repaired by
+transcription. A disagreement never can: both ends may be right, and which one holds is the
+question. `ARC#current` may be stale, or the `DEC` may have been superseded by a
+conversation nobody wrote down, and those want opposite repairs. Show both, with their
+provenance, and ask — the same move `references/routing-table.md §4` prescribes for a
+conflict found while writing.
+
+**Say what agreed.** Every pair examined is reported, including the ones that were fine.
+This pass exists because an absence of findings was indistinguishable from an absence of
+looking, and reporting only the disagreements rebuilds that hole one level up.
+
+**Say what you could not check.** A pair whose second end does not exist yet — a `CMT` with
+no `EVP` to hold its threshold, a delta with no target — is not agreement, it is a pair you
+could not read. Name it. A capability whose truth lives in the code and not in a document is
+the same case: this pass reads documents, and where the answer is in a repository it says
+which repository and stops.
 
 1. `error` level: they block the merge.
 2. Anything on a **living** document, because it is being read as current truth right now.
@@ -153,6 +214,11 @@ When you report back, say which findings you fixed, which you are proposing, and
 are deliberately leaving. **A finding left standing on purpose, with the reason, is a good
 outcome.** A report that says everything is green after ten minutes of work usually means
 something was silenced.
+
+And say whether the second pass ran. A clean validator means the structure holds: the links
+resolve, the fields are legal, nothing is stale by date. It does not mean the documents agree
+with each other, and handing back "nothing to report" without that sentence lets it be read
+as though it did.
 
 ## Turning a check on
 

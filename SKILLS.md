@@ -15,7 +15,7 @@ covers both. They are examples of what somebody types, not a syntax.
 | **`resolve`** | *"risolviamo gli open"* · *"what do I need to decide"* | works `OPEN.md` in cost-to-reverse order, produces `DEC` and the cascade |
 | **`cycle`** | *"cosa facciamo in questo ciclo"* · *"what do we build next"* | intake, `ICG`, reshaping, `CHG`, `IMP`, and the brief per change |
 | **`release`** | *"possiamo rilasciare?"* · *"are we ready to ship"* | the `RG` gate, `RLM`, `REL` |
-| **`audit`** | *"è tutto a posto?"* · *"check the docs are consistent"* | runs the validator, and judges what to do with each finding |
+| **`audit`** | *"è tutto a posto?"* · *"check the docs are consistent"* | runs the validator, judges what to do with each finding, and on request reads both ends of the pairs that have to agree |
 
 ---
 
@@ -69,6 +69,22 @@ both answers to neither reliably.
 
 **Why `cycle` and `release` are two.** Between opening a cycle and shipping there are days
 of building. A single invocation cannot span them. They are two moments where you sit down.
+
+**Why checking that the documents agree is not a seventh skill.** It is the most requested
+one that does not exist, and the reason it does not is the rule above. *"I documenti sono
+coerenti?"* is already `audit`'s sentence — it is in its description in those words — so a
+skill built to answer it would compete for exactly the phrase §2 forbids two skills to share,
+and the cost is not one skill misfiring but both. It is also not a separate moment: you sit
+down to check the documents once, and whether the answer is structural or semantic is a
+property of the finding, not of the occasion.
+
+What it needed was a second pass inside `audit`, not a second door, and the split between
+script and judgment holds unchanged: `validate.py` checks that the link exists, and the skill
+reads what is written at both ends of it. A `DEC` that decided Postgres and an `ARC#current`
+still describing what it replaced validate cleanly and contradict each other, and no schema
+will ever say so. The pairs are not a new checklist either: they are
+`references/routing-table.md §2` read backwards, because a cascade that says *write A, then
+update B* is already the list of what has to agree.
 
 **Why cross-product work is not a seventh skill.** It is not a separate moment, it is a
 constraint running through the others: in the cascade of `requirement` (a glossary metric
