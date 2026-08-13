@@ -1417,6 +1417,47 @@ def _early_products_are_not_findings():
     return problems
 
 
+@check("nothing states the framework's version except the registry that defines it")
+def _version_is_not_restated():
+    # `start` wrote a literal version into every repository it set up, in an example whose
+    # own next paragraph says to read the number from the registry. The framework moved and
+    # the skill kept seeding a value that was already wrong -- an `FW001` on day one, in the
+    # file whose whole job is to tell a migration from a mistake, produced by the skill that
+    # creates the file.
+    #
+    # The literal is not quoted anywhere in this comment, and that is this check working on
+    # itself rather than an accident of wording: an exemption for the file that holds the
+    # rule is the first hole anybody widens.
+    #
+    # It is the same failure as the count in prose, with a longer fuse: nothing is wrong on
+    # the day it is written, and nothing reports it on the day it becomes wrong. So the
+    # rule is the flat one -- no literal anywhere but the registry. An example writes `N`,
+    # and an `N` that reaches a real `framework.yaml` is an `FW001` saying it is a string
+    # and not a whole number, which is a sentence a stale number never produces.
+    literal = re.compile(r"framework_version:\s*['\"]?(\d+)")
+    skip = {"build", "__pycache__", ".git", "node_modules"}
+    problems = []
+    for path in sorted(ROOT.rglob("*")):
+        if path.suffix not in (".md", ".py", ".yaml") or not path.is_file():
+            continue
+        if set(path.relative_to(ROOT).parts) & skip:
+            continue
+        if path == ROOT / "schemas" / "artifact-types.yaml":
+            continue          # the one place the number is defined
+        for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            m = literal.search(line)
+            # Inside a test, a version built from the registry is the point of the test:
+            # `f"framework_version: {current + 1}"` has no literal for this to find, and a
+            # bare digit in one would be the same defect as anywhere else.
+            if m:
+                problems.append(
+                    f"{path.relative_to(ROOT)}:{n} writes framework_version {m.group(1)} "
+                    "as a literal. Read it from `version:` in schemas/artifact-types.yaml, "
+                    "or write `N` if it is an example: this is the line that goes wrong "
+                    "silently the day the framework moves")
+    return problems
+
+
 @check("every product owns its register, and the root composes them without copying them")
 def _registers_are_per_product():
     # The arrangement the framework now asks for: one register per product, one for the

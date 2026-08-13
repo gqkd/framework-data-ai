@@ -80,9 +80,17 @@ you are running.
 disk, so this publishes nothing either:
 
 ```bash
-claude plugin marketplace add $PWD --scope local
-claude plugin install framework-data-ai@framework-data-ai --scope local
+claude plugin marketplace add $PWD
+claude plugin install framework-data-ai@framework-data-ai
 ```
+
+**No `--scope`, and this used to say `--scope local` in all three commands.** Two different
+senses of the word had been collapsed: *local* as in "this publishes nothing", which is
+what the paragraph above means and stays true, and `--scope local`, which is the flag that
+installs for one project directory instead of for you. A framework you use across every
+project wants the default, `user`. The cost of the confusion is not an error message: the
+flag installs a *second* copy at a different scope beside the one that was already running,
+and then `claude plugin details` has two answers.
 
 This copies the repository into `~/.claude/plugins/cache/`. The copy is taken at install
 time, so an edit to a skill does not reach it until you reinstall. That is the only reason
@@ -92,10 +100,25 @@ Having both is safe: installing the plugin disables the symlink automatically, a
 uninstalling re-enables it. `claude plugin details framework-data-ai` shows which one is
 live under `Source:`.
 
+**To pick up a change, reinstall rather than update.** `claude plugin update` exists and is
+shorter, but the install path is keyed on the `version` in `plugin.json`, which does not
+move when a skill is edited — so it can find nothing to do and say so cheerfully:
+
+```bash
+claude plugin uninstall framework-data-ai@framework-data-ai
+claude plugin install framework-data-ai@framework-data-ai
+```
+
+Then restart the session; the copy is read at start-up. The marketplace does not need
+re-adding: its source is this directory, so it is read from disk every time. To check the
+copy actually moved, look for something you know is new in
+`~/.claude/plugins/cache/framework-data-ai/framework-data-ai/<version>/`, rather than
+trusting the command's own report.
+
 To undo it:
 
 ```bash
-claude plugin uninstall framework-data-ai@framework-data-ai --scope local
+claude plugin uninstall framework-data-ai@framework-data-ai
 claude plugin marketplace remove framework-data-ai
 ```
 
@@ -242,6 +265,14 @@ validator you believe you configured.
 `--emit-index --check` exits non-zero when what is on disk has drifted, which is what keeps
 a generated file from quietly becoming a hand written one.
 
+It also fills `§5` of the root `OPEN.md`, and that one is a region rather than a file:
+everything between `<!-- generated: open-union -->` and `<!-- /generated -->` is rewritten
+and everything around it is left alone. The open register is one per product now, so the
+ordering by cost to reverse that `§1` is built on only ever holds inside one of them; `§5`
+is where the three become one ordered list, under a heading per product. A register that
+does not carry the markers is not written to at all — they are the boundary and they are
+also the permission.
+
 The product index is the derived half of `product.yaml`: which decisions are open for that
 product, which changes are active, which of its documents are living and when each was last
 reviewed. `product.yaml` beside it stays authoritative and hand written. They are two files
@@ -328,8 +359,14 @@ reading a set of rules needs to know whether they are reading these or a variant
 
 ## In one line
 
-Seven living documents that have to stay true. About twenty written once and never touched
-again. And `OPEN.md`, which says what has not been decided yet.
+A set of living documents that have to stay true, a larger set written once and superseded
+rather than edited, two that only ever grow. And `OPEN.md`, which says what has not been
+decided yet.
+
+The counts are in the catalog in `FRAMEWORK.md §7`, which is generated from the registry.
+They used to be here, as "seven" and "about twenty", and they were wrong: sixteen and
+twelve. A number in prose is the thing this framework exists to stop, and the README had
+been carrying two of them.
 
 That last one is the point. No other document holds it, and it is what an agent invents when
 nobody wrote it down.

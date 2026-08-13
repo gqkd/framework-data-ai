@@ -183,7 +183,8 @@ what accumulated in it rather than by a choice.
 line in it is not configuration:
 
 ```yaml
-framework_version: 1          # from `version:` in the framework's artifact-types.yaml
+framework_version: N          # read N from `version:` at the top of the framework's
+                              # schemas/artifact-types.yaml. Do not copy a number from here
 
 scan:                         # only if the project holds code as well as documents
   skip_dirs: [dbt, infra, notebooks]
@@ -194,7 +195,14 @@ the framework changes, findings appear in a repository nobody touched, and witho
 line there is nothing to tell "the rules moved" from "we did this wrong". Those want
 opposite responses, one is a migration and one is a repair, and a team that guesses wrong
 at it twice stops reading the validator. Copy the number from `version:` at the top of the
-framework's `schemas/artifact-types.yaml`; do not invent one.
+framework's `schemas/artifact-types.yaml`; do not invent one, and do not copy the `N` above.
+
+**The example says `N` and not a number on purpose.** It said `1` until the framework moved
+to 2, and a skill that writes new repositories was seeding every one of them with a version
+that was already wrong — an `FW001` on day one, on the file whose entire job is to tell a
+migration from a mistake. A literal here is a count in prose with a longer fuse. If the `N`
+does reach a `framework.yaml` by accident, `FW001` says so in as many words: *"is `'N'`,
+which is str and not a whole number"*. A stale number produces no such sentence.
 
 `scan` is the other half, and only when the project holds code. Without it the first run
 reports every dbt model and every Kubernetes manifest as a document with no front matter,
@@ -203,8 +211,8 @@ which is a first impression a tool does not recover from.
 **Two keys and no prose.** This file is configuration. Do not write a paragraph explaining
 why there is no `scan:` block, or why some other key is absent: an absence worth acting on
 is an `OPEN.md` entry, where somebody works it, and a comment in a YAML file is neither
-parsed nor worked. The same goes for `product.yaml`. Leaving `framework_version: 1` alone
-on a line is the correct output of this step.
+parsed nor worked. The same goes for `product.yaml`. Leaving `framework_version` alone on a
+line is the correct output of this step.
 
 ## Step 4 · Ingest the corpus
 
