@@ -174,9 +174,18 @@ def build(name: str, spec: dict, registry: dict) -> dict:
         # Repository names are the case: they are somebody's slugs, not `SIG-001`, and
         # forcing them into the identifier shape would make the field unusable rather than
         # safe.
+        # A map is non-empty unless the type says otherwise, because for almost all of them
+        # an empty one is a field somebody started and did not fill in. `may_be_empty` is
+        # for the one shape where empty is a statement: an open register belonging to a
+        # product with nothing open. That register still has to exist -- `OD006` -- and
+        # `entries: {}` is how it says "read, and there is nothing", which is a different
+        # claim from an absent `entries:` and reported differently. Without this the two
+        # checks contradict each other: one demands the file, the other refuses the only
+        # honest thing it can contain, and the way out is to invent an entry.
         ids = "|".join(registry["id_prefixes"])
         key_pattern = rule.get("keys") or rf"^({ids})-(\d{{3,}}|NNN)$"
-        properties[field] = {"type": "object", "minProperties": 1,
+        properties[field] = {"type": "object",
+                             "minProperties": 0 if rule.get("may_be_empty") else 1,
                              "propertyNames": {"pattern": key_pattern},
                              "additionalProperties": value}
         if rule.get("required") and field not in required:

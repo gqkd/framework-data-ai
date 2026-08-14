@@ -286,6 +286,12 @@ types:
     # old-format register does not exist to protect.
     maps:
       entries:
+        # `entries: {}` is legal here and nowhere else. A product must have a register --
+        # `OD006` -- and a product may genuinely have nothing open, so refusing the empty
+        # map would leave inventing an entry as the only way to satisfy both. It is also a
+        # different claim from an absent `entries:`, which `OD004` reports: one says read
+        # and nothing found, the other says nobody filled this in.
+        may_be_empty: true
         keys: "^(OD|KI)-(\\d{3,}|NNN)$"
         fields:
           required: [status]

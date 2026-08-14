@@ -1601,6 +1601,29 @@ def _registers_are_per_product():
             problems.append("two registers declaring the same entry id were not reported, "
                             "so a `depends_on` naming it resolves to whichever was read last")
 
+        # A product may genuinely have nothing open, and it still has to have a register.
+        # `entries: {}` is how it says so: refusing it would leave inventing an entry as the
+        # only way to satisfy both checks, and an entry invented to clear a finding is the
+        # failure everything here is arranged against. Absent `entries:` stays a finding,
+        # because the two are different claims -- read and nothing found, versus nobody
+        # filled this in.
+        empty = root / "products" / "beta" / "OPEN.md"
+        empty.write_text(fm("entries: {}\n"))
+        out = json.loads(run().stdout)
+        stated = [f for f in out["findings"] if f["code"] in ("OD004", "FM002")
+                  and f["path"].endswith("beta/OPEN.md")]
+        if stated:
+            problems.append("a register declaring `entries: {}` was reported "
+                            f"({[f['code'] for f in stated]}): a product with nothing open "
+                            "has no way left to have a register except inventing an entry")
+        empty.write_text(fm(""))
+        silent = [f["code"] for f in json.loads(run().stdout)["findings"]
+                  if f["code"] == "OD004" and f["path"].endswith("beta/OPEN.md")]
+        if not silent:
+            problems.append("a register with no `entries:` at all was not reported, so "
+                            "'nobody filled this in' and 'there is nothing open' now read "
+                            "the same")
+
         (root / "products" / "beta" / "OPEN.md").write_text(
             fm("entries:\n  OD-003:\n    status: open\n    cost_to_reverse: low\n"
                "    default_in_force: three retries\n    products: [alpha]\n"))
