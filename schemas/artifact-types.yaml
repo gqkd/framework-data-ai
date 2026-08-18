@@ -82,8 +82,8 @@
 #
 # WHY, AND IT IS NOT A RENAME FOR TIDINESS. A date on a decision nobody has taken is a
 # number nobody derived. What actually closes the window is the default in force becoming
-# expensive to unwind, or an event: the second customer, the first line of the data plane,
-# the signature. The framework already said so on the low-cost tier, where the template has
+# expensive to unwind, or an event: the second customer, the first line of code written
+# against it, the signature. The framework already said so on the low-cost tier, where the template has
 # always read "there is no date by which to decide it, there is an event after which it can
 # no longer be deferred", and `trigger` is that rule applied to all three tiers.
 #
@@ -99,7 +99,7 @@
 # forever and a register where both appear, which is the ambiguity this file exists to
 # refuse. `OD009` reports a date in a trigger, at `warn`, and it
 # reports every date: an entry still open has no calendar, not even beside an event. "The
-# DPA audit" is a trigger; "the DPA audit, 2026-10-31" is the same trigger with a
+# external audit" is a trigger; "the external audit, 2026-10-31" is the same trigger with a
 # commitment glued to it, and the commitment is the half that gets quoted back later by
 # somebody who never opened the register.
 #

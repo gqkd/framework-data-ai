@@ -1655,7 +1655,7 @@ def _registers_are_per_product():
         # here is the event, and here is when it falls -- and the date is the half that gets
         # quoted back by somebody who never opened the register, on an entry whose whole
         # content is that nobody has decided.
-        for written in ("the DPA audit, 2026-10-31", "Q4 2026", "the audit on 31/10/2026"):
+        for written in ("the external audit, 2026-10-31", "Q4 2026", "the audit on 31/10/2026"):
             (root / "products" / "beta" / "OPEN.md").write_text(entry(written))
             codes = [f["code"] for f in json.loads(run().stdout)["findings"]]
             if "OD009" not in codes:
@@ -1664,7 +1664,7 @@ def _registers_are_per_product():
 
         # And the shape that must stay silent, because a check that reports the thing the
         # template asks for is a check somebody turns off.
-        for written in ("before the second customer", "the DPA audit"):
+        for written in ("before the second customer", "the external audit"):
             (root / "products" / "beta" / "OPEN.md").write_text(entry(written))
             codes = [f["code"] for f in json.loads(run().stdout)["findings"]]
             if "OD009" in codes:

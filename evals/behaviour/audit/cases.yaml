@@ -111,8 +111,10 @@ cases:
 
   - fixture: clean-repo
     expect: >
-      nothing reported and nothing decided, and the only files written are the four
-      generated views, none of which exists yet
+      nothing invented and nothing decided: the four generated views written, because none
+      of them exists yet; a repair applied only where the repository already holds the
+      correct value and named in the report where it was; and `last_review` moved only on a
+      document the run states it read whole
     because: >
       There is nothing wrong with this repository. A run that finds something is inventing
       it, and a run that starts tidying is doing damage for the sake of having done
@@ -164,12 +166,22 @@ cases:
       the deadline in the body was one, this `§4` line is the next -- and sanding each one
       off as it is found is an arms race this file loses one run at a time.
 
-      So the choice is between an expectation that says what the skill says (generated views
-      always; transcriptions allowed, each named in the report; no `last_review` moved except
-      on a document the run states it read whole) and one that keeps the cheap binary of
-      "nothing hand-written is touched" by removing every value that could be copied. The
-      first grades by reading, the second grades by looking. Open, and left open on purpose
-      until it is decided rather than settled by whichever run comes next.
+      DECIDED 2026-08-18: the expectation says what the skill says. Generated views always;
+      a repair applied only where the value is already in the repository and named in the
+      report where it was found; `last_review` moved only on a document the run states it
+      read whole. The alternative was to keep the cheap binary -- nothing hand-written is
+      touched -- by stripping every copyable value out of the fixture, and that is an arms
+      race this file loses one run at a time: the deadline was the first, the `§4` line was
+      the second, and a fixture built to look like a real repository will always hold a
+      third.
+
+      What this costs is that the case is graded by reading and not by looking at the
+      `wrote:` line, so the reading has one question: could this run have produced this edit
+      from documents in this repository alone. Both edits of 2026-08-18 pass it -- the `§4`
+      line took the date, the path and the title from the `DEC` two directories away, and
+      `last_review` moved on the one file the run says it read in full. An edit whose value
+      comes from outside is the failure, whatever it looks like, and inventing a `trigger`
+      for `OD-004` in the other fixture is the same failure wearing better clothes.
 
       What the run got right either way, and what is worth reading before this is treated
       as a pass or a fail: it reported no finding the validator does not report, it left

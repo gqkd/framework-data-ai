@@ -790,7 +790,7 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
             # field was called `deadline` until 2.0.0, and a field named for a date collects
             # dates: an end of quarter that reads as a commitment and was picked because the
             # line had to say something. A date inside a trigger is legitimate and stays
-            # silent -- "the DPA audit, 2026-10-31" says what arrives on the day. A bare one
+            # silent -- "the external audit, 2026-10-31" says what arrives on the day. A bare
             # does not, and the entry it sits on is by definition one nobody has decided.
             if row.get("status") == "open":
                 trg = row.get("trigger")
@@ -801,8 +801,8 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
                                "decision by arriving; something does, and the entry is open "
                                "precisely because nobody has decided when. Name the event "
                                "and drop the date: the second customer, the first line of "
-                               "the data plane, the audit, or another entry in this "
-                               "register -- `depends_on` for one before the other, "
+                               "code written against it, the contract, or another entry in "
+                               "this register -- `depends_on` for one before the other, "
                                "`decide_with` for two that have to be taken together.")
             if row.get("status") == "decided":
                 # Resolved, and not only present. A `closed_by` naming a decision that does

@@ -129,7 +129,7 @@ at first.
 - **Leaning:** the direction we lean toward, and why. Optional, and it is not a decision:
   it is there so you do not start the reasoning over from scratch in two weeks.
 - **Trigger:** the observable event after which the decision can no longer be deferred:
-  the second customer, the first line of the data plane, the signature, the audit. **No
+  the second customer, the first line of code written against it, the signature. **No
   date belongs here**, in any form and not even beside the event -- `OD009` reports the
   ones it can see, and "by the end of the quarter" is one it cannot. This entry is open
   because nobody has decided; a date written on it is read as a commitment by the next
