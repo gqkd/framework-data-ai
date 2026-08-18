@@ -177,7 +177,7 @@ def build(name: str, spec: dict, registry: dict) -> dict:
         # A map is non-empty unless the type says otherwise, because for almost all of them
         # an empty one is a field somebody started and did not fill in. `may_be_empty` is
         # for the one shape where empty is a statement: an open register belonging to a
-        # product with nothing open. That register still has to exist -- `OD006` -- and
+        # product with nothing open. That register still has to exist -- `REG006` -- and
         # `entries: {}` is how it says "read, and there is nothing", which is a different
         # claim from an absent `entries:` and reported differently. Without this the two
         # checks contradict each other: one demands the file, the other refuses the only

@@ -10,7 +10,7 @@ last_review: YYYY-MM-DD HH:MM
 classification: internal
 # The two facts a check needs, per entry. The body below is where the reasoning goes: the
 # question, the alternatives and what the default costs are what somebody reads while
-# deciding, and no field replaces them. `OD002` and `OD003` read this map and nothing else,
+# deciding, and no field replaces them. `REG002` and `REG003` read this map and nothing else,
 # because they used to match the prose and went quiet the first time a label was reworded.
 entries:
   OD-001:
@@ -18,13 +18,13 @@ entries:
     cost_to_reverse: high
     default_in_force: none            # `none` is a legitimate value. Absent is not
     trigger: the event after which this can no longer be deferred. Never a date, in
-             any form and not even beside the event -- `OD009`
+             any form and not even beside the event -- `REG009`
     decide_with: [OD-004]             # entries that have to be decided in one sitting.
                                       # Write it on both of them
     products: [product-a]             # only in the register at the root, and only when the
                                       # entry binds some products and not all. In a
                                       # product's own register the directory already said
-                                      # it, and naming another product there is `OD008`
+                                      # it, and naming another product there is `REG008`
   OD-002:
     status: open
     cost_to_reverse: medium
@@ -60,7 +60,7 @@ are three placements and one rule:
 
 | The entry is about | It is filed in |
 |---|---|
-| one product | `products/<p>/OPEN.md` — **mandatory**, one per product. `OD006` |
+| one product | `products/<p>/OPEN.md` — **mandatory**, one per product. `REG006` |
 | the shared substrate | `platform/OPEN.md`, if you decided to have one. See `PLATFORM.md` |
 | no single product | `OPEN.md` at the root — including "do we share a substrate at all" |
 
@@ -77,13 +77,13 @@ that day. "Do these products share a substrate" is the clearest case — it cann
 
 **Scope is read off the directory, not off `products:`.** In `products/<p>/OPEN.md` the
 field is left off: the entry is about `p` by virtue of sitting there. An entry that names a
-different product is filed under the wrong heading — `OD008` — and one that binds several
+different product is filed under the wrong heading — `REG008` — and one that binds several
 belongs at the root, where naming them is what the field is for.
 
 **Numbering is one sequence across all three.** `depends_on` and the `derives_from` of a
 `DEC` name an entry by its id and nothing else, so two registers that both start at
 `OD-001` make every reference to either one ambiguous, and the ambiguity resolves itself
-silently. `OD007` reports it. A register adopted from before the framework continues the
+silently. `REG007` reports it. A register adopted from before the framework continues the
 numbering and keeps its old labels in the prose beside the heading — `### OD-033 · (was
 K7) Title` — because the id is what a check resolves and the label is what a person
 recognises.
@@ -130,7 +130,7 @@ at first.
   it is there so you do not start the reasoning over from scratch in two weeks.
 - **Trigger:** the observable event after which the decision can no longer be deferred:
   the second customer, the first line of code written against it, the signature. **No
-  date belongs here**, in any form and not even beside the event -- `OD009` reports the
+  date belongs here**, in any form and not even beside the event -- `REG009` reports the
   ones it can see, and "by the end of the quarter" is one it cannot. This entry is open
   because nobody has decided; a date written on it is read as a commitment by the next
   person, and nobody made one.
@@ -206,7 +206,7 @@ written to at all. Do not edit between them — the next run overwrites it, and 
 column of every row says which register owns the entry.
 
 It holds no `entries:` of its own, and that is deliberate rather than an omission. A second
-copy of a row is a second thing for `OD002`, `OD003` and `OD005` to report, and two rows
+copy of a row is a second thing for `REG002`, `REG003` and `REG005` to report, and two rows
 with the same id for a `depends_on` to resolve against.
 
 <!-- generated: open-union -->

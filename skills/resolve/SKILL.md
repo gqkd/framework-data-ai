@@ -40,7 +40,7 @@ ready to take, and the `DEC` is written by then.
 
 ## The order to work in
 
-1. **Anything the validator reports as `OD003`** — high cost to reverse *and* no default in
+1. **Anything the validator reports as `REG003`** — high cost to reverse *and* no default in
    force. This is the most expensive combination there is, and it has to be decided even on
    incomplete information, because the cost of waiting exceeds the cost of being wrong.
 2. **§1 HIGH**, in the order the register lists them, respecting `Depends on`.
@@ -74,7 +74,7 @@ of the order rather than being ranked inside it: it cannot be worked, whatever i
 and giving it a position implies somebody could sit down and close it. Say what it is
 waiting on. Do not guess what the missing entry meant.
 
-Run the validator first to get the `OD003` list rather than reading the file and judging by
+Run the validator first to get the `REG003` list rather than reading the file and judging by
 eye.
 
 ## One decision at a time
@@ -167,7 +167,7 @@ why**. An entry left open on purpose, with the reason and what would settle it, 
 outcome. A register emptied in one session usually means somebody decided things that were
 not theirs to decide.
 
-Close by running the validator. If `OD002` fires, an entry you closed did not move to §4.
+Close by running the validator. If `REG002` fires, an entry you closed did not move to §4.
 
 **Then the two closing blocks the preamble describes, and they go last:** what changed in
 plain words, one line per file, and what to do next with what each option buys and costs. The

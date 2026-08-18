@@ -675,7 +675,7 @@ def product_dirs(arts: list[Artifact]) -> dict[Path, tuple[str, str]]:
 def check_open_register(arts: list[Artifact], report: Report) -> None:
     opens = [a for a in arts if a.type == "open-register"]
     if not opens:
-        report.add("OD001", "OPEN.md",
+        report.add("REG001", "OPEN.md",
                    "no open register: an agent has no way to know what has not been "
                    "decided, and will fill the gaps itself")
         return
@@ -688,7 +688,7 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
     held = {a.path.parent for a in opens}
     for d, (prod, rel) in sorted(dirs.items(), key=lambda kv: kv[1][0]):
         if d not in held:
-            report.add("OD006", f"{rel}/OPEN.md",
+            report.add("REG006", f"{rel}/OPEN.md",
                        f"product {prod!r} has no open register of its own. Whatever is "
                        "undecided about it is filed in another product's register or in "
                        "none, and an agent sent to work on this product finds a directory "
@@ -703,7 +703,7 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
         rows = a.meta.get("entries")
         for od in rows if isinstance(rows, dict) else ():
             if od in where:
-                report.add("OD007", a.rel,
+                report.add("REG007", a.rel,
                            f"{od} is also declared by {where[od]}. Entry ids are one "
                            "sequence across every register here, because `depends_on` and "
                            "the `derives_from` of a `DEC` name an entry by its id and "
@@ -731,7 +731,7 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
     for a in opens:
         # Read out of `entries:` in the front matter, not out of the prose. Both of these
         # used to match `- **Cost to reverse:** high` in the body, so translating the label
-        # or reformatting the bullet switched them off silently -- and a silent OD003 reads
+        # or reformatting the bullet switched them off silently -- and a silent REG003 reads
         # as "nothing high-cost is undecided", which is the answer somebody wanted.
         entries = a.meta.get("entries")
         if not isinstance(entries, dict):
@@ -743,9 +743,9 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
             # being what it is, and the reliable way to clear that finding is to paste the
             # entries back in, which is the divergence the union exists to remove.
             if not (UNION_MARK in a.body and len(opens) > 1):
-                report.add("OD004", a.rel,
+                report.add("REG004", a.rel,
                            "no `entries:` in the front matter. The body may say anything "
-                           "it likes and OD002 and OD003 have nothing to read, so this "
+                           "it likes and REG002 and REG003 have nothing to read, so this "
                            "register reports clean however it is filled in.")
             continue
 
@@ -761,7 +761,7 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
                 continue
 
             # The register's own instructions call `Default in force` mandatory, and until
-            # now only `OD003` looked at it and only on a high cost entry. A medium one with
+            # now only `REG003` looked at it and only on a high cost entry. A medium one with
             # no default passed, which is the field the whole file is built around: a
             # decision not taken does not mean nothing is happening, and naming what is
             # happening is what turns a worry into a decidable question.
@@ -770,7 +770,7 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
             # those are properties of a choice, and a `KI` is not one.
             if od.startswith("OD-"):
                 if row.get("status") == "open" and not str(row.get("default_in_force") or "").strip():
-                    report.add("OD005", a.rel,
+                    report.add("REG005", a.rel,
                                f"{od} is open and names no `default_in_force`. Something is "
                                "happening in the absence of this decision; write it, and "
                                "write `none` when the honest answer is that nothing is.")
@@ -781,7 +781,7 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
                 # having been carried out, which is the one direction a check must never
                 # fail in.
                 if row.get("status") == "open" and not row.get("cost_to_reverse"):
-                    report.add("OD005", a.rel,
+                    report.add("REG005", a.rel,
                                f"{od} is open and declares no `cost_to_reverse`. It is what "
                                "orders this register, and an entry without it is filed "
                                "nowhere.")
@@ -796,7 +796,7 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
                 trg = row.get("trigger")
                 if isinstance(trg, (date, datetime)) or (
                         isinstance(trg, str) and DATE_IN_TEXT.search(trg)):
-                    report.add("OD009", a.rel,
+                    report.add("REG009", a.rel,
                                f"{od} has a date in its `trigger`. A date does not force a "
                                "decision by arriving; something does, and the entry is open "
                                "precisely because nobody has decided when. Name the event "
@@ -817,34 +817,34 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
                 named = row.get("closed_by")
                 dec = decisions.get(named) if isinstance(named, str) else None
                 if not named:
-                    report.add("OD005", a.rel,
+                    report.add("REG005", a.rel,
                                f"{od} is `decided` and names no `closed_by`. The decision "
                                "exists somewhere and nothing here points at it, so the "
                                "reasoning has to be found again by whoever asks next.")
                 elif not od.startswith("OD-"):
                     pass
                 elif dec is None:
-                    report.add("OD005", a.rel,
+                    report.add("REG005", a.rel,
                                f"{od} is `decided` and names {named!r}, which is not a "
                                "decision in this repository. The entry reads as settled and "
                                "the reasoning cannot be reached, which is the state naming "
                                "nothing at all would have left it in.")
                 elif dec.meta.get("status") != "accepted":
-                    report.add("OD005", a.rel,
+                    report.add("REG005", a.rel,
                                f"{od} is `decided` and names {named!r}, whose status is "
                                f"{dec.meta.get('status')!r}. An entry closed on a decision "
                                "still in draft, or on one already superseded, is not closed.")
                 elif od not in as_list(dec.meta.get("derives_from")):
                     # The two checks disagree about one fact, and one of them is silent.
-                    # `OD002` reads closure off `derives_from` and nothing else, on purpose,
-                    # so a `decided` entry whose decision does not name it is one `OD002`
+                    # `REG002` reads closure off `derives_from` and nothing else, on purpose,
+                    # so a `decided` entry whose decision does not name it is one `REG002`
                     # could never have caught had the status been left `open`. The chain in
                     # `TRACEABILITY.md` is built from the same field, so the closure is
                     # missing from the graph too.
-                    report.add("OD005", a.rel,
+                    report.add("REG005", a.rel,
                                f"{od} says it was closed by {named}, and {named} does not "
                                f"name {od} in `derives_from`. Closure is read off that field "
-                               "everywhere else here -- by `OD002`, and by the traceability "
+                               "everywhere else here -- by `REG002`, and by the traceability "
                                "chain -- so as written this entry is closed in one direction "
                                "only, and invisible in the other.")
             # Against every register and not against this one. Once the entries are filed
@@ -854,7 +854,7 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
             # arrangement the framework asks for, which is how a check gets switched off.
             for dep in as_list(row.get("depends_on")):
                 if dep not in where:
-                    report.add("OD005", a.rel,
+                    report.add("REG005", a.rel,
                                f"{od} depends on {dep!r}, which no register in this "
                                "repository declares. Either it was decided and the "
                                "dependency is stale, or it is a typo and this entry is "
@@ -868,13 +868,13 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
             # binds the entry to nothing, which is the shape that survives a review.
             for peer in as_list(row.get("decide_with")):
                 if peer == od:
-                    report.add("OD005", a.rel,
+                    report.add("REG005", a.rel,
                                f"{od} names itself in `decide_with`. The field says which "
                                "other entry has to be decided in the same sitting, and an "
                                "entry paired with itself is an empty field that reads as a "
                                "full one.")
                 elif peer not in where:
-                    report.add("OD005", a.rel,
+                    report.add("REG005", a.rel,
                                f"{od} is to be decided with {peer!r}, which no register in "
                                "this repository declares. Either it was decided and the "
                                "pairing is stale, or it is a typo and this entry is paired "
@@ -882,7 +882,7 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
 
             stray = [p for p in as_list(row.get("products")) if p != scope]
             if scope and stray:
-                report.add("OD008", a.rel,
+                report.add("REG008", a.rel,
                            f"{od} sits in the register of {scope!r} and declares "
                            f"{', '.join(map(repr, stray))}. A register scoped to a product "
                            "is about that product: an entry belonging to another one goes "
@@ -890,7 +890,7 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
                            "in the register at the root, where naming them is what the "
                            "field is for.")
             if od in closed_by and row.get("status") == "open":
-                report.add("OD002", a.rel,
+                report.add("REG002", a.rel,
                            f"{od} is still `status: open` but {closed_by[od]} derives from "
                            "it: set it `decided`, name the decision in `closed_by`, and "
                            "move the entry to §4 with a cross reference")
@@ -904,7 +904,7 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
                     and (not default or re.match(r"none\b", default))):
                 undecided.append(od)
         if undecided:
-            report.add("OD003", a.rel,
+            report.add("REG003", a.rel,
                        f"{', '.join(undecided)}: high cost to reverse and no default in "
                        "force. These have to be decided even on incomplete information, "
                        "because the cost of waiting exceeds the cost of being wrong.")

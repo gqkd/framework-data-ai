@@ -244,8 +244,8 @@ def _skill_references():
 def _clean_repo():
     fm = lambda **kw: "---\n" + "\n".join(f"{k}: {v}" for k, v in kw.items()) + "\n---\n\n"
     files = {
-        # `entries:` is what OD002 and OD003 read. Without it the register is reported by
-        # OD004, which is the point: a register they cannot read used to report clean.
+        # `entries:` is what REG002 and REG003 read. Without it the register is reported by
+        # REG004, which is the point: a register they cannot read used to report clean.
         "OPEN.md": fm(schema="framework/open-register/v1", artifact_type="open-register",
                       lifecycle="living", status="active", owners="[owner]",
                       created="2026-01-01", last_review="2026-01-01 09:00",
@@ -1059,7 +1059,7 @@ def _claims_carry_their_record():
     # ambiguity the stack was added to remove, arriving back through the field meant to
     # remove it. An open register entry with no `default_in_force` is the same shape: the file
     # calls that field mandatory in its own instructions and nothing was reading it except
-    # OD003, and only on a high cost entry.
+    # REG003, and only on a high cost entry.
     def repo(files):
         with tempfile.TemporaryDirectory() as tmp:
             for rel, text in files.items():
@@ -1133,7 +1133,7 @@ def _claims_carry_their_record():
         got = repo({"OPEN.md": register(entries)})
         if got is None:
             problems.append(f"the validator crashed on {what}")
-        elif ("OD005" in got) != want:
+        elif ("REG005" in got) != want:
             problems.append(f"{what} was {'not ' if want else ''}reported")
     return problems
 
@@ -1550,17 +1550,17 @@ def _registers_are_per_product():
             return [f"the validator crashed: {r.stderr.strip().splitlines()[-1]}"]
         codes = [f["code"] for f in json.loads(r.stdout)["findings"]]
 
-        if "OD006" not in codes:
+        if "REG006" not in codes:
             problems.append("a product directory with no register of its own was not "
                             "reported: an agent sent to work there reads no register and "
                             "concludes nothing is open")
-        if "OD004" in codes:
+        if "REG004" in codes:
             problems.append("the register at the root was reported for holding no "
                             "`entries:` while carrying the union marker, and the reliable "
                             "way to clear that is to paste the entries back in")
-        if "OD005" in codes:
+        if "REG005" in codes:
             problems.append("a `depends_on` reaching another register was reported as "
-                            f"dangling: {[f['message'] for f in json.loads(r.stdout)['findings'] if f['code'] == 'OD005']}")
+                            f"dangling: {[f['message'] for f in json.loads(r.stdout)['findings'] if f['code'] == 'REG005']}")
 
         # Attribution comes from the directory. Reading it off `products:` -- absent in a
         # product's own register, because the directory already said it -- put alpha's
@@ -1597,7 +1597,7 @@ def _registers_are_per_product():
             fm("entries:\n  OD-002:\n    status: open\n    cost_to_reverse: low\n"
                "    default_in_force: three retries\n"))
         codes = [f["code"] for f in json.loads(run().stdout)["findings"]]
-        if "OD007" not in codes:
+        if "REG007" not in codes:
             problems.append("two registers declaring the same entry id were not reported, "
                             "so a `depends_on` naming it resolves to whichever was read last")
 
@@ -1610,7 +1610,7 @@ def _registers_are_per_product():
         empty = root / "products" / "beta" / "OPEN.md"
         empty.write_text(fm("entries: {}\n"))
         out = json.loads(run().stdout)
-        stated = [f for f in out["findings"] if f["code"] in ("OD004", "FM002")
+        stated = [f for f in out["findings"] if f["code"] in ("REG004", "FM002")
                   and f["path"].endswith("beta/OPEN.md")]
         if stated:
             problems.append("a register declaring `entries: {}` was reported "
@@ -1618,7 +1618,7 @@ def _registers_are_per_product():
                             "has no way left to have a register except inventing an entry")
         empty.write_text(fm(""))
         silent = [f["code"] for f in json.loads(run().stdout)["findings"]
-                  if f["code"] == "OD004" and f["path"].endswith("beta/OPEN.md")]
+                  if f["code"] == "REG004" and f["path"].endswith("beta/OPEN.md")]
         if not silent:
             problems.append("a register with no `entries:` at all was not reported, so "
                             "'nobody filled this in' and 'there is nothing open' now read "
@@ -1628,7 +1628,7 @@ def _registers_are_per_product():
             fm("entries:\n  OD-003:\n    status: open\n    cost_to_reverse: low\n"
                "    default_in_force: three retries\n    products: [alpha]\n"))
         codes = [f["code"] for f in json.loads(run().stdout)["findings"]]
-        if "OD008" not in codes:
+        if "REG008" not in codes:
             problems.append("an entry in beta's register naming alpha was not reported: a "
                             "person reading the directory and the derived view disagree "
                             "about who it is about, and neither is told")
@@ -1646,7 +1646,7 @@ def _registers_are_per_product():
         for written in ("2026-09-30", '"2026-09-30"', "2026-09-30."):
             (root / "products" / "beta" / "OPEN.md").write_text(entry(written))
             codes = [f["code"] for f in json.loads(run().stdout)["findings"]]
-            if "OD009" not in codes:
+            if "REG009" not in codes:
                 problems.append(f"a trigger written as {written} was not reported. A date "
                                 "does not force a decision by arriving, and the entry it "
                                 "sits on is one nobody has taken")
@@ -1658,7 +1658,7 @@ def _registers_are_per_product():
         for written in ("the external audit, 2026-10-31", "Q4 2026", "the audit on 31/10/2026"):
             (root / "products" / "beta" / "OPEN.md").write_text(entry(written))
             codes = [f["code"] for f in json.loads(run().stdout)["findings"]]
-            if "OD009" not in codes:
+            if "REG009" not in codes:
                 problems.append(f"a trigger reading {written!r} was not reported: a date "
                                 "beside an event is still a date on an undecided entry")
 
@@ -1667,7 +1667,7 @@ def _registers_are_per_product():
         for written in ("before the second customer", "the external audit"):
             (root / "products" / "beta" / "OPEN.md").write_text(entry(written))
             codes = [f["code"] for f in json.loads(run().stdout)["findings"]]
-            if "OD009" in codes:
+            if "REG009" in codes:
                 problems.append(f"a trigger reading {written!r} was reported: the check is "
                                 "matching prose rather than digits")
 
@@ -1683,13 +1683,13 @@ def _registers_are_per_product():
                           ("OD-004", "itself")):
             (root / "products" / "beta" / "OPEN.md").write_text(pair(peer))
             codes = [f["code"] for f in json.loads(run().stdout)["findings"]]
-            if "OD005" not in codes:
+            if "REG005" not in codes:
                 problems.append(f"an entry to be decided with {why} was not reported, so "
                                 "the register vouches for a pairing that binds it to "
                                 "nothing")
         (root / "products" / "beta" / "OPEN.md").write_text(pair("OD-001"))
         codes = [f["code"] for f in json.loads(run().stdout)["findings"]]
-        if "OD005" in codes:
+        if "REG005" in codes:
             problems.append("a `decide_with` naming an entry that exists in another "
                             "register was reported: the pairing reaches across registers "
                             "by design, exactly as `depends_on` does")
@@ -1814,7 +1814,7 @@ def _extract_keeps_provenance():
 def _fixture_counts_are_measured():
     # Three times the number of findings in `audit/dirty-repo` was written into prose and
     # three times it went stale: eleven, then thirteen against a fixture producing twelve,
-    # then thirteen again on the day `OD006` was added, when thirteen was already the count
+    # then thirteen again on the day `REG006` was added, when thirteen was already the count
     # before it. Every one of those was written in a file whose subject is documents going
     # out of date, and nothing reported any of them.
     #

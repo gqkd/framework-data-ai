@@ -32,8 +32,8 @@ cases:
       The entries with high cost to reverse and no default in force come before the rest:
       nothing is holding the line on them, so waiting costs more than deciding on
       incomplete information. There are four of them and this said three until 2026-08-18,
-      naming OD-002, OD-007 and OD-009 and leaving out OD-004 -- which is what `OD005`
-      reports about OD-004 in as many words, and what `OD003` has been listing all along.
+      naming OD-002, OD-007 and OD-009 and leaving out OD-004 -- which is what `REG005`
+      reports about OD-004 in as many words, and what `REG003` has been listing all along.
       Both runs of that day read the validator and said four. A count in prose, again, and
       this time the fixture's own output was the thing that contradicted it.
 

@@ -240,7 +240,7 @@ F["platform/OPEN.md"] = fm(
 
 # One each, and the numbering continues from the substrate's rather than restarting: three
 # registers that each began at OD-001 would make every `depends_on` naming one of them
-# resolve to whichever file was read last. `OD007` reports the restart.
+# resolve to whichever file was read last. `REG007` reports the restart.
 def _product_open(prod: str, num: str, title: str, body: str, cost: str, default: str):
     F[f"products/{prod}/OPEN.md"] = fm(
         schema="framework/open-register/v1", artifact_type="open-register",

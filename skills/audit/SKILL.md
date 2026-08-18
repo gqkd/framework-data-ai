@@ -124,7 +124,7 @@ Propose a diff and wait for everything else. In particular:
   reference silences the check and destroys the only surviving trace that the thing was
   supposed to exist. Look for what it pointed at, including in git history. If it never
   existed, say so in prose in the document rather than removing the line.
-- **`OD002`**, an entry decided but still listed as open. The repair is a move, not a
+- **`REG002`**, an entry decided but still listed as open. The repair is a move, not a
   delete: the entry leaves `§1` and leaves a cross reference line in `§4` of `OPEN.md`. An
   entry deleted outright takes with it the fact that the question was ever asked.
 - **Anything at all on an `immutable`.** The class means what it says. If the content is
@@ -190,8 +190,8 @@ if the indices are stale, the enumeration you are about to build from them is st
 | `ARC#delta` → `#current` and `#target` | is the delta still the difference between them. A stale delta is a silent lie |
 | `WF#delta` → `#current` and `#target` | the same |
 | a `PBR` capability that depends on another product → an internal `DC` | does the contact point have a contract |
-| `OPEN.md` open entries → the accepted `DEC` set | is a question still listed as open that a decision already answers. `OD002` catches this only when the `DEC` names the entry in `derives_from`, which is the minority of the cases: the rest are here |
-| each register → the product whose directory it sits in | is every entry actually about that product. `OD008` catches the ones that declare another product; the ones that declare nothing and are still misfiled are here, and they are the common shape — an entry written while working on one product and filed where the session happened to be |
+| `OPEN.md` open entries → the accepted `DEC` set | is a question still listed as open that a decision already answers. `REG002` catches this only when the `DEC` names the entry in `derives_from`, which is the minority of the cases: the rest are here |
+| each register → the product whose directory it sits in | is every entry actually about that product. `REG008` catches the ones that declare another product; the ones that declare nothing and are still misfiled are here, and they are the common shape — an entry written while working on one product and filed where the session happened to be |
 
 ### The three rules of this pass
 

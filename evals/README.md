@@ -134,7 +134,7 @@ read as a result.
 
 `audit` and `resolve` were re-run twice on **2026-08-18**: once against 1.1.0 and the
 register split one per product, and again after 2.0.0 replaced `deadline` with `trigger`
-and planted `OD009` in `audit/dirty-repo`. The other four are from the runs above. Every one of those runs found the defect in this repository rather than in the skill: the
+and planted `REG009` in `audit/dirty-repo`. The other four are from the runs above. Every one of those runs found the defect in this repository rather than in the skill: the
 warning count `audit/dirty-repo` produces, the list of views a clean repository is missing
 which still named two of four, and then an expectation that asks a fixture never to be
 written to while the skill it measures is told to transcribe values the repository already

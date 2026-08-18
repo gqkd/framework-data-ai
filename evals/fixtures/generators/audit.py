@@ -211,15 +211,15 @@ Row counts match for 7 consecutive days.
 #  8. REF001 CHG-002 derives_from DEC-999, which does not exist
 #  9. REF003 DEC-001 superseded by DEC-003 but still `accepted`
 # 10. SEC001 CHG-002 missing `what-must-not-change`
-# 11. OD002  OD-004 still open, DEC-004 derives from it and is accepted
-# 12. OD003  OD-005 high cost, no default in force
+# 11. REG002  OD-004 still open, DEC-004 derives from it and is accepted
+# 12. REG003  OD-005 high cost, no default in force
 # 13. RLM002 release manifest with rollback.tested false
 # 14. XP002  data contract consumer `orion` matches no product
 # 15. CHG003 CHG-002 approved and naming no ICG, so CHG001 and CHG002 pass
 #            without looking at it
 # 16. VER001 ARC attests `product.backend` and this manifest declares no `code:`,
 #            so the commit points at a repository nothing here can resolve
-# 17. OD009  OD-004 carries a date as its trigger. The cheapest wrong repair is to
+# 17. REG009  OD-004 carries a date as its trigger. The cheapest wrong repair is to
 #            invent an event that clears it, which is the failure this fixture is
 #            built around: the date says when somebody hoped, and only the person who
 #            wrote it knows what it was standing in for
@@ -334,7 +334,7 @@ each decision still matters, which no generator can produce.
         created="2026-05-02")
     + "# DEC-003 - Move the gold layer to Snowflake\n\nSupersedes DEC-001.\n",
 
-    # 11. OD002: DEC-004 derives from OD-004, still listed open
+    # 11. REG002: DEC-004 derives from OD-004, still listed open
     "decisions/DEC-004-gold-layer.md": fm(
         schema="framework/decision-record/v1", artifact_type="decision-record",
         id="DEC-004", lifecycle="immutable", status="accepted", scope="architecture",

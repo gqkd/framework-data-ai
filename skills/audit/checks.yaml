@@ -22,6 +22,18 @@
 # Two are `error` on day one, and they are the two `SKILLS.md §9` names: front matter that
 # parses, and front matter that means something.
 
+# ON `REG`, WHICH USED TO BE `OD`. The checks about the open register were `OD001` to
+# `OD009`, and the entries inside that register are `OD-001`, `OD-004`, `OD-011`. One dash
+# apart, in a file where both appear in the same sentence -- and it cost a reader exactly
+# what you would expect: a check code read as a decision somebody had left open, and the
+# reasonable question of why a framework carries decisions about a warehouse. A code names
+# a rule that holds for every project; an id names a choice inside one. Nothing else here
+# has that problem, because no artifact type is called `FM` or `LC`.
+#
+# The prefix is `REG` for register. The rename is mechanical and total: no code in this
+# catalog begins with `OD` any more, and a project that pinned a level by code has to
+# rename it too, which is one line per pinned check.
+
 stale_days: 90        # after how long a living document counts as unreviewed
 
 checks:
@@ -153,7 +165,7 @@ checks:
     prevents: >
       An untested rollback procedure is not a procedure, it is an intention.
 
-  OD001:
+  REG001:
     level: warn
     title: no open register in the repository
     prevents: >
@@ -161,7 +173,7 @@ checks:
       fill the gap with a plausible assumption and implement it with conviction. It is the
       single most damaging thing an agent does in a documented repository.
 
-  OD002:
+  REG002:
     level: warn
     title: open decision already closed by a DEC that derives from it
     prevents: >
@@ -171,30 +183,30 @@ checks:
       reasons and treating all three as closure would make this warning fire constantly,
       which teaches people to dismiss it.
 
-  OD003:
+  REG003:
     level: warn
     title: high cost to reverse and no default in force
     prevents: >
       The most expensive combination there is. It has to be decided even on incomplete
       information, because the cost of waiting exceeds the cost of getting it wrong.
 
-  OD004:
+  REG004:
     level: warn
     title: open register with no structured entries
     prevents: >
-      OD002 and OD003 having nothing to read while the register looks full. Both used to
+      REG002 and REG003 having nothing to read while the register looks full. Both used to
       match prose in the body -- `### OD-NNN`, and a line saying the cost to reverse -- so
       renaming that label or translating it switched them off without a word. Reporting
       nothing then read as "no high-cost decision is outstanding", which is the answer
       somebody was hoping for. The two fields they need live in `entries:` now, and their
       absence is a finding rather than a silence.
 
-  OD005:
+  REG005:
     level: warn
     title: an entry of the open register is not filled in enough to be read
     prevents: >
       The register's own instructions call `Default in force` mandatory, and until this only
-      `OD003` looked at it and only on a high cost entry: a medium one with no default
+      `REG003` looked at it and only on a high cost entry: a medium one with no default
       passed, and that is the field the whole file is built around. Also catches a `decided`
       entry naming no `closed_by`, which leaves the reasoning to be found again, a
       `depends_on` pointing at an entry the register does not declare, and an open `OD` with
@@ -204,7 +216,7 @@ checks:
       order §1, and an entry that has been decided has left it. Asked of a `decided` row
       they reported the documented closure for having been carried out.
 
-  OD006:
+  REG006:
     level: warn
     title: product with no open register of its own
     prevents: >
@@ -215,7 +227,7 @@ checks:
       per product is not a convenience, it is what makes "read `OPEN.md` first" a rule with
       a single answer.
 
-  OD007:
+  REG007:
     level: warn
     title: the same entry id declared by two registers
     prevents: >
@@ -226,7 +238,7 @@ checks:
       the wrong end. A register adopted from before the framework continues the numbering
       and keeps its old labels in the prose.
 
-  OD008:
+  REG008:
     level: warn
     title: an entry declares a product its register contradicts
     prevents: >
@@ -237,7 +249,7 @@ checks:
       other. An entry binding several products belongs in the register at the root, where
       naming them is exactly what the field is for.
 
-  OD009:
+  REG009:
     level: warn
     title: an open entry has a date in its trigger
     prevents: >
@@ -401,14 +413,14 @@ checks:
       which is what `none` is for, and a field that excused a `CHG` from classification
       would be a way around the way around.
 
-# ON THE PROSE COUPLED CHECKS. There are none left. OD002 and OD003 used to read the body
+# ON THE PROSE COUPLED CHECKS. There are none left. REG002 and REG003 used to read the body
 # of `OPEN.md` -- the `### OD-NNN` headings and the "Cost to reverse" and "Default in force"
 # lines inside each entry -- which is the fragility the section markers removed, one level
 # down: at the level of fields inside an entry rather than sections inside a file. Rewording
 # or translating the register switched both off, silently, and reporting nothing read as "no
 # high-cost decision is outstanding".
 #
-# They read `entries:` in the front matter now, and `OD004` reports a register that does not
+# They read `entries:` in the front matter now, and `REG004` reports a register that does not
 # carry it, because the absence has to be louder than the silence it used to produce. The
 # body keeps the prose: `OPEN.md` is where somebody decides something, and the alternatives
 # and consequences that make an entry decidable are not fields.

@@ -70,8 +70,8 @@
 # the register being touched. Under three components it is a MINOR: nothing stops
 # validating, and the only repositories whose documents change meaning are the ones that
 # already kept a register under a product -- which the framework asked for as an exception
-# and which is the arrangement being made standard, not one being taken away. `OD006`,
-# `OD007` and `OD008` are all `warn`. A repository that kept a single register at the root
+# and which is the arrangement being made standard, not one being taken away. `REG006`,
+# `REG007` and `REG008` are all `warn`. A repository that kept a single register at the root
 # means exactly what it meant.
 #
 # 1.1.0 -> 2.0.0. `deadline` on an open entry became `trigger`, and a register still
@@ -97,7 +97,7 @@
 # `entries:` used to say an old-format register does not exist to protect, and one does
 # now. It is migrated instead, because an alias would mean two spellings of the field
 # forever and a register where both appear, which is the ambiguity this file exists to
-# refuse. `OD009` reports a date in a trigger, at `warn`, and it
+# refuse. `REG009` reports a date in a trigger, at `warn`, and it
 # reports every date: an entry still open has no calendar, not even beside an event. "The
 # external audit" is a trigger; "the external audit, 2026-10-31" is the same trigger with a
 # commitment glued to it, and the commitment is the half that gets quoted back later by
@@ -292,7 +292,7 @@ types:
     lifecycle: living
     status: [active]
     # Three placements and one rule: an entry lives in the register of the thing it is
-    # about. One per product, mandatory, beside the product -- `OD006` -- because the file
+    # about. One per product, mandatory, beside the product -- `REG006` -- because the file
     # an agent reads before deciding anything has to be the one beside what it is working
     # on. `platform/OPEN.md` for the substrate, if a substrate was decided. The register at
     # the root for what belongs to no single product, which includes the question of
@@ -300,10 +300,10 @@ types:
     # generated union of all the others.
     #
     # Scope is read off the directory and not off `products:`, so in a product's register
-    # the field is left off and `OD008` reports one that contradicts where it sits.
-    # Numbering stays one sequence across all three -- `OD007` -- because `depends_on` and
+    # the field is left off and `REG008` reports one that contradicts where it sits.
+    # Numbering stays one sequence across all three -- `REG007` -- because `depends_on` and
     # the `derives_from` of a `DEC` name an entry by its id and nothing else.
-    # `OD002` and `OD003` used to read the body: `### OD-NNN` headings and lines like
+    # `REG002` and `REG003` used to read the body: `### OD-NNN` headings and lines like
     # `- **Cost to reverse:** high`. Rename that label, translate it, or reformat the bullet,
     # and both checks stop working -- reporting nothing, which reads as "no high-cost entry
     # is undecided". The flattering failure again, on the register a person edits by hand
@@ -320,15 +320,15 @@ types:
     maps:
       entries:
         # `entries: {}` is legal here and nowhere else. A product must have a register --
-        # `OD006` -- and a product may genuinely have nothing open, so refusing the empty
+        # `REG006` -- and a product may genuinely have nothing open, so refusing the empty
         # map would leave inventing an entry as the only way to satisfy both. It is also a
-        # different claim from an absent `entries:`, which `OD004` reports: one says read
+        # different claim from an absent `entries:`, which `REG004` reports: one says read
         # and nothing found, the other says nobody filled this in.
         may_be_empty: true
         keys: "^(OD|KI)-(\\d{3,}|NNN)$"
         # `trigger` and not `deadline`: the observable event after which the decision
         # can no longer be deferred, which is what forces it. No date belongs in one, in
-        # any form and not even beside the event -- `OD009` -- because the entry it sits on
+        # any form and not even beside the event -- `REG009` -- because the entry it sits on
         # is one nobody has decided, and a date written on an undecided thing is read as a
         # promise by whoever finds it next.
         #
@@ -746,7 +746,7 @@ types:
 #
 # Not recovered here, still only in git at `acaded9^`, and needed when the validator is
 # rebuilt: the check catalog with its codes and messages (FM001-FM008, LC001-LC004,
-# ID001, REF001-REF004, SEC001, XP001-XP003, CHG001-CHG002, RLM001-RLM002, OD001-OD003),
+# ID001, REF001-REF004, SEC001, XP001-XP003, CHG001-CHG002, RLM001-RLM002, REG001-REG003),
 # the `last_review` instant parsing with its refusal to treat a half filled timestamp as
 # midnight, and the index generators. Those are implementation. This file is the part
 # that was specification with nowhere to live.

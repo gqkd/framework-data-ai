@@ -123,7 +123,7 @@ _meta/                README.md, corpus/<p>/, extract/
 ```
 
 **One `OPEN.md` per product, from the first day, and one at the root.** It is the only
-document in the day one set that is not single, and `OD006` reports a product without one.
+document in the day one set that is not single, and `REG006` reports a product without one.
 The product's register holds what is undecided about that product; the root holds what
 belongs to no product in particular, which on day one is most of it — including whether the
 products share a substrate, which cannot be filed under any of them. Numbering is a single
@@ -291,7 +291,7 @@ Report in this order: the structure created, what the corpus produced (commitmen
 glossary candidates, and above all contradictions), the `OPEN.md` entries seeded with the
 high cost ones first, and what you deliberately did not write and why.
 
-Then run the validator and say what it found. At this point `OD003` firing on a high cost
+Then run the validator and say what it found. At this point `REG003` firing on a high cost
 entry with no default in force is the correct outcome, not a failure: it is the register
 telling you which decision cannot wait.
 
