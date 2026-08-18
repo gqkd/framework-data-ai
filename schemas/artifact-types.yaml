@@ -331,6 +331,14 @@ types:
         # different claim from an absent `entries:`, which `REG004` reports: one says read
         # and nothing found, the other says nobody filled this in.
         may_be_empty: true
+        # `OD-` and `KI-` share the register and not the rules for closing. An `OD-` closes
+        # on an accepted `DEC` and `REG005` resolves it: a decision nobody can reach is one
+        # nobody can revisit. A `KI-` closes on whatever recorded that it was dealt with --
+        # a `CHG`, a `SIG`, a commit, a line of the log -- and nothing resolves that field,
+        # deliberately. The template used to name three artefacts and the validator never
+        # checked any of them, which is a rule in name only; the honest version is that a
+        # known issue is not a choice, and asking for a decision record because somebody
+        # deleted two files is how a rule gets worked around rather than followed.
         keys: "^(OD|KI)-(\\d{3,}|NNN)$"
         # `trigger` and not `deadline`: the observable event after which the decision
         # can no longer be deferred, which is what forces it. No date belongs in one, in
@@ -425,7 +433,13 @@ types:
           optional: [decided_in, version, note]
           lists: [used_by]
           enums:
-            status: [chosen, unratified, ruled-out]
+            # `dropped` is the state this document could not describe, and every project
+            # has some: a tool that was tried, is not in use, and that nobody decided
+            # against. `unratified` says the opposite -- in use, nobody chose it -- and
+            # `ruled-out` claims a decision, which `STK001` then asks to see. With three
+            # values the only way to file an abandoned experiment was to write something
+            # false, which is what a real repository did twice.
+            status: [chosen, unratified, ruled-out, dropped]
 
   platform-architecture:
     id: PLATFORM

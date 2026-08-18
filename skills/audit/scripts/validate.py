@@ -1358,8 +1358,17 @@ def check_stack(arts: list[Artifact], report: Report) -> None:
             if status in ("chosen", "ruled-out") and not dec:
                 report.add("STK001", a.rel,
                            f"{cap!r} is {status!r} and names no `decided_in`. It reads as a "
-                           "decision and there is no record of one, which is what "
-                           "`unratified` is for: a tool in use that nobody chose.")
+                           "decision and there is no record of one. `unratified` is for a "
+                           "tool in use that nobody chose, and `dropped` for one that was "
+                           "tried, is not in use, and that nobody decided against.")
+            elif status == "dropped" and dec:
+                # The word exists for the abandonment nobody ratified. With a decision
+                # behind it the row is `ruled-out`, and calling it dropped files a decision
+                # as an accident -- which is the direction that loses the reasoning.
+                report.add("STK001", a.rel,
+                           f"{cap!r} is `dropped` and names {dec!r}. `dropped` is what was "
+                           "abandoned without anybody deciding; with a decision behind it "
+                           "the row is `ruled-out`, and the reasoning stays reachable.")
             elif status == "unratified" and dec:
                 report.add("STK001", a.rel,
                            f"{cap!r} is `unratified` and names {dec!r}. If the decision "

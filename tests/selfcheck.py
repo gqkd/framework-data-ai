@@ -1253,6 +1253,14 @@ def _claims_carry_their_record():
          True, "a decision that was never accepted"),
         ("stack:\n  db:\n    tool: PostgreSQL\n    status: unratified\n",
          False, "an unratified tool, which is the honest state and must stay quiet"),
+        # The state the vocabulary did not have: tried, not in use, nobody decided. With
+        # three values the only way to file it was `ruled-out` with nothing to name, and a
+        # real repository wrote two of those -- so the check reported a document whose only
+        # fault was that the words ran out.
+        ("stack:\n  db:\n    tool: PostgreSQL\n    status: dropped\n",
+         False, "an abandoned experiment nobody decided against, which is what `dropped` is"),
+        ("stack:\n  db:\n    tool: PostgreSQL\n    status: dropped\n    decided_in: DEC-001\n",
+         True, "a dropped tool naming a decision, which is a decision filed as an accident"),
     ]:
         got = repo({"STACK.md": stack(rows), "decisions/DEC-001.md": dec,
                     "decisions/DEC-002.md": draft})

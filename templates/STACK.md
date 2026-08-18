@@ -86,6 +86,12 @@ ones with a high cost to change.
 <!-- section: ruled-out -->
 ## 3 · Ruled out
 
+**`dropped` belongs here too, and is not the same word.** `ruled-out` means somebody decided
+against it and `decided_in` names the record. `dropped` means it was tried, it is not in use,
+and nobody ever decided: the experiment that quietly stopped. Both are things you are not
+running; only one of them has a reason somebody can read, and writing the second as the
+first claims a decision that does not exist -- which is what `STK001` reports.
+
 What must not be introduced, and why not. This section is read by agents more often than
 either of the others, because it is the only one that answers a question with "no".
 

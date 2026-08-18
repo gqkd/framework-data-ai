@@ -177,7 +177,13 @@ without a trigger it is not an accepted problem, it is a forgotten one.
 - Why we accept it for now.
 - Who or what bears the effect.
 - **Reopening trigger:** the observable condition that makes fixing it necessary.
-- **Reference:** the linked `CHG` / `DEC` / `SIG`.
+- **Reference:** whatever records that it was dealt with. A `CHG`, a `DEC` or a `SIG` when
+  there is one; a commit, or a line of `LOG.md`, when the thing was a file operation and
+  there was never a decision to write. `closed_by` on a `KI` is free text and no check
+  resolves it -- on an `OD-` it must name an accepted `DEC` and `REG005` says so, because a
+  decision that cannot be reached is a decision nobody can revisit. A known issue is not a
+  choice, and demanding a decision record for having deleted two files is how a rule gets
+  worked around instead of followed.
 
 ---
 

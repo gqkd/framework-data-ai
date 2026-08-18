@@ -367,6 +367,14 @@ checks:
     level: warn
     title: a stack entry contradicts what its status claims
     prevents: >
+      With three values there was no way to file the ordinary case -- a tool tried in a
+      proof of concept, not in use, that nobody decided against -- so a real repository
+      wrote two of them as `ruled-out` with no decision to name, and this check reported
+      documents whose only fault was that the vocabulary was short. `dropped` is that state.
+      `ruled-out` still claims a decision and still has to name it; `dropped` with a
+      `decided_in` is reported the other way, because a decision filed as an accident is a
+      reason nobody will find.
+
       The document going back to being the thing it replaced. `chosen` means somebody
       decided, so it has to name the `DEC`; `unratified` means nobody did, so it must not;
       and a `decided_in` pointing at a decision that does not exist or was never accepted

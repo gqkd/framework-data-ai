@@ -41,7 +41,8 @@
             "enum": [
               "chosen",
               "unratified",
-              "ruled-out"
+              "ruled-out",
+              "dropped"
             ]
           },
           "decided_in": {
