@@ -740,6 +740,99 @@ MOVED_TO_INDEX = {
 }
 
 
+# `GLOSSARY §Tenant`, with or without the backticks around the file name. The section sign
+# is the whole convention and it is worth one: "see the glossary" is not a reference, it is
+# a gesture, and nothing can resolve it.
+GLOSSARY_CITE = re.compile(r"GLOSSARY`?\s*§\s*([^`\n,.;:)\]]+)")
+
+
+def declared_entries(arts: list[Artifact]) -> set[str]:
+    """Every entry id any register in the repository declares."""
+    return {od for a in arts if a.type == "open-register"
+            for od in (a.meta.get("entries") or {})}
+
+
+def check_glossary_terms(arts: list[Artifact], report: Report) -> None:
+    """A term cited by a document and defined by nobody.
+
+    The pair whose second end nothing resolved. A data contract sending a reader to the
+    glossary for what a column means is a reference exactly like `derives_from`, and a
+    contract citing three terms that the glossary does not contain reads as defined and is
+    not -- which is more expensive than citing nothing, because the reader stops looking.
+
+    Resolved against `terms:` and not against the `###` headings of the body, because this
+    framework has already been bitten once by an index built on prose: two checks read
+    headings and lines, somebody reworded a label, and both went quiet reporting nothing.
+    """
+    glossaries = [a for a in arts if a.type == "glossary"]
+    declared: dict[str, tuple[str, dict]] = {}
+    for g in glossaries:
+        for name, row in (g.meta.get("terms") or {}).items():
+            declared[str(name).strip().lower()] = (g.rel, row if isinstance(row, dict) else {})
+
+    known = declared_entries(arts)
+    for term, (rel, row) in sorted(declared.items()):
+        blocked = row.get("blocked_by")
+        if blocked and blocked not in known:
+            report.add("REF005", rel,
+                       f"the term {term!r} says its definition is blocked by {blocked!r}, "
+                       "which no register in this repository declares. Either the decision "
+                       "was taken and the term is waiting on nothing, or the id is a typo "
+                       "and the reason this word has no definition is not written down "
+                       "anywhere.")
+
+    for a in arts:
+        if a.type == "glossary":
+            continue
+        for m in GLOSSARY_CITE.finditer(a.body):
+            name = " ".join(m.group(1).split()).strip("*_`")
+            if not glossaries:
+                report.add("REF005", a.rel,
+                           f"this document sends a reader to the glossary for {name!r} and "
+                           "there is no glossary in this repository.")
+            elif not declared:
+                report.add("REF005", a.rel,
+                           f"this document cites {name!r} and no glossary declares any "
+                           "`terms:`, so nothing can say whether the word is defined. The "
+                           "definitions may well be in the body; what is missing is the "
+                           "half a reference can be resolved against.")
+            elif name.lower() not in declared:
+                report.add("REF005", a.rel,
+                           f"this document cites {name!r} and no glossary declares it. A "
+                           "citation that resolves to nothing is worse than none: the "
+                           "reader stops looking, and the word goes on meaning whatever "
+                           "each document assumed.")
+
+
+def check_decisions_leave_open(arts: list[Artifact], report: Report) -> None:
+    """What a decision did not settle, named where it can be counted.
+
+    A `DEC` that says in its prose that something remains explicitly open leaves a question
+    that no register holds and no count of open decisions includes. `leaves_open: []` is the
+    answer when there is nothing, and it is a different claim from the field being absent --
+    the third time this repository has had to buy that distinction, after `entries: {}` and
+    `products: [all]`.
+    """
+    known = declared_entries(arts)
+    for a in arts:
+        if a.type != "decision-record" or a.meta.get("status") == "superseded":
+            continue
+        if "leaves_open" not in a.meta:
+            report.add("REG012", a.rel,
+                       "this decision does not say what it leaves open. `leaves_open: []` "
+                       "is the answer when it settles everything it touched, and it is a "
+                       "different statement from saying nothing: a question a decision "
+                       "names in its prose and no register holds is a question nobody is "
+                       "counting.")
+            continue
+        for od in as_list(a.meta.get("leaves_open")):
+            if od not in known:
+                report.add("REG012", a.rel,
+                           f"this decision leaves {od!r} open and no register declares it. "
+                           "The open half of a decision is only open if somebody can find "
+                           "it, and a register is where it gets looked for.")
+
+
 def check_manifest_derived_fields(arts: list[Artifact], report: Report) -> None:
     """A manifest answering a question something else now answers.
 
@@ -1669,6 +1762,8 @@ def main() -> int:
     check_open_register(arts, report)
     check_manifest_derived_fields(arts, report)
     check_review_batches(arts, report)
+    check_glossary_terms(arts, report)
+    check_decisions_leave_open(arts, report)
     check_triage(arts, report)
     check_stack(arts, report)
     check_cross_product(arts, report)

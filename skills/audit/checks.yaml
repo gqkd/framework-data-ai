@@ -182,6 +182,22 @@ checks:
     level: warn
     title: cycle in the supersedence chain
 
+  REF005:
+    level: warn
+    title: a citation to the glossary that resolves to nothing
+    prevents: >
+      A word that reads as defined and is not. A data contract sending a reader to
+      `GLOSSARY §Tenant` for what a column means is a reference exactly like `derives_from`,
+      and until this there was no second end to resolve it against: one contract cited three
+      terms, none of the three was in the glossary, and nothing said so. That is more
+      expensive than citing nothing at all, because the reader stops looking and the word
+      goes on meaning whatever each document assumed it meant. Resolved against the `terms:`
+      map and not against the `###` headings of the body: two checks here were once built on
+      headings, somebody reworded a label, and both went quiet -- reporting nothing, which
+      reads as nothing being wrong. A citation to a term declared `blocked_by` an open entry
+      resolves and stays silent: the gap is written down, which is the whole difference, and
+      a `blocked_by` pointing at an entry no register declares is reported instead.
+
   # ── Discipline ─────────────────────────────────────────────────────────────
   RLM001:
     level: warn
@@ -330,6 +346,21 @@ checks:
       Not asked before there are products to name: a repository at day one has a register
       and no manifest anywhere, which is the state the register exists for -- it fills up
       before the products do -- and a question with no available answers is not a finding.
+
+  REG012:
+    level: warn
+    title: a decision does not say what it leaves open
+    prevents: >
+      An open question that no register holds and no count includes. A `DEC` in a real
+      repository declared in its prose that one thing remained explicitly open -- the
+      reusable semantic context -- and that question lived nowhere: not in a register, not
+      in any tally of what is undecided, findable only by somebody reading the decision end
+      to end. `leaves_open: []` is the answer when a decision settles everything it touched,
+      and it is a different statement from the field being absent, which is the same
+      distinction `entries: {}` and `products: [all]` already buy. At `warn` and not in the
+      schema, so a repository written against an earlier version keeps validating while it
+      catches up. An id named there that no register declares is reported too: the open half
+      of a decision is only open if somebody can find it.
 
   # ── STACK ──────────────────────────────────────────────────────────────────
   STK001:

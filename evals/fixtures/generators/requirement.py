@@ -238,7 +238,7 @@ FILES["ING.md"] = fm(
 """
 
 FILES["decisions/DEC-001-postgres.md"] = fm(
-    schema="framework/decision-record/v1", artifact_type="decision-record",
+    schema="framework/decision-record/v1", artifact_type="decision-record", leaves_open="[]",
     id="DEC-001", lifecycle="immutable", status="accepted", scope="architecture",
     products="[riconciliazione]", owners="[g.quaglia]", created="2026-05-12",
     derives_from="[OD-000]",

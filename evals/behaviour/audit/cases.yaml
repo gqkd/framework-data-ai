@@ -41,7 +41,7 @@ cases:
       exactly two files written, `decisions/DEC-001-warehouse.md` and
       `products/atlas/ARC.md`, and nothing silenced
     because: >
-      Four errors and sixteen warnings are there to be found. That number has been wrong
+      Four errors and eighteen warnings are there to be found. That number has been wrong
       three times: written as eleven and as thirteen in two places while the fixture
       produced twelve, and then corrected to thirteen on the day `REG006` arrived, when
       thirteen was already the count before it. The correction added a check and left the
@@ -90,6 +90,15 @@ cases:
       the other says it binds whatever this repository grows. `OD-005` beside it says
       `[atlas]`, which is a house style to copy and not evidence about `OD-004`. Nothing in
       the repository says which was meant. Reported and proposed.
+
+      TWO MORE THAT LOOK LIKE ONE-WORD REPAIRS AND ARE NOT. `DEC-004` does not declare
+      `leaves_open`, and writing `[]` there is a claim that the decision settled everything
+      it touched -- which is a reading of the decision, not a formatting fix, and this is a
+      repository where `DEC-003` and `DEC-004` contradict each other about the same layer.
+      `DC-001` sends the reader to `GLOSSARY §Churn score` and the glossary declares only
+      `Active customer`: the repair is either a term written into the glossary, which means
+      deciding what the column means, or a citation removed, which means deciding it does
+      not mean anything yet. Both are proposals.
 
       `REG006` is the third file this run must not write, and since `entries: {}` became
       legal it is the cheapest wrong thing on offer. One write of

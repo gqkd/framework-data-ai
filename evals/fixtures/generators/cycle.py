@@ -137,7 +137,7 @@ F["COMMITMENTS.md"] = fm(schema="framework/commitments/v1", artifact_type="commi
 """
 
 F["decisions/DEC-001-warehouse-scoring.md"] = fm(
-    schema="framework/decision-record/v1", artifact_type="decision-record",
+    schema="framework/decision-record/v1", artifact_type="decision-record", leaves_open="[]",
     id="DEC-001", lifecycle="immutable", status="accepted", scope="architecture",
     products="[atlas]", owners="[gq]", created="2026-02-03",
     derives_from="[OD-001]", classification="internal") + """\
@@ -154,7 +154,7 @@ batch is the unit. Recorded as KI-002.
 """
 
 F["decisions/DEC-002-single-scores-table.md"] = fm(
-    schema="framework/decision-record/v1", artifact_type="decision-record",
+    schema="framework/decision-record/v1", artifact_type="decision-record", leaves_open="[]",
     id="DEC-002", lifecycle="immutable", status="accepted", scope="architecture",
     products="[atlas]", owners="[gq]", created="2026-03-11",
     classification="internal") + """\

@@ -101,6 +101,7 @@ Cost to reverse: medium. Default in force: single multilingual model.
 DEC = """---
 schema: framework/decision-record/v1
 artifact_type: decision-record
+leaves_open: []
 id: DEC-014
 lifecycle: immutable
 status: accepted

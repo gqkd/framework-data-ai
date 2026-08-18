@@ -369,6 +369,27 @@ types:
     path: GLOSSARY.md
     lifecycle: living
     status: [active]
+    # The terms, where something other than a reader can find them. A data contract that
+    # sends you to `GLOSSARY §Tenant` for the meaning of a column is a reference like any
+    # other, and until this there was no second end to resolve it against: the terms lived
+    # in `### ` headings, and `REG002` and `REG003` already went quiet once for being built
+    # on headings somebody reworded. The body keeps the definition, the prose and the
+    # examples; the map keeps the names.
+    #
+    # `blocked_by` is the state this framework had no way to write down: a term whose
+    # definition is waiting on a decision nobody has taken. Without it the word is simply
+    # absent, and a document leaning on it reads as if it were defined somewhere else.
+    # `REF005` resolves a citation to a blocked term as found -- the gap is declared, which
+    # is the whole difference.
+    maps:
+      terms:
+        may_be_empty: true
+        keys: "^\\S.*$"
+        fields:
+          required: [kind]
+          optional: [blocked_by]
+          enums:
+            kind: [domain, metric]
 
   operational-stack:
     id: STK
@@ -584,6 +605,18 @@ types:
     # having nowhere to write down what is blocking it.
 
   decision-record:
+    # `leaves_open:` is a list of register entries, and `[]` is the answer when a decision
+    # settles everything it touched. It is not in `required` here on purpose: the schema
+    # stays quiet and `REG012` reports the absence at `warn`, so a repository written
+    # against an earlier version keeps validating while it catches up.
+    #
+    # The third time this distinction has been bought in this file, and the same one every
+    # time: `entries: {}` against an absent `entries:`, `products: [all]` against absent,
+    # and now `leaves_open: []` against absent. "I looked and there is nothing" is a
+    # statement somebody made. Nothing is a gap. A decision that names what it did not
+    # settle is the difference between an open question and a question nobody wrote down --
+    # and the second is what a `DEC` declaring an open point in its prose leaves behind,
+    # because no register holds it and no count of open decisions includes it.
     id: DEC-ADR
     name: 'Decision record: product **or** architecture'
     axis: platform

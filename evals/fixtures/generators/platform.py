@@ -284,7 +284,7 @@ _product_open("vega", "OD-006", "Whether the export is a file or an API",
               "medium", "the nightly CSV drop")
 
 F["decisions/DEC-001-shared-warehouse.md"] = fm(
-    schema="framework/decision-record/v1", artifact_type="decision-record",
+    schema="framework/decision-record/v1", artifact_type="decision-record", leaves_open="[]",
     id="DEC-001", lifecycle="immutable", status="accepted", scope="platform",
     products="[atlas, orion, vega]", owners="[g.quaglia]", created="2026-01-22",
     derives_from="[OD-001]", classification="internal") + """\
@@ -296,7 +296,7 @@ F["decisions/DEC-001-shared-warehouse.md"] = fm(
 """
 
 F["decisions/DEC-002-customer-id-integer.md"] = fm(
-    schema="framework/decision-record/v1", artifact_type="decision-record",
+    schema="framework/decision-record/v1", artifact_type="decision-record", leaves_open="[]",
     id="DEC-002", lifecycle="immutable", status="accepted", scope="platform",
     products="[atlas, orion, vega]", owners="[g.quaglia]", created="2026-02-14",
     classification="internal") + """\

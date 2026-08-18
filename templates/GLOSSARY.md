@@ -8,6 +8,22 @@ owners: [NAME]
 created: YYYY-MM-DD HH:MM
 last_review: YYYY-MM-DD HH:MM
 classification: internal
+# The terms, where a check can find them. The body below keeps the definition, the examples
+# and the argument; this map keeps the names, so that a document citing `GLOSSARY §Term` has
+# something to resolve against -- `REF005`. Not the `###` headings: two checks here were
+# built on headings once and went quiet the day somebody reworded a label.
+#
+# `blocked_by` is for the term whose definition is waiting on a decision nobody has taken.
+# It is the state that used to be written as absence, and a word that is simply missing
+# reads as a word defined somewhere else.
+terms:
+  Name of the term:
+    kind: domain
+  Name of the metric:
+    kind: metric
+  Term nobody can define yet:
+    kind: domain
+    blocked_by: OD-001
 ---
 
 # Glossary and metrics dictionary

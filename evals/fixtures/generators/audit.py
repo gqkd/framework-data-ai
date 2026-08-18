@@ -101,7 +101,8 @@ Run `validate.py --emit-index` to fill this in.
     "GLOSSARY.md": fm(schema="framework/glossary/v1", artifact_type="glossary",
                       lifecycle="living", status="active", owners="[maria]",
                       products="[atlas]",
-                      created="2026-01-01", last_review=review())
+                      created="2026-01-01", last_review=review(),
+                      terms="\n  Active customer:\n    kind: domain\n")
     + "# Glossary\n\n**Active customer** - a customer with at least one order in 90 days.\n",
     "AGENTS.md": fm(schema="framework/agents-control-plane/v1",
                     artifact_type="agents-control-plane",
@@ -109,7 +110,7 @@ Run `validate.py --emit-index` to fill this in.
                     created="2026-01-01", last_review=review())
     + "# Control plane\n\nRead OPEN.md before any structural decision.\n",
     "decisions/DEC-001-warehouse.md": fm(
-        schema="framework/decision-record/v1", artifact_type="decision-record",
+        schema="framework/decision-record/v1", artifact_type="decision-record", leaves_open="[]",
         id="DEC-001", lifecycle="immutable", status="accepted", scope="architecture",
         products="[atlas]", owners="[maria]", derives_from="OD-001",
         created="2026-02-10")
@@ -233,11 +234,17 @@ Row counts match for 7 consecutive days.
 #            without looking at it
 # 16. VER001 ARC attests `product.backend` and this manifest declares no `code:`,
 #            so the commit points at a repository nothing here can resolve
-# 17. REG011 OD-004 sits in the register at the root and names no `products:`, so it
+# 17. REG012 DEC-004 does not say what it leaves open. The others here declare
+#            `leaves_open: []`, so the silence is legible as a defect and not as the
+#            state of a repository that has not caught up
+# 18. REF005 DC-001 sends the reader to `GLOSSARY §Churn score`, and the glossary
+#            declares `Active customer` and nothing else. The column reads as defined
+#            and is not, which is worse than a column with no semantics at all
+# 19. REG011 OD-004 sits in the register at the root and names no `products:`, so it
 #            binds every product by rule and reads exactly like an entry nobody asked
 #            the question about. OD-005 beside it names one, which is what makes the
 #            silence legible as a defect rather than as the house style
-# 18. REG009  OD-004 carries a date as its trigger. The cheapest wrong repair is to
+# 20. REG009  OD-004 carries a date as its trigger. The cheapest wrong repair is to
 #            invent an event that clears it, which is the failure this fixture is
 #            built around: the date says when somebody hoped, and only the person who
 #            wrote it knows what it was standing in for
@@ -318,7 +325,8 @@ each decision still matters, which no generator can produce.
     "GLOSSARY.md": fm(schema="framework/glossary/v1", artifact_type="glossary",
                       lifecycle="living", status="active", owners="[maria]",
                       products="[atlas]",
-                      created="2024-01-01", last_review="2024-01-05 09:00")
+                      created="2024-01-01", last_review="2024-01-05 09:00",
+                      terms="\n  Active customer:\n    kind: domain\n")
     + """# Glossary
 
 **Active customer** - a customer with at least one order in 90 days.
@@ -333,7 +341,7 @@ each decision still matters, which no generator can produce.
 
     # 4. FM002: lifecycle living on a decision-record
     "decisions/DEC-002-pii.md": fm(
-        schema="framework/decision-record/v1", artifact_type="decision-record",
+        schema="framework/decision-record/v1", artifact_type="decision-record", leaves_open="[]",
         id="DEC-002", lifecycle="living", status="accepted", scope="platform",
         products="[atlas]", owners="[maria]", created="2026-02-20")
     + "# DEC-002 - Hash PII on landing\n\nWe hash email and phone at landing time.\n"
@@ -341,13 +349,13 @@ each decision still matters, which no generator can produce.
 
     # 9. REF003: DEC-001 superseded by DEC-003 but still accepted
     "decisions/DEC-001-warehouse.md": fm(
-        schema="framework/decision-record/v1", artifact_type="decision-record",
+        schema="framework/decision-record/v1", artifact_type="decision-record", leaves_open="[]",
         id="DEC-001", lifecycle="immutable", status="accepted", scope="architecture",
         products="[atlas]", owners="[maria]", derives_from="OD-001",
         created="2026-02-10")
     + "# DEC-001 - Landing zone on BigQuery\n\nWe land raw extracts in BigQuery.\n",
     "decisions/DEC-003-warehouse-snowflake.md": fm(
-        schema="framework/decision-record/v1", artifact_type="decision-record",
+        schema="framework/decision-record/v1", artifact_type="decision-record", leaves_open="[]",
         id="DEC-003", lifecycle="immutable", status="accepted", scope="architecture",
         products="[atlas]", owners="[maria]", supersedes="DEC-001",
         created="2026-05-02")
@@ -449,7 +457,9 @@ Scoring latency stays under 200ms p95.
         id="DC-001", lifecycle="living", status="active", products="[atlas]",
         consumers="[atlas, orion]", owners="[maria]",
         created="2026-04-10", last_review=review())
-    + "# DC-001 - churn_scores\n\nOne row per customer per day.\n",
+    + ("# DC-001 - churn_scores\n\nOne row per customer per day.\n\n"
+       "| Field | Type | Semantics |\n|---|---|---|\n"
+       "| churn_score | float | `GLOSSARY §Churn score` |\n"),
 }
 
 

@@ -12,6 +12,11 @@ created: YYYY-MM-DD HH:MM
 derives_from: [HYP-NNN, EVD-NNN, SIG-NNN]
 supersedes: null
 classification: internal
+leaves_open: []                # the register entries this decision did NOT settle, and
+                               # `[]` when it settled everything it touched. `REG012`
+                               # reports the field missing, because a question a decision
+                               # names in its prose and no register holds is a question
+                               # nobody is counting
 ---
 
 # DEC-NNN · Decision title, in the active voice

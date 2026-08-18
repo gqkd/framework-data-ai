@@ -261,7 +261,8 @@ def _clean_repo():
         "decisions/DEC-001-slug.md": fm(
             schema="framework/decision-record/v1", artifact_type="decision-record",
             id="DEC-001", lifecycle="immutable", status="accepted", scope="architecture",
-            products="[alpha]", owners="[owner]", created="2026-01-01") + "# DEC-001\n",
+            products="[alpha]", owners="[owner]", created="2026-01-01",
+            leaves_open="[]") + "# DEC-001\n",
         "products/alpha/PBR.md": fm(
             schema="framework/product-brief/v1", artifact_type="product-brief",
             lifecycle="living", status="active", products="[alpha]", owners="[owner]",
@@ -283,6 +284,90 @@ def _clean_repo():
             return [f"the validator crashed: {r.stderr.strip().splitlines()[-1]}"]
         out = json.loads(r.stdout)
         return [f"{f['code']} {f['path']}: {f['message']}" for f in out["findings"]]
+
+
+@check("a citation to a term, and a decision that says what it left open, both resolve")
+def _references_with_a_second_end():
+    # Two pairs that had one end each. A data contract sending a reader to the glossary for
+    # what a column means, and a decision declaring in its prose that something stays open:
+    # both were references, and nothing resolved either of them.
+    fm = lambda **kw: "---\n" + "\n".join(f"{k}: {v}" for k, v in kw.items()) + "\n---\n\n"
+
+    def repo(terms: str, cite: str, leaves: str | None) -> dict:
+        dec = {"schema": "framework/decision-record/v1",
+               "artifact_type": "decision-record", "id": "DEC-001",
+               "lifecycle": "immutable", "status": "accepted", "scope": "architecture",
+               "products": "[alpha]", "owners": "[o]", "created": "2026-01-01"}
+        if leaves is not None:
+            dec["leaves_open"] = leaves
+        return {
+            "framework.yaml": f"framework_version: {REGISTRY['version']}\n",
+            "OPEN.md": fm(schema="framework/open-register/v1",
+                          artifact_type="open-register", lifecycle="living",
+                          status="active", owners="[o]", created="2026-01-01 09:00",
+                          last_review="2026-08-01 09:00",
+                          entries="\n  OD-001:\n    status: open\n"
+                                  "    cost_to_reverse: low\n    products: [all]\n"
+                                  "    default_in_force: nothing\n") + "# Open\n",
+            "GLOSSARY.md": fm(schema="framework/glossary/v1", artifact_type="glossary",
+                              lifecycle="living", status="active", owners="[o]",
+                              created="2026-01-01 09:00", last_review="2026-08-01 09:10",
+                              terms=terms) + "# Glossary\n",
+            "decisions/DEC-001-slug.md": fm(**dec) + "# DEC-001\n",
+            "products/alpha/contracts/DC-001-x.md": fm(
+                schema="framework/data-contract/v1", artifact_type="data-contract",
+                id="DC-001", lifecycle="living", status="active", products="[alpha]",
+                consumers="[alpha]", owners="[o]", created="2026-01-01 09:00",
+                last_review="2026-08-01 09:20") + f"# DC-001\n\n{cite}\n",
+        }
+
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+
+        def codes(files) -> set[str]:
+            for stale in root.rglob("*.md"):
+                stale.unlink()
+            for rel, text in files.items():
+                f = root / rel
+                f.parent.mkdir(parents=True, exist_ok=True)
+                f.write_text(text)
+            r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(root),
+                                "--json"], capture_output=True, text=True)
+            return {f["code"] for f in json.loads(r.stdout)["findings"]}
+
+        defined = "\n  Freshness:\n    kind: metric\n"
+        blocked = "\n  Freshness:\n    kind: metric\n    blocked_by: OD-001\n"
+        stale_block = "\n  Freshness:\n    kind: metric\n    blocked_by: OD-404\n"
+
+        if "REF005" not in codes(repo(defined, "`GLOSSARY §Tenant` is the unit", "[]")):
+            problems.append("a citation to a term no glossary declares was not reported: it "
+                            "reads as defined, and the reader stops looking")
+        if "REF005" in codes(repo(defined, "`GLOSSARY §Freshness` is the unit", "[]")):
+            problems.append("a citation to a declared term was reported, so the field cannot "
+                            "be answered")
+        if "REF005" in codes(repo(blocked, "`GLOSSARY §Freshness` is the unit", "[]")):
+            problems.append("a citation to a term declared blocked by an open entry was "
+                            "reported: the gap is written down, which is the difference "
+                            "between a word waiting on a decision and a word nobody defined")
+        if "REF005" not in codes(repo(stale_block, "# nothing cited here", "[]")):
+            problems.append("a term blocked by an entry no register declares was not "
+                            "reported, so the reason the word has no definition points at "
+                            "nothing")
+
+        if "REG012" not in codes(repo(defined, "# nothing cited here", None)):
+            problems.append("a decision saying nothing about what it leaves open was not "
+                            "reported: `[]` is a statement and silence is a gap")
+        if "REG012" in codes(repo(defined, "# nothing cited here", "[]")):
+            problems.append("a decision declaring `leaves_open: []` was reported, so there "
+                            "is no way to say a decision settled everything it touched")
+        if "REG012" in codes(repo(defined, "# nothing cited here", "[OD-001]")):
+            problems.append("a decision naming an entry a register declares was reported")
+        if "REG012" not in codes(repo(defined, "# nothing cited here", "[OD-404]")):
+            problems.append("a decision leaving an entry open that no register declares was "
+                            "not reported: the open half of a decision is only open if "
+                            "somebody can find it")
+    return problems
 
 
 @check("a review of six documents in one minute is reported, and a day one set is not")
@@ -731,6 +816,15 @@ def _maps_are_constrained():
             # rather than assumed: `keys` is an arbitrary pattern, and hardcoding one shape
             # of nickname meant the check broke the first time a map keyed its rows on
             # identifiers instead.
+            # THE ONE MAP WHOSE KEYS ARE NOT IDENTIFIERS. A glossary is keyed on the words
+            # the business uses -- "Active customer", "Freshness", "Frontend" -- and there
+            # is no vocabulary to close: any name a person writes is a name they write.
+            # What protects a citation from a typo is not the pattern but `REF005`, which
+            # resolves `GLOSSARY §Term` against these keys with case and whitespace
+            # normalised and reports the ones that find nothing.
+            if (name, field) == ("glossary", "terms"):
+                continue
+
             pattern = rule.get("keys")
             candidates = ["SIG-001", "OD-001", "frontend", "query-engine",
                           "product.backend", "platform.access"]

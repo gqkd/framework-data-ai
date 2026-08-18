@@ -1,6 +1,7 @@
 ---
 schema: framework/decision-record/v1
 artifact_type: decision-record
+leaves_open: []
 lifecycle: immutable
 status: accepted
 id: DEC-001
