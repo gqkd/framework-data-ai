@@ -34,7 +34,7 @@ entries:
 
 # §1 · Open decisions
 
-## Cost to reverse HIGH: decide before the first line of code
+## Cost to reverse HIGH: changing it later means redoing work that already exists
 
 ### OD-001 · Where the system runs
 
@@ -56,7 +56,7 @@ entries:
   evaluation, and the client's sentence ("gli esce il codice giusto") can be read either way.
 - **Trigger:** before the first line of code.
 
-## Cost to reverse MEDIUM: decide within the first month
+## Cost to reverse MEDIUM: changing it later costs a migration, not a rewrite
 
 ### OD-003 · How stock levels reach the system
 
@@ -67,7 +67,7 @@ entries:
   left Verona this morning.
 - **Trigger:** before the pilot.
 
-## Cost to reverse LOW: defer them as long as you like
+## Cost to reverse LOW: changing it later costs an afternoon
 
 ### OD-004 · Which language the interface is in
 

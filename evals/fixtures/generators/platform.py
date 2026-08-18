@@ -204,7 +204,7 @@ F["platform/OPEN.md"] = fm(
 
 # §1 · Open decisions
 
-## Cost to reverse HIGH: decide before the first line of code
+## Cost to reverse HIGH: changing it later means redoing work that already exists
 
 ### OD-002 · How EU subjects are pseudonymised in the shared identity
 

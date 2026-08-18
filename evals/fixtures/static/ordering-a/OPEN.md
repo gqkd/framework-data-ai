@@ -59,7 +59,7 @@ entries:
 
 # §1 · Open decisions
 
-## Cost to reverse HIGH: decide before the first line of code
+## Cost to reverse HIGH: changing it later means redoing work that already exists
 
 ### OD-002 · One identity provider for both products, or one per product
 
@@ -115,7 +115,7 @@ entries:
   measuring how late it is.
 - **Trigger:** the first Monday the analyst who drops the CSV by hand is on leave.
 
-## Cost to reverse MEDIUM: decide within the first month
+## Cost to reverse MEDIUM: changing it later costs a migration, not a rewrite
 
 ### OD-008 · Which orchestrator runs the weekly pipeline
 
@@ -135,7 +135,7 @@ entries:
   convention nobody agreed.
 - **Trigger:** none stated.
 
-## Cost to reverse LOW: defer them as long as you like
+## Cost to reverse LOW: changing it later costs an afternoon
 
 ### OD-006 · Which BI tool the store-ops digest is rendered in
 

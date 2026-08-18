@@ -85,7 +85,7 @@ FILES["products/riconciliazione/OPEN.md"] = fm(
 
 # §1 · Open decisions
 
-## Cost to reverse HIGH: decide before the first line of code
+## Cost to reverse HIGH: changing it later means redoing work that already exists
 
 ### OD-001 · Which orchestrator runs the nightly pipeline
 
@@ -95,7 +95,7 @@ FILES["products/riconciliazione/OPEN.md"] = fm(
 - **The problem the default introduces:** no retry, no lineage, failures are silent.
 - **Trigger:** the first silent failure that reaches the customer's report.
 
-## Cost to reverse MEDIUM: decide within the first month
+## Cost to reverse MEDIUM: changing it later costs a migration, not a rewrite
 
 ### OD-002 · Tenancy model of the reconciliation product
 

@@ -266,6 +266,21 @@ checks:
       the quarter" passes -- that is a limit of the check and not permission, and the
       template says so where a person is writing the line.
 
+  REG010:
+    level: warn
+    title: a heading of the open register carries a date
+    prevents: >
+      A term of time applied to every entry filed under a heading, recorded by no field of
+      any of them. This framework's own template shipped one -- the tier heading read
+      "decide within the first month" -- and in the first repository that copied it that
+      sentence bound sixteen entries at once without saying from when. `REG009` cannot see
+      it: it reads the `trigger` of an entry, and a heading belongs to no entry. Headings
+      only, which is what separates this from matching prose: a line starting with `#` is
+      structure somebody wrote on purpose, and a date in one is addressed to whoever files
+      an entry underneath. What a heading is for is what a group of entries have in common,
+      which in this register is what changing your mind costs; when each has to be decided
+      is its own trigger.
+
   # ── STACK ──────────────────────────────────────────────────────────────────
   STK001:
     level: warn

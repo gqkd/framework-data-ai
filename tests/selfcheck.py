@@ -1671,6 +1671,32 @@ def _registers_are_per_product():
                 problems.append(f"a trigger reading {written!r} was reported: the check is "
                                 "matching prose rather than digits")
 
+        # A date in a heading, which `REG009` structurally cannot see: it reads the
+        # `trigger` of an entry, and a heading belongs to no entry while binding every one
+        # filed under it. This framework shipped one in its own template.
+        head = lambda h: (fm("entries:\n  OD-004:\n    status: open\n"
+                             "    cost_to_reverse: high\n"
+                             "    default_in_force: none\n"
+                             "    trigger: before the second customer\n")
+                          + f"\n{h}\n\n### OD-004 - A choice\n")
+        for written in ("## Cost to reverse MEDIUM: decide by 2026-09-30",
+                        "## Decide these in Q4 2026",
+                        "### OD-004 - move by 30/09/2026"):
+            (root / "products" / "beta" / "OPEN.md").write_text(head(written))
+            codes = [f["code"] for f in json.loads(run().stdout)["findings"]]
+            if "REG010" not in codes:
+                problems.append(f"a heading reading {written!r} was not reported. It binds "
+                                "every entry under it and no `trigger` records it, so "
+                                "nothing will ever report it going stale")
+
+        for written in ("## Cost to reverse MEDIUM: changing it later costs a migration",
+                        "## Cost to reverse HIGH"):
+            (root / "products" / "beta" / "OPEN.md").write_text(head(written))
+            codes = [f["code"] for f in json.loads(run().stdout)["findings"]]
+            if "REG010" in codes:
+                problems.append(f"a heading reading {written!r} was reported: the check is "
+                                "matching headings rather than dates in them")
+
         # `decide_with`: the pairing an ordering cannot express. Same resolution as
         # `depends_on`, because a pairing with an entry nobody can find reads as one that
         # was honoured, and the self reference on top -- a field that looks filled in and

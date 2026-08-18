@@ -694,6 +694,26 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
                        "none, and an agent sent to work on this product finds a directory "
                        "that says nothing is open.")
 
+    # A date in a heading binds every entry filed under it, and no field of any entry
+    # records it. The tier headings of this framework's own template used to read "decide
+    # within the first month", which put a term of time on sixteen entries at once in the
+    # first repository that copied them -- and `REG009` could not see it, because it reads
+    # the `trigger` of an entry and a heading belongs to no entry.
+    #
+    # Headings only, and that is what makes this checkable rather than a guess at prose: a
+    # line starting with `#` is a structure a person wrote on purpose, and a date in one is
+    # addressed to whoever files an entry underneath it.
+    for a in opens:
+        for i, line in enumerate(a.body.splitlines(), 1):
+            if line.startswith("#") and DATE_IN_TEXT.search(line):
+                report.add("REG010", a.rel,
+                           f"a heading carries a date: {line.strip()[:70]!r}. It applies to "
+                           "every entry filed under it and belongs to none of them, so no "
+                           "`trigger` records it and nothing will report it going stale. A "
+                           "heading says what a group of entries have in common -- what "
+                           "changing your mind costs -- and when each of them has to be "
+                           "decided is the `trigger` of that entry.")
+
     # Numbering is one sequence across every register in the repository. `depends_on` and
     # the `derives_from` of a `DEC` resolve an entry by its id alone, so two registers that
     # both start at `OD-001` make those references ambiguous, and the ambiguity resolves

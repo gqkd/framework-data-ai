@@ -114,9 +114,12 @@ thing still open", there are three of them and nothing says which comes first.
 # §1 · Open decisions
 
 Grouped by cost to reverse, not by topic: it is the cost that tells you which ones to look
-at first.
+at first. The heading says what changing your mind costs, and nothing about when to decide
+-- a tier is a price, and a price has no calendar. When each entry has to be decided is its
+own `trigger`, which names an event, and `REG009` and `REG010` report a date written in
+either place.
 
-## Cost to reverse HIGH: decide before the first line of code
+## Cost to reverse HIGH: changing it later means redoing work that already exists
 
 ### OD-001 · Title of the decision, in the form of a choice
 
@@ -139,7 +142,7 @@ at first.
   two decisions, this one refuses to order them. Write it on both entries: nothing checks
   that you did, because nothing can tell which of the two is wrong when only one says it.
 
-## Cost to reverse MEDIUM: decide within the first month
+## Cost to reverse MEDIUM: changing it later costs a migration, not a rewrite
 
 ### OD-002 · Title
 
@@ -147,7 +150,7 @@ at first.
 - **The problem the default introduces:**
 - **Trigger:**
 
-## Cost to reverse LOW: defer them as long as you like
+## Cost to reverse LOW: changing it later costs an afternoon
 
 ### OD-003 · Title
 

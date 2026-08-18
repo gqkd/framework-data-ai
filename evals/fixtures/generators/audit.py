@@ -72,7 +72,7 @@ Run `validate.py --emit-index` to fill this in.
 
 # §1 · Open decisions
 
-## Cost to reverse MEDIUM
+## Cost to reverse MEDIUM: changing it later costs a migration, not a rewrite
 
 ### OD-004 · Which warehouse for the gold layer
 
@@ -273,7 +273,7 @@ each decision still matters, which no generator can produce.
 
 # §1 · Open decisions
 
-## Cost to reverse HIGH: decide before the first line of code
+## Cost to reverse HIGH: changing it later means redoing work that already exists
 
 ### OD-005 · Do we retain raw PII in the landing zone
 
@@ -283,7 +283,7 @@ each decision still matters, which no generator can produce.
 - **The problem the default introduces:** nobody knows what is in the bucket today.
 - **Trigger:** before the first model is written against the bucket.
 
-## Cost to reverse MEDIUM: decide within the first month
+## Cost to reverse MEDIUM: changing it later costs a migration, not a rewrite
 
 ### OD-004 · Which warehouse for the gold layer
 
