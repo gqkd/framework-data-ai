@@ -1748,6 +1748,83 @@ def _extract_keeps_provenance():
     return problems
 
 
+
+@check("a count of findings written in prose is the count the fixture produces")
+def _fixture_counts_are_measured():
+    # Three times the number of findings in `audit/dirty-repo` was written into prose and
+    # three times it went stale: eleven, then thirteen against a fixture producing twelve,
+    # then thirteen again on the day `OD006` was added, when thirteen was already the count
+    # before it. Every one of those was written in a file whose subject is documents going
+    # out of date, and nothing reported any of them.
+    #
+    # The count stays in prose rather than being deleted, because "four errors and fourteen
+    # warnings, by construction" is what tells a reader the fixture is planted and not
+    # merely dirty, and a pointer to a command they have to run says much less. What was
+    # missing is the thing that makes a number in prose safe: something that reads it.
+    #
+    # The fixture is the authority, not this file. It is built into a temporary directory
+    # and measured, so the check cannot be cleared by editing a number here.
+    words = {"zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
+             "seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12,
+             "thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16,
+             "seventeen": 17, "eighteen": 18, "nineteen": 19, "twenty": 20}
+    stated = re.compile(r"\b(" + "|".join(words) + r")\s+errors?\s+and\s+"
+                        r"(" + "|".join(words) + r")\s+warnings?\b", re.I)
+
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        gen = ROOT / "evals" / "fixtures" / "generators" / "audit.py"
+        r = subprocess.run([sys.executable, str(gen), tmp],
+                           capture_output=True, text=True)
+        if r.returncode != 0:
+            return [f"the audit fixture would not build, so its documented count cannot be "
+                    f"checked: {r.stderr.strip() or r.stdout.strip()}"]
+
+        measured = {}
+        for name in ("dirty-repo", "clean-repo"):
+            v = subprocess.run([sys.executable, str(VALIDATE), "--root",
+                                str(Path(tmp) / name), "--json"],
+                               capture_output=True, text=True)
+            try:
+                d = json.loads(v.stdout)
+            except json.JSONDecodeError:
+                problems.append(f"the validator returned nothing readable on {name}")
+                continue
+            measured[name] = (d["errors"], d["warnings"])
+
+        # The fixture that must report nothing. Its README says a checker finding something
+        # here is inventing, which is a claim about output and belongs with the other one.
+        if measured.get("clean-repo", (0, 0)) != (0, 0):
+            e, w = measured["clean-repo"]
+            problems.append(f"audit/clean-repo reports {e} error(s) and {w} warning(s). "
+                            "Its whole description is that anything reported there is "
+                            "invented, and a fixture that contradicts its own description "
+                            "teaches you to read past its output")
+
+        if "dirty-repo" not in measured:
+            return problems
+        want = measured["dirty-repo"]
+
+        found = 0
+        for rel in ("evals/fixtures/README.md", "evals/behaviour/audit/cases.yaml"):
+            text = (ROOT / rel).read_text(encoding="utf-8")
+            for m in stated.finditer(text):
+                found += 1
+                got = (words[m.group(1).lower()], words[m.group(2).lower()])
+                line = text[:m.start()].count("\n") + 1
+                if got != want:
+                    problems.append(
+                        f"{rel}:{line} says {got[0]} errors and {got[1]} warnings; "
+                        f"audit/dirty-repo produces {want[0]} and {want[1]}. Either the "
+                        "fixture changed and the sentence did not, or the sentence was "
+                        "wrong when it was written")
+        if not found:
+            problems.append(
+                "no file states what audit/dirty-repo produces any more. The count is "
+                "what tells a reader the fixture is planted rather than merely dirty; if "
+                "it is gone on purpose, this check is what has to go with it")
+    return problems
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 print()

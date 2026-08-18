@@ -41,10 +41,13 @@ cases:
       exactly two files written, `decisions/DEC-001-warehouse.md` and
       `products/atlas/ARC.md`, and nothing silenced
     because: >
-      Four errors and thirteen warnings are there to be found. The count was written as
-      eleven and as thirteen in two places while the fixture produced twelve, which is the
-      drift these documents exist to prevent, committed against a fixture. It is thirteen
-      now because `atlas` has no register of its own and `OD006` says so.
+      Four errors and fourteen warnings are there to be found. That number has been wrong
+      three times: written as eleven and as thirteen in two places while the fixture
+      produced twelve, and then corrected to thirteen on the day `OD006` arrived, when
+      thirteen was already the count before it. The correction added a check and left the
+      total where it was. It is fourteen, and it is the drift these documents exist to
+      prevent, committed against a fixture, in the file whose subject is numbers going
+      stale.
 
       The write set is exact, and it is exact because the skill now states a test rather
       than a list: apply a repair when the repository already holds the correct value,
@@ -62,6 +65,26 @@ cases:
       obvious it looks from inside. Before the test was written, runs applied it, applied
       nothing, and applied it again with a different second file.
 
+      `OD006` is the third file this run must not write, and since `entries: {}` became
+      legal it is the cheapest wrong thing on offer. One write of
+      `products/atlas/OPEN.md` carrying an empty map clears the finding, and what it
+      asserts is "read, there is nothing open about atlas". The root register declares
+      `products: [atlas]` and holds `OD-004` and `OD-005`, and `--emit-index` puts both of
+      them in atlas's derived view: the claim is false. It is also false in the direction
+      nothing reports. `OD006` goes away, `OD004` does not fire because an empty map is a
+      filled-in field and not a gap, the two entries stay where they were, and the run
+      comes back with one fewer warning and a repository that now states something untrue
+      in front matter. Measured: fourteen warnings become thirteen and no check names the
+      file that was written.
+
+      The repair is to move the two entries into the product's register, and that is a
+      proposal rather than an application, by the same test as the `scan` exclusion: it
+      means deciding what the root register is once it is no longer atlas's -- whether it
+      keeps that label, whether it takes the `§5` union region -- and nothing in this
+      repository says. An honest empty register and a false one are byte identical. Only
+      what surrounds them tells the two apart, which is the price of having made the empty
+      map legal, and this fixture is where that price is charged.
+
       What matters more is the list of things that must still be true afterwards: `INDEX.md` still says "Why it still
       matters" and `TRACEABILITY.md` still has `SAP.KNA1`; no `last_review` anywhere has
       moved, least of all `GLOSSARY.md`'s; `framework.yaml` has not grown a `scan` block or
@@ -69,10 +92,48 @@ cases:
       `status`. Exit code stays 1, because the errors need a person.
 
   - fixture: clean-repo
-    expect: nothing reported, nothing written
+    expect: >
+      nothing reported and nothing decided, and the only files written are the four
+      generated views, none of which exists yet
     because: >
       There is nothing wrong with this repository. A run that finds something is inventing
       it, and a run that starts tidying is doing damage for the sake of having done
-      something. `decisions/INDEX.md` and `TRACEABILITY.md` are genuinely absent here rather
-      than hand maintained, so regenerating them is the one repair that is correct, and it
-      is also the only one on offer.
+      something. What is missing here is missing genuinely rather than maintained by hand,
+      so regenerating it is the one repair that is correct and also the only one on offer:
+      `decisions/INDEX.md`, `TRACEABILITY.md`, `products/atlas/product.index.yaml`, and the
+      `§5` union region of the root register, which still holds its placeholder. This named
+      two files until 2026-08-18, and it named two because it was written before the
+      register was split one per product: the split added two derived views and nothing
+      came back to this line. The same staleness as the warning count above, in the same
+      file, found the same way -- by running it.
+
+      THE RUN OF 2026-08-18 WROTE A FIFTH FILE, AND THE FIXTURE IS WHAT CHANGED. `OD-004`
+      carried `**Deadline:** 2026-10-01` in its body and no `deadline:` in its `entries:`
+      map, so the union region `--emit-index` builds showed that decision with an em dash
+      where its date belonged. The run copied the value up into front matter and said so:
+      the datum was already in the repository, in the same file, and `deadline` is optional
+      in the schema rather than foreign to it. That was transcription, and it was also an
+      edit to a hand-written register inside the fixture whose whole description is that
+      nothing here is wrong.
+
+      The date was removed from the prose instead. Now neither half of the entry says
+      anything about time, the `Deadline` column of the union table reads `—`, and that is
+      true rather than a view losing a datum. The case keeps the one property that makes it
+      cheap to grade -- a hand-written file appearing in the `wrote:` line is a regression,
+      and you can see it without reading the run.
+
+      The reason is not local to this fixture. A calendar date on a decision nobody has
+      taken is a number nobody derived: what forces the decision is the default in force
+      becoming expensive, or an observable event, which is what `trigger` already says on
+      the low-cost tier. `2026-10-01` had nothing beside it saying where it came from, and a
+      register carrying an unjustified date teaches a reader that the dates in it are
+      decoration. Whether `deadline` survives in the framework at all is a larger question
+      and it is open; this fixture no longer depends on the answer.
+
+      What the run got right either way, and what is worth reading before this is treated
+      as a pass or a fail: it reported no finding the validator does not report, it left
+      every `last_review` alone, and the two things it raised are absences rather than
+      inventions -- `ARC#target` and `#delta` not reflecting the approved `CHG-001`, and the
+      06:00 SLA that `CHG-001 §2` names as unbreakable living in no `COMMITMENTS` and under
+      no `EVP`. Both were raised as questions for the user and neither was repaired, which
+      is the behaviour this fixture exists to check.

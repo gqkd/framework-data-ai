@@ -43,6 +43,7 @@ import argparse
 import fnmatch
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -62,6 +63,24 @@ SKILLS = {p.name for p in (ROOT / "skills").iterdir() if (p / "SKILL.md").exists
 # skill, and a hundred agents let loose with Edit on a copy of a fixture is a slow way to
 # discover that one of them rewrote it.
 DENY = ["Write", "Edit", "NotebookEdit", "Bash", "WebFetch", "WebSearch"]
+
+# A RUN THAT NEVER REACHED A MODEL IS NOT A RUN THAT CHOSE NOTHING. On 2026-08-18 the
+# account hit its session limit partway through, and all fifteen `audit` cases came back
+# with no skill fired: 0 of 15, in a set that scores 15 of 15 an hour later. Nothing in the
+# output said the measurement had not happened, and 0 of 15 is exactly the shape of a
+# description that stopped working.
+#
+# This is the third time the same failure has produced a number here -- the 120 second
+# timeout that read as "no skill fired", and the six skills in one fixture -- and all three
+# were wrong in the direction somebody acts on. So the run is marked unusable rather than
+# scored, and `main` refuses to print a total while any case is.
+#
+# Matched on the assistant text, because that is where it was actually observed. Matching
+# on a `result` event whose error shape nobody here has seen would be a check written
+# against a guess, and an unfired check is worse than none.
+UNUSABLE = re.compile(r"session limit|usage limit|rate limit|credit balance|"
+                      r"upgrade to increase|Claude AI usage limit", re.I)
+UNAVAILABLE = "<unusable>"
 
 
 def one_run(prompt: str, fixture: Path, timeout: int) -> list[str]:
@@ -91,6 +110,7 @@ def one_run(prompt: str, fixture: Path, timeout: int) -> list[str]:
 
     deadline = time.monotonic() + timeout
     fired: list[str] = []
+    said: list[str] = []
     try:
         for line in p.stdout:                       # blocks per line, not per process
             line = line.strip()
@@ -101,6 +121,8 @@ def one_run(prompt: str, fixture: Path, timeout: int) -> list[str]:
                     ev = {}
                 if ev.get("type") == "assistant":
                     for c in ev.get("message", {}).get("content", []):
+                        if c.get("type") == "text":
+                            said.append(c["text"])
                         if c.get("type") == "tool_use" and c.get("name") == "Skill":
                             # `framework-data-ai:start` when installed as a plugin, `start`
                             # from a bare skills directory. Both are the same answer.
@@ -115,6 +137,8 @@ def one_run(prompt: str, fixture: Path, timeout: int) -> list[str]:
         p.kill()
         p.wait(timeout=10)
         shutil.rmtree(tmp, ignore_errors=True)
+    if not fired and UNUSABLE.search(" ".join(said)):
+        return [UNAVAILABLE]
     return fired
 
 
@@ -176,6 +200,14 @@ def main() -> int:
     per: dict[str, list[list[str]]] = {}
     for (c, _), f in zip(jobs, fired):
         per.setdefault(c["prompt"], []).append(f)
+
+    unusable = sum(1 for f in fired if f == [UNAVAILABLE])
+    if unusable:
+        print(f"\n{unusable} of {len(jobs)} runs never reached a model -- the account was "
+              "out of quota, or the CLI could not start. Those cases would score as `none`, "
+              "which is indistinguishable from a description that does not fire.\n"
+              "NOT SCORED. Re-run when the account is available.", file=sys.stderr)
+        return 2
 
     rows, confusion = [], Counter()
     for c in cases:

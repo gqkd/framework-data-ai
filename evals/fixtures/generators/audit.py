@@ -79,7 +79,6 @@ Run `validate.py --emit-index` to fill this in.
 - **Question:** Snowflake or BigQuery for the gold layer?
 - **Cost to reverse:** medium.
 - **Default in force:** BigQuery, because the landing zone is already there.
-- **Deadline:** 2026-10-01.
 
 # §4 · Decided, moved out
 

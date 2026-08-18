@@ -42,20 +42,44 @@ claude plugin details framework-data-ai        # should list all six
 
 ## Where it stands
 
-| | | miss |
-|---|---|---|
-| `audit` | 14/15 | a prompt naming a path the fixture does not have |
-| `cycle` | 12/13 | *go ahead and implement a redis cache*: work starting with no approved `CHG`, the indirect case the description claims and the hardest one |
-| `release` | 15/16 | a production incident went to `requirement`, the only misroute in the set and an arguable label |
-| `requirement` | 18/20 | raising an `EVP` threshold; adding to the parking lot of `OPEN.md` |
-| `resolve` | 10/11 | closing an `OD` with a decision already taken, which is arguably `requirement` |
-| `start` | 12/12 | |
-| negatives | 24/25 | *spiegami cosa contiene un CHG*, an explanation, started `cycle` |
+Each row carries the day it was measured, because a score is only about the framework it
+was run against. `audit` and `resolve` were re-run on **2026-08-18** against 1.1.0, after
+the open register was split one-per-product. The other five rows are from **2026-08-10**,
+against a framework where `OPEN.md` was one file at the root.
 
-**105 of 112.** The failure is undertriggering: one misroute between siblings in the whole
-set, and one overtrigger, against 25 negatives that include lexical traps.
+| | measured | | miss |
+|---|---|---|---|
+| `audit` | 08-18 | 15/15 | |
+| `resolve` | 08-18 | 11/11 | |
+| `cycle` | 08-10 | 12/13 | *go ahead and implement a redis cache*: work starting with no approved `CHG`, the indirect case the description claims and the hardest one |
+| `release` | 08-10 | 15/16 | a production incident went to `requirement`, the only misroute in the set and an arguable label |
+| `requirement` | 08-10 | 18/20 | raising an `EVP` threshold; adding to the parking lot of `OPEN.md` |
+| `start` | 08-10 | 12/12 | |
+| negatives | 08-10 | 24/25 | *spiegami cosa contiene un CHG*, an explanation, started `cycle` |
 
-Two earlier numbers are wrong and are recorded here because both were wrong in the
+**107 of 112 if you add the column, and adding it is the thing not to do**: two rows are
+eight days newer than the rest and were measured against different rules. The number that
+means something is per row, on its date.
+
+The two that moved each gained one case, and neither gain should be read as an improvement
+until it is repeated. `audit`'s miss was a prompt naming a path the fixture does not have;
+`resolve`'s was closing an `OD` with a decision already taken, which is arguably
+`requirement`. One run per case is the default, so a single case flipping is inside the
+noise of the measurement -- `--runs 5` on the case is what settles it, and it has not been
+run.
+
+The failure across the set is still undertriggering: one misroute between siblings, and one
+overtrigger against 25 negatives that include lexical traps.
+
+**A run that never reached a model used to score as a run that fired nothing.** The first
+`audit` re-run on 08-18 came back 0 of 15 because the account hit its session limit partway
+through, which is the same shape as a description that stopped working entirely, and
+nothing in the output distinguished them. That is the third wrong number this file has
+carried for a harness reason, after the 120 second timeout and the six skills in one
+fixture. `run.py` now marks those runs unusable and refuses to print a total while any case
+is one.
+
+Earlier numbers here are wrong and are kept because every one of them was wrong in the
 flattering direction, which is the direction that gets believed:
 
 **3 of 10 for `audit`.** That harness registered the descriptions as `.claude/commands/*.md`,
@@ -103,6 +127,14 @@ this repository rather than in the skill: a gate rule that blocked on metrics th
 declares non-blocking, a fixture claiming a coverage it did not have, a measurement that
 could not reach the validator the skill is told to run first, and a truncated transcript
 read as a result.
+
+`audit` and `resolve` were re-run on **2026-08-18**, against 1.1.0 and the register split
+one per product; the other four are from the runs above. Both re-runs found the defect in
+this repository again rather than in the skill, and both times it was a sentence that had
+gone stale without anything noticing: the warning count `audit/dirty-repo` produces, and
+the list of views a clean repository is missing, which still named two of four. What each
+run showed is written into the `because` of the case it belongs to, which is where it can
+be read next to the expectation it bears on.
 
 **Grading is by hand.** The runner prints what the skill said, what it wrote, and whether
 the repository still validates, and a person decides. A keyword match on "go" and "block"

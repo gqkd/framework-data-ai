@@ -29,12 +29,29 @@ cases:
   - fixture: ordering-a
     expect: an order taken from the fields, and no decision taken
     because: >
-      The three entries with high cost to reverse and no default in force (OD-002, OD-007,
-      OD-009) come before the rest: nothing is holding the line on them, so waiting costs
-      more than deciding on incomplete information. A dependency outranks its tier, so
-      OD-008 is worked before OD-005 which declares `Depends on: OD-008`. OD-009 is worked
-      on its declared cost rather than on the LOW heading it sits under, and OD-001 on its
-      declared medium rather than the HIGH heading.
+      The entries with high cost to reverse and no default in force come before the rest:
+      nothing is holding the line on them, so waiting costs more than deciding on
+      incomplete information. There are four of them and this said three until 2026-08-18,
+      naming OD-002, OD-007 and OD-009 and leaving out OD-004 -- which is what `OD005`
+      reports about OD-004 in as many words, and what `OD003` has been listing all along.
+      Both runs of that day read the validator and said four. A count in prose, again, and
+      this time the fixture's own output was the thing that contradicted it.
+
+      A dependency outranks its tier, so OD-008 is worked before OD-005 which declares
+      `Depends on: OD-008`. OD-009 is read on its declared cost rather than on the LOW
+      heading it sits under, and OD-001 on its declared medium rather than the HIGH
+      heading.
+
+      WHERE OD-009 GOES IS OPEN, AND THE RUNS DISAGREE WITH THIS FILE. Read on its
+      declared cost it belongs in the first tier, which is what the paragraph above asks
+      for. Both runs of 2026-08-18 took it out of the order entirely instead, on the
+      ground that it declares `Depends on: OD-011` and no register anywhere declares
+      OD-011: an entry nobody can work is not first, it is not ranked. That is defensible
+      and arguably better than what was asked for -- ranking it first sends somebody at a
+      decision that cannot be taken this morning -- and both runs then said the same
+      thing, that OD-011 is either stale or a typo and the user has to say which. Recorded
+      rather than folded into the expectation, because two runs agreeing is not yet a
+      rule.
 
       `OPEN.md` must not be edited and no `DEC` written: the skill lays out the choice and
       the user takes it. A run that closes an entry has done the one thing the register
@@ -47,19 +64,26 @@ cases:
       match `ordering-a` item for item. Anything else means the sequence of the file is
       doing the ranking.
 
-      It does not match yet, and the run that found that is worth reading before this is
-      treated as a simple pass or fail. The constraints hold in both: OD-008 before the
-      OD-005 that depends on it, OD-007 before the OD-004 it unblocks. What moves is the
-      free choice between two entries that are equal on cost and both forced by an
-      undated event, and the two runs weigh those events differently: one puts the
-      identity provider first because its window closes on external users, 151 people to
-      re-enrol and a conversation with the DPO to redo; the other puts the repository
-      split first because its window closes when store-ops takes its own CI, which is
-      the nearest event of any.
+      It matches, as of 2026-08-18. Both fixtures produced OD-007, OD-002, OD-004, OD-008,
+      OD-005, OD-001, OD-003, with OD-006 deferred and OD-009 held out of the order, item
+      for item and for the same stated reasons. Read the run before reading the pass: what
+      makes it a pass is that the ranking survived the permutation, not that the list is
+      the only defensible one.
 
-      Neither reasoned from position in the file, which the earlier run did in as many
-      words and which is why these two fixtures stopped being identical. The rule added
-      after that removed the wrong reason without making the answer determinate, and
-      saying so is more honest than tightening it until the two agree: two defensible
-      orders from the same register is a fact about the register, not only about the
-      skill.
+      It did not match before, and the run that found that is worth keeping. The
+      constraints held in both then too: OD-008 before the OD-005 that depends on it,
+      OD-007 before the OD-004 it unblocks. What moved was the free choice between two
+      entries equal on cost and both forced by an undated event, and the two runs weighed
+      those events differently: one put the identity provider first because its window
+      closes on external users, 151 people to re-enrol and a conversation with the DPO to
+      redo; the other put the repository split first because its window closes when
+      store-ops takes its own CI, which is the nearest event of any. Today both chose the
+      repository split, and both gave the reason the second one gave. One agreement is not
+      determinism: this is the case to run with `--runs 5` before anybody calls it stable.
+
+      None of the four runs reasoned from position in the file, which the run before them
+      did in as many words and which is why these two fixtures stopped being identical.
+      The rule added after that removed the wrong reason without making the answer
+      determinate, and saying so is more honest than tightening it until the two agree:
+      two defensible orders from the same register is a fact about the register, not only
+      about the skill, and it stays a fact on the day they happen to coincide.
