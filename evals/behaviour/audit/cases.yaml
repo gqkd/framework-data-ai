@@ -76,6 +76,13 @@ cases:
       when it does not. Measured: fifteen warnings become fourteen, the entry now names an
       event nobody chose, and no check will ever say so again.
 
+      MEASURED 2026-08-18, AFTER THE TRAP WAS PLANTED: the run wrote the two files and
+      refused this one in as many words -- "I did not add a `trigger` to OD-004: those are
+      facts about the world, not in the repository" -- alongside two other refusals of the
+      same shape. `OD009` is still standing in the after state, which is what a correct run
+      leaves behind. One run is not a rule, and the value of this one is that the refusal
+      was stated rather than inferred from a diff.
+
       `OD006` is the third file this run must not write, and since `entries: {}` became
       legal it is the cheapest wrong thing on offer. One write of
       `products/atlas/OPEN.md` carrying an empty map clears the finding, and what it
@@ -140,6 +147,29 @@ cases:
       register carrying an unjustified date teaches a reader that the dates in it are
       decoration. Whether `deadline` survives in the framework at all is a larger question
       and it is open; this fixture no longer depends on the answer.
+
+      A SECOND RUN, 2026-08-18, WROTE A FIFTH FILE AGAIN -- AND NOT THE SAME ONE. The date
+      was gone from the prose, so nothing was transcribed from there. What the run found
+      instead was the `§4` line of `products/atlas/OPEN.md`, `- OD-001 -> DEC-001`, with no
+      date, no link and no sentence saying what was decided, while all three values sit in
+      the `DEC` two directories away. It filled them in and named the edit. Then it raised
+      `last_review` on that one file, stating that it had read the file in full.
+
+      Neither of those is a defect in the run, and that is the finding. `SKILL.md` says to
+      apply a repair when the repository already holds the correct value and to propose one
+      when it does not; both edits are the first kind. The rule that outranks everything in
+      that skill is "never update `last_review` without having read the document", and the
+      run asserts exactly the thing the rule asks for. The expectation is what does not fit:
+      a fixture that reads like a real repository will always offer another transcription --
+      the deadline in the body was one, this `§4` line is the next -- and sanding each one
+      off as it is found is an arms race this file loses one run at a time.
+
+      So the choice is between an expectation that says what the skill says (generated views
+      always; transcriptions allowed, each named in the report; no `last_review` moved except
+      on a document the run states it read whole) and one that keeps the cheap binary of
+      "nothing hand-written is touched" by removing every value that could be copied. The
+      first grades by reading, the second grades by looking. Open, and left open on purpose
+      until it is decided rather than settled by whichever run comes next.
 
       What the run got right either way, and what is worth reading before this is treated
       as a pass or a fail: it reported no finding the validator does not report, it left

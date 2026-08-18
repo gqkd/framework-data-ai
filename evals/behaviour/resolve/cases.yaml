@@ -81,14 +81,34 @@ cases:
       repository split, and both gave the reason the second one gave. One agreement is not
       determinism: this is the case to run with `--runs 5` before anybody calls it stable.
 
-      THE FIXTURE MOVED UNDER THIS RESULT ON 2026-08-18, AFTER THE RUNS. `deadline` became
-      `trigger` in 2.0.0 and the three entries whose deadline was a bare date -- OD-005,
-      OD-001, OD-008 -- now name the event that forces them instead: the DPO review, the
-      Monday the analyst is on leave, the missed Sunday run somebody has to explain. That
-      removes the one thing in this register that could be sorted rather than judged, which
-      is the whole point of the rename and also the reason the match above cannot be carried
-      forward. It was measured against a register with three dates in it. Re-run before
-      anybody reads the order below as current.
+      THE FIXTURE MOVED AND IT WAS RE-RUN THE SAME DAY. `deadline` became `trigger` in
+      2.0.0 and the three entries whose deadline was a bare date -- OD-005, OD-001, OD-008
+      -- now name the event that forces them: the DPO review, the Monday the analyst who
+      drops the CSV by hand is on leave, the missed Sunday run somebody has to explain.
+      That removed the one thing in this register that could be sorted instead of judged.
+
+      Both fixtures then produced OD-002, OD-007, OD-004, OD-008, OD-005, OD-001, OD-003,
+      OD-006 deferred, OD-009 held out of the order, item for item, with the constraints
+      intact: OD-008 before the OD-005 that declares it, OD-007 before the OD-004 that
+      depends on it, OD-009 unranked because `OD-011` is declared by no register. This is
+      the stronger version of the match recorded above, because there is now nothing in the
+      file to sort on: the ranking came from what each trigger says and from the
+      dependencies, and it survived the permutation anyway.
+
+      The top two swapped against the earlier run, and that is the honest part. OD-002 and
+      OD-007 are equal on cost and both forced by an event nobody can date; the earlier
+      runs put OD-007 first, both of these put OD-002 first and gave the same reason for it
+      -- its window closes without anybody deciding anything, because the first team to ship
+      a login sets the default in silence, while store-ops taking its own CI is a deliberate
+      act somebody can see coming. Two defensible orders from one register, again, and the
+      dates were what used to hide that rather than settle it.
+
+      Both runs also said something this register cannot express, and now could: OD-002 and
+      OD-004 are one decision taken in two places, because choosing the identity provider
+      decides most of the tenancy by implication. `decide_with` exists as of 2.0.0 and this
+      fixture does not use it. Declaring it here would test the rule that a pairing is not
+      an ordering -- worth doing, and not done, because it changes what this case measures
+      and this case has just been measured.
 
       None of the four runs reasoned from position in the file, which the run before them
       did in as many words and which is why these two fixtures stopped being identical.

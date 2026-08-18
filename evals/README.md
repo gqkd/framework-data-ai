@@ -61,9 +61,9 @@ against a framework where `OPEN.md` was one file at the root.
 eight days newer than the rest and were measured against different rules. The number that
 means something is per row, on its date.
 
-`resolve`'s row is already behind its own fixture: `ordering-a` lost its three bare dates
-on the same day, when `deadline` became `trigger`, and what that register asks of a ranking
-changed with them. The row stands as the last measurement and not as the current one.
+`resolve`'s trigger row was measured before its fixture lost the three bare dates it could
+be sorted on. The behaviour set was re-run after that change, on the same day, and the
+ranking held: see `behaviour/resolve/cases.yaml`, where the result belongs.
 
 The two that moved each gained one case, and neither gain should be read as an improvement
 until it is repeated. `audit`'s miss was a prompt naming a path the fixture does not have;
@@ -132,11 +132,13 @@ declares non-blocking, a fixture claiming a coverage it did not have, a measurem
 could not reach the validator the skill is told to run first, and a truncated transcript
 read as a result.
 
-`audit` and `resolve` were re-run on **2026-08-18**, against 1.1.0 and the register split
-one per product; the other four are from the runs above. Both re-runs found the defect in
-this repository again rather than in the skill, and both times it was a sentence that had
-gone stale without anything noticing: the warning count `audit/dirty-repo` produces, and
-the list of views a clean repository is missing, which still named two of four. What each
+`audit` and `resolve` were re-run twice on **2026-08-18**: once against 1.1.0 and the
+register split one per product, and again after 2.0.0 replaced `deadline` with `trigger`
+and planted `OD009` in `audit/dirty-repo`. The other four are from the runs above. Every one of those runs found the defect in this repository rather than in the skill: the
+warning count `audit/dirty-repo` produces, the list of views a clean repository is missing
+which still named two of four, and then an expectation that asks a fixture never to be
+written to while the skill it measures is told to transcribe values the repository already
+holds. What each
 run showed is written into the `because` of the case it belongs to, which is where it can
 be read next to the expectation it bears on.
 
