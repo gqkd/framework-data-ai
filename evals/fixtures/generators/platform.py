@@ -38,6 +38,20 @@ something shared, and it is visible in the fixture rather than argued about here
 """
 
 import re
+import itertools
+from datetime import datetime, timedelta
+
+# Every document here used to carry the same review instant, which is a claim that somebody
+# read the whole set in one minute -- the exact shape `LC005` reports, planted by the
+# generator in every fixture at once. Successive instants instead: a fixture that trips a
+# check it did not mean to plant teaches you to read past its output.
+_REVIEW_STEP = itertools.count()
+
+
+def review() -> str:
+    return (datetime(2026, 8, 1, 9, 0)
+            + timedelta(minutes=17 * next(_REVIEW_STEP))).strftime("%Y-%m-%d %H:%M")
+
 import sys
 from pathlib import Path
 
@@ -68,7 +82,7 @@ scan:
 F["AGENTS.md"] = fm(
     schema="framework/agents-control-plane/v1", artifact_type="agents-control-plane",
     lifecycle="living", status="active", owners="[g.quaglia]", created="2026-01-08",
-    last_review=NOW, classification="internal") + """\
+    last_review=review(), classification="internal") + """\
 # Instructions for agents
 
 Read this, then `OPEN.md`, then the `product.yaml` of the product you are working on. This
@@ -108,7 +122,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/skills/audit/scripts/validate.py --root .
 F["PLATFORM.md"] = fm(
     schema="framework/platform-architecture/v1", artifact_type="platform-architecture",
     lifecycle="living", status="active", owners="[g.quaglia]", created="2026-01-20",
-    last_review=NOW, verified_code="\n  product.backend: 4c1f9ae", classification="internal") + """\
+    last_review=review(), verified_code="\n  product.backend: 4c1f9ae", classification="internal") + """\
 # Shared substrate
 
 **Question:** what do the three products share, and who may change it?
@@ -139,7 +153,7 @@ subjects. Nothing is decided: see `OD-002`.
 
 F["GLOSSARY.md"] = fm(
     schema="framework/glossary/v1", artifact_type="glossary", lifecycle="living",
-    status="active", owners="[g.quaglia]", created="2026-01-08", last_review=NOW,
+    status="active", owners="[g.quaglia]", created="2026-01-08", last_review=review(),
     classification="internal") + """\
 # Glossary
 
@@ -152,7 +166,7 @@ F["GLOSSARY.md"] = fm(
 
 F["COMMITMENTS.md"] = fm(
     schema="framework/commitments/v1", artifact_type="commitments", lifecycle="living",
-    status="active", owners="[g.quaglia]", created="2026-02-02", last_review=NOW,
+    status="active", owners="[g.quaglia]", created="2026-02-02", last_review=review(),
     classification="confidential") + """\
 # Commercial commitments made
 
@@ -176,7 +190,7 @@ F["COMMITMENTS.md"] = fm(
 # means every product, which is what a substrate decision is.
 F["OPEN.md"] = fm(
     schema="framework/open-register/v1", artifact_type="open-register", lifecycle="living",
-    status="active", owners="[g.quaglia]", created="2026-01-08", last_review=NOW,
+    status="active", owners="[g.quaglia]", created="2026-01-08", last_review=review(),
     classification="internal") + """\
 # Open decisions and known issues
 
@@ -193,7 +207,7 @@ Run `validate.py --emit-index` to fill this in.
 
 F["platform/OPEN.md"] = fm(
     schema="framework/open-register/v1", artifact_type="open-register", lifecycle="living",
-    status="active", owners="[g.quaglia]", created="2026-01-08", last_review=NOW,
+    status="active", owners="[g.quaglia]", created="2026-01-08", last_review=review(),
     products="[atlas, orion, vega]",
     entries="\n  OD-002:\n    status: open\n    cost_to_reverse: high\n"
             "    default_in_force: customer_id is shown in the orion UI today\n"
@@ -245,7 +259,7 @@ def _product_open(prod: str, num: str, title: str, body: str, cost: str, default
     F[f"products/{prod}/OPEN.md"] = fm(
         schema="framework/open-register/v1", artifact_type="open-register",
         lifecycle="living", status="active", owners="[g.quaglia]", created="2026-01-08",
-        last_review=NOW, products=f"[{prod}]",
+        last_review=review(), products=f"[{prod}]",
         entries=f"\n  {num}:\n    status: open\n    cost_to_reverse: {cost}\n"
                 f"    default_in_force: {default}",
         classification="internal") + (
@@ -307,7 +321,7 @@ F["products/atlas/product.yaml"] = fm(
     schema="framework/product-manifest/v1", artifact_type="product-manifest",
     lifecycle="living", status="active", products="[atlas]", owners="[g.quaglia]",
     code="\n  backend:\n    url: git@github.com:org/atlas-backend.git\n    contains: the service and its models\n    release_relevant: 'true'",
-    created="2026-01-08", last_review=NOW, classification="internal") + """\
+    created="2026-01-08", last_review=review(), classification="internal") + """\
 
 name: atlas
 one_liner: churn risk scores for the CS team
@@ -317,7 +331,7 @@ stage: F6
 F["products/atlas/PBR.md"] = fm(
     schema="framework/product-brief/v1", artifact_type="product-brief", lifecycle="living",
     status="active", products="[atlas]", owners="[g.quaglia]", created="2026-02-01",
-    last_review=NOW, classification="internal") + """\
+    last_review=review(), classification="internal") + """\
 # Atlas · product brief
 
 **For whom.** The CS team at Northwind and Cerulean.
@@ -335,7 +349,7 @@ F["products/atlas/PBR.md"] = fm(
 F["products/atlas/ARC.md"] = fm(
     schema="framework/architecture/v1", artifact_type="architecture", lifecycle="living",
     status="active", products="[atlas]", owners="[g.quaglia]", created="2026-02-10",
-    last_review=NOW, verified_code="\n  product.backend: 4c1f9ae", classification="internal") + """\
+    last_review=review(), verified_code="\n  product.backend: 4c1f9ae", classification="internal") + """\
 # Atlas · architecture
 
 <!-- section: current -->
@@ -364,7 +378,7 @@ Unchanged.
 F["products/atlas/contracts/DC-001-customer.md"] = fm(
     schema="framework/data-contract/v1", artifact_type="data-contract", lifecycle="living",
     status="active", products="[atlas]", owners="[g.quaglia]", created="2026-02-14",
-    version="3", consumers="[atlas, orion, vega]", last_review=NOW,
+    version="3", consumers="[atlas, orion, vega]", last_review=review(),
     classification="internal") + """\
 # DC-001 · `analytics.customer`
 
@@ -409,7 +423,7 @@ F["products/atlas/LOG.md"] = fm(
 F["products/orion/product.yaml"] = fm(
     schema="framework/product-manifest/v1", artifact_type="product-manifest",
     lifecycle="living", status="active", products="[orion]", owners="[m.rossi]",
-    created="2026-03-04", last_review=NOW, classification="internal") + """\
+    created="2026-03-04", last_review=review(), classification="internal") + """\
 
 name: orion
 one_liner: demand forecasting for the supply chain team
@@ -419,7 +433,7 @@ stage: F5
 F["products/orion/PBR.md"] = fm(
     schema="framework/product-brief/v1", artifact_type="product-brief", lifecycle="living",
     status="active", products="[orion]", owners="[m.rossi]", created="2026-03-04",
-    last_review=NOW, classification="internal") + """\
+    last_review=review(), classification="internal") + """\
 # Orion · product brief
 
 **For whom.** The supply chain team at Northwind.
@@ -430,7 +444,7 @@ F["products/orion/PBR.md"] = fm(
 F["products/orion/ARC.md"] = fm(
     schema="framework/architecture/v1", artifact_type="architecture", lifecycle="living",
     status="active", products="[orion]", owners="[m.rossi]", created="2026-03-10",
-    last_review=NOW, verified_code="\n  product.backend: 4c1f9ae", classification="internal") + """\
+    last_review=review(), verified_code="\n  product.backend: 4c1f9ae", classification="internal") + """\
 # Orion · architecture
 
 <!-- section: current -->
@@ -459,7 +473,7 @@ Nothing structural outstanding.
 F["products/vega/product.yaml"] = fm(
     schema="framework/product-manifest/v1", artifact_type="product-manifest",
     lifecycle="living", status="active", products="[vega]", owners="[a.bianchi]",
-    created="2026-04-02", last_review=NOW, classification="internal") + """\
+    created="2026-04-02", last_review=review(), classification="internal") + """\
 
 name: vega
 one_liner: the customer-facing portal
@@ -469,7 +483,7 @@ stage: F6
 F["products/vega/PBR.md"] = fm(
     schema="framework/product-brief/v1", artifact_type="product-brief", lifecycle="living",
     status="active", products="[vega]", owners="[a.bianchi]", created="2026-04-02",
-    last_review=NOW, classification="internal") + """\
+    last_review=review(), classification="internal") + """\
 # Vega · product brief
 
 **For whom.** The customer's own operations staff, outside our organisation.
@@ -487,7 +501,7 @@ F["products/vega/PBR.md"] = fm(
 F["products/vega/ARC.md"] = fm(
     schema="framework/architecture/v1", artifact_type="architecture", lifecycle="living",
     status="active", products="[vega]", owners="[a.bianchi]", created="2026-04-08",
-    last_review=NOW, verified_code="\n  product.backend: 4c1f9ae", classification="internal") + """\
+    last_review=review(), verified_code="\n  product.backend: 4c1f9ae", classification="internal") + """\
 # Vega · architecture
 
 <!-- section: current -->
@@ -515,7 +529,7 @@ Nothing structural outstanding.
 F["products/vega/RSK.md"] = fm(
     schema="framework/risk-register/v1", artifact_type="risk-register", lifecycle="living",
     status="active", products="[vega]", owners="[a.bianchi]", created="2026-04-08",
-    last_review=NOW, classification="internal") + """\
+    last_review=review(), classification="internal") + """\
 # Vega · risks
 
 <!-- section: state -->

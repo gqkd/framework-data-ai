@@ -134,6 +134,24 @@ checks:
       was never reviewed look reviewed. Also catches the template placeholder surviving
       into a real repository.
 
+  LC005:
+    level: warn
+    title: several living documents attest the same review instant
+    prevents: >
+      A batch of field edits reading as a review. `last_review` says a person read this
+      document and found it still true, and nothing can check a reading -- but the false
+      version has a shape: in one repository six living documents were stamped with the same
+      minute, and one of them opened with a notice, left standing by the same run, saying the
+      rest of it was still written against something superseded and had to be reread in full.
+      Three is the floor, because two documents finished in the same minute is a person and
+      three is a loop. Timed to the minute and not to the day: reading four documents on a
+      Tuesday is a Tuesday, reading four in one minute is a field edit. Documents carrying a
+      bare date are not counted -- no minute, nothing to say. Neither is a document whose
+      `created` and `last_review` are the same instant: `start` writes a whole day one set
+      in one session and every document is born attesting itself, which is a creation and
+      not a reading, and a check that fired on every new repository would be switched off in
+      a week.
+
   # ── Identity and references ────────────────────────────────────────────────
   ID001:
     level: warn

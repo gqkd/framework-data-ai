@@ -6,7 +6,7 @@ status: active
 products: [retail-forecast, store-ops]
 owners: [g.quaglia]
 created: 2026-03-02
-last_review: 2026-07-30 11:20
+last_review: 2026-07-30 09:45
 classification: internal
 ---
 

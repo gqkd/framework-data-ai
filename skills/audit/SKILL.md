@@ -49,7 +49,7 @@ report, and a clean report on the wrong repository is worse than an error.
 
 ## The rule that outranks everything else here
 
-> **Never update `last_review` without having read the document.**
+> **You do not update `last_review`. You propose it.**
 
 It is the fastest way to turn the validator green and the only one that makes the whole
 framework useless. `last_review` is not a field about the file, it is a claim that a person
@@ -57,8 +57,18 @@ looked at the document and found it still true. Writing today's date into it wit
 having happened converts every downstream reader, human and agent, into someone acting on a
 document nobody has checked, while the staleness warning that would have told them is gone.
 
-If `LC002` fires, the work is to read the document. If you are not going to read it, leave
-the warning standing: it is doing its job.
+The rule used to be "never without having read the document", which authorised a run that
+had read. It stopped being enough. In one repository a run attested six living documents at
+the same minute, and one of them opened with a notice -- left standing by that same run --
+saying the rest of it was still written against something superseded and had to be reread in
+full. Reading is not the part that can be checked; who is making the claim is.
+
+So: list the documents you read, offer the instant for each, and let the person put it in.
+A proposal costs them one keystroke per document and leaves the attestation attached to
+somebody who can be asked about it. If `LC002` fires, the work is still to read the
+document. If you are not going to read it, leave the warning standing: it is doing its job.
+`LC005` reports several living documents attesting the same instant, which is the shape this
+failure takes when it happens anyway.
 
 ## Fix directly, or propose
 

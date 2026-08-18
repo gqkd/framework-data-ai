@@ -532,6 +532,57 @@ def parse_moment(v) -> datetime | None:
     return None
 
 
+# How many living documents have to share one instant before it stops being a coincidence.
+# Two is a person who finished the second one in the same minute, which happens. Three is a
+# batch, and a batch is not a reading.
+SAME_INSTANT_FLOOR = 3
+
+
+def check_review_batches(arts: list[Artifact], report: Report) -> None:
+    """Living documents attesting the same review instant.
+
+    `last_review` says a person read this document and found it still true, and no check
+    can verify a reading. What a check can see is the shape the false version takes: six
+    living documents in one repository stamped with the same minute, one of them carrying a
+    notice at the top saying it still had to be reread in full. That did not happen at
+    19:36 to six documents at once, and it is the only fact here a script can hold.
+
+    Timed to the minute rather than to the day, because a day is a plausible unit for real
+    work: reading four documents on a Tuesday is a Tuesday. Reading four in one minute is a
+    field edit.
+    """
+    by_instant: dict[str, list[str]] = {}
+    for a in arts:
+        if a.meta.get("lifecycle") != "living":
+            continue
+        lr = parse_moment(a.meta.get("last_review"))
+        # A bare date carries no minute, so it cannot say anything about batching: two
+        # documents reviewed on the same day are two documents reviewed on the same day.
+        if lr is None or lr.hour == lr.minute == 0:
+            continue
+        # A DAY ONE SET IS A CREATION AND NOT A REVIEW. `start` writes the whole first
+        # set in one session, legitimately, and every document is born with `created` and
+        # `last_review` at the same instant -- there is nothing to have reread, because
+        # nothing existed before. Counting those would make this check fire on every
+        # repository the framework itself creates, on its first day, which is the shortest
+        # path to it being switched off.
+        if parse_moment(a.meta.get("created")) == lr:
+            continue
+        by_instant.setdefault(lr.strftime("%Y-%m-%d %H:%M"), []).append(a.rel)
+
+    for instant, rels in sorted(by_instant.items()):
+        if len(rels) < SAME_INSTANT_FLOOR:
+            continue
+        listed = ", ".join(sorted(rels))
+        report.add("LC005", sorted(rels)[0],
+                   f"{len(rels)} living documents attest the same review instant "
+                   f"({instant}): {listed}. `last_review` is a claim that somebody read the "
+                   "document and found it still true, and one minute is not enough for all "
+                   "of them. If they really were read, the instant each reading finished is "
+                   "the honest value; if the date was written to clear `LC002`, the warning "
+                   "was doing its job and this is what replaced it.")
+
+
 def check_lifecycle(a: Artifact, stale_days: int, now: datetime, report: Report) -> None:
     lc = a.meta.get("lifecycle")
     if lc == "living":
@@ -1617,6 +1668,7 @@ def main() -> int:
     check_framework_version(root, project, registry, report)
     check_open_register(arts, report)
     check_manifest_derived_fields(arts, report)
+    check_review_batches(arts, report)
     check_triage(arts, report)
     check_stack(arts, report)
     check_cross_product(arts, report)

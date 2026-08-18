@@ -285,6 +285,61 @@ def _clean_repo():
         return [f"{f['code']} {f['path']}: {f['message']}" for f in out["findings"]]
 
 
+@check("a review of six documents in one minute is reported, and a day one set is not")
+def _review_batches():
+    # `last_review` attests a reading, and no check can verify one. What a check can see is
+    # the shape the false version takes, and it took it in a real repository: six living
+    # documents stamped with the same minute by a run, one of them carrying a notice at the
+    # top saying it still had to be reread in full. Both directions are asserted here,
+    # because the false positive is what would get this switched off -- `start` writes a
+    # whole day one set in one session and every document is born attesting itself.
+    fm = lambda **kw: "---\n" + "\n".join(f"{k}: {v}" for k, v in kw.items()) + "\n---\n\n"
+
+    def repo(n: int, review, created="2026-01-01 09:00") -> dict:
+        out = {"framework.yaml": f"framework_version: {REGISTRY['version']}\n"}
+        for i in range(n):
+            out[f"products/p{i}/PBR.md"] = fm(
+                schema="framework/product-brief/v1", artifact_type="product-brief",
+                lifecycle="living", status="active", products=f"[p{i}]", owners="[o]",
+                created=created,
+                last_review=review(i) if callable(review) else review) + "# Brief\n"
+        return out
+
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+
+        def codes(files) -> set[str]:
+            for stale in (root / "products").rglob("*.md"):
+                stale.unlink()
+            for rel, text in files.items():
+                f = root / rel
+                f.parent.mkdir(parents=True, exist_ok=True)
+                f.write_text(text)
+            r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(root),
+                                "--json"], capture_output=True, text=True)
+            return {f["code"] for f in json.loads(r.stdout)["findings"]}
+
+        if "LC005" not in codes(repo(3, "2026-08-01 09:00")):
+            problems.append("three living documents attesting the same minute were not "
+                            "reported: one minute is not a reading of three documents, and "
+                            "this is the only part of the claim a script can hold")
+        if "LC005" in codes(repo(2, "2026-08-01 09:00")):
+            problems.append("two documents finishing in the same minute were reported: that "
+                            "is a person, and a check that fires on it gets switched off")
+        if "LC005" in codes(repo(4, "2026-08-01 09:00", created="2026-08-01 09:00")):
+            problems.append("a day one set was reported: `start` writes the first documents "
+                            "in one session and each is born with `created` and "
+                            "`last_review` equal, which is a creation and not a reading")
+        if "LC005" in codes(repo(4, "2026-08-01")):
+            problems.append("four documents carrying a bare date were reported: a date with "
+                            "no minute says nothing about how long the reading took")
+        if "LC005" in codes(repo(4, lambda i: f"2026-08-01 09:{10 + i * 7:02d}")):
+            problems.append("four documents each with their own instant were reported, so "
+                            "the check is counting documents rather than a shared minute")
+    return problems
+
+
 @check("--emit-index refuses to overwrite an index somebody maintains by hand")
 def _emit_index_refuses():
     # `--emit-index` writes only what front matter can express, and the reason a project

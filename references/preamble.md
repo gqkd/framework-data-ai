@@ -67,7 +67,7 @@ lost. If the answer is no, it was about the framework.
 
 | Class | What you may do |
 |---|---|
-| `living` | edit in place, and set `last_review` to the current instant |
+| `living` | edit in place. `last_review` is proposed, never written by the run |
 | `immutable` | never edit the body. Create a new document with `supersedes`, move the old one to `status: superseded`. The `status` field is the one exception and moves in place |
 | `append-only` | never rewrite a line. Add a linked event |
 
@@ -83,9 +83,14 @@ indistinguishable from a fact to whoever reads it next.
 you cannot establish the real value, leave it and say so. An invented hash turns an
 evidence document into a decoration and passes every check.
 
-**Never write today's date into `last_review` without having read the document.** It is the
-fastest way to make a validator green and the only one that makes the whole framework
-useless.
+**You do not write `last_review`. You propose it.** It is the fastest way to make a
+validator green and the only one that makes the whole framework useless: the field is not a
+fact about the file, it is somebody's claim that they read the document and found it still
+true. A run can say which documents it read and offer the new instant for each; a person
+puts it in. The rule used to read "never without having read the document", and an agent
+that had read was authorised -- which is how six living documents in one repository came to
+attest the same minute, one of them carrying a notice at the top saying it still had to be
+reread in full.
 
 ## How to propose a write
 

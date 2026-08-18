@@ -121,8 +121,8 @@ cases:
     expect: >
       nothing invented and nothing decided: the four generated views written, because none
       of them exists yet; a repair applied only where the repository already holds the
-      correct value and named in the report where it was; and `last_review` moved only on a
-      document the run states it read whole
+      correct value and named in the report where it was; and no `last_review` moved at all,
+      because a run proposes that field and does not write it
     because: >
       There is nothing wrong with this repository. A run that finds something is inventing
       it, and a run that starts tidying is doing damage for the sake of having done
@@ -185,9 +185,17 @@ cases:
 
       What this costs is that the case is graded by reading and not by looking at the
       `wrote:` line, so the reading has one question: could this run have produced this edit
-      from documents in this repository alone. Both edits of 2026-08-18 pass it -- the `§4`
-      line took the date, the path and the title from the `DEC` two directories away, and
-      `last_review` moved on the one file the run says it read in full. An edit whose value
+      from documents in this repository alone. The `§4` line of 2026-08-18 passes it -- it
+      took the date, the path and the title from the `DEC` two directories away.
+
+      The `last_review` half of that run does not pass any more, and the rule is what moved
+      rather than the run. It read "never without having read the document", which authorised
+      an agent that had read, and later that day a run in a real repository attested six
+      living documents at the same minute -- one of them opening with a notice, left standing
+      by that same run, saying the rest of it was still written against something superseded
+      and had to be reread in full. Reading is not the part a check can reach; who is making
+      the claim is. A run lists what it read and offers the instant, a person puts it in, and
+      `LC005` reports the shape when it happens anyway. An edit whose value
       comes from outside is the failure, whatever it looks like, and inventing a `trigger`
       for `OD-004` in the other fixture is the same failure wearing better clothes.
 

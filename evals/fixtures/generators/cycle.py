@@ -5,6 +5,20 @@ Usage: python make_fixture.py <dest-dir>
 """
 import sys, shutil
 from pathlib import Path
+import itertools
+from datetime import datetime, timedelta
+
+# Every document here used to carry the same review instant, which is a claim that somebody
+# read the whole set in one minute -- the exact shape `LC005` reports, planted by the
+# generator in every fixture at once. Successive instants instead: a fixture that trips a
+# check it did not mean to plant teaches you to read past its output.
+_REVIEW_STEP = itertools.count()
+
+
+def review() -> str:
+    return (datetime(2026, 8, 1, 9, 0)
+            + timedelta(minutes=17 * next(_REVIEW_STEP))).strftime("%Y-%m-%d %H:%M")
+
 
 D = Path(sys.argv[1])
 if D.exists():
@@ -22,7 +36,7 @@ F = {}
 
 F["AGENTS.md"] = fm(schema="framework/agents-control-plane/v1",
     artifact_type="agents-control-plane", lifecycle="living", status="active",
-    owners="[gq]", created="2026-01-12", last_review=NOW, classification="internal") + """\
+    owners="[gq]", created="2026-01-12", last_review=review(), classification="internal") + """\
 # Instructions for agents
 
 Read this file first. Then `OPEN.md`. Then the `product.yaml` of the product you are
@@ -70,7 +84,7 @@ python skills/audit/scripts/validate.py --root .
 
 F["products/atlas/OPEN.md"] = fm(schema="framework/open-register/v1", artifact_type="open-register",
     lifecycle="living", status="active", owners="[gq]", created="2026-01-12",
-    last_review=NOW, classification="internal") + """\
+    last_review=review(), classification="internal") + """\
 # Open decisions and known issues
 
 ## 1 · Open decisions
@@ -100,7 +114,7 @@ F["products/atlas/OPEN.md"] = fm(schema="framework/open-register/v1", artifact_t
 
 F["GLOSSARY.md"] = fm(schema="framework/glossary/v1", artifact_type="glossary",
     lifecycle="living", status="active", owners="[gq]", created="2026-01-12",
-    last_review=NOW, classification="internal") + """\
+    last_review=review(), classification="internal") + """\
 # Glossary
 
 | Term | Definition | Does not include |
@@ -112,7 +126,7 @@ F["GLOSSARY.md"] = fm(schema="framework/glossary/v1", artifact_type="glossary",
 
 F["COMMITMENTS.md"] = fm(schema="framework/commitments/v1", artifact_type="commitments",
     lifecycle="living", status="active", owners="[gq]", created="2026-01-12",
-    last_review=NOW, classification="internal") + """\
+    last_review=review(), classification="internal") + """\
 # Commercial commitments made
 
 | ID | Commitment | Where it was said | To whom | Technical constraint that follows |
@@ -155,7 +169,7 @@ listed in DC-001.
 
 F["products/atlas/product.yaml"] = fm(schema="framework/product-manifest/v1",
     artifact_type="product-manifest", lifecycle="living", status="active",
-    products="[atlas]", owners="[gq]", created="2026-01-12", last_review=NOW,
+    products="[atlas]", owners="[gq]", created="2026-01-12", last_review=review(),
     code="\n  backend:\n    url: git@github.com:org/atlas-backend.git\n    contains: the service and its models\n    release_relevant: 'true'",
     classification="internal") + """\
 # Atlas · churn risk scoring for the CS team
@@ -168,7 +182,7 @@ stage: F5
 
 F["products/atlas/PBR.md"] = fm(schema="framework/product-brief/v1",
     artifact_type="product-brief", lifecycle="living", status="active",
-    products="[atlas]", owners="[gq]", created="2026-02-20", last_review=NOW,
+    products="[atlas]", owners="[gq]", created="2026-02-20", last_review=review(),
     classification="internal") + """\
 # Atlas · product brief
 
@@ -203,7 +217,7 @@ unflagged baseline.
 
 F["products/atlas/ARC.md"] = fm(schema="framework/architecture/v1",
     artifact_type="architecture", lifecycle="living", status="active",
-    products="[atlas]", owners="[gq]", created="2026-02-20", last_review=NOW,
+    products="[atlas]", owners="[gq]", created="2026-02-20", last_review=review(),
     verified_code="\n  product.backend: 9f2c1ab", classification="internal") + """\
 # Atlas · architecture
 
@@ -239,7 +253,7 @@ weekly retrain stops being a manual notebook run.
 
 F["products/atlas/WF.md"] = fm(schema="framework/workflow/v1",
     artifact_type="workflow", lifecycle="living", status="active",
-    products="[atlas]", owners="[gq]", created="2026-02-20", last_review=NOW,
+    products="[atlas]", owners="[gq]", created="2026-02-20", last_review=review(),
     classification="internal") + """\
 # Atlas · workflow
 
@@ -263,7 +277,7 @@ Nothing outstanding on the workflow axis.
 
 F["products/atlas/EVP.md"] = fm(schema="framework/evaluation-plan/v1",
     artifact_type="evaluation-plan", lifecycle="living", status="active",
-    products="[atlas]", owners="[gq]", created="2026-03-01", last_review=NOW,
+    products="[atlas]", owners="[gq]", created="2026-03-01", last_review=review(),
     classification="internal") + """\
 # Atlas · evaluation plan
 
@@ -279,7 +293,7 @@ Lowering any threshold requires a `DEC`.
 
 F["products/atlas/RSK.md"] = fm(schema="framework/risk-register/v1",
     artifact_type="risk-register", lifecycle="living", status="active",
-    products="[atlas]", owners="[gq]", created="2026-03-01", last_review=NOW,
+    products="[atlas]", owners="[gq]", created="2026-03-01", last_review=review(),
     classification="internal") + """\
 # Atlas · risks
 
@@ -307,7 +321,7 @@ RSK-001 accepted by gq on 2026-03-01: Atlas is advisory by design.
 
 F["products/atlas/RMP.md"] = fm(schema="framework/roadmap/v1",
     artifact_type="roadmap", lifecycle="living", status="active",
-    products="[atlas]", owners="[gq]", created="2026-03-01", last_review=NOW,
+    products="[atlas]", owners="[gq]", created="2026-03-01", last_review=review(),
     classification="internal") + """\
 # Atlas · roadmap
 
@@ -323,7 +337,7 @@ F["products/atlas/contracts/DC-001-atlas-scores.md"] = fm(
     schema="framework/data-contract/v1", artifact_type="data-contract",
     id="DC-001", lifecycle="living", status="active", version="3",
     products="[atlas]", consumers="[atlas, revops]", owners="[gq]",
-    created="2026-03-11", last_review=NOW, classification="internal") + """\
+    created="2026-03-11", last_review=review(), classification="internal") + """\
 # DC-001 · `analytics.atlas_scores`
 
 **Consumers.** `atlas-web`, `digest`, and the RevOps renewal forecast model, which joins

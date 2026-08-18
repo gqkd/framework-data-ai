@@ -6,6 +6,20 @@ routing table can name actually exists in the fixture.
 """
 import sys, shutil
 from pathlib import Path
+import itertools
+from datetime import datetime, timedelta
+
+# Every document here used to carry the same review instant, which is a claim that somebody
+# read the whole set in one minute -- the exact shape `LC005` reports, planted by the
+# generator in every fixture at once. Successive instants instead: a fixture that trips a
+# check it did not mean to plant teaches you to read past its output.
+_REVIEW_STEP = itertools.count()
+
+
+def review() -> str:
+    return (datetime(2026, 8, 1, 9, 0)
+            + timedelta(minutes=17 * next(_REVIEW_STEP))).strftime("%Y-%m-%d %H:%M")
+
 
 OUT = Path(sys.argv[1])
 if OUT.exists():
@@ -24,7 +38,7 @@ FILES = {}
 FILES["AGENTS.md"] = fm(
     schema="framework/agents-control-plane/v1", artifact_type="agents-control-plane",
     lifecycle="living", status="active", owners="[g.quaglia]", created=D,
-    last_review=T, classification="internal") + """# Instructions for agents
+    last_review=review(), classification="internal") + """# Instructions for agents
 
 Read this file first. Then `OPEN.md`. Then the `product.yaml` of the product you are
 working on.
@@ -80,7 +94,7 @@ require modifying an `immutable`.
 FILES["products/riconciliazione/OPEN.md"] = fm(
     schema="framework/open-register/v1", artifact_type="open-register",
     lifecycle="living", status="active", products="[riconciliazione]",
-    owners="[g.quaglia]", created=D, last_review=T,
+    owners="[g.quaglia]", created=D, last_review=review(),
     classification="internal") + """# Open decisions and known issues
 
 # §1 · Open decisions
@@ -127,7 +141,7 @@ FILES["products/riconciliazione/OPEN.md"] = fm(
 FILES["GLOSSARY.md"] = fm(
     schema="framework/glossary/v1", artifact_type="glossary", lifecycle="living",
     status="active", products="[riconciliazione]", owners="[g.quaglia]", created=D,
-    last_review=T, classification="internal") + """# Glossary and metrics dictionary
+    last_review=review(), classification="internal") + """# Glossary and metrics dictionary
 
 ## §Domain terms
 
@@ -164,7 +178,7 @@ FILES["GLOSSARY.md"] = fm(
 FILES["COMMITMENTS.md"] = fm(
     schema="framework/commitments/v1", artifact_type="commitments", lifecycle="living",
     status="active", products="[riconciliazione]", owners="[g.quaglia]", created=D,
-    last_review=T, classification="confidential") + """# Commercial commitments made
+    last_review=review(), classification="confidential") + """# Commercial commitments made
 
 ## Register
 
@@ -262,7 +276,7 @@ classification: internal
 FILES["products/riconciliazione/PBR.md"] = fm(
     schema="framework/product-brief/v1", artifact_type="product-brief",
     lifecycle="living", status="active", version="1.0.0",
-    products="[riconciliazione]", owners="[g.quaglia]", created=D, last_review=T,
+    products="[riconciliazione]", owners="[g.quaglia]", created=D, last_review=review(),
     classification="internal") + """# Product brief: Riconciliazione
 
 ## One line
@@ -295,7 +309,7 @@ It matches bank movements to accounting entries so a finance team closes the mon
 FILES["products/riconciliazione/ARC.md"] = fm(
     schema="framework/architecture/v1", artifact_type="architecture",
     lifecycle="living", status="draft", version="1.0.0",
-    products="[riconciliazione]", owners="[g.quaglia]", created=D, last_review=T,
+    products="[riconciliazione]", owners="[g.quaglia]", created=D, last_review=review(),
     classification="internal") + """# Architecture: Riconciliazione
 
 <!-- section: current -->
@@ -328,7 +342,7 @@ decided, and the matcher split from the API.
 FILES["products/riconciliazione/WF.md"] = fm(
     schema="framework/workflow/v1", artifact_type="workflow", lifecycle="living",
     status="active", version="1.0.0", products="[riconciliazione]",
-    owners="[g.quaglia]", created=D, last_review=T,
+    owners="[g.quaglia]", created=D, last_review=review(),
     classification="internal") + """# Workflow: monthly reconciliation
 
 <!-- section: current -->
@@ -361,7 +375,7 @@ Same steps, with step 4 shortened by better automatic matching.
 FILES["products/riconciliazione/EVP.md"] = fm(
     schema="framework/evaluation-plan/v1", artifact_type="evaluation-plan",
     lifecycle="living", status="active", version="1.0.0",
-    products="[riconciliazione]", owners="[g.quaglia]", created=D, last_review=T,
+    products="[riconciliazione]", owners="[g.quaglia]", created=D, last_review=review(),
     classification="internal") + """# Evaluation plan: matcher
 
 ## Evaluation dataset
@@ -384,7 +398,7 @@ An RC that does not clear every threshold does not ship.
 FILES["products/riconciliazione/RSK.md"] = fm(
     schema="framework/risk-register/v1", artifact_type="risk-register",
     lifecycle="living", status="active", version="1.0.0",
-    products="[riconciliazione]", owners="[g.quaglia]", created=D, last_review=T,
+    products="[riconciliazione]", owners="[g.quaglia]", created=D, last_review=review(),
     classification="confidential") + """# Risk and compliance register: Riconciliazione
 
 <!-- section: state -->
@@ -439,7 +453,7 @@ FILES["products/riconciliazione/LOG.md"] = fm(
 FILES["products/riconciliazione/RMP.md"] = fm(
     schema="framework/roadmap/v1", artifact_type="roadmap", lifecycle="living",
     status="active", version="1.0.0", products="[riconciliazione]",
-    owners="[g.quaglia]", created=D, last_review=T,
+    owners="[g.quaglia]", created=D, last_review=review(),
     classification="internal") + """# Progressive implementation roadmap: Riconciliazione
 
 ## Increments
@@ -453,7 +467,7 @@ FILES["products/riconciliazione/RMP.md"] = fm(
 FILES["products/riconciliazione/contracts/DC-001-vendite.md"] = fm(
     schema="framework/data-contract/v1", artifact_type="data-contract",
     lifecycle="living", status="active", id="DC-001", version="1.0.0",
-    products="[riconciliazione]", owners="[g.quaglia]", created=D, last_review=T,
+    products="[riconciliazione]", owners="[g.quaglia]", created=D, last_review=review(),
     classification="internal") + """# DC-001 · Data contract: bank movements
 
 ## Schema

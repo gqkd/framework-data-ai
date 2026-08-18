@@ -6,7 +6,7 @@ status: draft
 products: [store-ops]
 owners: [m.ferri]
 created: 2026-06-15
-last_review: 2026-07-30 11:20
+last_review: 2026-07-30 08:15
 classification: internal
 ---
 

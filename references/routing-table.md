@@ -87,7 +87,7 @@ A correction is the most delicate operation, because the class of the document d
 
 | Class of the document | Allowed operation |
 |---|---|
-| **living** | edit in place, set `last_review` to the current instant (`YYYY-MM-DD HH:MM`, not the date alone: it can happen more than once in a day) |
+| **living** | edit in place. `last_review` is proposed and not written: it attests a reading, and the instant goes in the proposal (`YYYY-MM-DD HH:MM`, not the date alone: it can happen more than once in a day) |
 | **immutable** | **never edit.** Create a new document with `supersedes`, and move the old one to `status: superseded` |
 | **append-only** | **never rewrite a line.** Add a linked event (`ANA-NNN` on `SIG-NNN`) |
 

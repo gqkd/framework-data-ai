@@ -7,6 +7,20 @@ import re
 import shutil
 import sys
 from pathlib import Path
+import itertools
+from datetime import datetime, timedelta
+
+# Every document here used to carry the same review instant, which is a claim that somebody
+# read the whole set in one minute -- the exact shape `LC005` reports, planted by the
+# generator in every fixture at once. Successive instants instead: a fixture that trips a
+# check it did not mean to plant teaches you to read past its output.
+_REVIEW_STEP = itertools.count()
+
+
+def review() -> str:
+    return (datetime(2026, 8, 1, 9, 0)
+            + timedelta(minutes=17 * next(_REVIEW_STEP))).strftime("%Y-%m-%d %H:%M")
+
 
 BASE = Path(sys.argv[1])   # where to write; see evals/fixtures/make.py
 
@@ -47,7 +61,7 @@ CLEAN = {
     "OPEN.md": fm(schema="framework/open-register/v1", artifact_type="open-register",
                   lifecycle="living", status="active", owners="[maria]",
                   products="[atlas]",
-                  created="2026-01-01", last_review="2026-08-01 09:00")
+                  created="2026-01-01", last_review=review())
     + """# Open decisions and known issues
 
 # §3 · Parking lot
@@ -63,7 +77,7 @@ Run `validate.py --emit-index` to fill this in.
     "products/atlas/OPEN.md": fm(
         schema="framework/open-register/v1", artifact_type="open-register",
         lifecycle="living", status="active", owners="[maria]", products="[atlas]",
-        created="2026-01-01", last_review="2026-08-01 09:00",
+        created="2026-01-01", last_review=review(),
         entries="\n  OD-004:\n    status: open\n    cost_to_reverse: medium\n"
                 "    default_in_force: BigQuery, the landing zone is already there\n"
                 "  OD-001:\n    status: decided\n    cost_to_reverse: medium\n"
@@ -87,12 +101,12 @@ Run `validate.py --emit-index` to fill this in.
     "GLOSSARY.md": fm(schema="framework/glossary/v1", artifact_type="glossary",
                       lifecycle="living", status="active", owners="[maria]",
                       products="[atlas]",
-                      created="2026-01-01", last_review="2026-08-01 09:00")
+                      created="2026-01-01", last_review=review())
     + "# Glossary\n\n**Active customer** - a customer with at least one order in 90 days.\n",
     "AGENTS.md": fm(schema="framework/agents-control-plane/v1",
                     artifact_type="agents-control-plane",
                     lifecycle="living", status="active", owners="[maria]",
-                    created="2026-01-01", last_review="2026-08-01 09:00")
+                    created="2026-01-01", last_review=review())
     + "# Control plane\n\nRead OPEN.md before any structural decision.\n",
     "decisions/DEC-001-warehouse.md": fm(
         schema="framework/decision-record/v1", artifact_type="decision-record",
@@ -119,13 +133,13 @@ Run `validate.py --emit-index` to fill this in.
     "products/atlas/PBR.md": fm(
         schema="framework/product-brief/v1", artifact_type="product-brief",
         lifecycle="living", status="active", products="[atlas]", owners="[maria]",
-        created="2026-01-01", last_review="2026-08-01 09:00")
+        created="2026-01-01", last_review=review())
     + "# Atlas - product brief\n\nAtlas answers: which customers are about to churn.\n",
     "products/atlas/ARC.md": fm(
         schema="framework/architecture/v1", artifact_type="architecture",
         lifecycle="living", status="active", products="[atlas]", owners="[maria]",
         verified_code="\n  product.backend: 9f2ab41", created="2026-03-01",
-        last_review="2026-08-01 09:00")
+        last_review=review())
     + """# Atlas - architecture
 
 <!-- section: current -->
@@ -267,7 +281,7 @@ each decision still matters, which no generator can produce.
     "OPEN.md": fm(schema="framework/open-register/v1", artifact_type="open-register",
                   lifecycle="living", status="active", owners="[maria]",
                   products="[atlas]",
-                  created="2026-01-01", last_review="2026-08-01 09:00",
+                  created="2026-01-01", last_review=review(),
                   entries="\n  OD-005:\n    status: open\n    cost_to_reverse: high\n"
                           "    products: [atlas]\n"
                           "    default_in_force: none\n"
@@ -314,7 +328,7 @@ each decision still matters, which no generator can produce.
     "AGENTS.md": fm(schema="framework/agents-control-plane/v1",
                     artifact_type="agents-control-plane",
                     lifecycle="living", status="active", owners="[maria]",
-                    created="2026-01-01", last_review="2026-08-01 09:00")
+                    created="2026-01-01", last_review=review())
     + "# Control plane\n\nRead OPEN.md before any structural decision.\n",
 
     # 4. FM002: lifecycle living on a decision-record
@@ -361,7 +375,7 @@ each decision still matters, which no generator can produce.
     "products/atlas/PBR.md": fm(
         schema="framework/product-brief/v1", artifact_type="product-brief",
         lifecycle="living", status="active", products="[atlas]",
-        created="2026-01-01", last_review="2026-08-01 09:00")
+        created="2026-01-01", last_review=review())
     + "# Atlas - product brief\n\nAtlas answers: which customers are about to churn.\n",
 
     # 5. FM003: unknown artifact_type
@@ -369,7 +383,7 @@ each decision still matters, which no generator can produce.
         schema="framework/architecture/v1", artifact_type="architecture-doc",
         lifecycle="living", status="active", products="[atlas]", owners="[maria]",
         verified_code="\n  product.backend: 9f2ab41", created="2026-03-01",
-        last_review="2026-08-01 09:00")
+        last_review=review())
     + """# Atlas - architecture
 
 <!-- section: current -->
@@ -392,7 +406,7 @@ The feature store does not exist yet.
     "initiatives/churn/EVD-001.md": fm(
         schema="framework/evidence-brief/v1", artifact_type="evidence-brief",
         id="EVD-001", lifecycle="immutable", status="active", products="[atlas]",
-        owners="[maria]", created="2026-01-20", last_review="2026-08-01 09:00")
+        owners="[maria]", created="2026-01-20", last_review=review())
     + "# EVD-001 - Churn costs 1.4M a year\n\nFrom the 2025 revenue extract.\n",
 
     # 8. REF001 + 10. SEC001
@@ -434,7 +448,7 @@ Scoring latency stays under 200ms p95.
         schema="framework/data-contract/v1", artifact_type="data-contract",
         id="DC-001", lifecycle="living", status="active", products="[atlas]",
         consumers="[atlas, orion]", owners="[maria]",
-        created="2026-04-10", last_review="2026-08-01 09:00")
+        created="2026-04-10", last_review=review())
     + "# DC-001 - churn_scores\n\nOne row per customer per day.\n",
 }
 

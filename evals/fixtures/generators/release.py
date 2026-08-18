@@ -134,7 +134,7 @@ status: active
 products: [atlas]
 owners: [g.quaglia]
 created: 2026-01-12
-last_review: 2026-07-28 17:40
+last_review: 2026-07-28 09:05
 ---
 
 # Atlas · product brief
@@ -161,7 +161,7 @@ status: active
 products: [atlas]
 owners: [g.quaglia]
 created: 2026-03-02
-last_review: 2026-07-28 17:40
+last_review: 2026-07-28 11:20
 ---
 
 # Atlas · runbook
@@ -224,7 +224,7 @@ name: Atlas
 one_liner: Drafts the first reply to a support ticket, with citations.
 owners: [g.quaglia]
 created: 2026-01-12
-last_review: 2026-07-28 17:40
+last_review: 2026-07-28 14:55
 
 code:
   backend:
@@ -253,11 +253,11 @@ platform:
 artifacts:                     # GENERATED
   living:
     - path: products/atlas/PBR.md
-      last_review: 2026-07-28 17:40
+      last_review: 2026-07-28 16:10
     - path: products/atlas/EVP.md
-      last_review: 2026-07-28 17:40
+      last_review: 2026-07-28 08:35
     - path: products/atlas/RB.md
-      last_review: 2026-07-28 17:40
+      last_review: 2026-07-28 15:25
 """
 
 CHG_041 = """---
