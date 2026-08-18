@@ -251,6 +251,11 @@ def _clean_repo():
                       created="2026-01-01", last_review="2026-01-01 09:00",
                       entries="\n  OD-001:\n    status: open\n"
                               "    cost_to_reverse: low\n"
+                              # At the root, who an entry binds has no other answer, so
+                              # `REG011` asks for one. `[all]` in a repository of one
+                              # product is not the same claim as naming that product: it
+                              # says the entry binds whatever this repository grows.
+                              "    products: [all]\n"
                               "    default_in_force: nothing is scheduled\n")
         + "# Open\n",
         "decisions/DEC-001-slug.md": fm(
@@ -1670,6 +1675,56 @@ def _registers_are_per_product():
             if "REG009" in codes:
                 problems.append(f"a trigger reading {written!r} was reported: the check is "
                                 "matching prose rather than digits")
+
+        # Who an entry at the root binds: `[all]` is a statement, absence is a gap, and
+        # before this they were written identically. The root register of this fixture is
+        # the one with no `entries:` at all, so the entry is added here and removed after.
+        rootreg = root / "OPEN.md"
+        keep = rootreg.read_text()
+        entry_at_root = lambda decl: (
+            fm("entries:\n  OD-009:\n    status: open\n    cost_to_reverse: low\n"
+               f"    default_in_force: nothing\n{decl}")
+            + "\n<!-- generated: open-union -->\nx\n<!-- /generated -->\n")
+        for decl, want in (("", True),
+                           ("    products: [all]\n", False),
+                           ("    products: [alpha]\n", False),
+                           ("    products: [all, alpha]\n", True)):
+            rootreg.write_text(entry_at_root(decl))
+            codes = [f["code"] for f in json.loads(run().stdout)["findings"]]
+            if want and "REG011" not in codes:
+                problems.append(f"an entry at the root declaring {decl.strip() or 'nothing'} "
+                                "was not reported: it binds every product by rule, and "
+                                "nothing distinguishes that from nobody having asked")
+            if not want and "REG011" in codes:
+                problems.append(f"an entry at the root declaring {decl.strip()} was "
+                                "reported, so the field cannot be answered")
+        # And the state the register is written for: a repository with a register and no
+        # products yet. Asking which products an entry binds has no available answer there.
+        rootreg.write_text(entry_at_root(""))
+        for man in (root / "products").glob("*/product.yaml"):
+            man.rename(man.with_suffix(".yaml.parked"))
+        codes = [f["code"] for f in json.loads(run().stdout)["findings"]]
+        for man in (root / "products").glob("*/product.yaml.parked"):
+            man.rename(man.with_suffix("").with_suffix(".yaml"))
+        if "REG011" in codes:
+            problems.append("an entry at the root was asked which products it binds in a "
+                            "repository that declares none: at day one the register is the "
+                            "file that exists and the products are what has not been "
+                            "created yet")
+        rootreg.write_text(keep)
+
+        # The manifest answering a question that moved. Absent from the template now, and a
+        # repository that kept the field keeps a second answer that nothing recomputes.
+        man_path = root / "products" / "alpha" / "product.yaml"
+        original = man_path.read_text()
+        for field_name in ("open_decisions: [OD-001]", "open_risks: []", "active_changes: []"):
+            man_path.write_text(original + field_name + "\n")
+            codes = [f["code"] for f in json.loads(run().stdout)["findings"]]
+            if "FM005" not in codes:
+                problems.append(f"a manifest carrying `{field_name.split(':')[0]}` was not "
+                                "reported: it is derived now, and a hand written copy of a "
+                                "derived answer is the one that goes stale unnoticed")
+        man_path.write_text(original)
 
         # A date in a heading, which `REG009` structurally cannot see: it reads the
         # `trigger` of an entry, and a heading belongs to no entry while binding every one

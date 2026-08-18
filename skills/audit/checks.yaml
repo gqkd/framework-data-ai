@@ -82,6 +82,18 @@ checks:
       to that costs. `last_review` is left to `LC004`, which reports the same value and says
       more about it.
 
+  FM005:
+    level: warn
+    title: a manifest carries a field that is derived now
+    prevents: >
+      Two answers to one question, where the hand written one wears the label of the
+      generated one. `open_decisions`, `open_risks` and `active_changes` sat in
+      `templates/product.yaml` marked GENERATED for months, with a note underneath admitting
+      that nothing generated them -- so they were maintained by hand and read as computed,
+      which is the combination nobody rereads. The derived answer is `product.index.yaml`
+      now, and `RSK.md` §state for the risks. A manifest still carrying them is the third
+      voice in a disagreement that should have one.
+
   # ── Sections ───────────────────────────────────────────────────────────────
   SEC001:
     level: warn
@@ -280,6 +292,26 @@ checks:
       an entry underneath. What a heading is for is what a group of entries have in common,
       which in this register is what changing your mind costs; when each has to be decided
       is its own trigger.
+
+  REG011:
+    level: warn
+    title: an entry in the root register does not say which products it binds
+    prevents: >
+      A silence that is two different statements. Under `products/<p>/` the directory
+      answers the question, which is why the field is left off there and `REG008` reports an
+      entry contradicting it. At the root nothing answers it: an entry with no `products:`
+      binds every product by rule, and that is indistinguishable from an entry nobody asked
+      the question about. The first repository to run into this had twenty entries at the
+      root, a product register whose prose said none of them were that product's, and a
+      manifest listing all of them as its own -- three artefacts, three answers, and no
+      check able to say which was meant. `products: [all]` is the statement and absence is
+      the gap, the same distinction `entries: {}` already buys against an absent
+      `entries:`. The reserved word rather than a list of every product, because a list says
+      the same thing until somebody adds a product and then quietly says less.
+
+      Not asked before there are products to name: a repository at day one has a register
+      and no manifest anywhere, which is the state the register exists for -- it fills up
+      before the products do -- and a question with no available answers is not a finding.
 
   # ── STACK ──────────────────────────────────────────────────────────────────
   STK001:

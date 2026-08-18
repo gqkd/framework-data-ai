@@ -71,9 +71,11 @@ artifacts:                     # GENERATED
   append_only:
     - products/product-a/LOG.md
 
-open_decisions: [OD-001, OD-003]   # GENERATED from OPEN.md
-open_risks: []                     # GENERATED from RSK.md §state
-active_changes: []                 # GENERATED: the CHG records with status approved
+# `open_decisions`, `open_risks` and `active_changes` were here, marked GENERATED, with the
+# note below admitting nothing generated them. They are answered elsewhere now and putting
+# them back is `FM005`: the open entries by `product.index.yaml` beside this file, which
+# `--emit-index` writes and `--check` reports as drifted; the risks by `RSK.md` §state,
+# which is where a risk is written in the first place.
 
 entry_points:                      # where an agent starts, by kind of activity
   understand: [README.md, products/product-a/PBR.md, products/product-a/ARC.md]
@@ -86,8 +88,9 @@ roles:
   product: NAME
   tech: NAME
 
-# On the GENERATED sections: today nothing regenerates them. No tooling exists yet, so you
-# fill those fields in by hand, and they have to be treated as hand written. A section
+# On the GENERATED sections that are left -- `release` and `artifacts`: today nothing
+# regenerates them. No tooling exists yet, so you fill those fields in by hand, and they
+# have to be treated as hand written. A section
 # labeled "generated" that is in fact written by hand is a section nobody rereads,
 # because everyone assumes something keeps it true. Until the generator exists, that
 # label is a promise the repository is not keeping, so either keep the fields honest or

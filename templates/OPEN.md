@@ -21,8 +21,12 @@ entries:
              any form and not even beside the event -- `REG009`
     decide_with: [OD-004]             # entries that have to be decided in one sitting.
                                       # Write it on both of them
-    products: [product-a]             # only in the register at the root, and only when the
-                                      # entry binds some products and not all. In a
+    products: [product-a]             # REQUIRED in the register at the root, where nothing
+                                      # else answers the question -- `[all]` when it really
+                                      # binds every product, including ones not created
+                                      # yet, and the names when it binds some. Absence is
+                                      # `REG011`: it binds everything by rule, and reads
+                                      # exactly like a question nobody asked. In a
                                       # product's own register the directory already said
                                       # it, and naming another product there is `REG008`
   OD-002:

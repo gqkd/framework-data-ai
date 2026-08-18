@@ -25,7 +25,7 @@ project with a corpus and no framework in it.
 
 | | |
 |---|---|
-| `audit/dirty-repo` | Real defects: front matter that does not parse, a `derives_from` pointing at a decision nobody wrote, a decision superseded by one that never moved it to `superseded`, a product with no open register of its own, and an open entry carrying a date where its trigger belongs. Four errors and fifteen warnings, by construction. |
+| `audit/dirty-repo` | Real defects: front matter that does not parse, a `derives_from` pointing at a decision nobody wrote, a decision superseded by one that never moved it to `superseded`, a product with no open register of its own, an open entry carrying a date where its trigger belongs, and one at the root that does not say which products it binds. Four errors and sixteen warnings, by construction. |
 | `audit/clean-repo` | Nothing wrong with it. A checker that reports something here is inventing. It is also the smallest correct example of the register layout: the entries in `products/atlas/OPEN.md`, and a root register holding the parking lot and the union region. |
 | `cycle/fixture-base` | Ten signals, a roadmap, and the previous cycle's `ICG`. Two of its routings are traps: one `not-classifiable` that must come back, one `not-a-candidate` that must not be re-triaged. Six signals are in no `ICG` at all. |
 | `release/A` … `F` | Six release candidates differing only in the evidence they carry. Four block, each for its own reason; `A` ships with a non-blocking metric over its ceiling, and `F` ships with three rows exactly on their threshold. |

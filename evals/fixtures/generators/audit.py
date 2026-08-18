@@ -219,7 +219,11 @@ Row counts match for 7 consecutive days.
 #            without looking at it
 # 16. VER001 ARC attests `product.backend` and this manifest declares no `code:`,
 #            so the commit points at a repository nothing here can resolve
-# 17. REG009  OD-004 carries a date as its trigger. The cheapest wrong repair is to
+# 17. REG011 OD-004 sits in the register at the root and names no `products:`, so it
+#            binds every product by rule and reads exactly like an entry nobody asked
+#            the question about. OD-005 beside it names one, which is what makes the
+#            silence legible as a defect rather than as the house style
+# 18. REG009  OD-004 carries a date as its trigger. The cheapest wrong repair is to
 #            invent an event that clears it, which is the failure this fixture is
 #            built around: the date says when somebody hoped, and only the person who
 #            wrote it knows what it was standing in for
@@ -265,6 +269,7 @@ each decision still matters, which no generator can produce.
                   products="[atlas]",
                   created="2026-01-01", last_review="2026-08-01 09:00",
                   entries="\n  OD-005:\n    status: open\n    cost_to_reverse: high\n"
+                          "    products: [atlas]\n"
                           "    default_in_force: none\n"
                           "  OD-004:\n    status: open\n    cost_to_reverse: medium\n"
                           "    default_in_force: BigQuery, already there\n"

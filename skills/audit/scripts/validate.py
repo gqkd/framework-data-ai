@@ -76,6 +76,12 @@ SECTION_MARK = re.compile(r"<!--\s*section:\s*([a-z0-9-]+)\s*-->")
 # quarter", "within a month". Those are time expressions with no digits in them, and a
 # check that tried to match them would have to match prose. The template says an event, the
 # skill says an event, and this catches the half that can be caught without guessing.
+# The value that says "every product, including the ones that do not exist yet". A list of
+# names says the same thing until somebody adds a product, and then it quietly says less --
+# which is the failure this word exists to prevent, and the reason it is not spelled by
+# listing everybody.
+ALL_PRODUCTS = "all"
+
 DATE_IN_TEXT = re.compile(r"(?<!\d)(?:19|20)\d{2}(?!\d)"
                           r"|(?<!\d)\d{1,2}[/.]\d{1,2}[/.]\d{2,4}(?!\d)")
 
@@ -672,6 +678,40 @@ def product_dirs(arts: list[Artifact]) -> dict[Path, tuple[str, str]]:
     return out
 
 
+# What `product.index.yaml` now answers, and what a manifest used to answer by hand while
+# claiming to be generated. Kept as a list rather than folded into the schema because these
+# are not illegal fields -- they are answers that have moved, and the finding has to say
+# where they moved to.
+MOVED_TO_INDEX = {
+    "open_decisions": "the registers, composed by `--emit-index`",
+    "open_risks": "`RSK.md` §state, which is where a risk is actually written",
+    "active_changes": "the `CHG` records themselves",
+}
+
+
+def check_manifest_derived_fields(arts: list[Artifact], report: Report) -> None:
+    """A manifest answering a question something else now answers.
+
+    These three were marked GENERATED in the template for months with a note underneath
+    admitting nothing generated them, so they were hand written and read as derived: the
+    worst of both, because a section labelled generated is a section nobody rereads. They
+    are derived now, in `product.index.yaml`, and a manifest that still carries them is a
+    second answer to a question that has one -- which is exactly how a repository ends up
+    telling three different stories about which entries belong to which product.
+    """
+    for a in arts:
+        if a.type != "product-manifest":
+            continue
+        for field_name, where in sorted(MOVED_TO_INDEX.items()):
+            if field_name in a.meta:
+                report.add("FM005", a.rel,
+                           f"`{field_name}` is still in this manifest. It is derived now, "
+                           f"and the authority is {where}; `product.index.yaml` beside this "
+                           "file holds the computed answer. Two answers to one question, "
+                           "and the hand written one is the one that goes stale without "
+                           "anybody noticing, because the label says it is generated.")
+
+
 def check_open_register(arts: list[Artifact], report: Report) -> None:
     opens = [a for a in arts if a.type == "open-register"]
     if not opens:
@@ -909,6 +949,42 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
                            "in that product's register, and one belonging to several goes "
                            "in the register at the root, where naming them is what the "
                            "field is for.")
+            # THE ROOT REGISTER IS WHERE NOTHING ELSE ANSWERS THE QUESTION. Under
+            # `products/<p>/` the directory says who an entry is about, which is why the
+            # field is normally left off and `REG008` reports one that contradicts it. At
+            # the root there is no directory to ask, and an entry with no `products:` binds
+            # every product by rule -- indistinguishable from an entry nobody asked the
+            # question about. Both look like silence, and one of them is a decision.
+            #
+            # The same distinction `entries: {}` bought against an absent `entries:`: read
+            # and there is nothing, versus nobody filled this in. `products: [all]` is the
+            # statement; nothing is the gap.
+            #
+            # NOT ASKED BEFORE THERE ARE PRODUCTS TO NAME. A repository at day one has a
+            # register and no `product.yaml` anywhere -- that is the state `start` is
+            # written for, and the whole point of the register is that it fills up before
+            # the products do. Asking which products an entry binds when the repository
+            # declares none is a question with no available answers, and `[all]` there says
+            # nothing. Same shape as not reporting a product in discovery for lacking what
+            # discovery has not reached.
+            if a.rel == "OPEN.md" and dirs:
+                named = as_list(row.get("products"))
+                if not named:
+                    report.add("REG011", a.rel,
+                               f"{od} sits in the register at the root and names no "
+                               "`products:`. It binds every product in this repository, "
+                               "which may be what somebody meant or may be a question "
+                               "nobody asked -- and the two are written identically. Name "
+                               "the products it binds, or `[all]` when it really is all of "
+                               "them.")
+                elif ALL_PRODUCTS in named and len(named) > 1:
+                    others = [p for p in named if p != ALL_PRODUCTS]
+                    report.add("REG011", a.rel,
+                               f"{od} declares `[{ALL_PRODUCTS}]` and also names "
+                               f"{', '.join(map(repr, others))}. Either it binds everything "
+                               "or it binds those, and as written the reader has to guess "
+                               "which half was the afterthought.")
+
             if od in closed_by and row.get("status") == "open":
                 report.add("REG002", a.rel,
                            f"{od} is still `status: open` but {closed_by[od]} derives from "
@@ -1333,7 +1409,11 @@ def binds(prod: str, row: dict, scope: str | None) -> bool:
     if scope is not None:
         return scope == prod
     named = as_list(row.get("products"))
-    return prod in named or not named
+    # Silence still binds every product, and `REG011` reports it rather than this changing
+    # its meaning: a repository written before the reserved word means what it meant, and a
+    # composition rule that changes under a document nobody edited is the one kind of
+    # migration that cannot be reviewed.
+    return ALL_PRODUCTS in named or prod in named or not named
 
 
 def build_regions(root: Path, arts: list[Artifact]) -> dict[Path, dict[str, str]]:
@@ -1536,6 +1616,7 @@ def main() -> int:
     check_change_contracts(arts, report)
     check_framework_version(root, project, registry, report)
     check_open_register(arts, report)
+    check_manifest_derived_fields(arts, report)
     check_triage(arts, report)
     check_stack(arts, report)
     check_cross_product(arts, report)

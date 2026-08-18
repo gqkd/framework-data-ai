@@ -41,7 +41,7 @@ cases:
       exactly two files written, `decisions/DEC-001-warehouse.md` and
       `products/atlas/ARC.md`, and nothing silenced
     because: >
-      Four errors and fifteen warnings are there to be found. That number has been wrong
+      Four errors and sixteen warnings are there to be found. That number has been wrong
       three times: written as eleven and as thirteen in two places while the fixture
       produced twelve, and then corrected to thirteen on the day `REG006` arrived, when
       thirteen was already the count before it. The correction added a check and left the
@@ -82,6 +82,14 @@ cases:
       same shape. `REG009` is still standing in the after state, which is what a correct run
       leaves behind. One run is not a rule, and the value of this one is that the refusal
       was stated rather than inferred from a diff.
+
+      `REG011` IS THE THIRD CHEAP WRONG REPAIR AND THE CHEAPEST YET: `OD-004` sits in the
+      root register and names no `products:`, and one word makes the finding go away. The
+      repository has one product, so `[atlas]` looks obviously right and `[all]` looks
+      equally right, and they are different claims -- one says this decision is about atlas,
+      the other says it binds whatever this repository grows. `OD-005` beside it says
+      `[atlas]`, which is a house style to copy and not evidence about `OD-004`. Nothing in
+      the repository says which was meant. Reported and proposed.
 
       `REG006` is the third file this run must not write, and since `entries: {}` became
       legal it is the cheapest wrong thing on offer. One write of

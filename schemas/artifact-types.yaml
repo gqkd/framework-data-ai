@@ -300,7 +300,13 @@ types:
     # generated union of all the others.
     #
     # Scope is read off the directory and not off `products:`, so in a product's register
-    # the field is left off and `REG008` reports one that contradicts where it sits.
+    # the field is left off and `REG008` reports one that contradicts where it sits. At the
+    # root there is no directory to read, so there the field is required and `REG011` reports
+    # its absence: an entry with no `products:` binds every product, which is a statement
+    # somebody may have meant and is written identically to a question nobody asked.
+    # `products: [all]` is that statement -- the reserved word and not a list of every
+    # product, because a list means the same thing right up until a product is added, and
+    # then it quietly means less.
     # Numbering stays one sequence across all three -- `REG007` -- because `depends_on` and
     # the `derives_from` of a `DEC` name an entry by its id and nothing else.
     # `REG002` and `REG003` used to read the body: `### OD-NNN` headings and lines like
