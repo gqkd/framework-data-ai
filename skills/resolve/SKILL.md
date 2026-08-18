@@ -54,9 +54,11 @@ that decision while the heading is where it got filed. An entry declaring `high`
 `LOW` heading is the one everybody scrolls past.
 
 **Within a tier, order by when the choice stops being available**, then by how many other
-entries the decision unblocks, then by the register's own order. Two entries with the same
-cost are not interchangeable: one may have a dated deadline, one an event that forces it,
-and one nothing at all. Saying so is most of the value of the ordering, and without a rule
+entries the decision unblocks, then by the register's own order. That is what `trigger`
+records: the event after which an entry can no longer be deferred, which is a judgement
+about which event arrives first and not a sort on a column. Two entries with the same cost
+are not interchangeable: one may name an event that is weeks away, one an event nobody can
+date, and one nothing at all. Saying so is most of the value of the ordering, and without a rule
 the tie goes to whichever entry happens to be printed first, which changes the answer the
 next time somebody edits the register for an unrelated reason. If two really are equal,
 say that rather than inventing a reason.

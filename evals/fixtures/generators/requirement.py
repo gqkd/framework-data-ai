@@ -93,7 +93,7 @@ FILES["products/riconciliazione/OPEN.md"] = fm(
 - **Cost to reverse:** high.
 - **Default in force:** cron on the ingestion VM, written by whoever set it up first.
 - **The problem the default introduces:** no retry, no lineage, failures are silent.
-- **Deadline:** 2026-09-30.
+- **Trigger:** the first silent failure that reaches the customer's report.
 
 ## Cost to reverse MEDIUM: decide within the first month
 
@@ -103,7 +103,7 @@ FILES["products/riconciliazione/OPEN.md"] = fm(
 - **Cost to reverse:** medium.
 - **Default in force:** one shared database, no tenant column: today there is one customer.
 - **The problem the default introduces:** the second customer forces a migration.
-- **Deadline:** at the second signed customer.
+- **Trigger:** at the second signed customer.
 
 # §2 · Accepted known issues
 

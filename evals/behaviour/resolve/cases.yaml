@@ -81,6 +81,15 @@ cases:
       repository split, and both gave the reason the second one gave. One agreement is not
       determinism: this is the case to run with `--runs 5` before anybody calls it stable.
 
+      THE FIXTURE MOVED UNDER THIS RESULT ON 2026-08-18, AFTER THE RUNS. `deadline` became
+      `trigger` in 2.0.0 and the three entries whose deadline was a bare date -- OD-005,
+      OD-001, OD-008 -- now name the event that forces them instead: the DPO review, the
+      Monday the analyst is on leave, the missed Sunday run somebody has to explain. That
+      removes the one thing in this register that could be sorted rather than judged, which
+      is the whole point of the rename and also the reason the match above cannot be carried
+      forward. It was measured against a register with three dates in it. Re-run before
+      anybody reads the order below as current.
+
       None of the four runs reasoned from position in the file, which the run before them
       did in as many words and which is why these two fixtures stopped being identical.
       The rule added after that removed the wrong reason without making the answer

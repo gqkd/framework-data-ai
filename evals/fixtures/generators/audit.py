@@ -276,7 +276,7 @@ each decision still matters, which no generator can produce.
 - **Cost to reverse:** high.
 - **Default in force:** none.
 - **The problem the default introduces:** nobody knows what is in the bucket today.
-- **Deadline:** 2026-09-01.
+- **Trigger:** before the first model is written against the bucket.
 
 ## Cost to reverse MEDIUM: decide within the first month
 
@@ -285,7 +285,7 @@ each decision still matters, which no generator can produce.
 - **Question:** Snowflake or BigQuery for the gold layer?
 - **Cost to reverse:** medium.
 - **Default in force:** BigQuery, because the landing zone is already there.
-- **Deadline:** 2026-10-01.
+- **Trigger:** the first consumer of the gold layer outside the team.
 
 # §4 · Decided, moved out
 

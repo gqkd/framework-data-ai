@@ -52,7 +52,7 @@
             "type": "string",
             "minLength": 1
           },
-          "deadline": {
+          "trigger": {
             "type": "string",
             "minLength": 1
           },

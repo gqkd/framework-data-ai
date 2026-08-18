@@ -44,7 +44,7 @@ entries:
 - **Default in force:** none.
 - **The problem the default introduces:** the client said "no roba in cloud americano" and
   nobody has asked what that means. Every other technical choice hangs off this one.
-- **Deadline:** before the first line of code.
+- **Trigger:** before the first line of code.
 
 ### OD-002 · What the thing the counter clerk types into actually is
 
@@ -54,7 +54,7 @@ entries:
 - **Default in force:** none.
 - **The problem the default introduces:** the two are different products, need different
   evaluation, and the client's sentence ("gli esce il codice giusto") can be read either way.
-- **Deadline:** before the first line of code.
+- **Trigger:** before the first line of code.
 
 ## Cost to reverse MEDIUM: decide within the first month
 
@@ -65,7 +65,7 @@ entries:
 - **Default in force:** the nightly export, because it is the only one that exists.
 - **The problem the default introduces:** a clerk can be told a part is in Verona when it
   left Verona this morning.
-- **Deadline:** before the pilot.
+- **Trigger:** before the pilot.
 
 ## Cost to reverse LOW: defer them as long as you like
 

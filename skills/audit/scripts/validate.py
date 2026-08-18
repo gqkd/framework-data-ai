@@ -65,6 +65,11 @@ CHECKS = FRAMEWORK / "skills" / "audit" / "checks.yaml"
 
 SECTION_MARK = re.compile(r"<!--\s*section:\s*([a-z0-9-]+)\s*-->")
 
+# A trigger that is nothing but a date. `2026-09-30`, and the same value with the trailing
+# full stop a prose bullet leaves behind. YAML hands back a `date` object for the unquoted
+# form, so the object is caught too and not only the string.
+BARE_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}\.?$")
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -771,6 +776,22 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
                                f"{od} is open and declares no `cost_to_reverse`. It is what "
                                "orders this register, and an entry without it is filed "
                                "nowhere.")
+
+            # What forces the decision, and a date on its own does not force anything. The
+            # field was called `deadline` until 2.0.0, and a field named for a date collects
+            # dates: an end of quarter that reads as a commitment and was picked because the
+            # line had to say something. A date inside a trigger is legitimate and stays
+            # silent -- "the DPA audit, 2026-10-31" says what arrives on the day. A bare one
+            # does not, and the entry it sits on is by definition one nobody has decided.
+            if row.get("status") == "open":
+                trg = row.get("trigger")
+                if isinstance(trg, (date, datetime)) or (
+                        isinstance(trg, str) and BARE_DATE.match(trg.strip())):
+                    report.add("OD009", a.rel,
+                               f"{od} has a `trigger` that is only a date. A date does not "
+                               "force a decision by arriving; something does. Name it -- the "
+                               "second customer, the first line of the data plane, the audit "
+                               "-- and keep the date beside it if there is one.")
             if row.get("status") == "decided":
                 # Resolved, and not only present. A `closed_by` naming a decision that does
                 # not exist has the identical consequence to naming none -- the reasoning
@@ -1286,7 +1307,7 @@ def build_regions(root: Path, arts: list[Artifact]) -> dict[Path, dict[str, str]
 
     def cell(v) -> str:
         # An absent field reads as an em dash and never as `None`. A table saying a
-        # deadline is `None` is a table nobody trusts the rest of.
+        # trigger is `None` is a table nobody trusts the rest of.
         v = " ".join(str(v).split()).replace("|", "\\|") if v is not None else ""
         return (v[:57] + "...") if len(v) > 60 else (v or "—")
 
@@ -1295,10 +1316,10 @@ def build_regions(root: Path, arts: list[Artifact]) -> dict[Path, dict[str, str]
                         key=lambda r: (COST_ORDER.get(r[1].get("cost_to_reverse"), 3), r[0]))
         if not chosen:
             return ["Nothing open.", ""]
-        out = ["| Entry | Cost to reverse | Default in force | Deadline | Register |",
+        out = ["| Entry | Cost to reverse | Default in force | Trigger | Register |",
                "|---|---|---|---|---|"]
         out += [f"| `{od}` | {cell(row.get('cost_to_reverse'))} "
-                f"| {cell(row.get('default_in_force'))} | {cell(row.get('deadline'))} "
+                f"| {cell(row.get('default_in_force'))} | {cell(row.get('trigger'))} "
                 f"| [`{rel}`]({rel}) |" for od, row, _, rel in chosen]
         return out + [""]
 

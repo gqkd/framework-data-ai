@@ -73,7 +73,34 @@
 # and which is the arrangement being made standard, not one being taken away. `OD006`,
 # `OD007` and `OD008` are all `warn`. A repository that kept a single register at the root
 # means exactly what it meant.
-version: "1.1.0"
+#
+# 1.1.0 -> 2.0.0. `deadline` on an open entry became `trigger`, and a register still
+# carrying the old key stops validating: `additionalProperties` is `false` on an entry, so
+# this is a MAJOR by the definition four paragraphs up, and the one that asks a project to
+# migrate. The migration is a rename plus, for any entry whose deadline was a bare date,
+# a sentence saying what happens on that date.
+#
+# WHY, AND IT IS NOT A RENAME FOR TIDINESS. A date on a decision nobody has taken is a
+# number nobody derived. What actually closes the window is the default in force becoming
+# expensive to unwind, or an event: the second customer, the first line of the data plane,
+# the signature. The framework already said so on the low-cost tier, where the template has
+# always read "there is no date by which to decide it, there is an event after which it can
+# no longer be deferred", and `trigger` is that rule applied to all three tiers.
+#
+# The name was the defect. A field called `deadline` is filled in with an event by whoever
+# knows what actually closes the window, and with a plausible end of quarter by whoever does
+# not -- and the second is indistinguishable from the first once it is written down, which
+# is the failure this framework keeps arranging itself against. `trigger` cannot be answered
+# with a number nobody derived without the answer looking like what it is.
+#
+# There is no fallback parser and no alias, which is a change of position: the note under
+# `entries:` used to say an old-format register does not exist to protect, and one does
+# now. It is migrated instead, because an alias would mean two spellings of the field
+# forever and a register where both appear, which is the ambiguity this file exists to
+# refuse. `OD009` reports the shape the rename is meant to prevent -- a trigger that is
+# only a date -- at `warn`, because a date with an event beside it is legitimate and only
+# a bare one is not.
+version: "2.0.0"
 
 lifecycles: [living, immutable, append-only]
 
@@ -293,9 +320,14 @@ types:
         # and nothing found, the other says nobody filled this in.
         may_be_empty: true
         keys: "^(OD|KI)-(\\d{3,}|NNN)$"
+        # `trigger` and not `deadline`: the observable event after which the decision
+        # can no longer be deferred, which is what forces it. A calendar date is legal
+        # inside one -- "the DPA audit, 2026-10-31" -- and a bare date is `OD009`, because
+        # a date with nothing beside it does not say what happens when it arrives, and the
+        # entry it sits on is by definition one nobody has decided.
         fields:
           required: [status]
-          optional: [cost_to_reverse, default_in_force, deadline, closed_by]
+          optional: [cost_to_reverse, default_in_force, trigger, closed_by]
           lists: [depends_on, products]
           enums:
             status: [open, decided, superseded, parked]

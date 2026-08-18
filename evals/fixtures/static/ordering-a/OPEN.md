@@ -69,7 +69,7 @@ entries:
 - **Default in force:** none.
 - **The problem the default introduces:** the two teams are each about to wire their own
   login, and the first one that ships makes the choice for everybody.
-- **Deadline:** before the store-ops pilot opens to the 140 store managers.
+- **Trigger:** before the store-ops pilot opens to the 140 store managers.
 
 ### OD-005 · Where the curated layer lives
 
@@ -82,7 +82,8 @@ entries:
   rewritten, and the client's DPO has not seen where the data sits.
 - **Depends on:** OD-008.
 - **Leaning:** managed warehouse, because nobody here wants to operate storage.
-- **Deadline:** 2026-09-15.
+- **Trigger:** the DPO review of where the curated data sits, which cannot be answered
+  while it sits on a pilot VM.
 
 ### OD-004 · One tenancy model for both products, or one each
 
@@ -92,7 +93,7 @@ entries:
 - **The problem the default introduces:** the pilot is single-customer, so the question
   never comes up, and it will come up on the day a second chain signs.
 - **Depends on:** OD-007.
-- **Deadline:** before the second customer.
+- **Trigger:** before the second customer.
 
 ### OD-007 · One repository for both products or one repository each
 
@@ -102,7 +103,7 @@ entries:
 - **Default in force:** none.
 - **The problem the default introduces:** the shared forecasting utilities are currently
   copy-pasted between two branches of the same repository, and they have already diverged.
-- **Deadline:** before store-ops gets its own CI.
+- **Trigger:** before store-ops gets its own CI.
 
 ### OD-001 · How forecast output reaches the buyers' ordering system
 
@@ -112,7 +113,7 @@ entries:
 - **Default in force:** a CSV dropped on an SFTP server by hand every Monday by an analyst.
 - **The problem the default introduces:** it works, and because it works nobody is
   measuring how late it is.
-- **Deadline:** 2026-10-01.
+- **Trigger:** the first Monday the analyst who drops the CSV by hand is on leave.
 
 ## Cost to reverse MEDIUM: decide within the first month
 
@@ -123,7 +124,7 @@ entries:
 - **Default in force:** a crontab on the pilot VM, edited over SSH.
 - **The problem the default introduces:** nobody can tell whether last Sunday's run
   succeeded without logging into the box.
-- **Deadline:** 2026-09-30.
+- **Trigger:** the first missed Sunday run somebody has to explain to the client.
 
 ### OD-003 · Naming convention for the marts
 
@@ -132,7 +133,7 @@ entries:
 - **Default in force:** whatever the first dbt model happened to do, which is grain first.
 - **The problem the default introduces:** two more models a week get written against a
   convention nobody agreed.
-- **Deadline:** none stated.
+- **Trigger:** none stated.
 
 ## Cost to reverse LOW: defer them as long as you like
 
@@ -152,7 +153,7 @@ entries:
 - **The problem the default introduces:** the overrides are being written to a table nobody
   reads, and the longer that goes on the more the model looks accidentally wrong.
 - **Depends on:** OD-011.
-- **Deadline:** before the first retraining.
+- **Trigger:** before the first retraining.
 
 ---
 

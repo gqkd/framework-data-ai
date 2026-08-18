@@ -1632,6 +1632,35 @@ def _registers_are_per_product():
             problems.append("an entry in beta's register naming alpha was not reported: a "
                             "person reading the directory and the derived view disagree "
                             "about who it is about, and neither is told")
+
+        # `trigger` replaced `deadline` in 2.0.0, and the point of the rename is the value
+        # rather than the key: what closes the window is an event, and a date on its own is
+        # a number somebody picked. Both spellings of a bare date are asserted, because YAML
+        # hands back a `date` object for the unquoted form and a string for the quoted one,
+        # and a check that only saw the string would be silent on the spelling everybody
+        # actually writes.
+        entry = lambda trg: fm("entries:\n  OD-004:\n    status: open\n"
+                               "    cost_to_reverse: high\n"
+                               "    default_in_force: none\n"
+                               f"    trigger: {trg}\n")
+        for written in ("2026-09-30", '"2026-09-30"', "2026-09-30."):
+            (root / "products" / "beta" / "OPEN.md").write_text(entry(written))
+            codes = [f["code"] for f in json.loads(run().stdout)["findings"]]
+            if "OD009" not in codes:
+                problems.append(f"a trigger written as {written} was not reported. A date "
+                                "does not force a decision by arriving, and the entry it "
+                                "sits on is one nobody has taken")
+
+        # And the two shapes that must stay silent, because a check that reports them is a
+        # check somebody turns off: an event, and an event carrying the date it falls on.
+        for written in ("before the second customer",
+                        "the DPA audit, 2026-10-31"):
+            (root / "products" / "beta" / "OPEN.md").write_text(entry(written))
+            codes = [f["code"] for f in json.loads(run().stdout)["findings"]]
+            if "OD009" in codes:
+                problems.append(f"a trigger reading {written!r} was reported: the check is "
+                                "matching dates wherever they appear rather than a value "
+                                "that is only a date")
     return problems
 
 

@@ -17,7 +17,8 @@ entries:
     status: open
     cost_to_reverse: high
     default_in_force: none            # `none` is a legitimate value. Absent is not
-    deadline: YYYY-MM-DD
+    trigger: the event after which this can no longer be deferred, and not a date on
+             its own -- `OD009`
     products: [product-a]             # only in the register at the root, and only when the
                                       # entry binds some products and not all. In a
                                       # product's own register the directory already said
@@ -125,7 +126,10 @@ at first.
 - **Depends on:** other `OD-NNN` entries that have to be decided first, if there are any.
 - **Leaning:** the direction we lean toward, and why. Optional, and it is not a decision:
   it is there so you do not start the reasoning over from scratch in two weeks.
-- **Deadline:** a date, or an observable event.
+- **Trigger:** the observable event after which the decision can no longer be deferred:
+  the second customer, the first line of the data plane, the signature. A date is not an
+  event and does not force anything by arriving, so a bare one is `OD009`; a date beside
+  the event it belongs to -- *the DPA audit, 2026-10-31* -- is exactly right.
 
 ## Cost to reverse MEDIUM: decide within the first month
 
@@ -133,16 +137,17 @@ at first.
 
 - **Question:**
 - **The problem the default introduces:**
-- **Deadline:**
+- **Trigger:**
 
 ## Cost to reverse LOW: defer them as long as you like
 
 ### OD-003 · Title
 
 - **Question:**
-- **Trigger:** the condition that makes it urgent. On a low-cost entry the trigger replaces
-  the deadline: there is no date by which to decide it, there is an event after which it
-  can no longer be deferred.
+- **Trigger:** the condition that makes it urgent. Nothing special about the low tier any
+  more: this is what the field says on all three, and it started here. There is no date by
+  which to decide any of them, there is an event after which each can no longer be
+  deferred.
 
 ---
 

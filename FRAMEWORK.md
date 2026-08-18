@@ -485,7 +485,9 @@ Four rules, and they hold whether or not you share a substrate.
    about. The composition you lose by splitting comes back generated, in `§5` of the root
    register, ordered by cost across every register at once. `OD006` reports a product with
    no register of its own, `OD007` a numbering that restarted, `OD008` an entry filed under
-   the wrong product.
+   the wrong product, and `OD009` an entry whose `trigger` is only a date -- what closes the
+   window on a decision nobody has taken is an event, and a date on its own is a number
+   somebody picked.
 
 ### If, and only if, you decide to share a substrate
 

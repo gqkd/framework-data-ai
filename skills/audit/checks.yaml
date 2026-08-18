@@ -237,6 +237,19 @@ checks:
       other. An entry binding several products belongs in the register at the root, where
       naming them is exactly what the field is for.
 
+  OD009:
+    level: warn
+    title: an open entry says a date where it should say what forces the decision
+    prevents: >
+      A number nobody derived standing in for the thing that actually closes the window.
+      The field was called `deadline` until 2.0.0, and a field named for a date collects
+      dates: an end of quarter picked because the line had to say something, which then
+      reads like a commitment to whoever finds it. What closes the window is an event --
+      the second customer, the first line of the data plane, the signature. A date with an
+      event beside it is legitimate and silent here; a bare one is reported, because it does
+      not say what arrives on the day, and the entry it sits on is by definition one nobody
+      has decided. Read on `open` entries only: a decided one has spent its trigger.
+
   # ── STACK ──────────────────────────────────────────────────────────────────
   STK001:
     level: warn

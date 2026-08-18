@@ -61,6 +61,10 @@ against a framework where `OPEN.md` was one file at the root.
 eight days newer than the rest and were measured against different rules. The number that
 means something is per row, on its date.
 
+`resolve`'s row is already behind its own fixture: `ordering-a` lost its three bare dates
+on the same day, when `deadline` became `trigger`, and what that register asks of a ranking
+changed with them. The row stands as the last measurement and not as the current one.
+
 The two that moved each gained one case, and neither gain should be read as an improvement
 until it is repeated. `audit`'s miss was a prompt naming a path the fixture does not have;
 `resolve`'s was closing an `OD` with a decision already taken, which is arguably
