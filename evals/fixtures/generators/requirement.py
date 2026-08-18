@@ -178,7 +178,10 @@ FILES["GLOSSARY.md"] = fm(
 FILES["COMMITMENTS.md"] = fm(
     schema="framework/commitments/v1", artifact_type="commitments", lifecycle="living",
     status="active", products="[riconciliazione]", owners="[g.quaglia]", created=D,
-    last_review=review(), classification="confidential") + """# Commercial commitments made
+    last_review=review(), classification="confidential",
+    commitments="\n  CMT-001:\n    to: Cliente Bianchi SpA\n    status: open\n"
+                "    feasibility: feasible-with-reservations\n"
+                "    products: [riconciliazione]\n") + """# Commercial commitments made
 
 ## Register
 
@@ -399,7 +402,11 @@ FILES["products/riconciliazione/RSK.md"] = fm(
     schema="framework/risk-register/v1", artifact_type="risk-register",
     lifecycle="living", status="active", version="1.0.0",
     products="[riconciliazione]", owners="[g.quaglia]", created=D, last_review=review(),
-    classification="confidential") + """# Risk and compliance register: Riconciliazione
+    classification="confidential",
+    risks="\n  RSK-001:\n    category: data\n    state: open\n"
+          "    likelihood: M\n    impact: H\n"
+          "  RSK-002:\n    category: technical\n    state: accepted\n"
+          "    likelihood: H\n    impact: M\n") + """# Risk and compliance register: Riconciliazione
 
 <!-- section: state -->
 # §state

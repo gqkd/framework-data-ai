@@ -286,6 +286,82 @@ def _clean_repo():
         return [f"{f['code']} {f['path']}: {f['message']}" for f in out["findings"]]
 
 
+@check("a promise and the risk it creates can be joined, now that both are readable")
+def _commitments_and_risks():
+    # Two markdown tables until 2.1.0, which is why neither of these could be reported: a
+    # product carrying commitments and no risk register at all, and a commercial risk about
+    # a claim the commitments register does not contain. A check cannot join two tables it
+    # cannot read, and the fix was the same one `OPEN.md` and `STACK.md` already had.
+    fm = lambda **kw: "---\n" + "\n".join(f"{k}: {v}" for k, v in kw.items()) + "\n---\n\n"
+
+    def repo(cmts: str, risks: str | None) -> dict:
+        files = {
+            "framework.yaml": f"framework_version: {REGISTRY['version']}\n",
+            "products/alpha/product.yaml": (
+                "schema: framework/product-manifest/v1\n"
+                "artifact_type: product-manifest\nlifecycle: living\nstatus: active\n"
+                "products: [alpha]\nname: alpha\none_liner: A thing.\nowners: [o]\n"
+                "created: 2026-01-01 09:00\nlast_review: 2026-01-01 09:00\n"
+                "stage:\n  phase: F5\n  block: A\n"),
+            "COMMITMENTS.md": fm(schema="framework/commitments/v1",
+                                 artifact_type="commitments", lifecycle="living",
+                                 status="active", owners="[o]", products="[alpha]",
+                                 created="2026-01-01 09:00",
+                                 last_review="2026-08-01 09:00",
+                                 commitments=cmts) + "# Commitments\n",
+        }
+        if risks is not None:
+            files["products/alpha/RSK.md"] = fm(
+                schema="framework/risk-register/v1", artifact_type="risk-register",
+                lifecycle="living", status="active", products="[alpha]", owners="[o]",
+                created="2026-01-01 09:00", last_review="2026-08-01 09:30",
+                risks=risks) + ("# Risks\n\n<!-- section: state -->\n## State\n\n"
+                                "<!-- section: acceptances -->\n## Acceptances\n\n"
+                                "<!-- section: events -->\n## Events\n")
+        return files
+
+    one = ("\n  CMT-001:\n    to: a customer\n    status: open\n"
+           "    products: [alpha]\n")
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+
+        def codes(files) -> set[str]:
+            for stale in root.rglob("*.md"):
+                stale.unlink()
+            for rel, text in files.items():
+                f = root / rel
+                f.parent.mkdir(parents=True, exist_ok=True)
+                f.write_text(text)
+            r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(root),
+                                "--json"], capture_output=True, text=True)
+            return {f["code"] for f in json.loads(r.stdout)["findings"]}
+
+        if "XP005" not in codes(repo(one, None)):
+            problems.append("a product carrying a commitment and no risk register was not "
+                            "reported: the exposure lives only in the sentence that made it")
+        if "XP005" in codes(repo(one, "\n  RSK-001:\n    category: technical\n"
+                                      "    state: open\n")):
+            problems.append("a product with a risk register was reported, so the check is "
+                            "asking for something other than the register")
+
+        commercial = "\n  RSK-001:\n    category: commercial\n    state: open\n"
+        if "REF006" not in codes(repo(one, commercial)):
+            problems.append("a commercial risk naming no commitment was not reported: a "
+                            "claim tracked as a risk and promised nowhere cannot be "
+                            "renegotiated, because there is no promise to renegotiate")
+        if "REF006" in codes(repo(one, commercial + "    commitment: CMT-001\n")):
+            problems.append("a commercial risk naming a declared commitment was reported")
+        if "REF006" not in codes(repo(one, commercial + "    commitment: CMT-404\n")):
+            problems.append("a risk naming a commitment no register declares was not "
+                            "reported: the promise it is about cannot be found")
+        if "REF006" in codes(repo(one, "\n  RSK-001:\n    category: commercial\n"
+                                       "    state: closed\n")):
+            problems.append("a closed commercial risk was reported: the promise behind it "
+                            "stopped mattering, and asking for it is asking about history")
+    return problems
+
+
 @check("a citation to a term, and a decision that says what it left open, both resolve")
 def _references_with_a_second_end():
     # Two pairs that had one end each. A data contract sending a reader to the glossary for
@@ -826,8 +902,8 @@ def _maps_are_constrained():
                 continue
 
             pattern = rule.get("keys")
-            candidates = ["SIG-001", "OD-001", "frontend", "query-engine",
-                          "product.backend", "platform.access"]
+            candidates = ["SIG-001", "OD-001", "CMT-001", "RSK-001", "frontend",
+                          "query-engine", "product.backend", "platform.access"]
             if pattern:
                 accepted = [k for k in candidates if re.match(pattern, k)]
                 if not accepted:

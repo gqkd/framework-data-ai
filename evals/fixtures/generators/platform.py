@@ -167,7 +167,14 @@ F["GLOSSARY.md"] = fm(
 F["COMMITMENTS.md"] = fm(
     schema="framework/commitments/v1", artifact_type="commitments", lifecycle="living",
     status="active", owners="[g.quaglia]", created="2026-02-02", last_review=review(),
-    classification="confidential") + """\
+    classification="confidential",
+    commitments="\n  CMT-001:\n    to: Northwind\n    status: open\n"
+                "    feasibility: feasible\n    products: [atlas]\n"
+                "  CMT-002:\n    to: Northwind, Cerulean\n    status: open\n"
+                "    feasibility: feasible\n    products: [vega]\n"
+                "  CMT-003:\n    to: every EU customer\n    status: open\n"
+                "    feasibility: feasible-with-reservations\n"
+                "    products: [atlas, vega, lyra]\n") + """\
 # Commercial commitments made
 
 | ID | Commitment | Where it was said | To whom | Technical constraint that follows |
@@ -526,10 +533,47 @@ Unchanged.
 Nothing structural outstanding.
 """
 
+# The commitment that binds every product also creates exposure in every product, which is
+# what `XP005` says: a promise made before the thing exists leaves a risk somebody owns and
+# an entry in a register. `CMT-003` is the DPA, and it reaches atlas exactly as it reaches
+# vega.
+F["products/atlas/RSK.md"] = fm(
+    schema="framework/risk-register/v1", artifact_type="risk-register", lifecycle="living",
+    status="active", products="[atlas]", owners="[m.rossi]", created="2026-04-08",
+    last_review=review(), classification="internal",
+    risks="\n  RSK-002:\n    category: compliance\n    state: open\n"
+          "    likelihood: M\n    impact: H\n    commitment: CMT-003\n"
+          "  RSK-003:\n    category: technical\n    state: open\n"
+          "    likelihood: M\n    impact: M\n    commitment: CMT-001\n") + """\
+# Atlas · risks
+
+<!-- section: state -->
+## State
+
+| ID | Risk | Category | L | I | Mitigation |
+|---|---|---|---|---|---|
+| RSK-002 | `customer_id` is pseudonymised nowhere, and the DPA says it is | compliance | M | H | blocked on the substrate decision in `platform/OPEN.md` |
+| RSK-003 | The nightly batch has no margin before 06:30 | technical | M | M | none yet: the scoring job has not been measured since the rewrite |
+
+<!-- section: acceptances -->
+## Acceptances
+
+Nothing accepted. Both are open, and the first is somebody else's to close.
+
+<!-- section: events -->
+## Events
+
+| Date | `RSK` | Event | `SIG` | Consequence |
+|---|---|---|---|---|
+| | | | | |
+"""
+
 F["products/vega/RSK.md"] = fm(
     schema="framework/risk-register/v1", artifact_type="risk-register", lifecycle="living",
     status="active", products="[vega]", owners="[a.bianchi]", created="2026-04-08",
-    last_review=review(), classification="internal") + """\
+    last_review=review(), classification="internal",
+    risks="\n  RSK-001:\n    category: compliance\n    state: accepted\n"
+          "    likelihood: L\n    impact: M\n    commitment: CMT-002\n") + """\
 # Vega · risks
 
 <!-- section: state -->

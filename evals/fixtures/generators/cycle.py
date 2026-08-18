@@ -126,7 +126,9 @@ F["GLOSSARY.md"] = fm(schema="framework/glossary/v1", artifact_type="glossary",
 
 F["COMMITMENTS.md"] = fm(schema="framework/commitments/v1", artifact_type="commitments",
     lifecycle="living", status="active", owners="[gq]", created="2026-01-12",
-    last_review=review(), classification="internal") + """\
+    last_review=review(), classification="internal",
+    commitments="\n  CMT-001:\n    to: the customer named in the order form\n"
+                "    status: open\n    feasibility: feasible\n    products: [atlas]\n") + """\
 # Commercial commitments made
 
 | ID | Commitment | Where it was said | To whom | Technical constraint that follows |

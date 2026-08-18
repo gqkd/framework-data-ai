@@ -106,7 +106,15 @@
 # `decide_with` arrives with it, so that the only sequencing this register can express is
 # between decisions: `depends_on` is this one before that one, `decide_with` is these two
 # in the same sitting, because deciding either alone decides the other by implication.
-version: "2.0.0"
+# 2.0.0 -> 2.1.0. Six checks and four fields arrived and nothing stopped validating, which
+# is what MINOR is for. `decide_with` on an entry, `terms` on the glossary, `leaves_open` on
+# a decision, and the two registers that were markdown tables until now -- `commitments:` and
+# `risks:` -- are all optional in the schema, and the checks that ask for them are `warn`:
+# `REG010`, `REG011`, `REG012`, `FM005`, `LC005`, `REF005`, `REF006`, `XP005`. A repository
+# written against 2.0.0 keeps validating and starts being told what it is missing, which is
+# the difference between a version that asks you to migrate and one that asks you to catch
+# up. `dropped` joined the stack vocabulary the same way: a value added takes nothing away.
+version: "2.1.0"
 
 lifecycles: [living, immutable, append-only]
 
@@ -367,6 +375,29 @@ types:
     path: COMMITMENTS.md
     lifecycle: living
     status: [active]
+    # THE THIRD REGISTER TO MAKE THIS MOVE, AND FOR THE THIRD TIME THE SAME REASON. The
+    # entries of `OPEN.md` and the rows of `STACK.md` are front matter because a check that
+    # reads a markdown table is a check that stops working the day somebody reformats one --
+    # silently, reporting nothing, which reads as nothing being wrong. Until now nothing
+    # here could read a commitment: not which product it binds, not whether it is a promise
+    # already made or a sentence in a deck nobody has sent, not whether anything measures
+    # it. In a real repository eight commitments were `stated-as-done` on capabilities the
+    # same repository says are not built, and no check could say a word.
+    #
+    # The body keeps the promise in the words that were used, who said it, how binding the
+    # literal wording is, and what it would take to build. That is what a person reads
+    # before renegotiating, and no field replaces it.
+    maps:
+      commitments:
+        may_be_empty: true
+        keys: "^CMT-(\\d{3,}|NNN)$"
+        fields:
+          required: [to, status]
+          optional: [feasibility, threshold, evidence]
+          lists: [products]
+          enums:
+            status: [not-yet-issued, stated-as-done, open, met, renegotiated, unsatisfiable]
+            feasibility: [feasible, feasible-with-reservations, out-of-reach]
 
   glossary:
     id: GLOSSARY
@@ -875,4 +906,25 @@ types:
     lifecycle: living
     status: [active]
     sections: [state, acceptances, events]
+    # §state in front matter, for the same reason as the commitments beside it: the rows
+    # were a markdown table and nothing could read one. `commitment` is the field that pair
+    # was missing -- a risk about a promise names the promise, and in a real repository a
+    # commercial risk tracked a claim that `COMMITMENTS.md` did not contain at all, which
+    # is a risk nobody can renegotiate because there is no promise to renegotiate.
+    #
+    # The body keeps the mitigation, the owner and the argument. §acceptances and §events
+    # stay prose entirely: an acceptance is somebody's signature under a sentence, and an
+    # event is a story with a date.
+    maps:
+      risks:
+        may_be_empty: true
+        keys: "^RSK-(\\d{3,}|NNN)$"
+        fields:
+          required: [category, state]
+          optional: [likelihood, impact, commitment]
+          enums:
+            category: [technical, data, ai, compliance, commercial, vendor]
+            state: [open, mitigated, accepted, transferred, closed, expired]
+            likelihood: [L, M, H]
+            impact: [L, M, H]
 

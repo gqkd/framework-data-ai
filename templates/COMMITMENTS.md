@@ -8,6 +8,27 @@ owners: [NAME]
 created: YYYY-MM-DD HH:MM
 last_review: YYYY-MM-DD HH:MM
 classification: confidential
+# One row per commitment, where a check can read it. The body below keeps the promise in the
+# words that were used, who said it and in what context, how binding the literal wording is,
+# and what it would take to build: that is what somebody reads before renegotiating, and no
+# field replaces it. These are the parts a machine has to join on.
+#
+# `status` is the vocabulary explained under §Register, and the two that matter are the two
+# that come first. `not-yet-issued` is the promise that exists in a document nobody has
+# received. `stated-as-done` is the sentence in the present tense about something that does
+# not exist yet.
+commitments:
+  CMT-001:
+    to: the customer who received it, by name
+    status: open
+    feasibility: feasible-with-reservations
+    products: [product-a]
+    threshold: the EVP row that measures it, when there is one
+  CMT-002:
+    to: a prospect, in the deck sent in March
+    status: stated-as-done
+    feasibility: feasible
+    products: [product-a, product-b]
 ---
 
 # Commercial commitments made

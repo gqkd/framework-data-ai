@@ -198,6 +198,20 @@ checks:
       resolves and stays silent: the gap is written down, which is the whole difference, and
       a `blocked_by` pointing at an entry no register declares is reported instead.
 
+  REF006:
+    level: warn
+    title: a risk about a promise nobody recorded
+    prevents: >
+      An exposure nobody can act on. A commercial risk is a claim somebody made to somebody
+      else, and the remedy for it is a conversation with whoever received it -- so a
+      commercial risk that names no `commitment` is one nobody will ever renegotiate,
+      because there is no record that a promise was made. In a real repository a risk
+      tracked "maintenance with no manual intervention" as a serious commercial exposure and
+      the commitments register did not contain that sentence at all. A `commitment` naming
+      an id no register declares is reported the same way. Closed and expired risks are
+      exempt: the promise behind them stopped mattering, and asking for it is asking about
+      history.
+
   # ── Discipline ─────────────────────────────────────────────────────────────
   RLM001:
     level: warn
@@ -381,6 +395,19 @@ checks:
       says a choice was made when the record of it is missing. Without this the schema
       accepts `status: chosen` with nothing behind it, which is exactly the ambiguity the
       artifact exists to remove.
+
+  XP005:
+    level: warn
+    title: a product carries commitments and has no risk register
+    prevents: >
+      The exposure living only in the sentence that created it. Promising something before
+      it exists is the ordinary case in the projects this framework is written for, and it
+      is supposed to leave two marks: a risk somebody owns, and an entry in the open
+      register. In a real repository one product carried eleven commitments -- eight of them
+      recorded as already delivered, on capabilities the same documents say are not built --
+      and had no `RSK.md` at all, so the first mark had nowhere to be. Nothing could see it
+      until the commitments became readable: both registers were markdown tables, and a
+      check cannot join two tables it cannot read.
 
   # ── Attestation ────────────────────────────────────────────────────────────
   VER001:

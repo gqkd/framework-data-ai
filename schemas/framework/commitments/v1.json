@@ -23,7 +23,61 @@
       "type": "array",
       "minItems": 1
     },
-    "created": {}
+    "created": {},
+    "commitments": {
+      "type": "object",
+      "minProperties": 0,
+      "propertyNames": {
+        "pattern": "^CMT-(\\d{3,}|NNN)$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "enum": [
+              "not-yet-issued",
+              "stated-as-done",
+              "open",
+              "met",
+              "renegotiated",
+              "unsatisfiable"
+            ]
+          },
+          "feasibility": {
+            "enum": [
+              "feasible",
+              "feasible-with-reservations",
+              "out-of-reach"
+            ]
+          },
+          "threshold": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence": {
+            "type": "string",
+            "minLength": 1
+          },
+          "products": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "to",
+          "status"
+        ],
+        "additionalProperties": false
+      }
+    }
   },
   "required": [
     "schema",

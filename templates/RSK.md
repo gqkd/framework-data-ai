@@ -9,6 +9,26 @@ owners: [NAME]
 created: YYYY-MM-DD HH:MM
 last_review: YYYY-MM-DD HH:MM
 classification: confidential
+# §state, where a check can read it. The body below keeps the mitigation, the owner and
+# the argument; §acceptances and §events stay prose entirely, because an acceptance is
+# somebody's signature under a sentence and an event is a story with a date.
+#
+# `commitment` is the field that makes the pair joinable: a risk about a promise names the
+# promise. A `commercial` risk without one is `REF006` -- a claim tracked as a risk that no
+# commitment records is a risk nobody can renegotiate, because there is nothing to
+# renegotiate against.
+risks:
+  RSK-001:
+    category: technical
+    state: open
+    likelihood: M
+    impact: H
+  RSK-002:
+    category: commercial
+    state: open
+    likelihood: M
+    impact: H
+    commitment: CMT-001
 ---
 
 # Risk and compliance register: Product name

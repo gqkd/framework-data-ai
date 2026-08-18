@@ -833,6 +833,65 @@ def check_decisions_leave_open(arts: list[Artifact], report: Report) -> None:
                            "it, and a register is where it gets looked for.")
 
 
+def check_commitments_and_risks(arts: list[Artifact], report: Report) -> None:
+    """The pair that had no second end because neither register could be read.
+
+    A commitment beyond what exists yet is supposed to produce a risk and an open entry.
+    Both halves were markdown tables until now, so nothing could join them, and in a real
+    repository the two failures showed up together: a product carrying eleven commitments
+    and no risk register at all, and -- in another product -- a commercial risk tracking a
+    claim that the commitments file did not contain. A risk with no promise behind it is a
+    risk nobody will renegotiate, because there is nothing to renegotiate.
+    """
+    cmts = {cid: (a.rel, row)
+            for a in arts if a.type == "commitments"
+            for cid, row in (a.meta.get("commitments") or {}).items()
+            if isinstance(row, dict)}
+    risk_files = [a for a in arts if a.type == "risk-register"]
+
+    # Which products have a risk register, read off the directory the register sits in,
+    # the same way a register's scope is read everywhere else here.
+    dirs = product_dirs(arts)
+    covered = {dirs[a.path.parent][0] for a in risk_files if a.path.parent in dirs}
+
+    promised: dict[str, list[str]] = {}
+    for cid, (rel, row) in sorted(cmts.items()):
+        for prod in as_list(row.get("products")):
+            promised.setdefault(prod, []).append(cid)
+
+    for prod, ids in sorted(promised.items()):
+        if prod in covered or prod not in {p for p, _ in dirs.values()}:
+            continue
+        report.add("XP005", f"products/{prod}/RSK.md",
+                   f"{prod!r} carries {len(ids)} commitment(s) -- {', '.join(sorted(ids))} "
+                   "-- and has no risk register. A promise made before the thing exists is "
+                   "the ordinary case here and it is supposed to leave two marks: a risk "
+                   "somebody owns and an entry in the register. With no `RSK.md` the first "
+                   "one has nowhere to be, and the exposure lives only in the sentence that "
+                   "created it.")
+
+    for a in arts:
+        if a.type != "risk-register":
+            continue
+        for rid, row in sorted((a.meta.get("risks") or {}).items()):
+            if not isinstance(row, dict):
+                continue
+            named = row.get("commitment")
+            if named and named not in cmts:
+                report.add("REF006", a.rel,
+                           f"{rid} names {named!r}, which no commitments register declares. "
+                           "The risk is about a promise nobody can find, so nothing can be "
+                           "renegotiated and nothing can be closed by the promise changing.")
+            elif not named and row.get("category") == "commercial" \
+                    and row.get("state") not in ("closed", "expired"):
+                report.add("REF006", a.rel,
+                           f"{rid} is a commercial risk and names no `commitment`. A claim "
+                           "tracked as a risk and recorded as a promise nowhere is a risk "
+                           "nobody will renegotiate: the remedy for a commercial exposure "
+                           "is a conversation with whoever received the promise, and there "
+                           "is no record of one having been made.")
+
+
 def check_manifest_derived_fields(arts: list[Artifact], report: Report) -> None:
     """A manifest answering a question something else now answers.
 
@@ -1773,6 +1832,7 @@ def main() -> int:
     check_review_batches(arts, report)
     check_glossary_terms(arts, report)
     check_decisions_leave_open(arts, report)
+    check_commitments_and_risks(arts, report)
     check_triage(arts, report)
     check_stack(arts, report)
     check_cross_product(arts, report)

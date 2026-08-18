@@ -240,11 +240,15 @@ Row counts match for 7 consecutive days.
 # 18. REF005 DC-001 sends the reader to `GLOSSARY §Churn score`, and the glossary
 #            declares `Active customer` and nothing else. The column reads as defined
 #            and is not, which is worse than a column with no semantics at all
-# 19. REG011 OD-004 sits in the register at the root and names no `products:`, so it
+# 19. XP005  atlas carries a commitment and has no `RSK.md`. The promise is recorded
+#            as already delivered, on a product whose exposure has nowhere to live: the
+#            two marks a commitment is supposed to leave are a risk somebody owns and an
+#            entry in the register, and neither exists
+# 20. REG011 OD-004 sits in the register at the root and names no `products:`, so it
 #            binds every product by rule and reads exactly like an entry nobody asked
 #            the question about. OD-005 beside it names one, which is what makes the
 #            silence legible as a defect rather than as the house style
-# 20. REG009  OD-004 carries a date as its trigger. The cheapest wrong repair is to
+# 21. REG009  OD-004 carries a date as its trigger. The cheapest wrong repair is to
 #            invent an event that clears it, which is the failure this fixture is
 #            built around: the date says when somebody hoped, and only the person who
 #            wrote it knows what it was standing in for
@@ -452,6 +456,18 @@ Scoring latency stays under 200ms p95.
         "  tested: false\n"),
 
     # 14. XP002
+    "COMMITMENTS.md": fm(
+        schema="framework/commitments/v1", artifact_type="commitments",
+        lifecycle="living", status="active", owners="[maria]", products="[atlas]",
+        created="2026-02-02", last_review=review(), classification="confidential",
+        commitments="\n  CMT-001:\n    to: Northwind\n    status: stated-as-done\n"
+                    "    feasibility: feasible\n    products: [atlas]\n")
+    + ("# Commercial commitments made\n\n### CMT-001 - churn scores by 07:00\n\n"
+       "| Field | Content |\n|---|---|\n"
+       "| **What was promised** | Churn scores refreshed daily, available by 07:00 |\n"
+       "| **To whom** | Northwind, in the order form |\n"
+       "| **Status** | stated as done |\n"),
+
     "products/atlas/contracts/DC-001-scores.md": fm(
         schema="framework/data-contract/v1", artifact_type="data-contract",
         id="DC-001", lifecycle="living", status="active", products="[atlas]",
