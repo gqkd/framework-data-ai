@@ -63,6 +63,11 @@ the tie goes to whichever entry happens to be printed first, which changes the a
 next time somebody edits the register for an unrelated reason. If two really are equal,
 say that rather than inventing a reason.
 
+`Decide with` is not an ordering and must not be turned into one: two entries paired that
+way are put in front of the user together, in one sitting, with one recommendation covering
+both. Ranking them against each other produces a session that decides half of a thing and
+leaves the other half looking open, which is the state the pairing exists to prevent.
+
 A `Depends on` outranks the tier: a `MEDIUM` blocking a `HIGH` is worked first, or the
 `HIGH` is decided twice. If it points at an entry that does not exist, the entry comes out
 of the order rather than being ranked inside it: it cannot be worked, whatever its cost,

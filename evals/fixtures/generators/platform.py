@@ -215,7 +215,7 @@ F["platform/OPEN.md"] = fm(
 - **Default in force:** none. `CMT-003` is signed and the DPA names pseudonymisation,
   which today is not implemented.
 - **Depends on:** nothing. It is the blocker, not the blocked.
-- **Trigger:** the DPA audit, 2026-10-31.
+- **Trigger:** the DPA audit.
 
 ### OD-003 · Who owns `analytics.customer`
 

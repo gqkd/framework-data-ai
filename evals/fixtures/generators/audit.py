@@ -219,6 +219,10 @@ Row counts match for 7 consecutive days.
 #            without looking at it
 # 16. VER001 ARC attests `product.backend` and this manifest declares no `code:`,
 #            so the commit points at a repository nothing here can resolve
+# 17. OD009  OD-004 carries a date as its trigger. The cheapest wrong repair is to
+#            invent an event that clears it, which is the failure this fixture is
+#            built around: the date says when somebody hoped, and only the person who
+#            wrote it knows what it was standing in for
 #
 # Plus a trap the validator CANNOT see: DEC-002 is an accepted immutable whose
 # body was edited after acceptance (git history shows it). Nothing reports this.
@@ -263,7 +267,8 @@ each decision still matters, which no generator can produce.
                   entries="\n  OD-005:\n    status: open\n    cost_to_reverse: high\n"
                           "    default_in_force: none\n"
                           "  OD-004:\n    status: open\n    cost_to_reverse: medium\n"
-                          "    default_in_force: BigQuery, already there\n")
+                          "    default_in_force: BigQuery, already there\n"
+                          "    trigger: 2026-10-01\n")
     + """# Open decisions and known issues
 
 # §1 · Open decisions
@@ -285,7 +290,7 @@ each decision still matters, which no generator can produce.
 - **Question:** Snowflake or BigQuery for the gold layer?
 - **Cost to reverse:** medium.
 - **Default in force:** BigQuery, because the landing zone is already there.
-- **Trigger:** the first consumer of the gold layer outside the team.
+- **Trigger:** 2026-10-01.
 
 # §4 · Decided, moved out
 

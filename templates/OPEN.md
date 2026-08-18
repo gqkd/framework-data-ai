@@ -17,8 +17,10 @@ entries:
     status: open
     cost_to_reverse: high
     default_in_force: none            # `none` is a legitimate value. Absent is not
-    trigger: the event after which this can no longer be deferred, and not a date on
-             its own -- `OD009`
+    trigger: the event after which this can no longer be deferred. Never a date, in
+             any form and not even beside the event -- `OD009`
+    decide_with: [OD-004]             # entries that have to be decided in one sitting.
+                                      # Write it on both of them
     products: [product-a]             # only in the register at the root, and only when the
                                       # entry binds some products and not all. In a
                                       # product's own register the directory already said
@@ -127,9 +129,15 @@ at first.
 - **Leaning:** the direction we lean toward, and why. Optional, and it is not a decision:
   it is there so you do not start the reasoning over from scratch in two weeks.
 - **Trigger:** the observable event after which the decision can no longer be deferred:
-  the second customer, the first line of the data plane, the signature. A date is not an
-  event and does not force anything by arriving, so a bare one is `OD009`; a date beside
-  the event it belongs to -- *the DPA audit, 2026-10-31* -- is exactly right.
+  the second customer, the first line of the data plane, the signature, the audit. **No
+  date belongs here**, in any form and not even beside the event -- `OD009` reports the
+  ones it can see, and "by the end of the quarter" is one it cannot. This entry is open
+  because nobody has decided; a date written on it is read as a commitment by the next
+  person, and nobody made one.
+- **Decide with:** other `OD-NNN` entries that have to be taken in the same sitting,
+  because deciding either one alone decides the other by implication. `Depends on` orders
+  two decisions, this one refuses to order them. Write it on both entries: nothing checks
+  that you did, because nothing can tell which of the two is wrong when only one says it.
 
 ## Cost to reverse MEDIUM: decide within the first month
 

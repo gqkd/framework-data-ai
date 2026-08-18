@@ -65,10 +65,19 @@ CHECKS = FRAMEWORK / "skills" / "audit" / "checks.yaml"
 
 SECTION_MARK = re.compile(r"<!--\s*section:\s*([a-z0-9-]+)\s*-->")
 
-# A trigger that is nothing but a date. `2026-09-30`, and the same value with the trailing
-# full stop a prose bullet leaves behind. YAML hands back a `date` object for the unquoted
-# form, so the object is caught too and not only the string.
-BARE_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}\.?$")
+# A date inside a trigger, in any of the shapes one gets written in: `2026-09-30`, the
+# same thing quoted or with the full stop a prose bullet leaves behind, `30/09/2026`,
+# `Q4 2026`, `end of 2026`. The year is what all of them have in common, so the year is
+# what is matched, plus the day-first forms that carry no four digit year at all. YAML
+# hands back a `date` object for the unquoted ISO form, and that is caught before any
+# matching happens.
+#
+# WHAT IT DOES NOT CATCH, and this is a limit rather than an omission: "by the end of the
+# quarter", "within a month". Those are time expressions with no digits in them, and a
+# check that tried to match them would have to match prose. The template says an event, the
+# skill says an event, and this catches the half that can be caught without guessing.
+DATE_IN_TEXT = re.compile(r"(?<!\d)(?:19|20)\d{2}(?!\d)"
+                          r"|(?<!\d)\d{1,2}[/.]\d{1,2}[/.]\d{2,4}(?!\d)")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -786,12 +795,15 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
             if row.get("status") == "open":
                 trg = row.get("trigger")
                 if isinstance(trg, (date, datetime)) or (
-                        isinstance(trg, str) and BARE_DATE.match(trg.strip())):
+                        isinstance(trg, str) and DATE_IN_TEXT.search(trg)):
                     report.add("OD009", a.rel,
-                               f"{od} has a `trigger` that is only a date. A date does not "
-                               "force a decision by arriving; something does. Name it -- the "
-                               "second customer, the first line of the data plane, the audit "
-                               "-- and keep the date beside it if there is one.")
+                               f"{od} has a date in its `trigger`. A date does not force a "
+                               "decision by arriving; something does, and the entry is open "
+                               "precisely because nobody has decided when. Name the event "
+                               "and drop the date: the second customer, the first line of "
+                               "the data plane, the audit, or another entry in this "
+                               "register -- `depends_on` for one before the other, "
+                               "`decide_with` for two that have to be taken together.")
             if row.get("status") == "decided":
                 # Resolved, and not only present. A `closed_by` naming a decision that does
                 # not exist has the identical consequence to naming none -- the reasoning
@@ -847,6 +859,26 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
                                "repository declares. Either it was decided and the "
                                "dependency is stale, or it is a typo and this entry is "
                                "waiting for nothing.")
+
+            # `decide_with` is the relation `depends_on` cannot express: two entries that
+            # have to be taken in one sitting because deciding either alone decides the
+            # other by implication. Same resolution, because the failure is the same -- a
+            # pairing with an entry nobody can find reads as a pairing that was honoured.
+            # Naming itself is reported separately: it looks like a filled-in field and
+            # binds the entry to nothing, which is the shape that survives a review.
+            for peer in as_list(row.get("decide_with")):
+                if peer == od:
+                    report.add("OD005", a.rel,
+                               f"{od} names itself in `decide_with`. The field says which "
+                               "other entry has to be decided in the same sitting, and an "
+                               "entry paired with itself is an empty field that reads as a "
+                               "full one.")
+                elif peer not in where:
+                    report.add("OD005", a.rel,
+                               f"{od} is to be decided with {peer!r}, which no register in "
+                               "this repository declares. Either it was decided and the "
+                               "pairing is stale, or it is a typo and this entry is paired "
+                               "with nothing.")
 
             stray = [p for p in as_list(row.get("products")) if p != scope]
             if scope and stray:

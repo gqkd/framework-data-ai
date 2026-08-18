@@ -97,9 +97,15 @@
 # `entries:` used to say an old-format register does not exist to protect, and one does
 # now. It is migrated instead, because an alias would mean two spellings of the field
 # forever and a register where both appear, which is the ambiguity this file exists to
-# refuse. `OD009` reports the shape the rename is meant to prevent -- a trigger that is
-# only a date -- at `warn`, because a date with an event beside it is legitimate and only
-# a bare one is not.
+# refuse. `OD009` reports a date in a trigger, at `warn`, and it
+# reports every date: an entry still open has no calendar, not even beside an event. "The
+# DPA audit" is a trigger; "the DPA audit, 2026-10-31" is the same trigger with a
+# commitment glued to it, and the commitment is the half that gets quoted back later by
+# somebody who never opened the register.
+#
+# `decide_with` arrives with it, so that the only sequencing this register can express is
+# between decisions: `depends_on` is this one before that one, `decide_with` is these two
+# in the same sitting, because deciding either alone decides the other by implication.
 version: "2.0.0"
 
 lifecycles: [living, immutable, append-only]
@@ -321,14 +327,19 @@ types:
         may_be_empty: true
         keys: "^(OD|KI)-(\\d{3,}|NNN)$"
         # `trigger` and not `deadline`: the observable event after which the decision
-        # can no longer be deferred, which is what forces it. A calendar date is legal
-        # inside one -- "the DPA audit, 2026-10-31" -- and a bare date is `OD009`, because
-        # a date with nothing beside it does not say what happens when it arrives, and the
-        # entry it sits on is by definition one nobody has decided.
+        # can no longer be deferred, which is what forces it. No date belongs in one, in
+        # any form and not even beside the event -- `OD009` -- because the entry it sits on
+        # is one nobody has decided, and a date written on an undecided thing is read as a
+        # promise by whoever finds it next.
+        #
+        # `decide_with` is the other half of the same idea: two entries that have to be
+        # decided in one sitting, which `depends_on` cannot say because it orders them. It
+        # belongs on both entries, and no check enforces that -- when only one declares it,
+        # nothing here can tell which of the two is the one that is wrong.
         fields:
           required: [status]
           optional: [cost_to_reverse, default_in_force, trigger, closed_by]
-          lists: [depends_on, products]
+          lists: [depends_on, decide_with, products]
           enums:
             status: [open, decided, superseded, parked]
             cost_to_reverse: [high, medium, low]

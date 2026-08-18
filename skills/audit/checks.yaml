@@ -239,16 +239,20 @@ checks:
 
   OD009:
     level: warn
-    title: an open entry says a date where it should say what forces the decision
+    title: an open entry has a date in its trigger
     prevents: >
       A number nobody derived standing in for the thing that actually closes the window.
+      A commitment being made by an entry that exists because nothing has been decided.
       The field was called `deadline` until 2.0.0, and a field named for a date collects
-      dates: an end of quarter picked because the line had to say something, which then
-      reads like a commitment to whoever finds it. What closes the window is an event --
-      the second customer, the first line of the data plane, the signature. A date with an
-      event beside it is legitimate and silent here; a bare one is reported, because it does
-      not say what arrives on the day, and the entry it sits on is by definition one nobody
-      has decided. Read on `open` entries only: a decided one has spent its trigger.
+      dates: an end of quarter picked because the line had to say something, read later as a
+      promise by somebody who never opened the register. What closes the window is an event
+      -- the second customer, the first line of the data plane, the signature -- or another
+      entry: `depends_on` for one before the other, `decide_with` for two that have to be
+      taken together. Every date is reported and not only a bare one, because a date beside
+      an event is still the half that gets quoted back. Read on `open` entries only: a
+      decided one has spent its trigger. The digits are what is matched, so "by the end of
+      the quarter" passes -- that is a limit of the check and not permission, and the
+      template says so where a person is writing the line.
 
   # ── STACK ──────────────────────────────────────────────────────────────────
   STK001:

@@ -1651,16 +1651,48 @@ def _registers_are_per_product():
                                 "does not force a decision by arriving, and the entry it "
                                 "sits on is one nobody has taken")
 
-        # And the two shapes that must stay silent, because a check that reports them is a
-        # check somebody turns off: an event, and an event carrying the date it falls on.
-        for written in ("before the second customer",
-                        "the DPA audit, 2026-10-31"):
+        # A date beside the event is the same finding. It reads as the careful version --
+        # here is the event, and here is when it falls -- and the date is the half that gets
+        # quoted back by somebody who never opened the register, on an entry whose whole
+        # content is that nobody has decided.
+        for written in ("the DPA audit, 2026-10-31", "Q4 2026", "the audit on 31/10/2026"):
+            (root / "products" / "beta" / "OPEN.md").write_text(entry(written))
+            codes = [f["code"] for f in json.loads(run().stdout)["findings"]]
+            if "OD009" not in codes:
+                problems.append(f"a trigger reading {written!r} was not reported: a date "
+                                "beside an event is still a date on an undecided entry")
+
+        # And the shape that must stay silent, because a check that reports the thing the
+        # template asks for is a check somebody turns off.
+        for written in ("before the second customer", "the DPA audit"):
             (root / "products" / "beta" / "OPEN.md").write_text(entry(written))
             codes = [f["code"] for f in json.loads(run().stdout)["findings"]]
             if "OD009" in codes:
                 problems.append(f"a trigger reading {written!r} was reported: the check is "
-                                "matching dates wherever they appear rather than a value "
-                                "that is only a date")
+                                "matching prose rather than digits")
+
+        # `decide_with`: the pairing an ordering cannot express. Same resolution as
+        # `depends_on`, because a pairing with an entry nobody can find reads as one that
+        # was honoured, and the self reference on top -- a field that looks filled in and
+        # binds the entry to nothing.
+        pair = lambda peer: fm("entries:\n  OD-004:\n    status: open\n"
+                               "    cost_to_reverse: high\n"
+                               "    default_in_force: none\n"
+                               f"    decide_with: [{peer}]\n")
+        for peer, why in (("OD-404", "an entry no register declares"),
+                          ("OD-004", "itself")):
+            (root / "products" / "beta" / "OPEN.md").write_text(pair(peer))
+            codes = [f["code"] for f in json.loads(run().stdout)["findings"]]
+            if "OD005" not in codes:
+                problems.append(f"an entry to be decided with {why} was not reported, so "
+                                "the register vouches for a pairing that binds it to "
+                                "nothing")
+        (root / "products" / "beta" / "OPEN.md").write_text(pair("OD-001"))
+        codes = [f["code"] for f in json.loads(run().stdout)["findings"]]
+        if "OD005" in codes:
+            problems.append("a `decide_with` naming an entry that exists in another "
+                            "register was reported: the pairing reaches across registers "
+                            "by design, exactly as `depends_on` does")
     return problems
 
 
