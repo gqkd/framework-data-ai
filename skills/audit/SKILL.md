@@ -282,6 +282,11 @@ findings:
   version.
 - **gone** — reported only by the old one. Cleared by the move.
 
+`FW001` and `FW002` are printed apart from those three, under *the version line itself*.
+They are new on every migration by construction — they are the finding that says the two
+numbers disagree — and what clears them is `--adopt`, not an edit to any document. Reporting
+them as migration work sends somebody looking for a repair that does not exist.
+
 It also prints the migration note for every version crossed, read out of
 `schemas/artifact-types.yaml` where it is written beside the number it explains.
 

@@ -736,6 +736,9 @@ over the same project, and splits the findings three ways. It is the distinction
 exists to make possible, made finding by finding instead of as a general warning: getting it
 wrong twice is how a team stops reading the validator.
 
+`FW001` and `FW002` themselves are printed apart from the three: they are new on every
+migration by construction, and `--adopt` is what clears them.
+
 It also prints the migration note for every version crossed, read out of
 `schemas/artifact-types.yaml` where each one is written beside the number it explains, and
 `--adopt` writes the new `framework_version` into the project — but refuses while anything

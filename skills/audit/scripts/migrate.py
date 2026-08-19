@@ -32,6 +32,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+from collections import Counter
 from pathlib import Path
 
 try:
@@ -42,6 +43,11 @@ except ImportError:
 FRAMEWORK = Path(__file__).resolve().parents[3]
 REGISTRY_REL = "schemas/artifact-types.yaml"
 VALIDATE_REL = "skills/audit/scripts/validate.py"
+
+# The two findings `--adopt` clears by writing the number, rather than by anybody editing a
+# document. They are not migration work and are not repairs: they are the migration itself,
+# stated as a finding.
+ADOPT_CLEARS = ("FW001", "FW002")
 
 SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 VERSION_LINE = re.compile(r"^version:\s*['\"]?(\d[\d.]*)", re.M)
@@ -107,9 +113,22 @@ def commit_declaring(version: str, framework: Path):
     the one that replaced it, and the validator a project has been running all along is the
     last one that shipped under that number, not the first.
     """
-    log = git(["log", "--format=%H", "--", REGISTRY_REL], framework)
+    # Asked before the log, because git's own answer to "not a repository" is
+    # `Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set)`, which
+    # names neither the directory nor what is wrong with it. A framework unpacked from an
+    # archive rather than cloned is a real way to arrive here, and the whole comparison
+    # rests on the history being present.
+    if git(["rev-parse", "--git-dir"], framework).returncode != 0:
+        return None, (f"{framework} is not a git checkout, so the validator of {version} "
+                      "cannot be reconstructed: this tool reads it out of the framework's "
+                      "own history. Point --framework at a clone. The migration notes above "
+                      "are still the ones for this move.")
+
+    log = git(["log", "--follow", "--format=%H", "--", REGISTRY_REL], framework)
     if log.returncode != 0:
-        return None, log.stderr.strip().splitlines()[-1] if log.stderr.strip() else "git failed"
+        tail = log.stderr.strip().splitlines()
+        return None, f"git could not read the history of {REGISTRY_REL}: " + (
+            tail[-1] if tail else "no reason given")
     for sha in log.stdout.split():
         show = git(["show", f"{sha}:{REGISTRY_REL}"], framework)
         if show.returncode == 0 and registry_version(show.stdout) == version:
@@ -130,25 +149,44 @@ def export(sha: str, framework: Path, into: Path) -> Path:
     tree = into / "old"
     tree.mkdir()
     with tarfile.open(archive) as tar:
-        tar.extractall(tree)
+        # `filter="data"` is the default from 3.14 and a DeprecationWarning before it. Named
+        # rather than left implicit so this prints nothing on 3.12, which is what CI runs:
+        # a migration tool whose first output is a warning about itself gets distrusted
+        # before it has said anything.
+        tar.extractall(tree, filter="data")
     archive.unlink()
     return tree
 
 
-def findings(validator: Path, root: Path):
-    """One validator's report on the project, keyed by what identifies a finding.
+def key(f: dict, seen: Counter) -> tuple:
+    """What identifies one finding across two versions of the validator.
 
     (code, path) and not the message: a reworded message is a PATCH by this framework's own
-    definition of one, and a diff that treated it as a new finding would report the whole
+    definition, and a diff that treated it as a new finding would report the whole
     repository as migration work the first time somebody fixed a sentence.
+
+    The ordinal is what stops that from swallowing the interesting case. A check can report
+    the same code on the same file many times -- one per entry of a register, one per
+    unresolved citation -- and keyed on the pair alone, three findings and five findings are
+    the same key: a version that made a check twice as noisy on a file it already reported
+    would come out of this tool as "nothing new". Counting them keeps the two extra ones
+    visible without making the diff sensitive to wording.
     """
+    k = (f["code"], f["path"])
+    seen[k] += 1
+    return (*k, seen[k])
+
+
+def findings(validator: Path, root: Path) -> dict:
+    """One validator's report on the project, keyed by `key`."""
     r = subprocess.run([sys.executable, str(validator), "--root", str(root), "--json"],
                        capture_output=True, text=True)
     if r.returncode not in (0, 1) or not r.stdout.strip():
         tail = (r.stderr or r.stdout).strip().splitlines()
         raise RuntimeError(tail[-1] if tail else "no output")
     out = json.loads(r.stdout)
-    return {(f["code"], f["path"]): f for f in out["findings"]}
+    seen: Counter = Counter()
+    return {key(f, seen): f for f in out["findings"]}
 
 
 def adopt(cfg: Path, version: str) -> None:
@@ -177,9 +215,9 @@ def verdict(report: dict) -> int:
     An adopted migration is nothing left to do even though it reported findings a moment
     ago: they were the reason to run it.
     """
-    if report.get("adopted"):
+    if report.get("adopted") or report["up_to_date"]:
         return 0
-    return 1 if report["new"] or report["problems"] else 0
+    return 1 if report["new"] or report["version_line"] or report["problems"] else 0
 
 
 def main() -> int:
@@ -202,7 +240,8 @@ def main() -> int:
     declared = args.from_version or declared
 
     report = {"project": str(root), "declared": declared, "current": current,
-              "notes": [], "already_there": [], "new": [], "gone": [], "problems": []}
+              "up_to_date": False, "notes": [], "already_there": [], "new": [], "gone": [],
+              "version_line": [], "problems": []}
 
     if declared is None:
         report["problems"].append(
@@ -215,7 +254,12 @@ def main() -> int:
             "dots. `2` and `1.1` are a whole number and a decimal to YAML, and neither "
             "compares with a version. Quote it, or complete it.")
     elif semver(declared) == semver(current):
-        report["problems"].append(f"already on {current}: nothing to migrate.")
+        # Not a problem, and the distinction is the exit code. A repository already on the
+        # current version is the state every repository is supposed to end up in, and a tool
+        # that returns 1 for it cannot be put in a pipeline: the run that says "nothing to
+        # do" and the run that says "the history is shallow and I could not compare" would
+        # be indistinguishable to whoever wired it up.
+        report["up_to_date"] = True
     elif semver(declared) > semver(current):
         report["problems"].append(
             f"the project declares {declared} and this checkout is {current}: it is ahead "
@@ -241,23 +285,25 @@ def main() -> int:
                     report["problems"].append(f"could not run the {declared} validator: {e}")
                 else:
                     report["commit"] = sha[:12]
-                    for key in sorted(set(old) | set(new)):
-                        where = ("already_there" if key in old and key in new
-                                 else "new" if key in new else "gone")
-                        f = new.get(key) or old[key]
+                    for k in sorted(set(old) | set(new)):
+                        f = new.get(k) or old[k]
+                        # `FW001` and `FW002` are about the number this tool exists to move.
+                        # They are new by construction on every migration, and what clears
+                        # them is `--adopt` rather than an edit to any document -- so filing
+                        # them under "this is the migration work" told the reader to go and
+                        # fix something, while `--adopt` was ignoring them. One of the two
+                        # was lying, and it was the report.
+                        where = ("version_line" if f["code"] in ADOPT_CLEARS
+                                 else "already_there" if k in old and k in new
+                                 else "new" if k in new else "gone")
                         report[where].append(
                             {"code": f["code"], "path": f["path"], "level": f["level"],
                              "message": f["message"]})
                 finally:
                     shutil.rmtree(Path(tmp) / "old", ignore_errors=True)
 
-    # `FW001` and `FW002` are new on every migration by construction: they are the finding
-    # that the declared number and the framework's disagree, which is the thing being fixed.
-    # Counting them as outstanding work would mean `--adopt` never runs on a clean bump --
-    # the tool would refuse to write the number because the number had not been written.
-    blocking = [f for f in report["new"] if f["code"] not in ("FW001", "FW002")]
     if args.adopt:
-        if blocking or report["problems"]:
+        if report["new"] or report["problems"]:
             report["problems"].append(
                 "not adopted. `--adopt` writes the new number, which is the claim that the "
                 "migration is done; do it after the findings under NEW are gone.")
@@ -273,6 +319,8 @@ def main() -> int:
     print(f"Declared:  {declared}")
     print(f"Framework: {current}" + (f"  (old validator from {report['commit']})"
                                      if report.get("commit") else ""))
+    if report["up_to_date"]:
+        print(f"\nAlready on {current}: nothing to migrate.")
     for p in report["problems"]:
         print(f"\n! {p}")
     if report["notes"]:
@@ -282,6 +330,8 @@ def main() -> int:
     for key, label, why in (
             ("new", "NEW: reported only by the new validator",
              "this is the migration work"),
+            ("version_line", "THE VERSION LINE ITSELF",
+             "not a document to repair: `--adopt` writes it, once NEW is empty"),
             ("already_there", "ALREADY THERE: reported by both",
              "documents to repair, unrelated to the version"),
             ("gone", "GONE: reported only by the old one",

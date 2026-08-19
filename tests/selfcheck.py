@@ -15,6 +15,7 @@ just broken something.
 
 from __future__ import annotations
 
+import collections
 import importlib.util
 import io
 import json
@@ -2595,6 +2596,26 @@ def _migration_is_executable():
     registry = (ROOT / "schemas" / "artifact-types.yaml").read_text(encoding="utf-8")
     notes = {to for _, to, _ in migrate.migration_notes(registry)}
     problems = []
+
+    # A check reports the same code on the same file many times -- one per entry of a
+    # register, one per unresolved citation. Keyed on the pair alone, three findings and
+    # five findings are the same key, and a version that made a check noisier on a file it
+    # already reported would come out of the tool as "nothing new".
+    seen = collections.Counter()
+    keys = [migrate.key({"code": "REG005", "path": "OPEN.md"}, seen) for _ in range(3)]
+    if len(set(keys)) != 3:
+        problems.append("three findings with the same code and path collapse to "
+                        f"{len(set(keys))} key(s): a check getting noisier would read as "
+                        "nothing having changed")
+
+    # The two the tool clears by writing a number rather than by anybody editing a
+    # document. They are separated in the report and skipped by the adopt gate, and those
+    # two have to be the same list: when they were not, the report told the reader to go
+    # and fix something that `--adopt` was already ignoring.
+    for code in migrate.ADOPT_CLEARS:
+        if code not in CHECKS["checks"]:
+            problems.append(f"migrate.py treats {code} as cleared by --adopt, and it is "
+                            "not in the catalog")
 
     log = subprocess.run(["git", "log", "--format=%H", "--", "schemas/artifact-types.yaml"],
                          cwd=ROOT, capture_output=True, text=True)
