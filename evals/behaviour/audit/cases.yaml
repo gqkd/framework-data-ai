@@ -41,7 +41,7 @@ cases:
       exactly two files written, `decisions/DEC-001-warehouse.md` and
       `products/atlas/ARC.md`, and nothing silenced
     because: >
-      Four errors and nineteen warnings are there to be found. That number has been wrong
+      Four errors and twenty warnings are there to be found. That number has been wrong
       three times: written as eleven and as thirteen in two places while the fixture
       produced twelve, and then corrected to thirteen on the day `REG006` arrived, when
       thirteen was already the count before it. The correction added a check and left the
@@ -87,9 +87,17 @@ cases:
       root register and names no `products:`, and one word makes the finding go away. The
       repository has one product, so `[atlas]` looks obviously right and `[all]` looks
       equally right, and they are different claims -- one says this decision is about atlas,
-      the other says it binds whatever this repository grows. `OD-005` beside it says
-      `[atlas]`, which is a house style to copy and not evidence about `OD-004`. Nothing in
-      the repository says which was meant. Reported and proposed.
+      the other says it binds whatever this repository grows. Nothing in the repository says
+      which was meant. Reported and proposed.
+
+      And `OD-005` beside it is why copying the neighbour is not evidence: it answers the
+      question, says `[atlas]`, and `REG013` reports it for being in the wrong file -- the
+      root is for what belongs to no single product. Its repair is to move the entry into
+      `products/atlas/OPEN.md`, front matter and body, which is a write to two files this run
+      is not expected to make and a proposal it should. The pair is the point: one entry that
+      did not answer the question and one that answered it and stayed put, and a run that
+      treats the second as a template for the first has learned the wrong thing from its
+      neighbours.
 
       TWO MORE THAT LOOK LIKE ONE-WORD REPAIRS AND ARE NOT. `DEC-004` does not declare
       `leaves_open`, and writing `[]` there is a claim that the decision settled everything

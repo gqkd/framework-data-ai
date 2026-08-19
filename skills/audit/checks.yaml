@@ -393,6 +393,25 @@ checks:
       catches up. An id named there that no register declares is reported too: the open half
       of a decision is only open if somebody can find it.
 
+  REG013:
+    level: warn
+    title: an entry at the root binds one product and belongs beside it
+    prevents: >
+      A register that answers the question and still files the entry in the wrong place.
+      `FRAMEWORK.md` says the root keeps what belongs to no single product, and `REG008`
+      says an entry belonging to one goes in that product's register -- the doctrine was
+      written twice and enforced nowhere, because `REG008` only looks inside
+      `products/<p>/` and at the root there is no directory to contradict. So `REG011` went
+      green on seventeen entries at the root that each bind one product, and green there
+      means the question was answered, not that the answer puts the entry where it belongs.
+      A check that a field is filled in is not a check that the value is right, and the two
+      are close enough to be mistaken for each other.
+
+      At `warn`, which is the level for a debt somebody may be carrying on purpose: it stays
+      visible until it is paid, and it does not stop a migration halfway. Only when the
+      product has a directory, because an entry naming a product with no register anywhere
+      has nowhere to be moved to -- that is `REG006`, and it is about the product.
+
   # ── STACK ──────────────────────────────────────────────────────────────────
   STK001:
     level: warn

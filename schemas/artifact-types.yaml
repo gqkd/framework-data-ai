@@ -114,7 +114,18 @@
 # written against 2.0.0 keeps validating and starts being told what it is missing, which is
 # the difference between a version that asks you to migrate and one that asks you to catch
 # up. `dropped` joined the stack vocabulary the same way: a value added takes nothing away.
-version: "2.1.0"
+# 2.1.0 -> 2.2.0. `REG013` at `warn`: an entry at the root that binds one product belongs
+# beside that product. The rule is not new -- `FRAMEWORK.md` has always said the root keeps
+# what belongs to no single product, and `REG008` says it from the other side -- but nothing
+# enforced it, because `REG008` only looks inside `products/<p>/` and at the root there is no
+# directory to contradict. `REG011` going green meant the question had been answered, which
+# is not the same as the answer putting the entry where it belongs.
+#
+# Also here, and a PATCH rather than a MINOR: `--emit-index` was printing `all` as a product
+# heading and selecting the "bound to no single product" section on entries that named
+# nothing, which is the state `REG011` removes. The two shipped in 2.1.0 and worked against
+# each other.
+version: "2.2.0"
 
 lifecycles: [living, immutable, append-only]
 

@@ -2056,6 +2056,29 @@ def _registers_are_per_product():
             if not want and "REG011" in codes:
                 problems.append(f"an entry at the root declaring {decl.strip()} was "
                                 "reported, so the field cannot be answered")
+        # Answering the question and still being in the wrong file. `REG011` asks who an
+        # entry binds; `REG013` is about what the root register is for, and green on the
+        # first has never implied the second -- which is how seventeen entries came to sit
+        # at the root of a real repository, each naming one product, all of them reported by
+        # nothing.
+        for decl, want, why in (("    products: [alpha]\n", True,
+                                 "an entry at the root binding one product that has a "
+                                 "register of its own"),
+                                ("    products: [all]\n", False,
+                                 "an entry binding every product, which is what the root is "
+                                 "for"),
+                                ("    products: [alpha, beta]\n", False,
+                                 "an entry binding two products, which belongs to neither "
+                                 "register"),
+                                ("    products: [gamma]\n", False,
+                                 "an entry naming a product with no directory anywhere, "
+                                 "which has nowhere to be moved to")):
+            rootreg.write_text(entry_at_root(decl))
+            codes = [f["code"] for f in json.loads(run().stdout)["findings"]]
+            if ("REG013" in codes) != want:
+                problems.append(f"{why} was {'not ' if want else ''}reported")
+        rootreg.write_text(keep)
+
         # And the state the register is written for: a repository with a register and no
         # products yet. Asking which products an entry binds has no available answer there.
         rootreg.write_text(entry_at_root(""))

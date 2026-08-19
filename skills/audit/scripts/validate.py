@@ -1180,6 +1180,31 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
                                "nobody asked -- and the two are written identically. Name "
                                "the products it binds, or `[all]` when it really is all of "
                                "them.")
+                elif len(named) == 1 and named[0] != ALL_PRODUCTS \
+                        and named[0] in {prod for prod, _ in dirs.values()}:
+                    # WHAT THE ROOT REGISTER IS FOR, WRITTEN TWICE AND ENFORCED NOWHERE.
+                    # `FRAMEWORK.md` says it keeps the entries that belong to no single
+                    # product; `REG008` says an entry belonging to one goes in that
+                    # product's register. Neither could see this, because `REG008` only
+                    # looks inside `products/<p>/` and at the root there is no directory to
+                    # contradict. So a green `REG011` came to mean the question was
+                    # answered, which is not the same as the answer implying the entry is
+                    # where it belongs -- a check that a field is filled in is not a check
+                    # that the value is right.
+                    #
+                    # Only when the product has a directory. An entry naming a product that
+                    # has no register anywhere has nowhere to be moved to, and asking is
+                    # asking for something impossible; `REG006` is the finding for that,
+                    # and it is about the product rather than the entry.
+                    report.add("REG013", a.rel,
+                               f"{od} sits in the register at the root and binds "
+                               f"{named[0]!r} alone. The root is for what belongs to no "
+                               "single product; this belongs beside the product, in "
+                               f"`products/{named[0]}/OPEN.md`, which is the file an agent "
+                               "working on it reads first. Moving it costs a cut and a "
+                               "paste: ids are one sequence across every register here, so "
+                               "the entry keeps its number and every `depends_on` and "
+                               "`derives_from` naming it still resolves.")
                 elif ALL_PRODUCTS in named and len(named) > 1:
                     others = [p for p in named if p != ALL_PRODUCTS]
                     report.add("REG011", a.rel,

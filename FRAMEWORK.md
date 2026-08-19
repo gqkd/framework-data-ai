@@ -485,7 +485,9 @@ Four rules, and they hold whether or not you share a substrate.
    about. The composition you lose by splitting comes back generated, in `§5` of the root
    register, ordered by cost across every register at once. `REG006` reports a product with
    no register of its own, `REG007` a numbering that restarted, `REG008` an entry filed under
-   the wrong product, and `REG009` a date in an entry's `trigger` -- what closes the window
+   the wrong product, `REG011` an entry at the root that does not say which products it
+   binds and `REG013` one that binds a single product and belongs beside it, and `REG009` a
+   date in an entry's `trigger` -- what closes the window
    on a decision nobody has taken is an event, or another entry, and a date written on an
    undecided thing is read as a commitment by whoever finds it next.
 
