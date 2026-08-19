@@ -1667,10 +1667,14 @@ def build_regions(root: Path, arts: list[Artifact]) -> dict[Path, dict[str, str]
                 f"| [`{rel}`]({rel}) |" for od, row, _, rel in chosen]
         return out + [""]
 
-    products = sorted({scope for _, _, scope, _ in rows if scope} |
-                      {p for _, row, scope, _ in rows if not scope
-                       for p in as_list(row.get("products"))} |
-                      {p for p, _ in dirs.values()})
+    # `all` is a word, not a product. It was reaching this set through the entries that
+    # name it, and the generator emitted `## all` -- a heading for a product no repository
+    # has. `binds` knew better and this did not, which is what happens when one rule is
+    # written in two places.
+    products = sorted(({scope for _, _, scope, _ in rows if scope} |
+                       {p for _, row, scope, _ in rows if not scope
+                        for p in as_list(row.get("products"))} |
+                       {p for p, _ in dirs.values()}) - {ALL_PRODUCTS})
 
     lines = [f"*{GENERATED_MARK}. Edit the register named in the last column, never this "
              "table: the next run overwrites whatever is between the markers.*", "",
@@ -1685,7 +1689,15 @@ def build_regions(root: Path, arts: list[Artifact]) -> dict[Path, dict[str, str]
     lines += ["## Bound to no single product", "",
               "The substrate, and everything above the products: they appear under every "
               "heading above as well, and this is where they are counted once.", ""]
-    lines += table(lambda r: r[2] is None and not as_list(r[1].get("products")))
+    # WHAT THIS SECTION IS FOR, AND THE STATE IT USED TO READ. It held the entries that
+    # named no product, and `REG011` exists to get rid of exactly that silence: the more a
+    # repository answers the new check, the emptier this got, until the section that holds
+    # what binds everything said "Nothing open" in a repository where twenty entries bind
+    # everything. `[all]` is the answer those entries now give, and it belongs here -- which
+    # is what the sentence above it has always described.
+    lines += table(lambda r: r[2] is None
+                   and (not as_list(r[1].get("products"))
+                        or ALL_PRODUCTS in as_list(r[1].get("products"))))
     return {target: {"open-union": "\n".join(lines).rstrip()}}
 
 

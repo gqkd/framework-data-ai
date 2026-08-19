@@ -1823,6 +1823,41 @@ def _registers_are_per_product():
                             "one now reports each entry twice and `depends_on` has two "
                             "rows with the same id to resolve against")
 
+        # `all` IS A WORD AND NOT A PRODUCT, and the two halves of that sentence used to
+        # live in different functions: `binds` knew it, the generator did not, and the union
+        # grew a `## all` heading for a product no repository has. Worse, the last section
+        # selected the entries that named nothing -- the exact state `REG011` exists to
+        # remove -- so the more a repository answered the new check, the emptier the section
+        # holding what binds everything became.
+        (root / "products" / "beta" / "OPEN.md").write_text(fm("entries: {}\n"))
+        (root / "OPEN.md").write_text(
+            fm("entries:\n  OD-009:\n    status: open\n    cost_to_reverse: high\n"
+               "    products: [all]\n    default_in_force: one database for everyone\n"
+               "  OD-010:\n    status: open\n    cost_to_reverse: low\n"
+               "    products: [alpha]\n    default_in_force: nothing\n")
+            + "\n<!-- generated: open-union -->\nx\n<!-- /generated -->\n")
+        run("--emit-index")
+        union = (root / "OPEN.md").read_text()
+        if "## all" in union:
+            problems.append("the union grew a heading for `all`, which is the word an entry "
+                            "uses to say it binds every product and not the name of one")
+        tail = union.split("## Bound to no single product", 1)
+        if len(tail) != 2:
+            problems.append("the union lost the section for what binds no single product")
+        else:
+            if "OD-009" not in tail[1]:
+                problems.append("an entry declaring `[all]` is missing from the section for "
+                                "what binds no single product. That section used to hold the "
+                                "entries naming nothing, which is the state `REG011` removes: "
+                                "answer the check and the section empties itself")
+            if "OD-010" in tail[1]:
+                problems.append("an entry naming one product appeared under what binds no "
+                                "single product")
+        for prod in ("## alpha", "## beta"):
+            block = union.split(prod, 1)[1].split("\n## ", 1)[0]
+            if "OD-009" not in block:
+                problems.append(f"an entry declaring `[all]` is missing from {prod.strip()}")
+
         # The prose outside the markers is not the generator's to touch.
         (root / "OPEN.md").write_text(union.replace("# Open", "# Open\n\nMine, by hand."))
         run("--emit-index")
