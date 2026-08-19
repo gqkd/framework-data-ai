@@ -42,38 +42,47 @@ claude plugin details framework-data-ai        # should list all six
 
 ## Where it stands
 
-Each row carries the day it was measured, because a score is only about the framework it
-was run against. `audit` and `resolve` were re-run on **2026-08-18** against 1.1.0, after
-the open register was split one-per-product. The other five rows are from **2026-08-10**,
-against a framework where `OPEN.md` was one file at the root.
+The whole trigger set, measured on **2026-08-19** against **2.6.2**. One version, one day,
+every row -- which it had not been since 08-10, and the reason for saying so is in the
+paragraph after the table.
 
-| | measured | | miss |
-|---|---|---|---|
-| `audit` | 08-18 | 15/15 | |
-| `resolve` | 08-18 | 11/11 | |
-| `cycle` | 08-10 | 12/13 | *go ahead and implement a redis cache*: work starting with no approved `CHG`, the indirect case the description claims and the hardest one |
-| `release` | 08-10 | 15/16 | a production incident went to `requirement`, the only misroute in the set and an arguable label |
-| `requirement` | 08-10 | 18/20 | raising an `EVP` threshold; adding to the parking lot of `OPEN.md` |
-| `start` | 08-10 | 12/12 | |
-| negatives | 08-10 | 24/25 | *spiegami cosa contiene un CHG*, an explanation, started `cycle` |
+| | | miss |
+|---|---|---|
+| `audit` | 15/15 | |
+| `release` | 15/16 | a production incident went to `requirement`, the only misroute in the set and an arguable label |
+| `cycle` | 12/13 | *go ahead and implement a redis cache*: work starting with no approved `CHG`, the indirect case the description claims and the hardest one |
+| `requirement` | 17/20 | raising an `EVP` threshold; adding to the parking lot of `OPEN.md`; and *the nightly batch failed again and nobody got scores*, which was not missed in August |
+| `start` | 11/12 | *we just closed the deal and I have the pitch deck, the offer PDF and the contract* -- the case the description is written for, missed for the first time |
+| `resolve` | 10/11 | closing an `OD` with a decision already taken, which is arguably `requirement` |
+| negatives | 24/25 | *spiegami cosa contiene un CHG*, an explanation, started `cycle` |
 
-**107 of 112 if you add the column, and adding it is the thing not to do**: two rows are
-eight days newer than the rest and were measured against different rules. The number that
-means something is per row, on its date.
+**104 of 112**, against 105 measured on 08-10 across seven versions of the framework. Read
+the two as the same number: `audit` gained one, `requirement` and `start` each lost one, and
+nothing here separates that from the noise.
 
-`resolve`'s trigger row was measured before its fixture lost the three bare dates it could
-be sorted on. The behaviour set was re-run after that change, on the same day, and the
-ranking held: see `behaviour/resolve/cases.yaml`, where the result belongs.
-
-The two that moved each gained one case, and neither gain should be read as an improvement
-until it is repeated. `audit`'s miss was a prompt naming a path the fixture does not have;
-`resolve`'s was closing an `OD` with a decision already taken, which is arguably
-`requirement`. One run per case is the default, so a single case flipping is inside the
-noise of the measurement -- `--runs 5` on the case is what settles it, and it has not been
-run.
+WHAT THE SET CANNOT TELL YOU YET, AND IT IS THE SAME THING EVERY TIME. One run per case is
+the default, so a case that flips is a coin nobody has flipped twice. `resolve`'s eleventh
+case has now been measured as passing (08-18) and as missing (08-19) with no change to any
+description in between, which is not a regression and not an improvement -- it is the
+measurement saying it is not precise enough to answer. `--runs 5` on the cases that move is
+what settles it, and it has not been run.
 
 The failure across the set is still undertriggering: one misroute between siblings, and one
 overtrigger against 25 negatives that include lexical traps.
+
+**`release` scored 10 of 16 in the same afternoon, and the six misses were the harness.**
+Six of the most explicit prompts in the set -- *prepara la release 1.2.0*, *mi serve la
+release note per REL-007* -- produced no assistant turn at all, and no assistant turn was
+scored as `none`: the answer that means the description did not fire. Two of the six were
+then run one at a time and both fired. The set was re-run whole and came back 15 of 16, with
+the miss being the one it has always had.
+
+That is the fifth number this directory has produced from a harness fault rather than from a
+skill, and the fix is under the next heading with the other four. What separates this one:
+the guard for it already existed and had a hole. It looked for the model saying it was out
+of quota, which is a sentence that only exists when the run got far enough for a model to
+say it. Both runners now refuse any case that produced no assistant turn, on the rule that
+does not depend on a phrase -- a process that never answered did not choose.
 
 **A run that never reached a model used to score as a run that fired nothing.** The first
 `audit` re-run on 08-18 came back 0 of 15 because the account hit its session limit partway
