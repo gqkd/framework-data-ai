@@ -159,6 +159,13 @@ def run_one(fixture: Path, prompt: str, timeout: int, baseline: bool = False) ->
                     skills.append(str(c.get("input", {}).get("skill", "")).split(":")[-1])
     written, valid = inspect(fixture, cwd)
     shutil.rmtree(tmp, ignore_errors=True)
+    # A run with no assistant turn at all did not choose to do nothing: it did not run.
+    # The phrase the regex looks for only appears when the CLI gets far enough for the model
+    # to say it, and the trigger set found six cases where nothing came back at all.
+    if not texts and not skills:
+        return ("NOT A MEASUREMENT. This run produced no assistant turn at all -- no text, "
+                "no tool use. The account was out of quota, or the CLI could not start.",
+                [], written, valid)
     if not skills and UNUSABLE.search(" ".join(texts)):
         return ("NOT A MEASUREMENT. This run never reached a model: the account was out of "
                 "quota. It scores as `none` fired and nothing written, which is the same "

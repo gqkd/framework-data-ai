@@ -111,6 +111,7 @@ def one_run(prompt: str, fixture: Path, timeout: int) -> list[str]:
     deadline = time.monotonic() + timeout
     fired: list[str] = []
     said: list[str] = []
+    answered = False
     try:
         for line in p.stdout:                       # blocks per line, not per process
             line = line.strip()
@@ -120,6 +121,7 @@ def one_run(prompt: str, fixture: Path, timeout: int) -> list[str]:
                 except json.JSONDecodeError:
                     ev = {}
                 if ev.get("type") == "assistant":
+                    answered = True
                     for c in ev.get("message", {}).get("content", []):
                         if c.get("type") == "text":
                             said.append(c["text"])
@@ -137,6 +139,13 @@ def one_run(prompt: str, fixture: Path, timeout: int) -> list[str]:
         p.kill()
         p.wait(timeout=10)
         shutil.rmtree(tmp, ignore_errors=True)
+    # THE HOLE THIS GUARD HAD, FOUND BY A SET THAT SCORED 10 OF 16 AND THEN PASSED THE SAME
+    # PROMPTS ONE AT A TIME. The phrase only appears when the CLI gets far enough to have the
+    # model say it. Six cases produced no assistant turn at all -- no text, no tool use,
+    # nothing -- and that scored as `none`, which is the answer "the model chose not to fire".
+    # A process that never produced an assistant turn did not choose anything.
+    if not answered:
+        return [UNAVAILABLE]
     if not fired and UNUSABLE.search(" ".join(said)):
         return [UNAVAILABLE]
     return fired
@@ -203,9 +212,9 @@ def main() -> int:
 
     unusable = sum(1 for f in fired if f == [UNAVAILABLE])
     if unusable:
-        print(f"\n{unusable} of {len(jobs)} runs never reached a model -- the account was "
-              "out of quota, or the CLI could not start. Those cases would score as `none`, "
-              "which is indistinguishable from a description that does not fire.\n"
+        print(f"\n{unusable} of {len(jobs)} runs never produced an assistant turn -- the "
+              "account was out of quota, or the CLI could not start. Those cases would score "
+              "as `none`, which is indistinguishable from a description that does not fire.\n"
               "NOT SCORED. Re-run when the account is available.", file=sys.stderr)
         return 2
 
