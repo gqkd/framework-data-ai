@@ -486,6 +486,29 @@ def _commitments_and_risks():
             problems.append("a product with a risk register was reported, so the check is "
                             "asking for something other than the register")
 
+        # A PROMISE NOBODY HAS RECEIVED IS NOT AN EXPOSURE. Counting it put a number in the
+        # finding that did not survive being checked, and a reader who verifies one row and
+        # finds it was never said to anybody stops believing the rest.
+        withheld = ("\n  CMT-002:\n    to: nobody yet, it is in the deck\n"
+                    "    status: not-yet-issued\n    products: [alpha]\n")
+        if "XP005" in codes(repo(withheld, None)):
+            problems.append("a product whose only commitment is `not-yet-issued` was "
+                            "reported: nothing has been said to anybody, so there is no "
+                            "exposure for a risk register to hold")
+        def findings(files, code):
+            codes(files)
+            r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(root),
+                                "--json"], capture_output=True, text=True)
+            return [f["message"] for f in json.loads(r.stdout)["findings"]
+                    if f["code"] == code]
+
+        msg = findings(repo(one + withheld, None), "XP005")
+        if not msg:
+            problems.append("a product with one commitment made and one not yet issued was "
+                            "not reported at all")
+        elif "1 commitment(s)" not in msg[0] or "CMT-002" in msg[0].split("--")[1]:
+            problems.append(f"the finding counts the promise nobody has received: {msg[0]}")
+
         commercial = "\n  RSK-001:\n    category: commercial\n    state: open\n"
         if "REF006" not in codes(repo(one, commercial)):
             problems.append("a commercial risk naming no commitment was not reported: a "
@@ -574,6 +597,18 @@ def _references_with_a_second_end():
             problems.append("a citation to a term declared blocked by an open entry was "
                             "reported: the gap is written down, which is the difference "
                             "between a word waiting on a decision and a word nobody defined")
+        # `kind` unless `blocked_by`. A term can be blocked precisely because nobody knows
+        # yet whether it is a metric or a domain concept, and requiring `kind` there makes
+        # the writer choose the thing `blocked_by` exists to avoid choosing.
+        bare_block = "\n  Freshness:\n    blocked_by: OD-001\n"
+        if "FM002" in codes(repo(bare_block, "# nothing cited here", "[]")):
+            problems.append("a term declaring only `blocked_by` was rejected by the schema: "
+                            "the word is used, is not defined, and what kind of thing it is "
+                            "may be part of what the decision has to settle")
+        if "FM002" not in codes(repo("\n  Freshness: {}\n", "# nothing cited here", "[]")):
+            problems.append("a term declaring neither `kind` nor `blocked_by` was accepted, "
+                            "so an empty row passes as a definition")
+
         if "REF005" not in codes(repo(stale_block, "# nothing cited here", "[]")):
             problems.append("a term blocked by an entry no register declares was not "
                             "reported, so the reason the word has no definition points at "

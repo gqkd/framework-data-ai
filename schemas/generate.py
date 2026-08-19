@@ -144,9 +144,29 @@ def build(name: str, spec: dict, registry: dict) -> dict:
                     raise SystemExit(f"{name}.maps.{field}.lists: {k!r} is not a field")
                 props[k] = {"type": "array", "items": {"type": "string", "minLength": 1},
                             "minItems": 1}
+            # A REQUIREMENT THAT ANOTHER FIELD CAN ANSWER INSTEAD. `kind` on a glossary
+            # term is the case that produced this: `blocked_by` exists to write down that a
+            # word is used, is not defined, and here is the decision that has to be taken
+            # first -- and a term can be blocked precisely because nobody knows yet whether
+            # it is a metric or a concept. Demanding `kind` there forces the writer to
+            # choose the thing `blocked_by` was invented to avoid choosing, and the answer
+            # is not to drop the requirement for everybody.
+            # Named apart from the artifact's own `required` on purpose: reusing that name
+            # here emptied it for every type at once, and the schemas still validated
+            # everything that happened to be complete.
+            row_required = list(f.get("required", []))
+            instead = f.get("required_unless") or {}
+            for k, other in instead.items():
+                if k not in props or other not in props:
+                    raise SystemExit(f"{name}.maps.{field}.required_unless: "
+                                     f"{k!r} or {other!r} is not a field")
+                row_required.remove(k)
             value = {"type": "object", "properties": props,
-                     "required": list(f.get("required", [])),
+                     "required": row_required,
                      "additionalProperties": False}
+            if instead:
+                value["allOf"] = [{"anyOf": [{"required": [k]}, {"required": [other]}]}
+                                  for k, other in sorted(instead.items())]
         elif "scalar" in rule:
             # One string per key, optionally constrained. `verified_code` wants this: a
             # commit is a value, not a record, and wrapping it in `{commit: ...}` to fit

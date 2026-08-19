@@ -44,10 +44,24 @@
             "minLength": 1
           }
         },
-        "required": [
-          "kind"
-        ],
-        "additionalProperties": false
+        "required": [],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "anyOf": [
+              {
+                "required": [
+                  "kind"
+                ]
+              },
+              {
+                "required": [
+                  "blocked_by"
+                ]
+              }
+            ]
+          }
+        ]
       }
     }
   },

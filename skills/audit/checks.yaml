@@ -476,6 +476,14 @@ checks:
       until the commitments became readable: both registers were markdown tables, and a
       check cannot join two tables it cannot read.
 
+      `not-yet-issued` rows are named and not counted. A promise that exists in an internal
+      document and has been said to nobody creates no exposure -- that state is first in the
+      vocabulary because it is the only one where the remedy costs an afternoon rather than
+      your credibility -- and counting it inside the number that carries the argument invites
+      exactly the check that undoes it: somebody reads "eleven commitments", goes to look,
+      finds one that was never said to anybody, and starts doubting the other ten. A count
+      that does not survive being verified takes the finding down with it.
+
   # ── Attestation ────────────────────────────────────────────────────────────
   VER001:
     level: warn

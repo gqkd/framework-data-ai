@@ -22,8 +22,9 @@ terms:
   Name of the metric:
     kind: metric
   Term nobody can define yet:
-    kind: domain
-    blocked_by: OD-001
+    blocked_by: OD-001              # `kind` is not required beside `blocked_by`: a term can
+                                    # be blocked precisely because whether it is a metric or
+                                    # a domain concept is part of what has to be decided
 ---
 
 # Glossary and metrics dictionary

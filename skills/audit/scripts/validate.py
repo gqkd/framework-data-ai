@@ -883,21 +883,34 @@ def check_commitments_and_risks(arts: list[Artifact], report: Report) -> None:
     dirs = product_dirs(arts)
     covered = {dirs[a.path.parent][0] for a in risk_files if a.path.parent in dirs}
 
+    # A PROMISE NOBODY HAS RECEIVED CREATES NO EXPOSURE, AND COUNTING IT WEAKENS THE
+    # FINDING RATHER THAN STRENGTHENING IT. `not-yet-issued` is the row that exists in an
+    # internal document and has been said to nobody -- the state `COMMITMENTS.md` puts first
+    # because it is the only one where the remedy costs an afternoon. There is no risk to
+    # own yet. A finding that counted it invited the obvious check, and whoever checked
+    # found one of the eleven had never been said to anybody and began doubting the other
+    # ten: a number that does not survive being verified takes the argument down with it.
     promised: dict[str, list[str]] = {}
+    withheld: dict[str, list[str]] = {}
     for cid, (rel, row) in sorted(cmts.items()):
+        bucket = withheld if row.get("status") == "not-yet-issued" else promised
         for prod in as_list(row.get("products")):
-            promised.setdefault(prod, []).append(cid)
+            bucket.setdefault(prod, []).append(cid)
 
-    for prod, ids in sorted(promised.items()):
-        if prod in covered or prod not in {p for p, _ in dirs.values()}:
+    for prod in sorted(set(promised) | set(withheld)):
+        ids = promised.get(prod, [])
+        if not ids or prod in covered or prod not in {p for p, _ in dirs.values()}:
             continue
+        held = withheld.get(prod, [])
+        aside = (f" ({len(held)} more are `not-yet-issued` and are not counted: nothing has "
+                 "been said to anybody yet, so there is no exposure to own.)" if held else "")
         report.add("XP005", f"products/{prod}/RSK.md",
-                   f"{prod!r} carries {len(ids)} commitment(s) -- {', '.join(sorted(ids))} "
-                   "-- and has no risk register. A promise made before the thing exists is "
-                   "the ordinary case here and it is supposed to leave two marks: a risk "
-                   "somebody owns and an entry in the register. With no `RSK.md` the first "
-                   "one has nowhere to be, and the exposure lives only in the sentence that "
-                   "created it.")
+                   f"{prod!r} carries {len(ids)} commitment(s) that have been made -- "
+                   f"{', '.join(sorted(ids))} -- and has no risk register.{aside} A promise "
+                   "made before the thing exists is the ordinary case here and it is "
+                   "supposed to leave two marks: a risk somebody owns and an entry in the "
+                   "register. With no `RSK.md` the first one has nowhere to be, and the "
+                   "exposure lives only in the sentence that created it.")
 
     for a in arts:
         if a.type != "risk-register":
