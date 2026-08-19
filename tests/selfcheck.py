@@ -2694,6 +2694,52 @@ def _wrong_arguments_are_not_a_clean_report():
                                 f"the two arguments was wrong to nobody: {out.strip()[:120]}")
     return problems
 
+
+@check("a pinned framework commit is checked against the one doing the checking")
+def _the_pin_is_read():
+    # An unchecked pin is a comment, and this is the whole value of the field: a project
+    # that writes the commit down is claiming its report was produced by that code, and
+    # nothing but this compares the claim with the process actually running.
+    #
+    # The two silences are asserted as hard as the two findings. No pin at all is the normal
+    # state and must stay quiet, or the field becomes a checklist item; and a framework
+    # installed rather than cloned has no history to ask, where unverifiable is a different
+    # claim from violated -- that one cannot be exercised here, because this repository is
+    # always a checkout when the self check runs, so it is stated rather than tested.
+    head = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"],
+                          capture_output=True, text=True)
+    if head.returncode != 0:
+        return ["git history is not available here, so the check is not running"]
+    sha = head.stdout.strip()
+    version = REGISTRY["version"]
+    problems = []
+
+    def codes(config: str):
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "framework.yaml").write_text(config)
+            r = subprocess.run([sys.executable, str(VALIDATE), "--root", tmp, "--json",
+                                "--stale-days", "36500"], capture_output=True, text=True)
+            if r.returncode not in (0, 1) or not r.stdout.strip():
+                return None
+            return {f["code"] for f in json.loads(r.stdout)["findings"]}
+
+    declared = f'framework_version: "{version}"\n'
+    for config, want, what in [
+        (declared, False, "a project that pins nothing, which is the ordinary state"),
+        (declared + f'framework_commit: "{sha}"\n', False, "a pin that is being honoured"),
+        (declared + f'framework_commit: "{sha[:10]}"\n', False, "the same pin, abbreviated"),
+        (declared + 'framework_commit: "0123456789abcdef"\n', True,
+         "a pin naming a commit that is not the one running"),
+        (declared + 'framework_commit: "main"\n', True,
+         "a branch name, which is a pin that moves and therefore not a pin"),
+    ]:
+        got = codes(config)
+        if got is None:
+            problems.append(f"the validator crashed on {what}")
+        elif ("FW003" in got) != want:
+            problems.append(f"{what} was {'not ' if want else ''}reported")
+    return problems
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 print()

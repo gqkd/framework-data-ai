@@ -197,7 +197,32 @@
 # repository already on the current version exited 1; and an unparseable `framework.yaml`
 # or a framework that was unpacked rather than cloned came back as a traceback instead of a
 # sentence.
-version: "2.7.1"
+# 2.7.1 -> 2.8.0. `framework_commit` in a project's `framework.yaml`, and `FW003` reading it.
+# An optional field and a check at `warn`: a repository that validated still does, and one
+# that does not pin sees nothing, which is what MINOR is for.
+#
+# The two fields answer different questions and the difference is the reason both exist.
+# `framework_version` says which rules a repository was written against, and binds nothing:
+# two machines can declare the same number and run different code, so a green report cannot
+# be reproduced from anything the repository records. `framework_commit` is the project
+# writing down the commit it is checked by, and `FW003` is what stops that from being a
+# comment. It is silent when the field is absent -- pinning costs a deliberate bump for every
+# fix the framework ships, which a project with one developer and no CI has no reason to pay
+# -- and silent when the framework was installed rather than cloned, because there is no
+# history to ask and unverifiable is not the same claim as violated.
+#
+# `migrate.py --adopt` moves both lines together, and only rewrites the pin when the file
+# already carries one. A migration that moved the version and left the pin naming the code it
+# had just stopped running would produce `FW003` for the rest of the week, out of the tool
+# whose whole job is to tell a migration from a mistake.
+#
+# Versions are tagged from here: `v2.8.0` is the first. Nothing in the framework needs the
+# tags -- `migrate.py` reconstructs an old validator from the history, which is why it never
+# needed them -- but a project pinning a commit reads a tag to find out which one, and a CI
+# job checking the framework out names a ref rather than a hash. Earlier versions are not
+# retro-tagged: inventing the tags after the fact would put a release label on commits that
+# were never released.
+version: "2.8.0"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of

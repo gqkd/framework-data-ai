@@ -204,23 +204,33 @@ def findings(validator: Path, root: Path) -> dict:
     return {key(f, seen): f for f in out["findings"]}
 
 
-def adopt(cfg: Path, version: str) -> None:
-    """Write the new number, and touch nothing else in the file.
+def adopt(cfg: Path, version: str, commit: str | None) -> None:
+    """Write the new number, and the pinned commit beside it when there is one.
+
+    Both or neither, and that is the point of doing it here. A project that pins moves two
+    facts at once; a migration that moved one of them would leave the pin naming the version
+    it just stopped running, which `FW003` then reports for the rest of the week. The pin is
+    only rewritten when the file already carries one: adding it to a project that never asked
+    for it would be this tool taking a decision that costs a deliberate bump per fix.
 
     A rewrite through yaml.safe_dump would drop every comment in a project's own
     configuration, including the ones explaining why a check is switched off -- which is
     the reasoning this framework asks people to write down.
     """
-    if not cfg.exists():
-        cfg.write_text(f'framework_version: "{version}"\n', encoding="utf-8")
-        return
-    text = cfg.read_text(encoding="utf-8")
-    line = re.compile(r"^framework_version:.*$", re.M)
     # Quoted, always. A bare `2.7` is a decimal to YAML and a bare `3` a whole number,
     # and `FW001` reports both as unusable -- which would be this tool writing the
     # finding it exists to clear.
-    text = (line.sub(f'framework_version: "{version}"', text, count=1)
-            if line.search(text) else f'framework_version: "{version}"\n' + text)
+    declared = f'framework_version: "{version}"'
+    if not cfg.exists():
+        cfg.write_text(declared + "\n", encoding="utf-8")
+        return
+    text = cfg.read_text(encoding="utf-8")
+    line = re.compile(r"^framework_version:.*$", re.M)
+    text = (line.sub(declared, text, count=1) if line.search(text)
+            else declared + "\n" + text)
+    pin = re.compile(r"^framework_commit:.*$", re.M)
+    if commit and pin.search(text):
+        text = pin.sub(f'framework_commit: "{commit}"', text, count=1)
     cfg.write_text(text, encoding="utf-8")
 
 
@@ -335,7 +345,9 @@ def main() -> int:
                 "not adopted. `--adopt` writes the new number, which is the claim that the "
                 "migration is done; do it after the findings under NEW are gone.")
         else:
-            adopt(cfg, current)
+            head = git(["rev-parse", "HEAD"], framework)
+            commit = head.stdout.strip() if head.returncode == 0 else None
+            adopt(cfg, current, commit)
             report["adopted"] = current
 
     if args.json:

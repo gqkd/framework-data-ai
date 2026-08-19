@@ -232,7 +232,7 @@ python3 skills/audit/scripts/validate.py --root ../my-project --emit-index
 <!-- generated: counts -->
 *Generated from `schemas/artifact-types.yaml` and `skills/audit/checks.yaml`. Edit those, not this line.*
 
-**30 artifact types. 53 checks** (5 error, 46 warn, 2 info), each catalogued with the failure it prevents written next to it.
+**30 artifact types. 54 checks** (5 error, 47 warn, 2 info), each catalogued with the failure it prevents written next to it.
 <!-- /generated -->
 
 The count above is generated, and it is generated because the one that used to be here was
@@ -343,6 +343,12 @@ without `status` and `owners` for as long as it did. The self check runs in CI h
 - **Distribution.** A project refers to the framework by path. There is no packaging and no
   release to install. With one project this is invisible. With the second it is the first
   thing that breaks.
+
+  Pinning is no longer part of that gap. A project can write `framework_commit` beside its
+  `framework_version`, and `FW003` compares it with the commit doing the checking; versions
+  are tagged from `v2.8.0` on. What is still missing is the install: the framework arrives by
+  being cloned next to the project, and a pin tells you which commit that clone has to be at
+  rather than fetching it for you.
 
   What exists is the part underneath it. A project writes `framework_version` in its own
   `framework.yaml`, and the validator tells you when that number and the framework's

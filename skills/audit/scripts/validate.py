@@ -40,6 +40,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import subprocess
 import sys
 from dataclasses import dataclass, field
 from datetime import date, datetime
@@ -242,7 +243,8 @@ def normalize_level(v, code: str) -> str:
     return v
 
 
-PROJECT_KEYS = {"checks", "stale_days", "scan", "framework_version"}
+PROJECT_KEYS = {"checks", "stale_days", "scan", "framework_version",
+                "framework_commit"}
 SCAN_KEYS = {"skip_dirs", "skip_files", "skip_hidden"}
 
 
@@ -1576,6 +1578,60 @@ def check_framework_version(root: Path, project: dict, registry: dict,
                    f"then either migrate and update this line, or pin the framework.")
 
 
+COMMIT = re.compile(r"^[0-9a-f]{7,40}$")
+
+
+def framework_head() -> str | None:
+    """The commit this framework checkout is actually at, or None when it cannot be asked.
+
+    None is not a failure and must not be reported as one: a framework installed as a plugin
+    rather than cloned has no history, and the pin is unverifiable there in a way that says
+    nothing about whether it is being honoured. Where the pin matters -- a CI job, which gets
+    the framework by checking it out -- git is there.
+    """
+    try:
+        r = subprocess.run(["git", "-C", str(FRAMEWORK), "rev-parse", "HEAD"],
+                           capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return r.stdout.strip() or None if r.returncode == 0 else None
+
+
+def check_framework_pin(project: dict, report: Report) -> None:
+    """A repository that pins a commit, against the commit it is being checked by.
+
+    `framework_version` answers "which rules was this written against". It does not bind:
+    two machines can declare the same number and run different code, and the run that
+    produced a green report cannot be reproduced from what the repository records. A project
+    that wants that writes the commit down, and this is what makes writing it down mean
+    something -- an unchecked pin is a comment.
+
+    It stays optional, and silence when it is absent is the correct behaviour rather than a
+    gap: pinning costs a deliberate bump for every fix, which is a price a project with one
+    developer and no CI has no reason to pay yet.
+    """
+    pinned = project.get("framework_commit")
+    if pinned is None:
+        return
+    if not isinstance(pinned, str) or not COMMIT.match(pinned.strip()):
+        report.add("FW003", "framework.yaml",
+                   f"framework_commit is {pinned!r}, which is not a commit. It takes the "
+                   "hash the framework is pinned at, seven characters or more. A branch or "
+                   "a tag name is not enough: both move, and a pin that moves is the state "
+                   "this field exists to leave.")
+        return
+    pinned = pinned.strip()
+    head = framework_head()
+    if head is None or head.startswith(pinned):
+        return
+    report.add("FW003", "framework.yaml",
+               f"pins the framework at {pinned}, and the framework being run is at "
+               f"{head[:12]}. Either the checkout moved under this repository -- in which "
+               "case the report you are reading was not produced by the rules this project "
+               "declares -- or the pin was left behind by a migration. "
+               "`migrate.py --adopt` writes both lines together.")
+
+
 def check_triage(arts: list[Artifact], report: Report) -> None:
     """Which signals has nobody looked at.
 
@@ -2102,6 +2158,7 @@ def main() -> int:
     check_change_contracts(arts, report)
     check_pull_request(arts, pr_text, changed_files, report)
     check_framework_version(root, project, registry, report)
+    check_framework_pin(project, report)
     check_open_register(arts, report)
     check_manifest_derived_fields(arts, report)
     check_review_batches(arts, report)

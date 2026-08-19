@@ -576,6 +576,23 @@ checks:
       it becomes worth raising the first time a version bump costs somebody an afternoon
       of looking for a mistake that was not theirs.
 
+  FW003:
+    level: warn
+    title: the repository pins a framework commit and is being checked by another one
+    prevents: >
+      A pin that nobody reads, which is a comment. `framework_version` says which rules a
+      repository was written against and binds nothing: two machines can declare the same
+      number and run different code, and a green report cannot be reproduced from anything
+      the repository records. `framework_commit` is the project writing the commit down, and
+      this is what makes writing it down mean something.
+
+      It is silent when the field is absent, and that is correct rather than a gap: pinning
+      costs a deliberate bump for every fix the framework ships, and a project with one
+      developer and no CI has no reason to pay that yet. It is also silent when the framework
+      is installed rather than cloned, because there is no history to ask -- unverifiable is
+      not the same claim as violated, and where a pin actually matters, which is a CI job,
+      the framework arrives by being checked out.
+
   ICG001:
     level: info    # the first `info` in this catalog, and the reason is below
     title: signals no impact classification has ever considered

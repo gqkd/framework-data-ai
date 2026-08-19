@@ -222,10 +222,11 @@ filling a document: the skill elicits what you know instead of inventing what it
 - **Distribution, not versioning.** A project can now say which framework it was written
   against; `FW001`/`FW002` tell "the rules moved" from "we did this wrong", and
   `skills/audit/scripts/migrate.py` says which finding is which, by running both validators
-  over the same repository. What is still missing is everything that would make the
-  declaration **binding**: no tag, no installable release, no pinned commit. A repository can
-  declare one version and run another, get a warning, and still be checked by the rules of
-  the one it is running — the tool tells you what that costs, it does not stop it.
+  over the same repository. A repository that wants the declaration to **bind** writes
+  `framework_commit` beside it, and `FW003` reports a report produced by any other commit;
+  versions are tagged from `v2.8.0`. What is still missing is the install — no packaging, no
+  release to fetch — so the pin says which commit the sister checkout has to be at, and
+  somebody still has to put it there.
 - **A baseline for the behaviour evals.** They show what a skill did; they do not show what
   would have happened without it. The comparison worth running is not one turn against one
   turn — the claim these skills make is that tomorrow's session does not start over, and a

@@ -28,7 +28,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: OWNER/framework-data-ai
-          ref: vX.Y.Z            # the version this project declares in framework.yaml
+          # The commit the project pins in `framework_commit`, or the tag of the version
+          # it declares. Not a branch: a job that follows the framework's main branch turns
+          # every change made there into a build failure here, which is the confusion
+          # `FW001` exists to prevent and `FW003` to catch.
+          ref: COMMIT_OR_TAG
           path: .framework
 
       - uses: actions/setup-python@v5
