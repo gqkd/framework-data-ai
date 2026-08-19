@@ -57,9 +57,20 @@ One entry per commitment. `CMT-NNN`.
 | **Implicit or explicit deadline** | "by the end of the year" is a deadline too |
 | **Room for interpretation** | How binding the literal wording is |
 | **Technical translation** | What it actually takes to build |
-| **Feasibility** | feasible · feasible with reservations · **out of reach** |
+| **Feasibility** | feasible · feasible with reservations · **out of reach** · **not yet assessable** · not applicable |
 | **Architectural constraint that follows from it** | link to a `DEC` or an `OPEN.md` entry |
 | **Status** | **not yet issued** · **stated as done** · open · met · renegotiated · unsatisfiable |
+
+**`not yet assessable` is the ordinary state of this file early on**, and it was missing
+from the vocabulary for as long as the vocabulary existed. This is the register of promises
+made before the thing was built — that is the first sentence of this document — so a row's
+honest feasibility is very often that nobody can judge it: the design does not exist, the
+decision it depends on has not been taken, or the promise as worded cannot be checked at all.
+`blocked_by` beside it names the register entry that has to be decided before the question
+can even be asked. Three shades of difficulty and no "not yet" left one legal move, which was
+to pick the nearest value and write something false.
+
+`not applicable` is the other one: a promise with no technical content to assess.
 
 `not yet issued` is the promise that exists in a document and that nobody has received yet.
 It comes first because it is **the only state in which the remedy costs an afternoon

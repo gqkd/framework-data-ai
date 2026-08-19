@@ -394,6 +394,39 @@ def _every_entry_reaches_the_view():
     return problems
 
 
+@check("the vocabularies have a value for the day the question is first asked")
+def _vocabularies_cover_not_yet():
+    # Three enums were extended on the same day and the omissions were all on one axis: the
+    # answer on the day nobody has done the work yet. A vocabulary without it makes omission
+    # the honest move, and an omitted field is invisible -- a risk with no likelihood drops
+    # out of every ordering, a promise with no feasibility reads as unexamined rather than
+    # unexaminable. This asserts the values exist, so removing one is a decision somebody
+    # takes rather than a line somebody deletes.
+    want = {
+        ("risk-register", "risks", "category"): {"security", "organisational"},
+        ("risk-register", "risks", "likelihood"): {"C"},
+        ("commitments", "commitments", "feasibility"): {"not-yet-assessable",
+                                                        "not-applicable"},
+        ("open-register", "entries", "status"): {"parked"},
+        ("operational-stack", "stack", "status"): {"dropped"},
+    }
+    problems = []
+    for (type_name, field, key), values in sorted(want.items()):
+        spec = REGISTRY["types"].get(type_name, {})
+        enums = ((spec.get("maps") or {}).get(field, {}).get("fields", {}).get("enums") or {})
+        have = set(enums.get(key) or [])
+        missing = values - have
+        if missing:
+            problems.append(
+                f"{type_name}.{field}.{key} has no {', '.join(sorted(missing))}. Every one of "
+                "these is the answer on the day the question is first asked -- not decided, "
+                "not measurable, not applicable, already true -- and a vocabulary without it "
+                "leaves two moves: omit the field, which takes the row out of everything "
+                "that reads it, or pick the nearest value, which writes something false that "
+                "nothing will contradict")
+    return problems
+
+
 @check("a promise and the risk it creates can be joined, now that both are readable")
 def _commitments_and_risks():
     # Two markdown tables until 2.1.0, which is why neither of these could be reported: a

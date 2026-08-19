@@ -38,8 +38,10 @@
               "technical",
               "data",
               "ai",
+              "security",
               "compliance",
               "commercial",
+              "organisational",
               "vendor"
             ]
           },
@@ -57,7 +59,8 @@
             "enum": [
               "L",
               "M",
-              "H"
+              "H",
+              "C"
             ]
           },
           "impact": {

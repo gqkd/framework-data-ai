@@ -51,7 +51,9 @@
             "enum": [
               "feasible",
               "feasible-with-reservations",
-              "out-of-reach"
+              "out-of-reach",
+              "not-yet-assessable",
+              "not-applicable"
             ]
           },
           "threshold": {
@@ -59,6 +61,10 @@
             "minLength": 1
           },
           "evidence": {
+            "type": "string",
+            "minLength": 1
+          },
+          "blocked_by": {
             "type": "string",
             "minLength": 1
           },

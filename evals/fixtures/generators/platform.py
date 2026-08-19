@@ -174,6 +174,9 @@ F["COMMITMENTS.md"] = fm(
                 "    feasibility: feasible\n    products: [vega]\n"
                 "  CMT-003:\n    to: every EU customer\n    status: open\n"
                 "    feasibility: feasible-with-reservations\n"
+                "    products: [atlas, vega, lyra]\n"
+                "  CMT-004:\n    to: Cerulean, in the renewal call\n    status: open\n"
+                "    feasibility: not-yet-assessable\n    blocked_by: OD-002\n"
                 "    products: [atlas, vega, lyra]\n") + """\
 # Commercial commitments made
 
@@ -182,6 +185,7 @@ F["COMMITMENTS.md"] = fm(
 | CMT-001 | Churn scores refreshed once per day, available by 07:00 CET | Atlas order form §3, signed | Northwind | the nightly batch finishes by 06:30 |
 | CMT-002 | The customer export carries **the same customer id the customer sees in their own CRM** | Vega order form §5, signed 2026-04-11 | Northwind, Cerulean | `customer_id` in the export is the CRM integer, not an internal surrogate |
 | CMT-003 | Personal data of EU subjects is processed in the EU and pseudonymised at rest | Group DPA §4, countersigned | all EU customers | the DPA names pseudonymisation; today only residency is implemented |
+| CMT-004 | One sign-in across the whole suite | Renewal call, spoken | Cerulean | nobody can say what it costs until `OD-002` is decided: the answer is a different piece of work under each option |
 """
 
 # The registers, and the reason this fixture is where the arrangement shows. Both open
@@ -546,7 +550,9 @@ F["products/atlas/RSK.md"] = fm(
           "  RSK-003:\n    category: technical\n    state: open\n"
           "    likelihood: M\n    impact: M\n    commitment: CMT-001\n"
           "  RSK-004:\n    category: commercial\n    state: open\n"
-          "    likelihood: M\n    impact: M\n    commitment: none\n") + """\
+          "    likelihood: M\n    impact: M\n    commitment: none\n"
+          "  RSK-005:\n    category: organisational\n    state: open\n"
+          "    likelihood: C\n    impact: M\n    commitment: none\n") + """\
 # Atlas · risks
 
 <!-- section: state -->
@@ -557,6 +563,7 @@ F["products/atlas/RSK.md"] = fm(
 | RSK-002 | `customer_id` is pseudonymised nowhere, and the DPA says it is | compliance | M | H | blocked on the substrate decision in `platform/OPEN.md` |
 | RSK-003 | The nightly batch has no margin before 06:30 | technical | M | M | none yet: the scoring job has not been measured since the rewrite |
 | RSK-004 | The second customer is assumed and has not been interviewed | commercial | M | M | nobody promised this to anybody: it is what the roadmap is built on |
+| RSK-005 | The pseudonymisation decision needs somebody on shift to approve exports, and nobody is assigned | organisational | C | M | `C` and not `H`: today there is no rota, so it is not a forecast |
 
 <!-- section: acceptances -->
 ## Acceptances

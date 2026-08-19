@@ -58,9 +58,18 @@ Living. The current truth. One row per risk.
 
 | ID | Risk | Category | Likelihood | Impact | State | Mitigation | Owner | Reviewed |
 |---|---|---|---|---|---|---|---|---|
-| RSK-001 | | technical · data · AI · compliance · commercial · vendor | L/M/H | L/M/H | | | | YYYY-MM-DD |
+| RSK-001 | | technical · data · AI · security · compliance · commercial · organisational · vendor | L/M/H/C | L/M/H | | | | YYYY-MM-DD |
 
 `state`: `open` · `mitigated` · `accepted` · `transferred` · `closed` · `expired`
+
+`likelihood` `C` is certain, and it is not a fourth degree of likely: the thing has happened,
+or what is written down already contradicts what was said outside. Leaving the field empty
+because `H` would be an understatement takes the row out of every ordering that reads a
+likelihood, which is the one outcome worse than an imprecise letter.
+
+`security` is not `compliance` — one is whether somebody gets in, the other whether a rule is
+broken — and `organisational` is the risk that the person is not there: a decision whose
+validity depends on somebody being on shift rather than on code.
 
 `expired` deserves attention: it is a risk whose mitigation was tied to a condition that no
 longer holds. These are the most dangerous, because they look managed.
