@@ -152,7 +152,13 @@
 # inside a table cell, where the match ran to the end of the row, and one naming a section of
 # the glossary instead of a term. Both were found by a repository, and both produced the
 # worst kind of finding -- one that sends somebody to check a document that was right.
-version: "2.6.1"
+# 2.6.1 -> 2.6.2. Documentation drift, and `FW001` learning to ignore a patch. A reference
+# document carrying its own version two majors behind, a count of checks wrong by fifteen, a
+# diagram presented as current that had not been redrawn in two weeks, a sentence saying
+# tooling was still to be built after it was built. All four were found by a reading and none
+# by a check, which is the honest measure of what a self-check covers. The count is generated
+# now; the rest were sentences and are gone.
+version: "2.6.2"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of

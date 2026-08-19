@@ -212,10 +212,13 @@ filling a document: the skill elicits what you know instead of inventing what it
 
 ## 7 · What is still missing
 
-- **`--emit-manifest`.** The `GENERATED` sections of `product.yaml` are still written by
-  hand, and the template says so at the bottom where somebody will read it. Build it at the
-  first `CHG`, not before: with a handful of artifacts the manifest updates in thirty
-  seconds and a generator would be a factory built before the product.
+- **`--emit-manifest`.** `release` and `artifacts` in `product.yaml` are still written by
+  hand. They carried a `GENERATED` label until 2026-08-19, which was the worst of both --
+  a hand written section everybody read as computed, and those are the ones nobody rereads.
+  The label is gone and the fields stay; the other three that carried it are derived now, in
+  `product.index.yaml` and in `RSK.md`. Build the generator at the first `CHG`, not before:
+  with a handful of artifacts the manifest updates in thirty seconds and a generator would
+  be a factory built before the product.
 - **Distribution, not versioning.** A project can now say which framework it was written
   against, and `FW001`/`FW002` tell "the rules moved" from "we did this wrong". What is
   still missing is everything that would make the declaration binding: no tag, no

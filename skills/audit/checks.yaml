@@ -560,6 +560,13 @@ checks:
       It warns rather than blocking, because the day the registry moves is exactly when a
       project most needs to run the validator and see what it says.
 
+      A patch difference is silent. A patch is wording, a message, a fixture -- by this
+      registry's own definition nothing a repository has to act on -- and reporting it
+      asked every project to edit a line whenever a sentence here was rephrased. A
+      finding whose correct response is "change the number until it stops" is one people
+      learn to clear without reading, and this check is the one that has to be believed
+      on the day the rules really do move.
+
   FW002:
     level: info
     title: the repository does not say which framework version it was written against

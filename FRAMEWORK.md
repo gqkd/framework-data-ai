@@ -1,7 +1,10 @@
 # Documentation Framework: Data & AI Projects
 
-**Version 1.0** · Reference document. If you are joining the project now, read this file
-in full before opening any other document.
+Reference document. If you are joining the project now, read this file in full before
+opening any other document. It carried a version of its own until 2026-08-19, two major
+versions behind the framework it describes: a number nothing regenerated, in the document
+that opens the argument against numbers nothing regenerates. The version of the framework is
+in `schemas/artifact-types.yaml`, which is the file that defines it, and nowhere else.
 
 ---
 
@@ -551,8 +554,8 @@ Before writing a line of code, in this order:
    requirements analyses) and from there work out what has been promised, to whom, by
    when, with what room for interpretation, and what is out of technical reach. These are
    requirements you will discover anyway: the choice is whether you discover them now or
-   at the worst possible moment. The extraction and the classification still have to be
-   done, and the tooling for them is still to be built.
+   at the worst possible moment. The extraction has tooling now -- `_meta/extract/`, written
+   by the `start` skill -- and the classification is a reading somebody still has to do.
 2. `OPEN.md`: the decisions you have to take before you can write code, with the cost to
    reverse each one. One per product from the start — the numbering is a single sequence
    across all of them — plus the one at the root for what belongs to no product in

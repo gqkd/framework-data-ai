@@ -1434,7 +1434,13 @@ def check_framework_version(root: Path, project: dict, registry: dict,
                    f"be compared with a version: until this line has all three parts it "
                    f"says nothing about which framework the repository was written against.")
         return
-    if got != want:
+    # A PATCH IS SILENT, AND THAT IS THE WHOLE POINT OF HAVING THREE NUMBERS. This check
+    # exists to tell "the rules moved" from "we did this wrong", and by the registry's own
+    # definition a patch is wording, a message, a fixture -- nothing a repository has to do
+    # anything about. Reporting it asked every project on earth to edit a line each time a
+    # sentence was rephrased here, and a finding whose correct response is "change the number
+    # to make it stop" is a finding people learn to clear without reading.
+    if got[:2] != want[:2]:
         direction = "behind" if got < want else "ahead of"
         report.add("FW001", "framework.yaml",
                    f"declares framework_version {declared!r} and the framework is at "

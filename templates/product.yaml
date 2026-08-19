@@ -1,6 +1,7 @@
 # Product manifest, machine-readable.
-# The sections marked GENERATED are meant to be regenerated, not hand written. See the
-# note at the bottom for what that means today.
+# Nothing in this file is regenerated: it is authoritative and written by hand. What is
+# derived lives in `product.index.yaml` beside it, written by `--emit-index`. Two fields
+# here still look like the second kind and are not -- see the note at the bottom.
 
 schema: framework/product-manifest/v1
 artifact_type: product-manifest
@@ -24,7 +25,7 @@ stage:
   next_gate: G4
   mor_completed: false
 
-release:                       # GENERATED
+release:                       # by hand, and read as by hand. See the note at the bottom
   current: REL-004
   manifest: RLM-004
   deployed_at: null
@@ -62,7 +63,7 @@ code:
     contains: the API and the domain logic. Owns the database migrations
     path: ../product-a-backend
 
-artifacts:                     # GENERATED
+artifacts:                     # by hand, and read as by hand. See the note at the bottom
   living:
     - path: products/product-a/PBR.md
       last_review: YYYY-MM-DD HH:MM
@@ -88,9 +89,12 @@ roles:
   product: NAME
   tech: NAME
 
-# On the GENERATED sections that are left -- `release` and `artifacts`: today nothing
-# regenerates them. No tooling exists yet, so you fill those fields in by hand, and they
-# have to be treated as hand written. A section
+# ON `release` AND `artifacts`, WHICH SAID GENERATED AND WERE NOT. Nothing regenerates
+# them: `--emit-manifest` does not exist, and until it does the label was the worst of both
+# -- a section maintained by hand that everybody read as computed, which is the one kind
+# nobody rereads. The other three fields that carried it are gone, answered by
+# `product.index.yaml` and by `RSK.md` beside it. These two stay, without the label, and
+# they have to be treated as what they are. A section
 # labeled "generated" that is in fact written by hand is a section nobody rereads,
 # because everyone assumes something keeps it true. Until the generator exists, that
 # label is a promise the repository is not keeping, so either keep the fields honest or

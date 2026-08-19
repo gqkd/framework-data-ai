@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Does a skill do the right thing once it fires, on repositories built to tell it apart.
 
-    python evals/behaviour/run.py release           # every case, one at a time
-    python evals/behaviour/run.py release --case D  # one of them
-    python evals/behaviour/run.py cycle
+    python evals/behaviour/run.py release             # every case, one at a time
+    python evals/behaviour/run.py release --case D    # one of them
+    python evals/behaviour/run.py release --baseline  # the same, with no framework at all
 
 Triggering asks whether the skill answers. This asks whether the answer is right, which
 for a gate is the half that matters: one that fires reliably and says yes to everything is
@@ -87,12 +87,21 @@ def inspect(fixture: Path, cwd: Path) -> tuple[list[str], str]:
     return changed, verdict
 
 
-def run_one(fixture: Path, prompt: str, timeout: int) -> tuple[str, list[str], list[str], str]:
+def run_one(fixture: Path, prompt: str, timeout: int, baseline: bool = False) -> tuple[str, list[str], list[str], str]:
     """Return the closing text, the skills invoked, what was written, and the validator."""
     tmp = Path(tempfile.mkdtemp(prefix="rel-"))
     cwd = tmp / "project"
     shutil.copytree(fixture, cwd)
     env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
+    # THE ARM THAT ANSWERS THE QUESTION THIS DIRECTORY CANNOT ANSWER WITHOUT IT. Every score
+    # here says the skill did something; none of them says it did better than the same model
+    # with no framework at all, which is the question that decides whether any of this earns
+    # its tokens. `CLAUDE_CONFIG_DIR` at an empty directory loads no plugins and no skills
+    # directory, per process: the fixture, the prompt and the tools are identical, and the
+    # only difference is whether the six descriptions exist.
+    if baseline:
+        env["CLAUDE_CONFIG_DIR"] = str(Path(tmp) / "no-config")
+        (Path(tmp) / "no-config").mkdir(parents=True, exist_ok=True)
     try:
         # `-p` denies writes by default, and the first run of this hit it: the skill
         # reached the right verdict and then printed the manifest it could not save,
@@ -146,6 +155,9 @@ def main() -> int:
     ap.add_argument("skill", help="which case set to run: a skill name, or a scenario")
     ap.add_argument("--case", help="one case, by the name or fixture it starts with")
     ap.add_argument("--timeout", type=int, default=900)
+    ap.add_argument("--baseline", action="store_true",
+                    help="run the same fixtures with no plugins and no skills directory: "
+                         "the arm that says whether the framework beat the model alone")
     args = ap.parse_args()
 
     spec_file = HERE / args.skill / "cases.yaml"
@@ -168,9 +180,11 @@ def main() -> int:
         if not fx.exists():
             print(f"! {fx} is missing, skipping", file=sys.stderr)
             continue
-        print(f"\n{'=' * 78}\n{c['name']}   expected: {c['expect']}\n  because: "
+        arm = "  [BASELINE: no plugins, no skills]" if args.baseline else ""
+        print(f"\n{'=' * 78}\n{c['name']}   expected: {c['expect']}{arm}\n  because: "
               f"{c['because']}\n{'=' * 78}")
-        text, skills, written, valid = run_one(fx, c["prompt"], args.timeout)
+        text, skills, written, valid = run_one(fx, c["prompt"], args.timeout,
+                                               baseline=args.baseline)
         # The answer first. A run of this was cut off partway through the front matter
         # listing, and the closing text, which is most of what is being graded, never
         # printed. Reading that transcript back, a grep for what the skill should have

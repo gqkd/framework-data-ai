@@ -964,6 +964,14 @@ def _framework_version():
          "a major ahead"),
         (f"framework_version: {major}.{int(minor) + 1}.0\n", {("FW001", "warn")},
          "a minor ahead"),
+        # A PATCH IS SILENT, AND ASSERTED IN BOTH DIRECTIONS. By this registry's own
+        # definition a patch is wording, a message, a fixture: nothing a repository has to
+        # act on. Reported, it asks every project to edit a line whenever a sentence here is
+        # rephrased, and a finding whose correct response is "change the number until it
+        # stops" is one people learn to clear without reading -- on the check that has to be
+        # believed the day the rules really do move.
+        (f"framework_version: {major}.{minor}.0\n", set(), "a patch behind"),
+        (f"framework_version: {major}.{minor}.99\n", set(), "a patch ahead"),
         # The two YAML traps, and they are the reason the version is a string. `1.1` is a
         # decimal and `2` is a whole number, so neither is comparable with a version, and
         # both are what somebody reaches for when shortening it. Quoting, which used to be

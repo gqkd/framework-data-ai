@@ -42,6 +42,7 @@ import argparse
 import json
 import re
 import sys
+from collections import Counter
 from pathlib import Path
 
 try:
@@ -284,8 +285,28 @@ def catalog_table(registry: dict, header: list[str], row) -> str:
     return "\n".join(lines)
 
 
+def counts(registry: dict) -> str:
+    """How many of each thing there are, measured rather than typed.
+
+    A README said "thirty four checks" for as long as it took the catalog to reach
+    forty nine, in the repository whose own rule is that a number nobody regenerates is a
+    number waiting to be false. The count is worth having -- it is what tells a reader
+    whether this is a checklist or a system -- so it is generated, and `--check` reports it
+    the way it reports the tables.
+    """
+    checks = yaml.safe_load((HERE.parent / "skills" / "audit" / "checks.yaml")
+                            .read_text(encoding="utf-8"))["checks"]
+    levels = Counter(c["level"] for c in checks.values())
+    at = ", ".join(f"{levels[k]} {k}" for k in ("error", "warn", "info") if levels.get(k))
+    return (f"*Generated from `schemas/artifact-types.yaml` and "
+            f"`skills/audit/checks.yaml`. Edit those, not this line.*\n\n"
+            f"**{len(registry['types'])} artifact types. {len(checks)} checks** ({at}), "
+            "each catalogued with the failure it prevents written next to it.")
+
+
 def catalogs(registry: dict) -> dict[str, str]:
     return {
+        "counts": counts(registry),
         "catalog": catalog_table(
             registry, ["ID", "Name", "Class", "Axis", "Born in"],
             lambda s: f"| `{s['id']}` | {s['name']} | {artifact_class(s)} "
@@ -319,7 +340,8 @@ def main() -> int:
               for name, spec in types.items()}
 
     tables = catalogs(registry)
-    for doc in (HERE.parent / "FRAMEWORK.md", HERE.parent / "templates" / "README.md"):
+    for doc in (HERE.parent / "FRAMEWORK.md", HERE.parent / "README.md",
+                HERE.parent / "templates" / "README.md"):
         current = doc.read_text(encoding="utf-8")
         rewritten = rewrite_regions(current, tables, doc)
         if REGION.search(current) is None:
