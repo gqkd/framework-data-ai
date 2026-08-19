@@ -82,6 +82,13 @@ SECTION_MARK = re.compile(r"<!--\s*section:\s*([a-z0-9-]+)\s*-->")
 # listing everybody.
 ALL_PRODUCTS = "all"
 
+# The third state of `leaves_open`, and the one a real repository needed four times in a
+# week: this decision did not settle everything, and what it left is not in any register
+# yet. A list of ids says where to look. Absence says nobody looked. This says somebody
+# looked, found something, and has not written the entry -- which is a debt, and reads
+# nothing like the other two.
+UNREGISTERED = "unregistered"
+
 DATE_IN_TEXT = re.compile(r"(?<!\d)(?:19|20)\d{2}(?!\d)"
                           r"|(?<!\d)\d{1,2}[/.]\d{1,2}[/.]\d{2,4}(?!\d)")
 
@@ -820,17 +827,31 @@ def check_decisions_leave_open(arts: list[Artifact], report: Report) -> None:
         if "leaves_open" not in a.meta:
             report.add("REG012", a.rel,
                        "this decision does not say what it leaves open. `leaves_open: []` "
-                       "is the answer when it settles everything it touched, and it is a "
-                       "different statement from saying nothing: a question a decision "
-                       "names in its prose and no register holds is a question nobody is "
-                       "counting.")
+                       "is the answer when it settles everything it touched, "
+                       f"`[{UNREGISTERED}]` when it left something nobody has written down "
+                       "yet, and both are different statements from saying nothing: a "
+                       "question a decision names in its prose and no register holds is a "
+                       "question nobody is counting.")
             continue
-        for od in as_list(a.meta.get("leaves_open")):
+        declared = as_list(a.meta.get("leaves_open"))
+        if UNREGISTERED in declared:
+            others = [od for od in declared if od != UNREGISTERED]
+            also = f" It also names {', '.join(others)}." if others else ""
+            report.add("REG014", a.rel,
+                       "this decision leaves something open that no register holds, and "
+                       f"says so.{also} The debt is declared and that is the whole "
+                       "difference from the silence next door -- but it is still a question "
+                       "nobody can find, nothing ranks by cost to reverse, and no count of "
+                       "what is open includes. Write the entry and name it here.")
+        for od in declared:
+            if od == UNREGISTERED:
+                continue
             if od not in known:
                 report.add("REG012", a.rel,
                            f"this decision leaves {od!r} open and no register declares it. "
                            "The open half of a decision is only open if somebody can find "
-                           "it, and a register is where it gets looked for.")
+                           "it, and a register is where it gets looked for. If the entry "
+                           f"has not been written yet, `{UNREGISTERED}` is how to say so.")
 
 
 def check_commitments_and_risks(arts: list[Artifact], report: Report) -> None:
@@ -1779,6 +1800,9 @@ def build_indices(root: Path, arts: list[Artifact]) -> dict[Path, str]:
         open_now = sorted(od for od, row, scope in open_entries
                           if binds(prod, row, scope))
         mine = [a for a in arts if prod in as_list(a.meta.get("products"))]
+        unregistered = sorted(a.id for a in mine if a.type == "decision-record" and a.id
+                              and a.meta.get("status") != "superseded"
+                              and UNREGISTERED in as_list(a.meta.get("leaves_open")))
         changes = sorted(a.id for a in mine if a.type == "change-contract"
                          and a.meta.get("status") in ("approved", "implemented") and a.id)
         releases = sorted(a.id for a in mine if a.type == "release-note" and a.id)
@@ -1794,6 +1818,13 @@ def build_indices(root: Path, arts: list[Artifact]) -> dict[Path, str]:
                  f"product: {prod}",
                  f"current_release: {releases[-1] if releases else 'null'}",
                  "open_decisions: [" + ", ".join(open_now) + "]",
+                 # WHO ELSE READS THIS STATE. `leaves_open: [unregistered]` says a decision
+                 # left something open that has no entry, and an open question with no entry
+                 # cannot appear in a view built from registers -- which is precisely the
+                 # complaint that produced the state: a question nobody counts. So the
+                 # derived view carries the decisions that declare one, and "what is open
+                 # for this product" stops meaning "what is open and already written down".
+                 "open_unregistered: [" + ", ".join(unregistered) + "]",
                  "active_changes: [" + ", ".join(changes) + "]",
                  "living_artifacts:"]
         lines += [f"  - {x}" for x in living] or ["  []"]

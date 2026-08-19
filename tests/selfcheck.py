@@ -331,6 +331,13 @@ def _every_entry_reaches_the_view():
         "platform/OPEN.md": fm("entries:\n" + entry("OD-004")),
         "products/alpha/OPEN.md": fm("entries:\n" + entry("OD-005")),
         "products/beta/OPEN.md": fm("entries: {}\n"),
+        # A decision that left something open whose entry nobody has written. It has no
+        # register row by definition, so the view is the only place it can surface.
+        "decisions/DEC-001-x.md": (
+            "---\nschema: framework/decision-record/v1\n"
+            "artifact_type: decision-record\nid: DEC-001\nlifecycle: immutable\n"
+            "status: accepted\nscope: architecture\nproducts: [alpha]\nowners: [o]\n"
+            "created: 2026-01-01 09:00\nleaves_open: [unregistered]\n---\n\n# DEC-001\n"),
     }
 
     problems = []
@@ -365,6 +372,17 @@ def _every_entry_reaches_the_view():
                     problems.append(
                         f"{od} is {'missing from' if want else 'listed under'} what binds no "
                         "single product, and it is the opposite of what it declares")
+
+        # WHO ELSE READS THIS STATE -- the question the catalog now tells you to ask before
+        # adding a check. A question with no entry cannot appear in a view built from
+        # registers, so the view names the decision that declares one.
+        r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(root),
+                            "--emit-index"], capture_output=True, text=True)
+        idx = (root / "products" / "alpha" / "product.index.yaml")
+        if idx.exists() and "open_unregistered: [DEC-001]" not in idx.read_text():
+            problems.append("the derived view does not name the decision that declares an "
+                            "unregistered open point, so 'what is open for this product' "
+                            "still means 'what is open and already written down'")
 
         alpha = (root / "products" / "alpha" / "product.index.yaml").read_text()
         for od, want in (("OD-001", True), ("OD-003", True), ("OD-004", True),
@@ -529,6 +547,23 @@ def _references_with_a_second_end():
                             "is no way to say a decision settled everything it touched")
         if "REG012" in codes(repo(defined, "# nothing cited here", "[OD-001]")):
             problems.append("a decision naming an entry a register declares was reported")
+        # THE THIRD STATE. A decision that left something open whose entry nobody has
+        # written is neither a list nor a silence, and written as a silence it produced the
+        # finding for "nobody looked" on a decision where somebody had looked and said so.
+        if "REG014" not in codes(repo(defined, "# nothing cited here", "[unregistered]")):
+            problems.append("a decision declaring `[unregistered]` was not reported: the "
+                            "debt is acknowledged and the question is still one nobody can "
+                            "find, rank or count")
+        if "REG012" in codes(repo(defined, "# nothing cited here", "[unregistered]")):
+            problems.append("`unregistered` was resolved as an entry id, so the reserved "
+                            "word reads as a dangling reference and the two states collapse "
+                            "back into one")
+        both = codes(repo(defined, "# nothing cited here", "[OD-001, unregistered]"))
+        if "REG014" not in both or "REG012" in both:
+            problems.append("a decision naming a real entry and an unregistered one was not "
+                            "reported as the second and only the second: the ids it does "
+                            "know are not the part that is missing")
+
         if "REG012" not in codes(repo(defined, "# nothing cited here", "[OD-404]")):
             problems.append("a decision leaving an entry open that no register declares was "
                             "not reported: the open half of a decision is only open if "
@@ -2291,8 +2326,17 @@ def _fixture_counts_are_measured():
              "seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12,
              "thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16,
              "seventeen": 17, "eighteen": 18, "nineteen": 19, "twenty": 20}
-    stated = re.compile(r"\b(" + "|".join(words) + r")\s+errors?\s+and\s+"
-                        r"(" + "|".join(words) + r")\s+warnings?\b", re.I)
+    # Past twenty the fixture kept growing and the vocabulary did not, so the sentence
+    # stopped matching and this check reported that nobody states the count any more --
+    # correct, and for the wrong reason. The compound forms first in the alternation, or
+    # `twenty` matches the first half of `twenty-one` and the number reads as 20.
+    words.update({f"twenty-{w}": 20 + n for w, n in
+                  (("one", 1), ("two", 2), ("three", 3), ("four", 4), ("five", 5),
+                   ("six", 6), ("seven", 7), ("eight", 8), ("nine", 9))})
+    words["thirty"] = 30
+    ordered = sorted(words, key=len, reverse=True)
+    stated = re.compile(r"\b(" + "|".join(ordered) + r")\s+errors?\s+and\s+"
+                        r"(" + "|".join(ordered) + r")\s+warnings?\b", re.I)
 
     problems = []
     with tempfile.TemporaryDirectory() as tmp:

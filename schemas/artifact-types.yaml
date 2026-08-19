@@ -125,7 +125,14 @@
 # heading and selecting the "bound to no single product" section on entries that named
 # nothing, which is the state `REG011` removes. The two shipped in 2.1.0 and worked against
 # each other.
-version: "2.2.0"
+# 2.2.0 -> 2.3.0. `leaves_open` gains a third state and `REG014` reports it.
+# `[unregistered]` says a decision left something open whose entry nobody has written --
+# usually because the register it lived in was withdrawn and never reimported -- and until
+# now that had to be written as absence, which produced the finding for "nobody looked" on
+# decisions where somebody had looked and said so. `product.index.yaml` grows
+# `open_unregistered` for the same reason: a question with no entry cannot appear in a view
+# built from registers, which is the complaint that produced the state.
+version: "2.3.0"
 
 lifecycles: [living, immutable, append-only]
 
@@ -673,6 +680,14 @@ types:
     # settle is the difference between an open question and a question nobody wrote down --
     # and the second is what a `DEC` declaring an open point in its prose leaves behind,
     # because no register holds it and no count of open decisions includes it.
+    #
+    # `[unregistered]` is the third state, and it was missing. A decision can leave something
+    # open whose entry has not been written -- the ordinary reason is a register withdrawn
+    # and never reimported -- and written as absence it produced the finding for "nobody
+    # looked" on a decision where somebody had looked and said so. It goes alone or beside
+    # the ids that do exist, `REG014` reports it, and `product.index.yaml` carries
+    # `open_unregistered` because a question with no entry cannot appear in a view built
+    # from registers, which is the complaint that produced the state in the first place.
     id: DEC-ADR
     name: 'Decision record: product **or** architecture'
     axis: platform

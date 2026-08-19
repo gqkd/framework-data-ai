@@ -12,11 +12,12 @@ created: YYYY-MM-DD HH:MM
 derives_from: [HYP-NNN, EVD-NNN, SIG-NNN]
 supersedes: null
 classification: internal
-leaves_open: []                # the register entries this decision did NOT settle, and
-                               # `[]` when it settled everything it touched. `REG012`
-                               # reports the field missing, because a question a decision
-                               # names in its prose and no register holds is a question
-                               # nobody is counting
+leaves_open: []                # the register entries this decision did NOT settle. `[]`
+                               # when it settled everything it touched; `[unregistered]`,
+                               # alone or beside the ids, when it left something whose entry
+                               # nobody has written yet. `REG012` reports the field missing
+                               # and `REG014` the unregistered debt, and the three are three
+                               # different statements: settled, owed, and never asked
 ---
 
 # DEC-NNN · Decision title, in the active voice

@@ -246,9 +246,13 @@ Row counts match for 7 consecutive days.
 #            entry in the register, and neither exists
 # 20. REG011 OD-004 sits in the register at the root and names no `products:`, so it
 #            binds every product by rule and reads exactly like an entry nobody asked
-#            the question about. OD-005 beside it names one, which is what makes the
-#            silence legible as a defect rather than as the house style
-# 21. REG009  OD-004 carries a date as its trigger. The cheapest wrong repair is to
+#            the question about
+# 21. REG013 OD-005 beside it answers the question and is still in the wrong file: it
+#            binds atlas alone, and the root is for what belongs to no single product
+# 22. REG014 DEC-003 says it leaves something open that no register holds. It sits next
+#            to DEC-004's silence on purpose: one is a debt somebody wrote down, the
+#            other is a question nobody asked, and until 2.3.0 they read the same
+# 23. REG009  OD-004 carries a date as its trigger. The cheapest wrong repair is to
 #            invent an event that clears it, which is the failure this fixture is
 #            built around: the date says when somebody hoped, and only the person who
 #            wrote it knows what it was standing in for
@@ -359,7 +363,8 @@ each decision still matters, which no generator can produce.
         created="2026-02-10")
     + "# DEC-001 - Landing zone on BigQuery\n\nWe land raw extracts in BigQuery.\n",
     "decisions/DEC-003-warehouse-snowflake.md": fm(
-        schema="framework/decision-record/v1", artifact_type="decision-record", leaves_open="[]",
+        schema="framework/decision-record/v1", artifact_type="decision-record",
+        leaves_open="[unregistered]",
         id="DEC-003", lifecycle="immutable", status="accepted", scope="architecture",
         products="[atlas]", owners="[maria]", supersedes="DEC-001",
         created="2026-05-02")

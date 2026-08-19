@@ -412,6 +412,25 @@ checks:
       product has a directory, because an entry naming a product with no register anywhere
       has nowhere to be moved to -- that is `REG006`, and it is about the product.
 
+  REG014:
+    level: warn
+    title: a decision leaves something open that nobody has registered
+    prevents: >
+      A debt that reads exactly like a silence. `leaves_open` had two states -- a list of
+      ids, or absent -- and a real repository needed a third four times in one week: the
+      decision did settle less than everything, and what it left has no entry yet, usually
+      because the register it was in was withdrawn and never reimported. Written as absence
+      it produced the finding for "nobody looked", word for word, on decisions where
+      somebody had looked and said so.
+
+      `[unregistered]` is that third state, alone or beside the ids that do exist, and it is
+      the same distinction `entries: {}` and `products: [all]` were introduced to buy.
+      Reported at `warn` because it is still a question nobody can find: nothing ranks it by
+      cost to reverse and no count of what is open includes it. What it buys is that the
+      repository can tell the difference between a debt somebody has accepted and a question
+      nobody asked -- and `product.index.yaml` carries `open_unregistered` for the same
+      reason, since a question with no entry cannot appear in a view built from registers.
+
   # ── STACK ──────────────────────────────────────────────────────────────────
   STK001:
     level: warn
