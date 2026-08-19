@@ -65,12 +65,27 @@ def git(args, cwd, **kw):
 
 
 def declared_version(root: Path):
-    """What the project says it was written against, and where it says it."""
+    """What the project says it was written against, where it says it, and why not.
+
+    The third return value is what this used to lack. A `framework.yaml` that does not parse
+    came back out of here as a `yaml` traceback -- the tool died on the one file it exists to
+    read, having said nothing about the project -- and a file with no `framework_version` in
+    it came back indistinguishable from a file that is not valid YAML at all. They are
+    different repairs.
+    """
     cfg = root / "framework.yaml"
     if not cfg.exists():
-        return None, cfg
-    data = yaml.safe_load(cfg.read_text(encoding="utf-8")) or {}
-    return data.get("framework_version"), cfg
+        return None, cfg, None
+    try:
+        data = yaml.safe_load(cfg.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError as e:
+        first = str(e).strip().splitlines()[0]
+        return None, cfg, (f"{cfg} does not parse as YAML: {first}. Nothing can be read out "
+                           "of it, including which version this repository was written "
+                           "against, and the validator will stop on the same line.")
+    if not isinstance(data, dict):
+        return None, cfg, f"{cfg}: the top level has to be a mapping."
+    return data.get("framework_version"), cfg, None
 
 
 def registry_version(text: str):
@@ -234,16 +249,28 @@ def main() -> int:
     args = ap.parse_args()
 
     root, framework = args.root.resolve(), args.framework.resolve()
+    # Both are checked before anything is read, and they are checked apart: pointed at a
+    # project that is not there, this reported "declares no framework_version" about a
+    # `framework.yaml` inside a directory that does not exist, which sends somebody to write
+    # a line into a file they cannot open.
+    if not root.is_dir():
+        sys.exit(f"{root}: no such directory. `--root` is the project being migrated.")
+    if not (framework / REGISTRY_REL).exists():
+        sys.exit(f"{framework}: no {REGISTRY_REL} here, so this is not a checkout of the "
+                 "framework. `--framework` is the definition, `--root` is the project.")
+
     registry = (framework / REGISTRY_REL).read_text(encoding="utf-8")
     current = registry_version(registry)
-    declared, cfg = declared_version(root)
+    declared, cfg, unreadable = declared_version(root)
     declared = args.from_version or declared
 
     report = {"project": str(root), "declared": declared, "current": current,
               "up_to_date": False, "notes": [], "already_there": [], "new": [], "gone": [],
               "version_line": [], "problems": []}
 
-    if declared is None:
+    if unreadable and not args.from_version:
+        report["problems"].append(unreadable)
+    elif declared is None:
         report["problems"].append(
             f"{cfg} declares no `framework_version`, so there is no version to migrate "
             "from. That is `FW002`, and the repair is to write the number the project has "

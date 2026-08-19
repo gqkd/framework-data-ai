@@ -257,7 +257,15 @@ def load_project(root: Path) -> dict:
     path = root / "framework.yaml"
     if not path.exists():
         return {}
-    project = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    try:
+        project = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError as e:
+        # A traceback here is the worst place for one: this file is the first thing read,
+        # so a stray quote in it makes the validator die before it has looked at a single
+        # document, with a message about a unicode string and no filename in it. The other
+        # failures in this function exit with the path and the repair; so does this one now.
+        sys.exit(f"{path}: does not parse as YAML.\n"
+                 f"{str(e).strip()}")
     if not isinstance(project, dict):
         sys.exit(f"{path}: the top level has to be a mapping")
 
@@ -2044,6 +2052,15 @@ def main() -> int:
     args = ap.parse_args()
 
     root = args.root.resolve()
+    # The skill has said for as long as it has existed that "running it against the wrong
+    # directory produces a clean report, and a clean report on the wrong repository is worse
+    # than an error". Nothing enforced it: pointed at a path that is not there, the
+    # validator scanned nothing, reported that the repository does not declare a framework
+    # version, and exited 0. Every one of those sentences was true and the conclusion a
+    # reader draws from them -- this repository is fine -- was not.
+    if not root.is_dir():
+        sys.exit(f"{root}: no such directory. `--root` is the project being checked, not "
+                 "the framework and not a file.")
     registry = yaml.safe_load(REGISTRY.read_text(encoding="utf-8"))
     project = load_project(root)
     config, stale_days = load_config(project)

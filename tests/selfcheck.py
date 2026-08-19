@@ -2642,6 +2642,58 @@ def _migration_is_executable():
                             "of `FW001` a version comparison cannot supply")
     return problems
 
+
+@check("a run that could not have read the repository says so instead of reporting it clean")
+def _wrong_arguments_are_not_a_clean_report():
+    # `audit/SKILL.md` has said from its first version that "running it against the wrong
+    # directory produces a clean report, and a clean report on the wrong repository is worse
+    # than an error". Nothing enforced it. Pointed at a path that is not there, the validator
+    # scanned nothing, said the repository declares no framework version, and exited 0 --
+    # three true sentences whose only available reading was that the project is fine.
+    #
+    # The other half is the same failure with a stack trace on top: `framework.yaml` is the
+    # first file read, so a stray quote in it killed both tools before either had looked at a
+    # document, with a message naming a unicode string and no path at all.
+    migrate = ROOT / "skills" / "audit" / "scripts" / "migrate.py"
+    problems = []
+
+    def run(script, *args):
+        r = subprocess.run([sys.executable, str(script), *args],
+                           capture_output=True, text=True)
+        return r.returncode, (r.stdout + r.stderr)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        missing = str(Path(tmp) / "not-here")
+        broken = Path(tmp) / "broken"
+        broken.mkdir()
+        # The version is `N` because a literal one here is the defect `_version_is_not_restated`
+        # exists to catch, and it caught this line. What is being tested is a quote that never
+        # closes; which number it fails to close is not part of it.
+        (broken / "framework.yaml").write_text('framework_version: "N\nchecks: [\n')
+
+        for script, args, what in [
+            (VALIDATE, ["--root", missing], "the validator pointed at no directory"),
+            (migrate, ["--root", missing], "the migration tool pointed at no directory"),
+            (migrate, ["--root", str(broken), "--framework", tmp],
+             "a --framework that holds no registry"),
+            (VALIDATE, ["--root", str(broken)],
+             "a framework.yaml that does not parse, read by the validator"),
+            (migrate, ["--root", str(broken)],
+             "a framework.yaml that does not parse, read by the migration tool"),
+        ]:
+            code, out = run(script, *args)
+            if code == 0:
+                problems.append(f"{what}: exited 0. Nothing distinguishes it from a run "
+                                "that had something to check and found it correct")
+            if "Traceback" in out:
+                problems.append(f"{what}: died with a traceback rather than a sentence")
+            # The path is what turns the message into a repair. Either of the two directories
+            # involved will do: what must not happen is a message that names neither.
+            if not any(p in out for p in (missing, str(broken), tmp)):
+                problems.append(f"{what}: the message names no path, so it says which of "
+                                f"the two arguments was wrong to nobody: {out.strip()[:120]}")
+    return problems
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 print()
