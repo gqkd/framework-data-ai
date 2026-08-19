@@ -49,6 +49,18 @@ VALIDATE = HERE.parents[1] / "skills" / "audit" / "scripts" / "validate.py"
 FRONT = re.compile(r"\A---\n(.*?)\n---\n", re.S)
 
 
+# THE SAME GUARD THE TRIGGER RUNNER HAS, AND IT IS HERE BECAUSE IT WAS MISSING. A batch of
+# six skills ran into a session limit and printed "skills invoked: none" for every case after
+# it -- which reads exactly like six descriptions that stopped working, on the day six
+# descriptions had just been changed. The sibling runner has refused to score that shape
+# since the first time it happened; this one printed it as a result.
+#
+# Grading here is by hand, so the guard does not need to score anything: it needs to say, at
+# the top of the case, that what follows is not a measurement.
+UNUSABLE = re.compile(r"session limit|usage limit|rate limit|credit balance|"
+                      r"upgrade to increase|Claude AI usage limit", re.I)
+
+
 def inspect(fixture: Path, cwd: Path) -> tuple[list[str], str]:
     """What the run left behind, and whether the repository still validates.
 
@@ -147,6 +159,12 @@ def run_one(fixture: Path, prompt: str, timeout: int, baseline: bool = False) ->
                     skills.append(str(c.get("input", {}).get("skill", "")).split(":")[-1])
     written, valid = inspect(fixture, cwd)
     shutil.rmtree(tmp, ignore_errors=True)
+    if not skills and UNUSABLE.search(" ".join(texts)):
+        return ("NOT A MEASUREMENT. This run never reached a model: the account was out of "
+                "quota. It scores as `none` fired and nothing written, which is the same "
+                "shape as a description that stopped working.\n\n" + (texts[-1] if texts
+                                                                       else "")), \
+               [], written, valid
     return (texts[-1] if texts else "(no closing text)"), skills, written, valid
 
 
@@ -190,6 +208,9 @@ def main() -> int:
         # printed. Reading that transcript back, a grep for what the skill should have
         # said came up empty, which reads exactly like the skill not saying it. Whatever
         # is most expensive to lose goes at the top.
+        unusable = text.startswith("NOT A MEASUREMENT")
+        if unusable:
+            print("! NOT SCORED: this case never reached a model. Re-run it.")
         print(f"skills invoked : {skills or 'none'}")
         print(f"repo after run : {valid}")
         print()
