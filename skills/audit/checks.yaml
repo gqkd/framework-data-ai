@@ -631,6 +631,71 @@ checks:
       which is what `none` is for, and a field that excused a `CHG` from classification
       would be a way around the way around.
 
+  # ── The pull request ───────────────────────────────────────────────────────
+  #
+  # THESE FOUR ARE THE ONLY ONES THAT NEED A CONTEXT THE REPOSITORY DOES NOT CONTAIN: what
+  # a change set says it is doing, and which files it touches. Without `--pr-text` they do
+  # not run at all, which is why the first three are `error` in a catalog where almost
+  # everything starts at `warn`. The argument for `warn` -- twelve checks turned on before
+  # the artifacts exist are a factory built before the product -- does not apply to a check
+  # that fires only when somebody has wired it into a pipeline on purpose. A gate that does
+  # not block is not a gate, it is a comment.
+
+  PR001:
+    level: error
+    title: a change set that cites no change contract
+    prevents: >
+      Work merged with nothing authorizing it. The framework has exactly one authorization
+      -- a `CHG` at `status: approved` -- and everything else that looks like one is a
+      signal: a request, a line in the `LOG`, an `RMP` increment, a conversation. Until
+      this check existed the rule was written in three documents and enforced by nobody
+      remembering it at the moment of the merge.
+
+      `no-chg: <reason>` in the change set's text suppresses it, and the reason is
+      mandatory. That is not a hole, it is the honest exit: a typo in a comment does not
+      need a change contract, and a gate with no way out is a gate somebody deletes from
+      the workflow file the first time it blocks one. The reason stays in the history where
+      a reviewer reads it, which is the difference between an exception and a bypass.
+
+  PR002:
+    level: error
+    title: a change set citing a change contract that does not exist
+    prevents: >
+      A mandate nobody can read. Almost always a typo in the identifier, occasionally a
+      contract that lives in another repository -- and both mean the same thing to anyone
+      trying to find out later what authorized this: nothing. It also closes the cheapest
+      way past `PR001`, which is to write a plausible identifier.
+
+  PR003:
+    level: error
+    title: a change set citing a change contract that is not authorized
+    prevents: >
+      Implementing a `draft`, which the `CHG` template names as an anti-pattern in its own
+      words: "if this happens systematically, the `status` field is doing nothing and you
+      may as well delete it. But then you lose the boundary between idea and mandate." The
+      boundary is the field, and this is the only place it can be defended, because it is
+      the only moment the two things -- the contract and the work -- are in the same place.
+      `rolled-back` is reported too, and it is the stranger case: whatever it authorized has
+      already been taken out again.
+
+  PR004:
+    level: warn
+    title: a change set that does not touch what its classification says it touches
+    prevents: >
+      A rule that used to have a process document of its own and now has nowhere else to
+      live: touch data or a schema, and the `DC` is versioned and its consumers are told.
+      The `ICG` already records what a candidate touches; nothing compared that with what
+      the change set actually did. A data contract that changed while its version stood
+      still is a promise broken in silence -- the consumers are reading the old one, and
+      the document that would have told them is the one that did not move.
+
+      Architecture and risk-compliance are checked the same way. `ai` is not: the `EVR` is
+      written at the release gate, after the build, so asking the pull request that builds
+      the thing to carry one would forbid the order the framework prescribes. `CHG001` asks
+      for it at `verified`, which is where it belongs. It warns rather than blocking
+      because the other repair is legitimate and common: the classification was wrong, and
+      the `ICG` is what has to move.
+
 # ON THE PROSE COUPLED CHECKS. There are none left. REG002 and REG003 used to read the body
 # of `OPEN.md` -- the `### OD-NNN` headings and the "Cost to reverse" and "Default in force"
 # lines inside each entry -- which is the fragility the section markers removed, one level

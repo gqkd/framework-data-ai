@@ -1,0 +1,57 @@
+# The pull request against the contract that authorizes it.
+#
+# Copy to `.github/workflows/pull-request.yml` in the project. Two jobs in one: the
+# validator on the artifacts, which is what `audit` runs everywhere else, plus the pull
+# request context -- the text that cites the `CHG` and the list of files the change set
+# touches -- which is what turns `PR001` to `PR004` on.
+#
+# THE FRAMEWORK IS REFERRED TO BY PATH. There is no package to install yet, so this checks
+# the framework repository out beside the project. Pin `ref:` to the version the project
+# declares in its own `framework.yaml`: a CI job that silently follows the framework's main
+# branch turns every change made here into a build failure over there, which is the exact
+# confusion `FW001` exists to prevent.
+
+name: pull request
+
+on:
+  pull_request:
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The base branch has to be there for the diff below.
+          fetch-depth: 0
+
+      - uses: actions/checkout@v4
+        with:
+          repository: OWNER/framework-data-ai
+          ref: vX.Y.Z            # the version this project declares in framework.yaml
+          path: .framework
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install pyyaml jsonschema
+
+      - name: which files this change set touches
+        run: |
+          git diff --name-only \
+            "origin/${{ github.base_ref }}...${{ github.sha }}" > /tmp/changed.txt
+          cat /tmp/changed.txt
+
+      - name: the artifacts, and the contract that authorizes the change
+        env:
+          # Through the environment and not through the command line: a pull request body
+          # is text somebody else wrote, and interpolating it into a shell command is how a
+          # backtick in a description becomes a command.
+          PR_TEXT: "${{ github.event.pull_request.title }}\n${{ github.event.pull_request.body }}"
+        run: |
+          printf '%b' "$PR_TEXT" > /tmp/pr.txt
+          python3 .framework/skills/audit/scripts/validate.py \
+            --root . \
+            --pr-text-file /tmp/pr.txt \
+            --changed-files /tmp/changed.txt

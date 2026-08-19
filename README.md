@@ -16,9 +16,11 @@ decisions, products, initiatives and corpus, live in that project's repository, 
 | `framework-flow.mermaid` | The lifecycle with its gates. Importable into draw.io: *Arrange → Insert → Advanced → Mermaid* |
 | `Framework.drawio` | Where the layout came from, and not a second copy of the truth. The mermaid file is the one kept current; this one has not been redrawn since 2026-08-06 and is not maintained. Import the mermaid if you want a draw.io view of today |
 | `SKILLS.md` | The six skills that operate the framework, and where their boundaries fall |
+| `PROCESSES.md` | The twelve operating processes: who does what, what each one leaves written, and which of them the tooling actually carries today. Diagrammed, one per process |
 | `templates/` | One template per artifact, each with its anti-patterns at the bottom |
 | `schemas/` | The artifact catalog and what each type is allowed to be. `artifact-types.yaml` is the source; `generate.py` projects it into the JSON Schemas, into `FRAMEWORK.md §7` and into `templates/README.md` |
-| `skills/` | The six skills. `audit/` also carries the gate: `scripts/validate.py` and `checks.yaml` |
+| `skills/` | The six skills. `audit/` also carries the gate: `scripts/validate.py`, `scripts/migrate.py` and `checks.yaml` |
+| `ci/` | Two files a project copies into `.github/`: the pull request template and the workflow that checks a change set against the `CHG` authorizing it |
 | `references/` | Shared by the skills: the common preamble and the routing table |
 | `tests/selfcheck.py` | The framework checked against itself. Runs in CI |
 
@@ -31,6 +33,10 @@ decisions, products, initiatives and corpus, live in that project's repository, 
 
 **To start using it with the skills:** *Using it with the skills*, below, then `SKILLS.md`
 for what each one does and where their boundaries fall
+
+**To run it with other people:** `PROCESSES.md`, which is the same lifecycle told by who
+does the work rather than by which document comes out. It is also the honest inventory: each
+process says whether the tooling carries it, carries part of it, or leaves it to a person
 
 ## Applying it to a project
 
@@ -226,7 +232,7 @@ python3 skills/audit/scripts/validate.py --root ../my-project --emit-index
 <!-- generated: counts -->
 *Generated from `schemas/artifact-types.yaml` and `skills/audit/checks.yaml`. Edit those, not this line.*
 
-**30 artifact types. 49 checks** (2 error, 45 warn, 2 info), each catalogued with the failure it prevents written next to it.
+**30 artifact types. 53 checks** (5 error, 46 warn, 2 info), each catalogued with the failure it prevents written next to it.
 <!-- /generated -->
 
 The count above is generated, and it is generated because the one that used to be here was
@@ -302,6 +308,10 @@ In a project's CI, one line:
 - run: python3 ../framework-data-ai/skills/audit/scripts/validate.py --root .
 ```
 
+On a pull request it takes two more arguments — what the change set says it is doing and
+which files it touches — and checks it against the `CHG` that authorizes it. `ci/` holds the
+template and the workflow; `PR001` to `PR004` are the checks.
+
 How the project gets hold of the framework in CI is the part that is not solved. See below.
 
 ### Where the rules live, and why none of them are in the validator
@@ -330,20 +340,26 @@ without `status` and `owners` for as long as it did. The self check runs in CI h
 ## What still does not exist
 
 
-- **Distribution.** A project refers to the framework by path. There is no packaging, no
-  release to install, and no migration note when a rename lands. With one project this is
-  invisible. With the second it is the first thing that breaks.
+- **Distribution.** A project refers to the framework by path. There is no packaging and no
+  release to install. With one project this is invisible. With the second it is the first
+  thing that breaks.
 
-  Half of it exists. A project writes `framework_version` in its own `framework.yaml`, and
-  the validator tells you when that number and the framework's disagree.
+  What exists is the part underneath it. A project writes `framework_version` in its own
+  `framework.yaml`, and the validator tells you when that number and the framework's
+  disagree — which answers the question that comes first: is this finding here because the
+  rules moved, or because the document is wrong? Those need opposite responses, and guessing
+  wrong twice is how people stop reading the validator.
 
-  This pins nothing, and is not meant to. It answers the question that comes first: is this
-  finding here because the rules moved, or because the document is wrong? Those need
-  opposite responses. Guess wrong twice and people stop reading the validator.
+  `skills/audit/scripts/migrate.py` answers it finding by finding. It rebuilds the validator
+  the project pinned out of this repository's git history, runs it and the current one over
+  the same project, and reports what is new, what was already there and what is gone. No tag
+  and no release are needed for that: the history is the archive. The note explaining each
+  version sits beside the number in `schemas/artifact-types.yaml`, and the tool reads it out
+  rather than keeping a second copy.
 
-  `version:` in `schemas/artifact-types.yaml` explains when the number goes up. It is not
-  the plugin's version, on purpose: a release that rewords a skill cannot break a
-  document.
+  `version:` in that file explains when the number goes up. It is the plugin's version too —
+  one artifact, one number — which is a reversal of what stood here, and `tests/selfcheck.py`
+  keeps the three files that state it from disagreeing.
 - **A reference implementation.** Nothing here has been used on a real project for a full
   cycle. Every fixture in `evals/` was written by somebody who already understood the
   framework, which is the one limit more fixtures cannot fix.

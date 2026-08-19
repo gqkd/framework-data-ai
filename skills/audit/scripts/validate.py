@@ -1378,6 +1378,124 @@ def check_change_contracts(arts: list[Artifact], report: Report) -> None:
                            "which is the question a `DEC` exists to answer.")
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# The pull request
+
+CHG_IN_TEXT = re.compile(r"\bCHG-\d{3,}\b")
+
+# The declared exception, and it is declared on purpose. A gate with no honest way out is
+# a gate somebody deletes from the workflow file the first Friday it blocks a typo, and
+# what goes with it is the check that mattered. `no-chg:` costs a sentence, appears in the
+# pull request where a reviewer reads it, and stays in the history. What it must never be
+# is silent: a reason is required, because "no-chg" alone is the same thing as deleting
+# the check with extra steps.
+NO_CHG = re.compile(r"^[ \t>*-]*no-chg:[ \t]*(\S.*)$", re.M | re.I)
+
+# What each impact obliges the change set to touch. `ai` is deliberately absent: the `EVR`
+# is written at the release gate, after the build, so demanding it in the pull request that
+# builds the thing would forbid the order the framework prescribes. `CHG001` asks for it at
+# `verified`, which is where it belongs.
+IMPACT_OBLIGES = {
+    "architecture": ("architecture", "an `ARC`"),
+    "data": ("data-contract", "the `DC`"),
+    "risk-compliance": ("risk-register", "`RSK`"),
+}
+
+AUTHORIZED_FOR_A_PR = ("approved", "implemented", "verified")
+
+
+def check_pull_request(arts: list[Artifact], pr_text: str | None,
+                       changed: set[str] | None, report: Report) -> None:
+    """The change set against the contract that authorizes it.
+
+    Everything else in this file reads the documents. This reads the documents against
+    something outside them -- what a pull request says it is doing, and which files it
+    touches -- and that is why it runs only when the caller supplies both, rather than on
+    every invocation. A check that cannot see the change set has to stay quiet about it:
+    reporting "no `CHG`" on a plain `--root` run would fire on every desk in the project.
+
+    The join it makes is the one the framework already describes and nothing enforced. A
+    `CHG` is what turns a signal into a mandate with boundaries; `status: approved` is what
+    says the mandate exists. Until now the only thing standing between a `draft` and a
+    merge was somebody remembering, and the template's own anti-pattern list says what that
+    costs: "if this happens systematically, the `status` field is doing nothing".
+
+    `PR004` is the other half, and it is the one that recovers a rule that had no home.
+    "Touch data or schema and the `DC` is versioned" used to live in a process document of
+    its own, which was folded into the cycle; the obligation survives here, as a question
+    about the diff rather than about the prose. The `ICG` says what the candidate touches,
+    the diff says what was touched, and the two disagreeing is a contract that moved
+    without anybody versioning it.
+    """
+    if pr_text is None:
+        return
+
+    ids = sorted(set(CHG_IN_TEXT.findall(pr_text)))
+    if not ids:
+        exempt = NO_CHG.search(pr_text)
+        if not exempt:
+            report.add("PR001", "pull request",
+                       "names no change contract, and carries no `no-chg:` line saying "
+                       "why. A signal, a request, an `RMP` increment and a good idea are "
+                       "not authorizations: the one authorization this framework has is a "
+                       "`CHG` with `status: approved`. Cite it, or write `no-chg: <reason>` "
+                       "and let the reason be read.")
+        return
+
+    by_id = {a.id: a for a in arts if a.id}
+    by_rel = {a.rel: a for a in arts}
+    icgs = {a.id: a for a in arts if a.type == "impact-classification"}
+    touched = {by_rel[p].type for p in (changed or set()) if p in by_rel}
+
+    for cid in ids:
+        a = by_id.get(cid)
+        if a is None or a.type != "change-contract":
+            what = (f"is a {a.type!r} and not a change contract" if a is not None
+                    else "is not in this repository")
+            report.add("PR002", "pull request",
+                       f"cites {cid}, which {what}. Either the identifier is a typo, or "
+                       "the contract lives somewhere this repository cannot see -- and a "
+                       "mandate nobody can read is not a mandate.")
+            continue
+
+        status = a.meta.get("status")
+        if status not in AUTHORIZED_FOR_A_PR:
+            why = ("was rolled back: whatever it authorized has been taken out again, so "
+                   "it cannot authorize this" if status == "rolled-back" else
+                   f"is `{status}`, which is a proposal and not a mandate. The boundary "
+                   "between an idea and authorized work is this field, and merging across "
+                   "it is how the field stops meaning anything")
+            report.add("PR003", a.rel,
+                       f"{cid} is cited by a change set that is being merged, and it {why}.")
+            continue
+
+        if changed is None:
+            continue
+
+        icg = icgs.get(a.meta.get("icg"))
+        impacts_map = icg.meta.get("impacts") if icg is not None else None
+        if not isinstance(impacts_map, dict):
+            continue
+        impacts: set[str] = set()
+        for ref in as_list(a.meta.get("derives_from")):
+            for i in as_list(impacts_map.get(ref)):
+                if isinstance(i, str):
+                    impacts.add(i)
+
+        for impact in sorted(impacts):
+            if impact not in IMPACT_OBLIGES:
+                continue
+            wanted_type, what = IMPACT_OBLIGES[impact]
+            if wanted_type in touched:
+                continue
+            extra = (" A data contract that changed without its version moving is a "
+                     "promise broken silently: the consumers are reading the old one and "
+                     "nothing tells them to stop." if impact == "data" else "")
+            report.add("PR004", a.rel,
+                       f"{icg.id} classifies this change as touching `{impact}`, and the "
+                       f"change set does not touch {what}. Either the classification was "
+                       f"wrong, or the update is missing.{extra}")
+
 SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 
 
@@ -1914,6 +2032,15 @@ def main() -> int:
                     help="override the staleness threshold from checks.yaml")
     ap.add_argument("--list-checks", action="store_true",
                     help="print every check and the severity in force, then exit")
+    # The pull request context. Supplied by CI, absent everywhere else, and the `PR*`
+    # checks stay quiet without it: see check_pull_request.
+    ap.add_argument("--pr-text",
+                    help="the pull request's title and body, for the CHG it cites")
+    ap.add_argument("--pr-text-file", type=Path,
+                    help="the same, read from a file. `-` reads standard input")
+    ap.add_argument("--changed-files", type=Path,
+                    help="a file of paths the change set touches, one per line, relative "
+                         "to --root. `-` reads standard input")
     args = ap.parse_args()
 
     root = args.root.resolve()
@@ -1923,6 +2050,20 @@ def main() -> int:
     scan = load_scan(registry, project)
     if args.stale_days is not None:
         stale_days = args.stale_days
+
+    def read(arg: Path | None) -> str | None:
+        if arg is None:
+            return None
+        return sys.stdin.read() if str(arg) == "-" else arg.read_text(encoding="utf-8")
+
+    pr_text = args.pr_text if args.pr_text is not None else read(args.pr_text_file)
+    lines = read(args.changed_files)
+    # Relative to `--root`, and normalised the two ways a diff writes them: `./` from find,
+    # backslashes from a Windows checkout. A path that does not match an artifact is code,
+    # and code is not what this reads.
+    changed_files = None if lines is None else {
+        l.strip().replace("\\", "/").removeprefix("./")
+        for l in lines.splitlines() if l.strip()}
 
     if args.list_checks:
         for code in sorted(config):
@@ -1942,6 +2083,7 @@ def main() -> int:
     check_references(arts, registry, report)
     check_release(arts, report)
     check_change_contracts(arts, report)
+    check_pull_request(arts, pr_text, changed_files, report)
     check_framework_version(root, project, registry, report)
     check_open_register(arts, report)
     check_manifest_derived_fields(arts, report)

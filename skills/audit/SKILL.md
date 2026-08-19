@@ -12,7 +12,11 @@ description: >
   documenti", "i documenti sono coerenti", "controlla la coerenza", "verifica che i
   documenti non si contraddicano", "fai un audit della documentazione", "il check in CI è
   rosso", "check the docs", "are the docs consistent", "do these documents contradict each
-  other", "audit the documentation", "the framework check is failing".
+  other", "audit the documentation", "the framework check is failing". Use it also to check
+  a pull request against the change contract that authorizes it, and to adopt a new version
+  of the framework: "questa PR si può mergiare", "il check della PR è rosso", "aggiorniamo il
+  framework", "che cosa cambia con la nuova versione", "can this PR be merged", "migrate to
+  the new framework version".
 ---
 
 # audit
@@ -43,6 +47,10 @@ process the output, plain when a person is going to read it. Two more flags matt
 - `--emit-index` regenerates `decisions/INDEX.md`, `TRACEABILITY.md`, each
   `products/<p>/product.index.yaml`, and the `§5` region inside the root `OPEN.md`
 - `--list-checks` prints the catalog with the severity in force
+
+Three more supply a context the repository does not contain, and without them the checks
+that need it stay quiet: `--pr-text` and `--pr-text-file` for what a change set says it is
+doing, `--changed-files` for the paths it touches. See *The change set and its contract*.
 
 If `--root` is not obvious, ask. Running it against the wrong directory produces a clean
 report, and a clean report on the wrong repository is worse than an error.
@@ -221,6 +229,72 @@ no `EVP` to hold its threshold, a delta with no target — is not agreement, it 
 could not read. Name it. A capability whose truth lives in the code and not in a document is
 the same case: this pass reads documents, and where the answer is in a repository it says
 which repository and stops.
+
+## The change set and its contract
+
+A pull request is the one moment where the documents and the work are in the same place, and
+until `PR001` to `PR004` existed nothing looked at them together. The framework has exactly
+one authorization — a `CHG` at `status: approved` — and it was defended by people
+remembering it.
+
+```bash
+git diff --name-only "origin/$BASE...$HEAD" > /tmp/changed.txt
+python3 "${CLAUDE_PLUGIN_ROOT:?}/skills/audit/scripts/validate.py" --root <project> \
+    --pr-text-file /tmp/pr.txt --changed-files /tmp/changed.txt
+```
+
+| | What it says |
+|---|---|
+| `PR001` | the change set cites no `CHG`, and carries no `no-chg: <reason>` line |
+| `PR002` | it cites one that is not in this repository |
+| `PR003` | it cites one that is `draft` or `rolled-back` |
+| `PR004` | the `ICG` says the change touches architecture, data or risk, and the diff does not touch the artifact that owes an update |
+
+`ci/PULL_REQUEST_TEMPLATE.md` and `ci/pull-request.yml` are the two files a project copies
+in. They are not artifacts and carry no front matter, which is why they are not in
+`templates/`.
+
+**What none of them can check** is whether the change set stayed inside what the contract
+said must not change. That is field 2 of the `CHG`, it is the most expensive gap in the
+framework, and it is a reading. If you are asked whether a pull request is ready to merge,
+run these, then read that field against the diff and say which of the two you did.
+
+The repair for `PR004` is not always the missing update. A classification can be wrong, and
+then the `ICG` is what moves — but an `ICG` is `immutable`, so that is a new one that
+supersedes it, not an edit. Propose, do not apply: which of the two is wrong is exactly the
+question.
+
+## Adopting a new version of the framework
+
+`FW001` says the rules moved. It cannot say which of the findings in front of you moved with
+them, and those need opposite responses: one is a migration, the other is a repair.
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT:?}/skills/audit/scripts/migrate.py" --root <project>
+```
+
+It reads the project's `framework_version`, rebuilds the validator from that version out of
+the framework's own git history, runs both over the same repository, and splits the
+findings:
+
+- **new** — reported only by the new validator. This is the migration work.
+- **already there** — reported by both. Documents to repair, and nothing to do with the
+  version.
+- **gone** — reported only by the old one. Cleared by the move.
+
+It also prints the migration note for every version crossed, read out of
+`schemas/artifact-types.yaml` where it is written beside the number it explains.
+
+`--adopt` writes the new number into the project's `framework.yaml`, and refuses while
+anything is still under **new**: that number is a claim that the migration is done. The
+migration itself is not automated and should not be — a `MAJOR` is, by this framework's
+definition, a document that used to validate and no longer does, and every rule on this page
+about what you may repair and what you must propose applies to each one of them.
+
+If the tool reports that no commit ever declared the version the project pins, the checkout
+is shallow or the project pins a version that never shipped. Say which, do not guess a
+starting point: a comparison against the wrong baseline reports the whole repository as
+migration work.
 
 ## Reading the report
 

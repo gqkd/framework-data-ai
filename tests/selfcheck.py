@@ -206,7 +206,13 @@ def _skill_references():
     # at the moment somebody is trusting it. The three things checked here are the ones
     # that go stale silently: the name that has to match the directory or the skill never
     # resolves, a check code that was renamed, and a flag that never existed.
-    known_flags = set(re.findall(r'"(--[a-z-]+)"', VALIDATE.read_text()))
+    # Every script the skills ship, not only the validator. `audit` carries two now, and a
+    # union across them is the honest shape of the guard: a skill that names a flag has to
+    # be naming one that something it ships accepts. What the union gives up is telling a
+    # `migrate.py` flag written against `validate.py` from a correct one, which is a typo
+    # this cannot see and a reader can.
+    known_flags = {f for script in sorted((ROOT / "skills").rglob("scripts/*.py"))
+                   for f in re.findall(r'"(--[a-z-]+)"', script.read_text())}
     problems = []
 
     skills = sorted(p for p in (ROOT / "skills").iterdir() if (p / "SKILL.md").exists())
@@ -2487,6 +2493,132 @@ def _fixture_counts_are_measured():
                 "no file states what audit/dirty-repo produces any more. The count is "
                 "what tells a reader the fixture is planted rather than merely dirty; if "
                 "it is gone on purpose, this check is what has to go with it")
+    return problems
+
+
+@check("a change set is checked against the contract that authorizes it")
+def _pull_request_binding():
+    # The four `PR` checks are the only ones that read something outside the repository,
+    # and that is what this pins: they must stay silent without that context. A check that
+    # fired on a plain `--root` run would report every desk in the project as unauthorized
+    # work, and would be switched off within the day.
+    def fm(**kw):
+        return "---\n" + "\n".join(f"{k}: {v}" for k, v in kw.items()) + "\n---\n\n"
+
+    chg = lambda status: fm(
+        schema="framework/change-contract/v1", artifact_type="change-contract",
+        lifecycle="immutable", status=status, id="CHG-001", owners="[o]",
+        created="2026-01-01 09:00", icg="ICG-001", derives_from="[SIG-001]") + (
+        "<!-- section: what-changes -->\n# 1\n"
+        "<!-- section: what-must-not-change -->\n# 2\n"
+        "<!-- section: how-we-know-it-worked -->\n# 3\n")
+
+    icg = fm(schema="framework/impact-classification/v1",
+             artifact_type="impact-classification", lifecycle="immutable",
+             status="accepted", id="ICG-001", owners="[o]", created="2026-01-01 09:00",
+             routing="\n  SIG-001: architecture",
+             impacts="\n  SIG-001: [data]") + (
+        "<!-- section: intake -->\n# 1\n<!-- section: classification -->\n# 2\n"
+        "<!-- section: open-questions -->\n# 3\n")
+
+    dc = fm(schema="framework/data-contract/v1", artifact_type="data-contract",
+            lifecycle="living", status="active", id="DC-001", owners="[o]",
+            created="2026-01-01 09:00", last_review="2026-01-01 09:00", version="1.0.0",
+            products="[alpha]", consumers="[alpha]") + "# DC\n"
+
+    def run(status, text=None, changed=None):
+        with tempfile.TemporaryDirectory() as tmp:
+            for rel, body in {"CHG-001.md": chg(status), "ICG-001.md": icg,
+                              "products/alpha/DC-001.md": dc}.items():
+                f = Path(tmp) / rel
+                f.parent.mkdir(parents=True, exist_ok=True)
+                f.write_text(body)
+            extra = [] if text is None else ["--pr-text", text]
+            if changed is not None:
+                cf = Path(tmp) / "changed.txt"
+                cf.write_text("\n".join(changed))
+                extra += ["--changed-files", str(cf)]
+            r = subprocess.run(
+                [sys.executable, str(VALIDATE), "--root", tmp, "--json",
+                 "--stale-days", "36500", *extra], capture_output=True, text=True)
+            if r.returncode not in (0, 1) or not r.stdout.strip():
+                return None
+            return {f["code"] for f in json.loads(r.stdout)["findings"]
+                    if f["code"].startswith("PR")}
+
+    problems = []
+    for want, args, what in [
+        (set(), dict(status="approved"),
+         "no pull request context at all, which must report nothing"),
+        ({"PR001"}, dict(status="approved", text="tidy up the logging"),
+         "a change set citing no contract"),
+        (set(), dict(status="approved", text="tidy up\n\nno-chg: a typo in a comment"),
+         "the declared exception, with its reason"),
+        ({"PR001"}, dict(status="approved", text="tidy up\n\nno-chg:"),
+         "the exception with no reason, which is the check deleted with extra steps"),
+        ({"PR002"}, dict(status="approved", text="implements CHG-404"),
+         "a contract that is not in the repository"),
+        ({"PR003"}, dict(status="draft", text="implements CHG-001"),
+         "implementing a draft"),
+        ({"PR003"}, dict(status="rolled-back", text="implements CHG-001"),
+         "citing a contract that was rolled back"),
+        (set(), dict(status="approved", text="implements CHG-001"),
+         "an approved contract with no diff supplied: PR004 cannot run and must not guess"),
+        ({"PR004"}, dict(status="approved", text="implements CHG-001",
+                         changed=["src/app.py"]),
+         "a data impact whose change set touches no data contract"),
+        (set(), dict(status="approved", text="implements CHG-001",
+                     changed=["src/app.py", "products/alpha/DC-001.md"]),
+         "the same change set once the contract moves with it"),
+        (set(), dict(status="approved", text="implements CHG-001",
+                     changed=["./products/alpha/DC-001.md"]),
+         "a diff that writes its paths with a leading ./"),
+    ]:
+        got = run(**args)
+        if got is None:
+            problems.append(f"the validator crashed on {what}")
+        elif got != want:
+            problems.append(f"{what}: expected {sorted(want) or 'nothing'}, got "
+                            f"{sorted(got) or 'nothing'}")
+    return problems
+
+
+@check("the migration tool reconstructs the version a project pins")
+def _migration_is_executable():
+    # `P-16` is a procedure nobody can execute unless the old validator can be got hold of.
+    # It is not kept anywhere: it is rebuilt from this repository's history, at the commit
+    # where the registry last declared the version the project pinned. So what this asserts
+    # is the one thing that would silently stop being true -- that every version this
+    # framework has ever declared is still reachable, and that the note explaining it is
+    # still beside the number.
+    migrate = _load(ROOT / "skills" / "audit" / "scripts" / "migrate.py", "migrate")
+    registry = (ROOT / "schemas" / "artifact-types.yaml").read_text(encoding="utf-8")
+    notes = {to for _, to, _ in migrate.migration_notes(registry)}
+    problems = []
+
+    log = subprocess.run(["git", "log", "--format=%H", "--", "schemas/artifact-types.yaml"],
+                         cwd=ROOT, capture_output=True, text=True)
+    if log.returncode != 0:
+        return ["git history is not available here, so the check is not running"]
+
+    seen = []
+    for sha in log.stdout.split():
+        show = subprocess.run(["git", "show", f"{sha}:schemas/artifact-types.yaml"],
+                              cwd=ROOT, capture_output=True, text=True)
+        v = migrate.registry_version(show.stdout) if show.returncode == 0 else None
+        if v and v not in seen:
+            seen.append(v)
+
+    for v in seen:
+        if migrate.semver(v) is None:
+            continue          # the integers this file used before it carried three numbers
+        sha, why = migrate.commit_declaring(v, ROOT)
+        if sha is None:
+            problems.append(f"{v}: {why}")
+        if v not in notes and v != seen[-1]:
+            problems.append(f"{v}: no `X -> {v}` note in the registry. The number moved and "
+                            "nothing says what it asks a project to do, which is the half "
+                            "of `FW001` a version comparison cannot supply")
     return problems
 
 # ─────────────────────────────────────────────────────────────────────────────

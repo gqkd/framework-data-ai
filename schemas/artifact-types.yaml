@@ -158,7 +158,28 @@
 # tooling was still to be built after it was built. All four were found by a reading and none
 # by a check, which is the honest measure of what a self-check covers. The count is generated
 # now; the rest were sentences and are gone.
-version: "2.6.2"
+# 2.6.2 -> 2.7.0. Four checks and two files that are not artifacts. `PR001` to `PR004` read
+# a change set -- the text of a pull request and the list of files it touches -- against the
+# `CHG` that authorizes it, and `ci/` holds the pull request template and the workflow that
+# supply that context. The first three are `error`, in a catalog whose rule is that almost
+# everything starts at `warn`, and this is still a MINOR: they do not run at all without
+# `--pr-text`, so no pipeline that exists today can start failing because of them. The
+# argument for `warn` -- checks turned on before the artifacts exist are a factory built
+# before the product -- is about checks a repository cannot avoid. These fire only where
+# somebody wired them in on purpose, and a gate that does not block is a comment.
+#
+# `PR004` is the one that recovers something. "Touch data or a schema and the `DC` is
+# versioned and its consumers are told" was written in a process document that was folded
+# into another one, and the rule went with it: the `ICG` already records that a candidate
+# touches `data`, and nothing compared that with what the change set did.
+#
+# `skills/audit/scripts/migrate.py` arrives with them and adds no check. It runs the
+# validator a project pinned and the one it is moving to over the same repository and
+# splits the findings into already there, new, and gone -- which is the question `FW001`
+# asks and cannot answer. The old validator is reconstructed from this repository's git
+# history at the commit where this file last declared that version, so nothing has to have
+# been tagged or released for a migration to be executable.
+version: "2.7.0"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of
