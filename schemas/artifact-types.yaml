@@ -179,7 +179,25 @@
 # asks and cannot answer. The old validator is reconstructed from this repository's git
 # history at the commit where this file last declared that version, so nothing has to have
 # been tagged or released for a migration to be executable.
-version: "2.7.0"
+# 2.7.0 -> 2.7.1. Five defects in the tooling, found by the first real migration and by
+# running it against arguments nobody had tried. Nothing in the rules moved -- no check, no
+# field, no vocabulary -- so no document that validated stops validating, and no repository
+# has anything to do about this. That is what a PATCH is.
+#
+# One of them changes an exit code, which is the only reason a project could notice. A
+# `--root` that is not a directory used to be scanned as an empty repository: nothing found,
+# a note saying the framework version was not declared, exit 0. `audit/SKILL.md` had warned
+# about exactly this from its first version -- a clean report on the wrong repository is
+# worse than an error -- and nothing enforced it. Both tools refuse now. A pipeline that
+# goes red on this was checking nothing before it went red.
+#
+# The rest are `migrate.py`: findings keyed on (code, path) collapsed the repeats of one
+# check on one file, so a version that made a check noisier would have reported "nothing
+# new"; `FW001` was filed as migration work while `--adopt` was already skipping it; a
+# repository already on the current version exited 1; and an unparseable `framework.yaml`
+# or a framework that was unpacked rather than cloned came back as a traceback instead of a
+# sentence.
+version: "2.7.1"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of
