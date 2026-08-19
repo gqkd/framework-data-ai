@@ -132,7 +132,12 @@
 # decisions where somebody had looked and said so. `product.index.yaml` grows
 # `open_unregistered` for the same reason: a question with no entry cannot appear in a view
 # built from registers, which is the complaint that produced the state.
-version: "2.3.0"
+# 2.3.0 -> 2.4.0. `commitment: none` on a risk, and `REF006` narrowed to match. The check
+# asserted that a commercial risk naming no commitment was a claim promised nowhere, which
+# is false of every commercial exposure that is not a promise -- and `category` cannot say
+# which is which, because that vocabulary is about where a risk comes from. With no way to
+# answer honestly, the only way to silence the check was a category that was untrue.
+version: "2.4.0"
 
 lifecycles: [living, immutable, append-only]
 
@@ -937,6 +942,16 @@ types:
     # was missing -- a risk about a promise names the promise, and in a real repository a
     # commercial risk tracked a claim that `COMMITMENTS.md` did not contain at all, which
     # is a risk nobody can renegotiate because there is no promise to renegotiate.
+    #
+    # `commitment: none` is the declared absence, and it exists because the first version of
+    # the check was wrong about a whole class of risk. A commercial risk is not always about
+    # a promise: an untested market hypothesis, a comparison drawn against the wrong
+    # competitor set, an intellectual property transfer nobody completed are all commercial
+    # exposures and none of them was said to anybody. `category` cannot answer this -- the
+    # vocabulary there is where a risk comes from, not whether somebody promised something --
+    # so without `none` the only way to stop `REF006` asking was to file the risk under a
+    # category that was false. A check whose cheapest repair is a lie is a check that
+    # teaches the habit its own skill spends half a page warning against.
     #
     # The body keeps the mitigation, the owner and the argument. §acceptances and §events
     # stay prose entirely: an acceptance is somebody's signature under a sentence, and an

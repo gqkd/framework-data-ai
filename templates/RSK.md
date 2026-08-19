@@ -14,9 +14,10 @@ classification: confidential
 # somebody's signature under a sentence and an event is a story with a date.
 #
 # `commitment` is the field that makes the pair joinable: a risk about a promise names the
-# promise. A `commercial` risk without one is `REF006` -- a claim tracked as a risk that no
-# commitment records is a risk nobody can renegotiate, because there is nothing to
-# renegotiate against.
+# promise. On a `commercial` risk the field is expected either way -- `CMT-NNN` when somebody
+# promised this, `none` when the exposure is real and nobody promised anything, which is the
+# ordinary case for a market hypothesis nobody has tested or an IP transfer nobody completed.
+# Silence is `REF006`, and it reads as the first: a promise made and recorded nowhere.
 risks:
   RSK-001:
     category: technical
@@ -29,6 +30,14 @@ risks:
     likelihood: M
     impact: H
     commitment: CMT-001
+  RSK-003:
+    category: commercial
+    state: open
+    likelihood: M
+    impact: M
+    commitment: none                  # a commercial exposure nobody promised: said out
+                                      # loud, because silence here reads as a promise
+                                      # somebody made and nobody wrote down
 ---
 
 # Risk and compliance register: Product name

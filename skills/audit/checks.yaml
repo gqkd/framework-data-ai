@@ -229,6 +229,18 @@ checks:
       exempt: the promise behind them stopped mattering, and asking for it is asking about
       history.
 
+      IT ASKS AND DOES NOT ASSERT, and the first version did not. It said a commercial risk
+      naming no commitment was a claim recorded as a promise nowhere -- false of every
+      commercial risk that is not about a promise, and there are many: a market hypothesis
+      nobody has tested, a comparison drawn against the wrong competitor set, an
+      intellectual property transfer nobody completed. `category` cannot settle it, because
+      that vocabulary says where a risk comes from and not whether somebody promised
+      something, so the only way to stop the check asking was to file the risk under a
+      category that was untrue -- the cheap repair that leaves the repository worse, which
+      is what the skill running this check spends half a page warning against. A check whose
+      easiest answer is a lie teaches the habit. `commitment: none` is the honest answer, and
+      the finding now names both readings and asks which.
+
   # ── Discipline ─────────────────────────────────────────────────────────────
   RLM001:
     level: warn

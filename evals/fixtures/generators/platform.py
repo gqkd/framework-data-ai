@@ -544,7 +544,9 @@ F["products/atlas/RSK.md"] = fm(
     risks="\n  RSK-002:\n    category: compliance\n    state: open\n"
           "    likelihood: M\n    impact: H\n    commitment: CMT-003\n"
           "  RSK-003:\n    category: technical\n    state: open\n"
-          "    likelihood: M\n    impact: M\n    commitment: CMT-001\n") + """\
+          "    likelihood: M\n    impact: M\n    commitment: CMT-001\n"
+          "  RSK-004:\n    category: commercial\n    state: open\n"
+          "    likelihood: M\n    impact: M\n    commitment: none\n") + """\
 # Atlas · risks
 
 <!-- section: state -->
@@ -554,6 +556,7 @@ F["products/atlas/RSK.md"] = fm(
 |---|---|---|---|---|---|
 | RSK-002 | `customer_id` is pseudonymised nowhere, and the DPA says it is | compliance | M | H | blocked on the substrate decision in `platform/OPEN.md` |
 | RSK-003 | The nightly batch has no margin before 06:30 | technical | M | M | none yet: the scoring job has not been measured since the rewrite |
+| RSK-004 | The second customer is assumed and has not been interviewed | commercial | M | M | nobody promised this to anybody: it is what the roadmap is built on |
 
 <!-- section: acceptances -->
 ## Acceptances

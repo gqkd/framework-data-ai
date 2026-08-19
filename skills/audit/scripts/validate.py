@@ -89,6 +89,14 @@ ALL_PRODUCTS = "all"
 # nothing like the other two.
 UNREGISTERED = "unregistered"
 
+# `commitment: none` on a risk. Same shape as the two above, and needed for the same reason:
+# a commercial risk is not always about a promise. An untested market hypothesis, a
+# comparison drawn against the wrong competitor set, an intellectual property transfer
+# nobody completed -- all commercial exposures, none of them a claim made to anybody. Before
+# this the only way to stop the check asking was to file the risk under a category that was
+# not true, which is the repair `audit/SKILL.md` spends half a page warning against.
+NO_COMMITMENT = "none"
+
 DATE_IN_TEXT = re.compile(r"(?<!\d)(?:19|20)\d{2}(?!\d)"
                           r"|(?<!\d)\d{1,2}[/.]\d{1,2}[/.]\d{2,4}(?!\d)")
 
@@ -898,19 +906,26 @@ def check_commitments_and_risks(arts: list[Artifact], report: Report) -> None:
             if not isinstance(row, dict):
                 continue
             named = row.get("commitment")
-            if named and named not in cmts:
+            if named and named != NO_COMMITMENT and named not in cmts:
                 report.add("REF006", a.rel,
                            f"{rid} names {named!r}, which no commitments register declares. "
                            "The risk is about a promise nobody can find, so nothing can be "
                            "renegotiated and nothing can be closed by the promise changing.")
             elif not named and row.get("category") == "commercial" \
                     and row.get("state") not in ("closed", "expired"):
+                # ASKS, AND DOES NOT ASSERT. This used to say the risk was a claim recorded
+                # as a promise nowhere, which is false of every commercial risk that is not
+                # about a promise -- and there is no category for those, so the only way to
+                # silence it was to file the risk under something untrue. Two readings, and
+                # the field can now hold either answer.
                 report.add("REF006", a.rel,
-                           f"{rid} is a commercial risk and names no `commitment`. A claim "
-                           "tracked as a risk and recorded as a promise nowhere is a risk "
-                           "nobody will renegotiate: the remedy for a commercial exposure "
-                           "is a conversation with whoever received the promise, and there "
-                           "is no record of one having been made.")
+                           f"{rid} is a commercial risk and says nothing about a promise. "
+                           "Either somebody promised this and the commitments register does "
+                           "not have it -- in which case the exposure cannot be "
+                           "renegotiated, because there is no record of a promise to "
+                           f"renegotiate -- or it is an exposure nobody promised, and "
+                           f"`commitment: {NO_COMMITMENT}` says so. The two are different "
+                           "risks with different remedies, and silence reads as the first.")
 
 
 def check_manifest_derived_fields(arts: list[Artifact], report: Report) -> None:

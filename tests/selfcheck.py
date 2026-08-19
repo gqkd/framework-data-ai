@@ -463,6 +463,13 @@ def _commitments_and_risks():
         if "REF006" not in codes(repo(one, commercial + "    commitment: CMT-404\n")):
             problems.append("a risk naming a commitment no register declares was not "
                             "reported: the promise it is about cannot be found")
+        # THE CLASS THE FIRST VERSION WAS WRONG ABOUT. A commercial risk that is not about
+        # a promise -- and without a way to say so, the only way to stop the check asking was
+        # to file the risk under a category that was false.
+        if "REF006" in codes(repo(one, commercial + "    commitment: none\n")):
+            problems.append("a commercial risk declaring `commitment: none` was reported. "
+                            "Not every commercial exposure is a promise, and if the honest "
+                            "answer is unavailable the cheap repair is a wrong category")
         if "REF006" in codes(repo(one, "\n  RSK-001:\n    category: commercial\n"
                                        "    state: closed\n")):
             problems.append("a closed commercial risk was reported: the promise behind it "
