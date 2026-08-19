@@ -13,7 +13,7 @@ decisions, products, initiatives and corpus, live in that project's repository, 
 | File | What it is |
 |---|---|
 | **`FRAMEWORK.md`** | The reference document. Start here |
-| `framework-flow.mermaid` | The lifecycle with its gates. Importable into draw.io: *Arrange → Insert → Advanced → Mermaid* |
+| `framework-flow.mermaid.md` | The lifecycle with its gates, drawn. It renders where you are reading it; the fence is what makes that happen, and the diagram inside it is importable into draw.io: *Arrange → Insert → Advanced → Mermaid* |
 | `Framework.drawio` | Where the layout came from, and not a second copy of the truth. The mermaid file is the one kept current; this one has not been redrawn since 2026-08-06 and is not maintained. Import the mermaid if you want a draw.io view of today |
 | `SKILLS.md` | The six skills that operate the framework, and where their boundaries fall |
 | `PROCESSES.md` | The twelve operating processes: who does what, what each one leaves written, and which of them the tooling actually carries today. Diagrammed, one per process |
@@ -26,7 +26,7 @@ decisions, products, initiatives and corpus, live in that project's repository, 
 
 ## Reading order
 
-**To understand the framework:** `FRAMEWORK.md` → `framework-flow.mermaid` →
+**To understand the framework:** `FRAMEWORK.md` → `framework-flow.mermaid.md` →
 `templates/README.md`
 
 **To start using it by hand:** `FRAMEWORK.md §10`, the entry assessment and the day one set

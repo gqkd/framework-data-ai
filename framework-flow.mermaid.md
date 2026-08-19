@@ -1,3 +1,4 @@
+```mermaid
 %% Documentation framework for Data & AI projects. The version is in the registry
 %% .
 %% Layout follows Framework.drawio, because that drawing reads better than the
@@ -128,3 +129,4 @@ flowchart TB
   class CP1,CP2,CP3,CP4,CP5,CP6,CP7 always
 
   %% Every gate leaves a DEC behind. A gate with no written trace is a meeting.
+```
