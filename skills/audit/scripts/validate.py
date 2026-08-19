@@ -758,7 +758,16 @@ MOVED_TO_INDEX = {
 # `GLOSSARY §Tenant`, with or without the backticks around the file name. The section sign
 # is the whole convention and it is worth one: "see the glossary" is not a reference, it is
 # a gesture, and nothing can resolve it.
-GLOSSARY_CITE = re.compile(r"GLOSSARY`?\s*§\s*([^`\n,.;:)\]]+)")
+# The pipe is in the stop set because a citation is very often written inside a table cell,
+# and without it the match ran to the end of the row: a document citing a term in a column
+# produced a finding naming `'Metriche | routed |'`, which resolves to nothing for a reason
+# that has nothing to do with the glossary.
+GLOSSARY_CITE = re.compile(r"GLOSSARY`?\s*§\s*([^`\n,.;:)\]|]+)")
+
+# `§Metrics`, `§Domain terms` -- the headings of the glossary itself. Pointing a reader at a
+# section is a legitimate citation and resolves to no term by construction, so a check that
+# only knows terms reports the one form of reference that cannot be wrong.
+GLOSSARY_SECTION = re.compile(r"^#{1,6}\s*§?\s*(.+?)\s*$", re.M)
 
 
 def declared_entries(arts: list[Artifact]) -> set[str]:
@@ -781,9 +790,12 @@ def check_glossary_terms(arts: list[Artifact], report: Report) -> None:
     """
     glossaries = [a for a in arts if a.type == "glossary"]
     declared: dict[str, tuple[str, dict]] = {}
+    sections: set[str] = set()
     for g in glossaries:
         for name, row in (g.meta.get("terms") or {}).items():
             declared[str(name).strip().lower()] = (g.rel, row if isinstance(row, dict) else {})
+        sections |= {m.group(1).strip().lower()
+                     for m in GLOSSARY_SECTION.finditer(g.body)}
 
     known = declared_entries(arts)
     for term, (rel, row) in sorted(declared.items()):
@@ -801,6 +813,8 @@ def check_glossary_terms(arts: list[Artifact], report: Report) -> None:
             continue
         for m in GLOSSARY_CITE.finditer(a.body):
             name = " ".join(m.group(1).split()).strip("*_`")
+            if name.lower() in sections:
+                continue
             if not glossaries:
                 report.add("REF005", a.rel,
                            f"this document sends a reader to the glossary for {name!r} and "

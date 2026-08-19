@@ -590,6 +590,20 @@ def _references_with_a_second_end():
         if "REF005" not in codes(repo(defined, "`GLOSSARY §Tenant` is the unit", "[]")):
             problems.append("a citation to a term no glossary declares was not reported: it "
                             "reads as defined, and the reader stops looking")
+        # A CITATION IN A TABLE CELL, and one that points at a section of the glossary
+        # rather than a term. The first ran to the end of the row and produced a finding
+        # naming a string with a pipe in it; the second is the one form of reference that
+        # cannot be wrong, and it resolved to no term by construction.
+        if "REF005" in codes(repo(defined,
+                                  "| field | `GLOSSARY §Freshness` | routed |", "[]")):
+            problems.append("a citation inside a table cell was reported: the match ran past "
+                            "the cell and the term it names is not what the document wrote")
+        if "REF005" in codes(repo(defined, "see `GLOSSARY §Glossary`", "[]")):
+            problems.append("a citation naming a heading of the glossary was reported: "
+                            "pointing a reader at a section is a reference that resolves by "
+                            "construction, and a check that only knows terms reports the one "
+                            "form that cannot be wrong")
+
         if "REF005" in codes(repo(defined, "`GLOSSARY §Freshness` is the unit", "[]")):
             problems.append("a citation to a declared term was reported, so the field cannot "
                             "be answered")

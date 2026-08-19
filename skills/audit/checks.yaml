@@ -213,7 +213,12 @@ checks:
       headings, somebody reworded a label, and both went quiet -- reporting nothing, which
       reads as nothing being wrong. A citation to a term declared `blocked_by` an open entry
       resolves and stays silent: the gap is written down, which is the whole difference, and
-      a `blocked_by` pointing at an entry no register declares is reported instead.
+      a `blocked_by` pointing at an entry no register declares is reported instead. Two
+      shapes are not findings and were: a citation written inside a table cell, where the
+      match used to run to the end of the row and name a string with a pipe in it, and a
+      citation naming a heading of the glossary rather than a term -- pointing a reader at a
+      section is the one form of reference that cannot be wrong, and it resolves to no term
+      by construction.
 
   REF006:
     level: warn

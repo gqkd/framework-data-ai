@@ -148,7 +148,11 @@
 # places: a field that exists to describe what is not known yet, asking you to know something
 # -- and a count that included the rows with no exposure behind them, which is a number that
 # does not survive being checked. Nothing narrowed; a term that validated still does.
-version: "2.6.0"
+# 2.6.0 -> 2.6.1. `REF005` reported two shapes that are not findings: a citation written
+# inside a table cell, where the match ran to the end of the row, and one naming a section of
+# the glossary instead of a term. Both were found by a repository, and both produced the
+# worst kind of finding -- one that sends somebody to check a document that was right.
+version: "2.6.1"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of
