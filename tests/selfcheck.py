@@ -286,6 +286,96 @@ def _clean_repo():
         return [f"{f['code']} {f['path']}: {f['message']}" for f in out["findings"]]
 
 
+@check("every open entry reaches the generated view, in every shape it is allowed to declare")
+def _every_entry_reaches_the_view():
+    # THE GENERAL FORM OF A BUG THAT SHIPPED. `REG011` made one state illegal -- an entry at
+    # the root naming no products -- and the generator's last section was selecting on
+    # exactly that state, so the more a repository obeyed the check, the emptier the view
+    # became. Nothing looked wrong: the register was right, the check was satisfied, and
+    # `§5` said there was nothing above the products.
+    #
+    # So the invariant, rather than the instance: an entry that is open is in the view,
+    # whatever legal shape it declares and wherever it is filed. A state added later that
+    # the generator does not know about fails here, on the day it is added, instead of on
+    # the day somebody finishes migrating to it.
+    fm = lambda body: ("---\nschema: framework/open-register/v1\n"
+                       "artifact_type: open-register\nlifecycle: living\nstatus: active\n"
+                       "owners: [o]\ncreated: 2026-01-01 09:00\n"
+                       "last_review: 2026-08-01 09:00\n" + body + "---\n\n# Open\n")
+    man = lambda p, m: ("schema: framework/product-manifest/v1\n"
+                        "artifact_type: product-manifest\nlifecycle: living\n"
+                        "status: active\n"
+                        f"products: [{p}]\nname: {p}\none_liner: A thing.\n"
+                        "owners: [o]\ncreated: 2026-01-01 09:00\n"
+                        f"last_review: 2026-01-01 09:{m}\nstage:\n  phase: F5\n  block: A\n")
+    entry = lambda od, extra="": (f"  {od}:\n    status: open\n    cost_to_reverse: low\n"
+                                  f"    default_in_force: nothing\n{extra}")
+
+    # One entry per legal shape, and the shape is the point of each.
+    shapes = {
+        "OD-001": "declaring `[all]` at the root",
+        "OD-002": "naming one product at the root",
+        "OD-003": "naming no products at the root, which is legal and reported",
+        "OD-004": "filed in the substrate's register",
+        "OD-005": "filed in a product's own register",
+    }
+    files = {
+        "framework.yaml": f"framework_version: {REGISTRY['version']}\n",
+        "products/alpha/product.yaml": man("alpha", "10"),
+        "products/beta/product.yaml": man("beta", "20"),
+        "OPEN.md": fm("entries:\n"
+                      + entry("OD-001", "    products: [all]\n")
+                      + entry("OD-002", "    products: [beta]\n")
+                      + entry("OD-003"))
+        + "\n<!-- generated: open-union -->\nx\n<!-- /generated -->\n",
+        "platform/OPEN.md": fm("entries:\n" + entry("OD-004")),
+        "products/alpha/OPEN.md": fm("entries:\n" + entry("OD-005")),
+        "products/beta/OPEN.md": fm("entries: {}\n"),
+    }
+
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        for rel, text in files.items():
+            f = root / rel
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_text(text)
+        r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(root),
+                            "--emit-index"], capture_output=True, text=True)
+        if r.returncode not in (0, 1):
+            return [f"--emit-index failed: {r.stderr.strip() or r.stdout.strip()}"]
+
+        union = (root / "OPEN.md").read_text()
+        region = union.split("<!-- generated: open-union -->", 1)[-1]
+        for od, why in sorted(shapes.items()):
+            if od not in region:
+                problems.append(f"{od}, {why}, does not appear anywhere in the generated "
+                                "union. An entry that is open and invisible in the view is "
+                                "the failure this view exists to prevent, and it reads as "
+                                "nothing being open")
+
+        # And the two the union has to keep apart, or the section stops meaning anything.
+        tail = region.split("## Bound to no single product", 1)
+        if len(tail) != 2:
+            problems.append("the union has no section for what binds no single product")
+        else:
+            for od, want in (("OD-001", True), ("OD-003", True), ("OD-004", True),
+                             ("OD-002", False), ("OD-005", False)):
+                if (od in tail[1]) != want:
+                    problems.append(
+                        f"{od} is {'missing from' if want else 'listed under'} what binds no "
+                        "single product, and it is the opposite of what it declares")
+
+        alpha = (root / "products" / "alpha" / "product.index.yaml").read_text()
+        for od, want in (("OD-001", True), ("OD-003", True), ("OD-004", True),
+                         ("OD-005", True), ("OD-002", False)):
+            if (od in alpha) != want:
+                problems.append(
+                    f"alpha's derived view {'is missing' if want else 'holds'} {od}, which "
+                    "is the opposite of what that entry binds")
+    return problems
+
+
 @check("a promise and the risk it creates can be joined, now that both are readable")
 def _commitments_and_risks():
     # Two markdown tables until 2.1.0, which is why neither of these could be reported: a

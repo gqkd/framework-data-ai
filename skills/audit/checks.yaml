@@ -16,6 +16,23 @@
 #       LC002: error        # we have been bitten by a stale living document
 #       XP003: off          # we only have one product
 #
+# BEFORE ADDING A CHECK THAT MAKES A STATE ILLEGAL, ASK WHO ELSE READS THAT STATE.
+# `REG011` asks every entry at the root to name the products it binds, which is correct on
+# its own and was reviewed on its own. The generated union was selecting the entries that
+# named none -- that being, until then, how an entry said it bound everything -- so the two
+# shipped in one version and worked against each other: the more a repository answered the
+# check, the emptier the section holding what binds all of it became, and in the first
+# repository to finish answering, twenty entries left `§5` reading "Nothing open". Nothing
+# looked wrong. The register was right and the check was satisfied.
+#
+# The question is mechanical and the answer is almost always in the same two places:
+# `--emit-index`, which composes the registers into the views, and the skills, which tell an
+# agent what a field means. Grep the state, not the check. And the invariant that catches
+# the class rather than the instance is asserted in `tests/selfcheck.py`: every open entry
+# reaches the generated view, in every shape it is allowed to declare, so a state added
+# later that the generator does not know about fails on the day it is added instead of on
+# the day somebody finishes migrating to it.
+#
 # WHY ALMOST EVERYTHING STARTS AT `warn`. Twelve checks turned on before the artifacts
 # exist are a factory built before the product: they slow you down without having
 # prevented anything yet, and the predictable reaction is to turn them all off at once.
