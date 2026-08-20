@@ -2877,6 +2877,23 @@ def _migration_is_executable():
         # counted back to: one of the numbers in this history was declared and withdrawn, so
         # `HEAD~4` picked a project that was ahead of the framework and the tool refused it
         # for the right reason -- which tested the refusal instead of the deadlock.
+        # NOT WHILE THE BUMP IS UNCOMMITTED. Between editing `version:` and committing it,
+        # the number in the working tree belongs to no commit, and everything downstream of
+        # that -- what `--adopt` writes, which commit declares what -- describes a framework
+        # state no consumer can be in. This check went red exactly there, on every bump, and
+        # a check that is red while you work is one you commit through.
+        head_registry = subprocess.run(
+            ["git", "-C", str(ROOT), "show", f"HEAD:{migrate.REGISTRY_REL}"],
+            capture_output=True, text=True)
+        committed = (migrate.registry_version(head_registry.stdout)
+                     if head_registry.returncode == 0 else None)
+        if committed != REGISTRY["version"]:
+            return problems + [f"NOT RUN: the working tree declares "
+                               f"{REGISTRY['version']} and the last commit declares "
+                               f"{committed}. Commit the bump and run this again -- what "
+                               "`--adopt` writes cannot be asserted against a version no "
+                               "commit has."]
+
         now = migrate.semver(REGISTRY["version"])
         old_commit = old_version = None
         for sha in subprocess.run(["git", "-C", str(ROOT), "rev-list", "-40", "HEAD"],
