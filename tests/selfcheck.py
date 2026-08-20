@@ -559,6 +559,102 @@ def _commitments_and_risks():
     return problems
 
 
+@check("a pin that was never true is told apart from a checkout that moved")
+def _pin_shapes():
+    # Both produce a hash that does not match, and the two need opposite responses: one is a
+    # migration to read, the other is a line nobody ever verified. And git resolves an
+    # uppercase hash as readily as a lowercase one, so rejecting it was a finding about
+    # somebody's shift key.
+    problems = []
+    head = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--short=12", "HEAD"],
+                          capture_output=True, text=True)
+    if head.returncode != 0:
+        return ["git history is not available here, so the check is not running"]
+    now = head.stdout.strip()
+    old = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--short=12", "HEAD~3"],
+                         capture_output=True, text=True).stdout.strip()
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+
+        def message(pin: str) -> str:
+            (root / "framework.yaml").write_text(
+                f"framework_version: {REGISTRY['version']}\nframework_commit: {pin}\n")
+            r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(root),
+                                "--json"], capture_output=True, text=True)
+            found = [f["message"] for f in json.loads(r.stdout)["findings"]
+                     if f["code"] == "FW003"]
+            return found[0] if found else ""
+
+        if message(now):
+            problems.append("a pin at the commit being run was reported")
+        if message(now.upper()):
+            problems.append("a pin written in uppercase was reported: git resolves it, and a "
+                            "field that refuses what the tool accepts is a finding about a "
+                            "shift key")
+        moved = message(old)
+        if "no such commit" in moved or not moved:
+            problems.append(f"a pin at an older commit of this framework said {moved[:60]!r}: "
+                            "the checkout moved, and that is a migration to read")
+        never = message("deadbeefcafe")
+        if "no such commit" not in never:
+            problems.append("a pin at a commit this framework does not have was reported as a "
+                            "checkout that moved, which sends somebody looking for a "
+                            "migration that never happened")
+        if not message("main"):
+            problems.append("a branch name was accepted as a pin: both a branch and a tag "
+                            "move, which is the state the field exists to leave")
+    return problems
+
+
+@check("the pull request gate reads what somebody wrote, not what the template says")
+def _pr_gate_reads_assertions():
+    # The template ships with `no-chg: typo in a comment` inside an HTML comment, as the
+    # instruction for writing one. A pull request that keeps the template carried that line
+    # into its body, matched the exemption, and turned `PR001` off -- so the gate was silent
+    # by default in every repository using the template it comes with.
+    #
+    # Fenced blocks and quotes go with it. `git log --grep CHG-041` in a snippet is not a
+    # change contract being cited, and a quoted line is somebody quoting.
+    fm = lambda **kw: "---\n" + "\n".join(f"{k}: {v}" for k, v in kw.items()) + "\n---\n\n"
+    template = (ROOT / "ci" / "PULL_REQUEST_TEMPLATE.md")
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / "framework.yaml").write_text(f"framework_version: {REGISTRY['version']}\n")
+        (root / "products" / "alpha").mkdir(parents=True)
+        (root / "products" / "alpha" / "product.yaml").write_text(
+            "schema: framework/product-manifest/v1\nartifact_type: product-manifest\n"
+            "lifecycle: living\nstatus: active\nproducts: [alpha]\nname: alpha\n"
+            "one_liner: A thing.\nowners: [o]\ncreated: 2026-01-01 09:00\n"
+            "last_review: 2026-01-01 09:00\nstage:\n  phase: F5\n  block: A\n")
+        empty = root / "changed.txt"
+        empty.write_text("")
+
+        def codes(pr_text: str) -> set[str]:
+            r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(root),
+                                "--pr-text", pr_text, "--changed-files", str(empty),
+                                "--json"], capture_output=True, text=True)
+            return {f["code"] for f in json.loads(r.stdout)["findings"]}
+
+        cases = [
+            (template.read_text(encoding="utf-8") if template.exists() else "",
+             True, "the template kept unedited, whose own comment shows how to write "
+                   "`no-chg:`"),
+            ("Fix a typo\n\nno-chg: prose only", False,
+             "an exemption somebody wrote"),
+            ("> no-chg: <reason>", True, "an exemption inside a quote"),
+            ("Fix\n\n```\nno-chg: example\n```", True,
+             "an exemption inside a fenced block"),
+            ("Fix\n\n```bash\ngit log --grep CHG-041\n```", True,
+             "a change contract named inside a fenced block"),
+        ]
+        for pr_text, want, what in cases:
+            got = "PR001" in codes(pr_text)
+            if got != want:
+                problems.append(f"{what}: PR001 was {'not ' if want else ''}reported")
+    return problems
+
+
 @check("a malformed map is reported and does not take the run down with it")
 def _malformed_maps_survive():
     # `terms: [Freshness, Tenant]` is one bracket away from two rows under `terms:`, and it

@@ -254,7 +254,14 @@
 # `all`, so a promise about the whole suite bound nothing; `LC005` tested for midnight and
 # was blind to `00:00` and to any value carrying seconds, which is the shape a script writes;
 # `REG010` knew backtick fences and not tilde ones.
-version: "2.8.2"
+# 2.8.2 -> 2.8.3. Four faults in what arrived with 2.8.0, found by probing the new surface.
+# The worst: the pull request template ships `no-chg: typo in a comment` inside an HTML
+# comment as the instruction for writing one, so a pull request that kept the template
+# matched the exemption and `PR001` was off in every repository using the template it comes
+# with. `FW003` refused an uppercase hash git resolves, and told a pin that was never true
+# that the checkout had moved. `PR004` claimed a version had not moved when all it read was
+# whether the file was in the diff.
+version: "2.8.3"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of

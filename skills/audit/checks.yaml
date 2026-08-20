@@ -719,6 +719,13 @@ checks:
       still is a promise broken in silence -- the consumers are reading the old one, and
       the document that would have told them is the one that did not move.
 
+      WHAT IT READS IS THE CHANGE SET, AND ONLY THAT: whether the document the impact
+      obliges appears in the diff. Whether a version moved inside a data contract needs the
+      commit the branch started from, and nothing here is given one -- so a contract touched
+      with its version standing still passes this check. The message says so instead of
+      claiming otherwise, which it did until 2.8.3: a finding that asserts more than it
+      verified is believed the first time and discounted for good the second.
+
       Architecture and risk-compliance are checked the same way. `ai` is not: the `EVR` is
       written at the release gate, after the build, so asking the pull request that builds
       the thing to carry one would forbid the order the framework prescribes. `CHG001` asks

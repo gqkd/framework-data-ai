@@ -1456,7 +1456,26 @@ CHG_IN_TEXT = re.compile(r"\bCHG-\d{3,}\b")
 # pull request where a reviewer reads it, and stays in the history. What it must never be
 # is silent: a reason is required, because "no-chg" alone is the same thing as deleting
 # the check with extra steps.
-NO_CHG = re.compile(r"^[ \t>*-]*no-chg:[ \t]*(\S.*)$", re.M | re.I)
+# `>` is not in the leading set on purpose: a quoted line is somebody quoting, usually the
+# template, and an exemption has to be somebody's own sentence. List markers stay, because a
+# reason written as a bullet is still written.
+NO_CHG = re.compile(r"^[ \t*-]*no-chg:[ \t]*(\S.*)$", re.M | re.I)
+
+# WHAT A PULL REQUEST ACTUALLY SAYS, WITH THE PARTS NOBODY WROTE REMOVED. The template ships
+# with `no-chg: typo in a comment` inside an HTML comment, as the instruction for how to
+# write one -- and a pull request that keeps the template unedited carried that line into the
+# body, matched the exemption, and turned `PR001` off. The gate was silent by default in
+# every repository that used the template it comes with.
+#
+# Fenced blocks go for the same reason: `git log --grep CHG-041` in a snippet is not a change
+# contract being cited, and it was being read as one.
+HTML_COMMENT = re.compile(r"<!--.*?-->", re.S)
+FENCED = re.compile(r"^([ \t]*)(```|~~~).*?^\1\2.*?$", re.M | re.S)
+
+
+def asserted(text: str) -> str:
+    """A pull request body with the parts nobody typed taken out."""
+    return FENCED.sub("", HTML_COMMENT.sub("", text))
 
 # What each impact obliges the change set to touch. `ai` is deliberately absent: the `EVR`
 # is written at the release gate, after the build, so demanding it in the pull request that
@@ -1497,9 +1516,10 @@ def check_pull_request(arts: list[Artifact], pr_text: str | None,
     if pr_text is None:
         return
 
-    ids = sorted(set(CHG_IN_TEXT.findall(pr_text)))
+    said = asserted(pr_text)
+    ids = sorted(set(CHG_IN_TEXT.findall(said)))
     if not ids:
-        exempt = NO_CHG.search(pr_text)
+        exempt = NO_CHG.search(said)
         if not exempt:
             report.add("PR001", "pull request",
                        "names no change contract, and carries no `no-chg:` line saying "
@@ -1555,9 +1575,17 @@ def check_pull_request(arts: list[Artifact], pr_text: str | None,
             wanted_type, what = IMPACT_OBLIGES[impact]
             if wanted_type in touched:
                 continue
-            extra = (" A data contract that changed without its version moving is a "
-                     "promise broken silently: the consumers are reading the old one and "
-                     "nothing tells them to stop." if impact == "data" else "")
+            # WHAT THIS SEES AND WHAT IT DOES NOT, because the message used to claim the
+            # second. It reads the change set: whether the document exists in the diff at
+            # all. Whether a version moved inside it needs the base the branch came from,
+            # which nothing here is given -- so the sentence about a version is written as
+            # the reason to look, and not as a finding about what was found.
+            extra = (" And touching it is not versioning it: a data contract that changed "
+                     "with its version standing still is a promise broken quietly, because "
+                     "the consumers are reading the old one and nothing tells them to stop. "
+                     "That half is a reading somebody has to do -- the change set says "
+                     "whether the file moved, not whether the number did."
+                     if impact == "data" else "")
             report.add("PR004", a.rel,
                        f"{icg.id} classifies this change as touching `{impact}`, and the "
                        f"change set does not touch {what}. Either the classification was "
@@ -1635,7 +1663,10 @@ def check_framework_version(root: Path, project: dict, registry: dict,
                    f"then either migrate and update this line, or pin the framework.")
 
 
-COMMIT = re.compile(r"^[0-9a-f]{7,40}$")
+# Uppercase included, because git resolves `E4318E8` as readily as `e4318e8` and a field
+# that rejects what the tool accepts is a finding about the writer's shift key. Compared
+# case-insensitively for the same reason.
+COMMIT = re.compile(r"^[0-9a-fA-F]{7,40}$")
 
 
 def framework_head() -> str | None:
@@ -1652,6 +1683,17 @@ def framework_head() -> str | None:
     except (OSError, subprocess.SubprocessError):
         return None
     return r.stdout.strip() or None if r.returncode == 0 else None
+
+
+def framework_has(commit: str) -> bool | None:
+    """Whether this framework checkout contains that commit. None when it cannot be asked."""
+    try:
+        r = subprocess.run(["git", "-C", str(FRAMEWORK), "cat-file", "-e",
+                            f"{commit}^{{commit}}"], capture_output=True, text=True,
+                           timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return r.returncode == 0
 
 
 def check_framework_pin(project: dict, report: Report) -> None:
@@ -1679,7 +1721,19 @@ def check_framework_pin(project: dict, report: Report) -> None:
         return
     pinned = pinned.strip()
     head = framework_head()
-    if head is None or head.startswith(pinned):
+    if head is None or head.lower().startswith(pinned.lower()):
+        return
+    # A COMMIT THAT IS NOT HERE IS NOT A CHECKOUT THAT MOVED. Both produce a hash that does
+    # not match, and the two need opposite responses: one is a migration to read, the other
+    # is a line that was never true. Sending somebody to look for the first when it is the
+    # second is the trip that teaches them to stop making it.
+    if framework_has(pinned) is False:
+        report.add("FW003", "framework.yaml",
+                   f"pins the framework at {pinned}, and no such commit exists in the "
+                   "framework being run. Either it was written by hand and never checked, "
+                   "or it belongs to a fork or a rewritten history -- and nothing was "
+                   "verified against it. There is no migration to read here: the pin has "
+                   "never been true.")
         return
     report.add("FW003", "framework.yaml",
                f"pins the framework at {pinned}, and the framework being run is at "
