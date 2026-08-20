@@ -58,6 +58,7 @@ is being exercised.
 | P-10 | Reconciling the architecture with the real system | manual | DEV, ADMIN | `ARC`, `RLM`, `DEC`, `OPEN` | `audit` (second pass) |
 | P-11 | Semantic audit | runnable | ADMIN, DEV, UB for the commercial parts | every authoritative pair | `audit` |
 | P-12 | Adopting a version of the framework | runnable | ADMIN | `framework.yaml`, the migrated artifacts, the indices | `audit`: `scripts/migrate.py`, `--emit-index` |
+| P-13 | Superseding a decision | manual | whoever writes the new `DEC`, `ADMIN` where the cascade reaches the substrate | the new `DEC`, the superseded one's `status`, the entries that depended on it | `requirement` or `resolve` writes it, `audit` reports what stayed behind |
 
 ## How they feed each other
 
@@ -75,6 +76,7 @@ flowchart LR
   P10["P-10 · Reconciliation"]
   P11["P-11 · Semantic audit"]
   P12["P-12 · Framework version"]
+  P13["P-13 · Superseding<br/>a decision"]
 
   P01 --> P04
   P01 --> P02
@@ -90,6 +92,9 @@ flowchart LR
   P09 --> P06
   P10 --> P06
   P08 --> P10
+  P11 -.-> P13
+  P10 -.-> P13
+  P13 --> P04
   P04 -.-> P06
   P04 -.-> P07
   P11 -.-> P05
@@ -755,6 +760,77 @@ script says which documents and why; the change is made by a person, or by an ag
 
 `audit`: `scripts/migrate.py` for the comparison, `scripts/validate.py --emit-index` to
 regenerate the indices, `tests/selfcheck.py` in the framework's own repository.
+
+## P-13 · Superseding a decision
+
+**Status:** manual.
+
+### Trigger
+
+A `DEC` that is `accepted` and no longer true. Not a `DEC` somebody disagrees with, and not
+one that turned out to be badly written: a decision whose content the world has moved past.
+
+### Actors
+
+Whoever writes the new `DEC` — `UB` for a product decision, `ADMIN` or `DEV` for an
+architectural one. **There is no approver and no provisional state.** A `DEC` that supersedes
+another is an ordinary `DEC` that declares what it supersedes and why. Supersession is an
+event that gets recorded, not a workflow that gets run.
+
+### How it runs
+
+1. **Write the new `DEC`.** `supersedes: DEC-NNN` in its front matter -- a list when it
+   replaces more than one -- and in the body the sentence the old one can no longer support.
+   `REF002` resolves the id, `REF004` refuses a cycle.
+2. **Move the old one to `status: superseded`.** That field is the only one you may touch on
+   an immutable. The document **stays where it is and stays readable**: it is the reasoning
+   somebody will come looking for when the same question reopens. `REF003` reports an old
+   decision left at `accepted`.
+3. **Then the four dependents**, in this order, because each one is somebody deciding and not
+   a rewrite:
+
+   | What depended on it | What happens |
+   |---|---|
+   | An `OD` with `closed_by: DEC-NNN` | `REG005` stops counting it as closed. Re-point `closed_by` at the new `DEC` when that one decides the same question; set the entry back to `status: open` when it does not, and it re-enters the ordering by cost to reverse where it belongs |
+   | The `leaves_open` the old `DEC` carried | **The new `DEC` restates them.** Nothing else will: `REG012` and `REG014` skip a superseded decision, so an entry that lived only there -- the `[unregistered]` case above all -- disappears without a finding |
+   | Documents citing it | `derives_from` on a `CHG`, `decided_in` in `STACK.md`. `STK001` reports the second; nothing reports the first, so it is a grep: `grep -rn DEC-NNN` |
+   | The views | `validate.py --emit-index`. `ARC#current` and `PLATFORM.md` are **not** regenerated: whether the architecture still describes the system is `P-10`, and whether the documents still agree is `P-11` |
+
+### Partial supersession
+
+The ordinary case, and the one this framework has already produced twice: a decision that is
+still right about most of what it says and wrong about one row.
+
+**The old `DEC` stays `accepted`, and the new one quotes the part it invalidates.** Not
+paraphrases it -- quotes it, so a reader who arrives from the old document recognises the
+sentence that stopped being true. The alternative was to supersede the whole thing and
+restate what survives, and it was not chosen: it costs a rewrite of everything that was
+still true, and a rewrite of a `DEC` is the thing this class of document exists to make
+unnecessary.
+
+The price is paid with open eyes: **an `accepted` document keeps a false line inside it, and
+no check will ever say so.** That is what makes the quoting obligatory rather than polite.
+The habit already exists in the wild and works -- one decision opens with *"this is not a
+revocation of `DEC-003`: that decision stands in full"* and then says exactly what it
+narrows; another quotes *"without an attachment mechanism"* from the decision it follows and
+explains why that moment has arrived. What has also happened is the other version: a later
+decision that made one row of an earlier one false, said nothing about it, and left the row
+sitting in a document still marked `accepted`.
+
+When the invalidated part is the whole decision, this section does not apply: that is
+supersession, and it is steps 1 to 3.
+
+### What stays by hand
+
+All of it. Whether a decision has been overtaken is a reading, and the four dependents are
+four judgements -- which is why this is `manual` and why `audit` proposes rather than
+applies.
+
+### Skill and tooling
+
+`requirement` or `resolve` writes the new `DEC`; `audit` reports what stayed behind
+(`REF002`, `REF003`, `REF004`, `REG005`, `STK001`) and regenerates the indices with
+`--emit-index`.
 
 ## Committing
 
