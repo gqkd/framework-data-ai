@@ -273,7 +273,23 @@
 # work is outstanding; and the only thing that clears `FW003` is `--adopt` writing the pin. So
 # the way out was to delete the pin -- the field's own purpose, undone by the tool that exists
 # to move it. `FW003` joins the two findings `--adopt` clears by writing a number.
-version: "2.8.5"
+# 2.8.5 -> 2.8.6. `supersedes` is declared. It was read by the validator and written in a
+# template for weeks and was in no schema, so `supersedes: 12` and `supersedes: {id: DEC-004}`
+# were as legal as the thing anybody meant. `id_fields` on a type generates the shape --
+# absent, one id, or several, with the id pattern -- and it is declared on all seven types
+# whose `status` can reach `superseded`.
+#
+# STRICTLY THIS IS A MAJOR AND IT SHIPS AS A PATCH, which is the freeze talking. It narrows
+# what validates: a document carrying a `supersedes` of the wrong shape used to pass and now
+# does not. What breaks is exactly that -- a number, a map, a malformed id, a list with a
+# duplicate or an empty one. `null`, one id, several ids and the `NNN` of a template all stay
+# legal, and in the one repository written against this framework all nineteen decisions
+# carry `supersedes: null` and are unaffected.
+#
+# It types the value and not the key. No type here closes `additionalProperties`, because real
+# front matter carries `approvers`, `classification`, `icg` and others nobody should have to
+# enumerate -- so `supercedes:` spelled wrong is still an unknown field that nothing reports.
+version: "2.8.6"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of
@@ -353,6 +369,16 @@ placeholders:
 # dangling, and a check that cries wolf on correct documents gets turned off within a week.
 id_prefixes: [PRB, HYP, EVD, CMP, DFB, SD, DEC, CHG, EVR, REL, RLM, DC,
               SIG, ANA, INC, OD, KI, RSK, CMT, ING, ICG]
+
+# `id_fields` on a type declares a front matter field that holds an identifier or a list of
+# them, and generates the shape: absent, one id, or several. `supersedes` lived for weeks as a
+# convention -- read by the validator, written in a template, in no schema -- so `supersedes:
+# 12` was as legal as `supersedes: DEC-004`. It is declared on every type whose `status` can
+# reach `superseded`, because those are the documents that can be replaced.
+#
+# It types the value and not the key: no type here closes `additionalProperties`, since real
+# front matter carries `approvers`, `classification`, `icg` and others nobody should have to
+# enumerate, so `supercedes:` spelled wrong is still an unknown field that nothing reports.
 
 # Types whose body *defines* identifiers instead of only citing them, and which prefixes
 # each one defines. The second half is the part that matters. Every one of these registers
@@ -762,6 +788,7 @@ types:
     path: initiatives/<i>/PRB-NNN.md
     lifecycle: immutable
     status: [active, superseded]
+    id_fields: [supersedes]
 
   hypothesis:
     id: HYP
@@ -793,6 +820,7 @@ types:
     path: initiatives/<i>/EVD-NNN.md
     lifecycle: immutable
     status: [active, superseded]
+    id_fields: [supersedes]
 
   competitor-comparison:
     id: CMP
@@ -803,6 +831,7 @@ types:
     path: initiatives/<i>/CMP-NNN.md
     lifecycle: immutable
     status: [active, superseded]
+    id_fields: [supersedes]
 
   data-feasibility:
     id: DFB
@@ -813,6 +842,7 @@ types:
     path: initiatives/<i>/DFB-NNN.md
     lifecycle: immutable
     status: [active, superseded]
+    id_fields: [supersedes]
 
   solution-design:
     id: SD
@@ -823,6 +853,7 @@ types:
     path: initiatives/<i>/SD-NNN.md
     lifecycle: immutable
     status: [active, superseded]
+    id_fields: [supersedes]
 
   evaluation-plan:
     id: EVP
@@ -880,6 +911,7 @@ types:
     path: decisions/DEC-NNN-slug.md
     lifecycle: immutable
     status: [proposed, accepted, superseded]
+    id_fields: [supersedes]
     enums:
       # The field that determines the nature of the decision. One register, one
       # numbering, one folder: separate registers would leave cross-product decisions,
@@ -1063,6 +1095,7 @@ types:
     path: products/<p>/cycles/ICG-NNN.md
     lifecycle: immutable
     status: [proposed, accepted, superseded]
+    id_fields: [supersedes]
     sections: [intake, classification, open-questions]
     # One document per cycle, one row per candidate. `routing` is where each candidate
     # goes and there is exactly one answer per candidate; `impacts` is what it touches on

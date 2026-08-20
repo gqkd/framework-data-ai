@@ -1451,6 +1451,52 @@ def _maps_are_constrained():
     return problems
 
 
+@check("supersedes is a declared field with a shape, and not a convention")
+def _supersedes_is_typed():
+    # It was read by the validator and written in a template for weeks without being in any
+    # schema, so `supersedes: 12` and `supersedes: {id: DEC-004}` were as legal as the thing
+    # anybody meant, and the shape was whatever the last person wrote. Declared on every type
+    # whose `status` can reach `superseded`, because those are the documents that can be
+    # replaced.
+    #
+    # The three legal forms are all in use and none is a mistake: absent, one id, several.
+    # `null` stays legal because the template writes it -- a field shown as existing and
+    # holding nothing is how the templates say "this is yours to fill in".
+    problems = []
+    for name, spec in REGISTRY["types"].items():
+        if "superseded" not in (spec.get("status") or []):
+            continue
+        if "supersedes" not in (spec.get("id_fields") or []):
+            problems.append(f"{name} can reach `status: superseded` and does not declare "
+                            "`supersedes`: the field that says what replaced it is a "
+                            "convention there, and a convention has no shape")
+            continue
+        schema = json.loads((ROOT / "schemas" / "framework" / name / "v1.json")
+                            .read_text(encoding="utf-8"))
+        prop = schema["properties"].get("supersedes")
+        if not prop or "oneOf" not in prop:
+            problems.append(f"{name}: `supersedes` is declared in the registry and absent "
+                            "or untyped in the generated schema")
+            continue
+        # The property on its own, and not a whole document with a `supersedes` in it: a
+        # synthetic `ICG` missing its required maps is invalid for reasons that have nothing
+        # to do with this field, and a probe that cannot tell the two apart reports the
+        # field as broken on every type whose front matter is hard to fake.
+        v = Draft202012Validator(prop)
+        legal = [None, "DEC-004", ["DEC-004", "DEC-007"], "DEC-NNN"]
+        illegal = [12, {"id": "DEC-004"}, "DEC4", "XYZ-001", ["DEC-004", "DEC-004"], []]
+        for value in legal:
+            if not v.is_valid(value):
+                problems.append(f"{name}: rejected {value!r}, which is one of the forms in "
+                                "use -- absent, one id, several, and the `null` a template "
+                                "writes to show the field is yours to fill in")
+        for value in illegal:
+            if v.is_valid(value):
+                problems.append(f"{name}: accepted {value!r} as a supersedes, so the field "
+                                "is declared and still shapeless")
+    return problems
+
+
 @check("supersedes reads as a list, and a diamond is not a cycle")
 def _supersedes_takes_a_list():
     # `supersedes: [DEC-001, DEC-004]` is how anyone replacing two decisions at once would

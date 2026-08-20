@@ -216,6 +216,27 @@ def build(name: str, spec: dict, registry: dict) -> dict:
         if rule.get("required") and field not in required:
             required.append(field)
 
+    # FIELDS THAT HOLD AN IDENTIFIER, OR SEVERAL. `supersedes` was read by the validator
+    # and written in a template for weeks without being in any schema: a convention, which
+    # means `supersedes: 12` and `supersedes: {a: b}` were as legal as `supersedes: DEC-004`
+    # and the shape was whatever the last person wrote. Declared here it is typed, and the
+    # three forms that mean something stay legal -- absent, one id, several -- because all
+    # three are in use and none of them is a mistake.
+    #
+    # WHAT THIS DOES NOT CATCH, and the schema cannot: a misspelled key. `supercedes:` is an
+    # unknown field, and no type here closes `additionalProperties`, because the front
+    # matter of a real artifact carries `approvers`, `classification`, `icg` and half a dozen
+    # others that are nobody's business to enumerate. Declaring the field types the value,
+    # not the name.
+    ids = "|".join(registry["id_prefixes"])
+    one_id = {"type": "string", "pattern": rf"^({ids})-(\d{{3,}}|NNN)$"}
+    for field in spec.get("id_fields", []):
+        if field in properties:
+            raise SystemExit(f"{name}.id_fields: {field!r} is already declared elsewhere")
+        properties[field] = {"oneOf": [{"type": "null"}, one_id,
+                                       {"type": "array", "items": one_id,
+                                        "minItems": 1, "uniqueItems": True}]}
+
     for field in spec.get("required", []):
         # A field already shaped by `maps` keeps that shape. Listing it under `required` says
         # it must be present, not that it is a string, and overwriting it here turned the
