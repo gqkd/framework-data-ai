@@ -550,6 +550,19 @@ checks:
       failure it guards is not the duplication itself but what follows: the entries are
       written on the same day and agree, and then one of them is corrected.
 
+  XP006:
+    level: warn
+    title: a commitment does not say which products it binds
+    prevents: >
+      A promise that no join can reach. Everything downstream of a commitment runs through
+      `products:` -- the risk register that has to hold the exposure, the product's derived
+      view, and `XP005` asking whether the exposure has a home -- and with the field empty
+      the row still reads as filled in. It is the same silence with two meanings as an entry
+      in the register at the root: somebody meant the whole suite, or nobody asked, and the
+      same word settles it. `[all]` was being read as a product named `all`, which no
+      repository has, so a promise about the whole suite bound nothing at all; it binds every
+      product now.
+
   FW001:
     level: warn
     title: the repository was written against a different version of the framework

@@ -596,10 +596,18 @@ def check_review_batches(arts: list[Artifact], report: Report) -> None:
     for a in arts:
         if a.meta.get("lifecycle") != "living":
             continue
-        lr = parse_moment(a.meta.get("last_review"))
+        raw = a.meta.get("last_review")
+        lr = parse_moment(raw)
         # A bare date carries no minute, so it cannot say anything about batching: two
         # documents reviewed on the same day are two documents reviewed on the same day.
-        if lr is None or lr.hour == lr.minute == 0:
+        # Read off the value and not off the clock: testing for midnight made the check
+        # blind to `00:00`, which is a real instant and the one a script would write.
+        # `2026-08-01 09:00` stays a string because YAML's timestamp shape wants seconds,
+        # and `2026-08-01 09:00:00` comes back a `datetime`. Both state a time; a `date`
+        # object and a plain `YYYY-MM-DD` do not.
+        stated_time = (isinstance(raw, datetime)
+                       or (isinstance(raw, str) and ":" in raw))
+        if lr is None or not stated_time:
             continue
         # A DAY ONE SET IS A CREATION AND NOT A REVIEW. `start` writes the whole first
         # set in one session, legitimately, and every document is born with `created` and
@@ -936,11 +944,28 @@ def check_commitments_and_risks(arts: list[Artifact], report: Report) -> None:
     # own yet. A finding that counted it invited the obvious check, and whoever checked
     # found one of the eleven had never been said to anybody and began doubting the other
     # ten: a number that does not survive being verified takes the argument down with it.
+    every = sorted({prod for prod, _ in dirs.values()})
     promised: dict[str, list[str]] = {}
     withheld: dict[str, list[str]] = {}
     for cid, (rel, row) in sorted(cmts.items()):
+        named = as_list(row.get("products"))
+        # A COMMITMENT THAT NAMES NOBODY IS PAIRED WITH NOTHING, AND NOTHING SAID SO. The
+        # whole join runs through this field: with it empty the promise cannot reach a risk
+        # register, a product's derived view or this check, and the row still reads as
+        # filled in. Same silence-with-two-meanings as an entry at the root -- somebody
+        # meant every product, or nobody asked -- and the same answer: `[all]` says it.
+        if not named:
+            report.add("XP006", rel,
+                       f"{cid} names no `products:`. Nothing can pair it with anything: not "
+                       "a risk register, not a product's derived view, not the check that "
+                       "asks whether the exposure it creates has a home. Name the products "
+                       "it binds, or `[all]` when the promise is about the whole suite.")
+            continue
+        # `[all]` was being read as a product called `all`, which no repository has, so a
+        # promise about the whole suite bound nothing. It binds every product there is.
+        targets = every if ALL_PRODUCTS in named else named
         bucket = withheld if row.get("status") == "not-yet-issued" else promised
-        for prod in as_list(row.get("products")):
+        for prod in targets:
             bucket.setdefault(prod, []).append(cid)
 
     for prod in sorted(set(promised) | set(withheld)):
@@ -1048,7 +1073,7 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
         # trip is the one where somebody stops reading the output.
         fenced = False
         for i, line in enumerate(a.body.splitlines(), 1):
-            if line.lstrip().startswith("```"):
+            if line.lstrip().startswith(("```", "~~~")):
                 fenced = not fenced
                 continue
             if fenced:

@@ -22,7 +22,10 @@ commitments:
     to: the customer who received it, by name
     status: open
     feasibility: feasible-with-reservations
-    products: [product-a]
+    products: [product-a]              # required: `XP006`. `[all]` when the promise is
+                                       # about the whole suite -- every join downstream
+                                       # runs through this field, and empty it reaches
+                                       # nothing while still reading as filled in
     threshold: the EVP row that measures it, when there is one
   CMT-002:
     to: a prospect, in the deck sent in March

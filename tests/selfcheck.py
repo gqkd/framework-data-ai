@@ -516,6 +516,25 @@ def _commitments_and_risks():
         elif "1 commitment(s)" not in msg[0] or "CMT-002" in msg[0].split("--")[1]:
             problems.append(f"the finding counts the promise nobody has received: {msg[0]}")
 
+        # A commitment that names nobody is paired with nothing, and the row still reads as
+        # filled in. And `[all]` used to be read as a product called `all`, which no
+        # repository has, so a promise about the whole suite bound nothing at all.
+        nameless = "\n  CMT-003:\n    to: a customer\n    status: open\n"
+        if "XP006" not in codes(repo(nameless, None)):
+            problems.append("a commitment naming no products was not reported: nothing can "
+                            "pair it with a risk register, a derived view or the check that "
+                            "asks whether its exposure has a home")
+        binds_all = ("\n  CMT-004:\n    to: everybody\n    status: open\n"
+                     "    products: [all]\n")
+        if "XP005" not in codes(repo(binds_all, None)):
+            problems.append("a commitment declaring `[all]` bound nothing: read as a product "
+                            "named `all`, a promise about the whole suite reached no product "
+                            "and no check")
+        if "XP005" in codes(repo(binds_all, "\n  RSK-001:\n    category: technical\n"
+                                            "    state: open\n")):
+            problems.append("a commitment declaring `[all]` was still reported after the one "
+                            "product in the repository got a risk register")
+
         commercial = "\n  RSK-001:\n    category: commercial\n    state: open\n"
         if "REF006" not in codes(repo(one, commercial)):
             problems.append("a commercial risk naming no commitment was not reported: a "
@@ -765,6 +784,17 @@ def _review_batches():
             problems.append("a day one set was reported: `start` writes the first documents "
                             "in one session and each is born with `created` and "
                             "`last_review` equal, which is a creation and not a reading")
+        # Midnight is an instant, and testing for it made the check blind to the one value
+        # a script would write. A full timestamp comes back a `datetime` rather than a
+        # string, which is the other half of the same discrimination.
+        if "LC005" not in codes(repo(3, "2026-08-01 00:00")):
+            problems.append("three documents attesting midnight were not reported: `00:00` is "
+                            "an instant, and the check was reading the clock instead of "
+                            "whether a time was stated at all")
+        if "LC005" not in codes(repo(3, "2026-08-01 09:00:00")):
+            problems.append("three documents attesting the same second were not reported: "
+                            "with seconds the value parses to a `datetime` and stopped being "
+                            "a string, which is not a fact about the review")
         if "LC005" in codes(repo(4, "2026-08-01")):
             problems.append("four documents carrying a bare date were reported: a date with "
                             "no minute says nothing about how long the reading took")
@@ -2319,7 +2349,8 @@ def _registers_are_per_product():
         # A `#` inside a fenced block is a comment in somebody's example. A bash snippet
         # saying `# rigenerato il 2026-09-30` was reported as a heading carrying a date, and
         # a false finding costs the trip to the document.
-        for written in ("```bash\n# rigenerato il 2026-09-30\n```",
+        for written in ("~~~bash\n# rigenerato il 2026-09-30\n~~~",
+                        "```bash\n# rigenerato il 2026-09-30\n```",
                         "```yaml\n# entro il 2026-09-30\nentries: {}\n```"):
             (root / "products" / "beta" / "OPEN.md").write_text(head(written))
             codes = [f["code"] for f in json.loads(run().stdout)["findings"]]

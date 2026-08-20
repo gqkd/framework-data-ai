@@ -227,7 +227,12 @@
 # `AttributeError` and nothing at all was reported; `REF005` exempted every heading in the
 # glossary instead of only its sections, which handed back the hole `terms:` was added to
 # close; `REG010` read a `#` comment inside a fenced block as a heading.
-version: "2.8.1"
+# 2.8.1 -> 2.9.0. `XP006` at `warn`: a commitment that names no products. And two silent
+# holes closed beside it -- `[all]` on a commitment was read as a product called `all`, so a
+# promise about the whole suite bound nothing; `LC005` tested for midnight and was blind to
+# `00:00` and to any value with seconds in it, which is the shape a script writes; `REG010`
+# knew backtick fences and not tilde ones.
+version: "2.9.0"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of
@@ -526,6 +531,11 @@ types:
         fields:
           required: [to, status]
           optional: [feasibility, threshold, evidence, blocked_by]
+          # `products` carries `[all]` here for the same reason it does in the register at
+          # the root: a promise about the whole suite is the ordinary kind, and read as a
+          # product named `all` it bound nothing. Required in practice rather than in the
+          # schema -- `XP006` reports the absence -- because every join downstream of a
+          # commitment runs through this field and an empty one still reads as filled in.
           lists: [products]
           enums:
             status: [not-yet-issued, stated-as-done, open, met, renegotiated, unsatisfiable]
