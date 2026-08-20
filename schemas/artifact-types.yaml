@@ -289,7 +289,14 @@
 # It types the value and not the key. No type here closes `additionalProperties`, because real
 # front matter carries `approvers`, `classification`, `icg` and others nobody should have to
 # enumerate -- so `supercedes:` spelled wrong is still an unknown field that nothing reports.
-version: "2.8.6"
+# 2.8.6 -> 2.8.7. `FM006` at `warn`: a front matter key one letter from one that is read.
+# Declaring `supersedes` in 2.8.6 typed its value and not its name, and an unknown key is
+# silence -- the document validates, every check reading the real field sees nothing, and the
+# line sits in the file looking right. It catches `supercedes` for `supersedes`, `owner` for
+# `owners`, `product` for `products`, and the vocabulary is the framework's rather than one
+# type's: `products` is declared on the manifest, so with a single decision in a repository
+# `product:` used to be one edit from nothing.
+version: "2.8.7"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of

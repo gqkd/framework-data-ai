@@ -43,6 +43,7 @@ import re
 import subprocess
 import sys
 from dataclasses import dataclass, field
+from collections import Counter
 from datetime import date, datetime
 from pathlib import Path, PurePosixPath
 
@@ -472,6 +473,94 @@ def check_front_matter(a: Artifact, registry: dict, report: Report) -> None:
     for e in errors:
         where = "/".join(map(str, e.path)) or "front matter"
         report.add("FM002", a.rel, f"{where}: {e.message}")
+
+
+def one_edit_apart(a: str, b: str) -> bool:
+    """Whether two keys differ by a single letter: one substituted, added or removed."""
+    if a == b:
+        return False
+    if abs(len(a) - len(b)) > 1:
+        return False
+    if len(a) == len(b):
+        return sum(x != y for x, y in zip(a, b)) == 1
+    short, long = (a, b) if len(a) < len(b) else (b, a)
+    i = 0
+    while i < len(short) and short[i] == long[i]:
+        i += 1
+    return short[i:] == long[i + 1:]
+
+
+def check_key_typos(arts: list[Artifact], registry: dict, report: Report) -> None:
+    """A front matter key one letter away from one that is read.
+
+    Declaring a field types its value and not its name. No type here closes
+    `additionalProperties`, because real front matter carries `approvers`, `classification`,
+    `icg` and others nobody should have to enumerate -- so `supercedes:` is an unknown field,
+    and an unknown field is silence: the document validates, the checks that read
+    `supersedes` see nothing, and what the writer meant to say is in the file and has no
+    effect. That is the flattering failure in its purest form, because the line is there and
+    looks right.
+
+    The vocabulary is not a list kept somewhere. It is the schema's own properties, plus the
+    fields every artifact has, plus every key at least two documents of the same type in this
+    repository already use -- which is what makes it work in both directions: a typo in a
+    repository with nineteen decisions stands beside eighteen correct spellings, and a
+    repository with one decision falls back to the schema.
+    """
+    known_by_type: dict[str, set[str]] = {}
+    seen: dict[str, Counter] = {}
+    for a in arts:
+        if not a.type or a.type not in registry["types"]:
+            continue
+        seen.setdefault(a.type, Counter()).update(k for k in a.meta if isinstance(k, str))
+    # THE VOCABULARY IS THE FRAMEWORK'S AND NOT ONE TYPE'S. `products` is declared on the
+    # manifest and not on a decision, so with one decision in the repository `product:` was
+    # one edit from nothing and went unreported -- in the framework that renamed that exact
+    # field once, for this exact reason. A name this framework reads anywhere is a name a
+    # typo can be measured against.
+    everywhere = set(registry["base_required"])
+    for other in registry["types"]:
+        f = SCHEMA_DIR / other / "v1.json"
+        if f.exists():
+            everywhere |= set(json.loads(f.read_text(encoding="utf-8"))
+                              .get("properties", {}))
+
+    for t, spec in registry["types"].items():
+        schema_file = SCHEMA_DIR / t / "v1.json"
+        props = set(everywhere)
+        if schema_file.exists():
+            props |= set(json.loads(schema_file.read_text(encoding="utf-8"))
+                         .get("properties", {}))
+        # THE FREQUENCY HALF CANNOT WHITELIST A TYPO, which it did: a key used twice was
+        # vocabulary, so `supercedes` written in two decisions became legal and both went
+        # quiet -- and a typo somebody copies is more likely than one somebody makes once.
+        # A key that already looks like a declared field is never learned from repetition,
+        # whatever it costs the writer who genuinely wanted `owner` beside `owners`.
+        declared = props | set(registry["base_required"])
+        learned = {k for k, n in seen.get(t, Counter()).items() if n > 1
+                   and not any(one_edit_apart(k.lower(), d.lower()) or k.lower() == d.lower()
+                               for d in declared if d != k)}
+        known_by_type[t] = declared | learned
+
+    for a in arts:
+        if not a.type or a.type not in known_by_type:
+            continue
+        known = known_by_type[a.type]
+        for key in a.meta:
+            if not isinstance(key, str) or key in known:
+                continue
+            lower = key.lower()
+            near = sorted(k for k in known
+                          if k.lower() == lower or one_edit_apart(lower, k.lower()))
+            if not near or len(key) < 3:
+                continue
+            report.add("FM006", a.rel,
+                       f"{key!r} is one letter from {', '.join(map(repr, near))}, which "
+                       "something reads, and nothing reads this. An unknown key does not "
+                       "fail: the document validates, the checks looking for the real field "
+                       "find nothing, and the line sits there looking right. Either it is "
+                       "the field next to it spelled wrong, or it is yours and it needs a "
+                       "name that cannot be read as that one.")
 
 
 def check_sections(a: Artifact, registry: dict, report: Report) -> None:
@@ -2291,6 +2380,7 @@ def main() -> int:
     check_framework_pin(project, report)
     check_open_register(arts, report)
     check_manifest_derived_fields(arts, report)
+    check_key_typos(arts, registry, report)
     check_review_batches(arts, report)
     check_glossary_terms(arts, report)
     check_decisions_leave_open(arts, report)

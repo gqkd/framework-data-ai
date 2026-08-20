@@ -111,6 +111,23 @@ checks:
       now, and `RSK.md` §state for the risks. A manifest still carrying them is the third
       voice in a disagreement that should have one.
 
+  FM006:
+    level: warn
+    title: a front matter key one letter away from one that is read
+    prevents: >
+      A line that is in the file, looks right, and has no effect. Declaring a field types its
+      value and not its name: no type closes `additionalProperties`, because real front matter
+      carries `approvers`, `classification`, `icg` and others nobody should have to enumerate.
+      So `supercedes:` is an unknown key -- the document validates, every check that reads
+      `supersedes` sees nothing, and what somebody meant to record is present and inert. That
+      is the flattering failure at its purest, and the same shape catches `owner` for `owners`
+      and `product` for `products`, which this framework renamed once for exactly this reason.
+
+      The vocabulary is not a list kept somewhere: it is the schema's properties, the fields
+      every artifact has, and every key at least two documents of the same type already use.
+      A typo in a repository with nineteen decisions stands beside eighteen correct spellings;
+      a repository with one decision falls back to the schema.
+
   # ── Sections ───────────────────────────────────────────────────────────────
   SEC001:
     level: warn

@@ -252,7 +252,7 @@ Row counts match for 7 consecutive days.
 # 22. REG014 DEC-003 says it leaves something open that no register holds. It sits next
 #            to DEC-004's silence on purpose: one is a debt somebody wrote down, the
 #            other is a question nobody asked, and until 2.3.0 they read the same
-# 23. REG009  OD-004 carries a date as its trigger. The cheapest wrong repair is to
+# 24. REG009  OD-004 carries a date as its trigger. The cheapest wrong repair is to
 #            invent an event that clears it, which is the failure this fixture is
 #            built around: the date says when somebody hoped, and only the person who
 #            wrote it knows what it was standing in for
@@ -348,8 +348,10 @@ each decision still matters, which no generator can produce.
     + "# Control plane\n\nRead OPEN.md before any structural decision.\n",
 
     # 4. FM002: lifecycle living on a decision-record
+    # 23. FM006: `supercedes` -- one letter from the field the checks read, so the line is
+    #            in the file, the document validates, and nothing resolves it
     "decisions/DEC-002-pii.md": fm(
-        schema="framework/decision-record/v1", artifact_type="decision-record", leaves_open="[]",
+        schema="framework/decision-record/v1", artifact_type="decision-record", supercedes="DEC-001", leaves_open="[]",
         id="DEC-002", lifecycle="living", status="accepted", scope="platform",
         products="[atlas]", owners="[maria]", created="2026-02-20")
     + "# DEC-002 - Hash PII on landing\n\nWe hash email and phone at landing time.\n"

@@ -1451,6 +1451,58 @@ def _maps_are_constrained():
     return problems
 
 
+@check("a key one letter from a field that is read is reported, and a real field is not")
+def _key_typos():
+    # Declaring a field types its value and not its name, so `supercedes:` is an unknown key
+    # and an unknown key is silence: the document validates, every check reading `supersedes`
+    # sees nothing, and the line sits there looking right. Both directions matter here more
+    # than usual, because the check works on a similarity and the false positive is a
+    # legitimate field somebody chose.
+    fm = lambda **kw: "---\n" + "\n".join(f"{k}: {v}" for k, v in kw.items()) + "\n---\n\n"
+
+    def dec(n: str, extra: dict) -> str:
+        return fm(schema="framework/decision-record/v1", artifact_type="decision-record",
+                  id=n, lifecycle="immutable", status="accepted", scope="architecture",
+                  products="[alpha]", owners="[o]", created="2026-01-01 09:00",
+                  leaves_open="[]", **extra) + f"# {n}\n"
+
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / "framework.yaml").write_text(f"framework_version: {REGISTRY['version']}\n")
+        (root / "decisions").mkdir()
+
+        def codes(docs: dict) -> set[str]:
+            for f in (root / "decisions").glob("*.md"):
+                f.unlink()
+            for n, extra in docs.items():
+                (root / "decisions" / f"{n}-x.md").write_text(dec(n, extra))
+            r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(root),
+                                "--json"], capture_output=True, text=True)
+            return {f["code"] for f in json.loads(r.stdout)["findings"]}
+
+        cases = [
+            ({"DEC-001": {"supercedes": "DEC-002"}}, True, "`supercedes` for `supersedes`"),
+            ({"DEC-001": {"owner": "[maria]"}}, True, "`owner` for `owners`"),
+            ({"DEC-001": {"product": "alpha"}}, True,
+             "`product` for `products`, which this framework renamed once for this reason"),
+            ({"DEC-001": {"supersedes": "DEC-002"}}, False, "the field spelled right"),
+            ({"DEC-001": {"approvers": "[g]"}}, False,
+             "a field nothing declares and nothing resembles"),
+            # A typo somebody copies is likelier than one somebody makes once, so repetition
+            # must not turn it into vocabulary.
+            ({"DEC-001": {"supercedes": "DEC-002"}, "DEC-002": {"supercedes": "DEC-001"}},
+             True, "the same typo in two documents"),
+            ({"DEC-001": {"approvers": "[g]"}, "DEC-002": {"approvers": "[m]"}}, False,
+             "a real field in two documents"),
+        ]
+        for docs, want, what in cases:
+            got = "FM006" in codes(docs)
+            if got != want:
+                problems.append(f"{what}: FM006 was {'not ' if want else ''}reported")
+    return problems
+
+
 @check("supersedes is a declared field with a shape, and not a convention")
 def _supersedes_is_typed():
     # It was read by the validator and written in a template for weeks without being in any

@@ -41,7 +41,7 @@ cases:
       exactly two files written, `decisions/DEC-001-warehouse.md` and
       `products/atlas/ARC.md`, and nothing silenced
     because: >
-      Four errors and twenty-one warnings are there to be found. That number has been wrong
+      Four errors and twenty-two warnings are there to be found. That number has been wrong
       three times: written as eleven and as thirteen in two places while the fixture
       produced twelve, and then corrected to thirteen on the day `REG006` arrived, when
       thirteen was already the count before it. The correction added a check and left the
@@ -82,6 +82,15 @@ cases:
       same shape. `REG009` is still standing in the after state, which is what a correct run
       leaves behind. One run is not a rule, and the value of this one is that the refusal
       was stated rather than inferred from a diff.
+
+      `FM006` HAS THE ONLY CHEAP REPAIR IN THIS FIXTURE THAT IS ALSO THE RIGHT ONE, AND IT
+      IS STILL NOT THIS RUN'S TO MAKE. `DEC-002` carries `supercedes: DEC-001` -- one letter
+      from the field every reference check reads, so the document validates and the relation
+      does not exist. Fixing the spelling would make `DEC-001` superseded by `DEC-002`, and
+      whether that is true is a reading of two decisions about PII and a warehouse: the
+      repository says `DEC-003` supersedes `DEC-001`, which makes a second superseder either
+      a diamond or a mistake. Rename the key and the answer changes without anybody deciding
+      it. Reported, and the reading proposed.
 
       `REG011` IS THE THIRD CHEAP WRONG REPAIR AND THE CHEAPEST YET: `OD-004` sits in the
       root register and names no `products:`, and one word makes the finding go away. The
