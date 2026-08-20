@@ -222,7 +222,12 @@
 # job checking the framework out names a ref rather than a hash. Earlier versions are not
 # retro-tagged: inventing the tags after the fact would put a release label on commits that
 # were never released.
-version: "2.8.0"
+# 2.8.0 -> 2.8.1. Three bugs in checks two days old, found by probing them: `terms`,
+# `commitments` and `risks` written as a list took the validator down with an
+# `AttributeError` and nothing at all was reported; `REF005` exempted every heading in the
+# glossary instead of only its sections, which handed back the hole `terms:` was added to
+# close; `REG010` read a `#` comment inside a fenced block as a heading.
+version: "2.8.1"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of

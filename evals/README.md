@@ -42,14 +42,24 @@ claude plugin details framework-data-ai        # should list all six
 
 ## Where it stands
 
-The whole trigger set, measured on **2026-08-19** against **2.6.2**. One version, one day,
-every row -- which it had not been since 08-10, and the reason for saying so is in the
-paragraph after the table.
+The whole trigger set, measured on **2026-08-19**. Six rows against **2.6.2** between 12:39
+and 16:05, and `release` against **2.8.0** at 22:45, because the framework moved twice that
+evening in work happening beside this.
+
+The rows are still comparable and the reason is narrow enough to state: triggering depends on
+the six `description:` fields and on nothing else, and the diff from 2.6.2 to 2.8.0 does not
+touch one of them. It changes checks, the migration script, the registry and the CI. If a
+version ever does move a description, a table like this one stops meaning anything and the
+rows have to be re-measured together.
+
+That sentence used to read "one version, one day, every row", which was written four hours
+before the row that made it false, in the file that collects the numbers this directory got
+wrong.
 
 | | | miss |
 |---|---|---|
 | `audit` | 15/15 | |
-| `release` | 15/16 | a production incident went to `requirement`, the only misroute in the set and an arguable label |
+| `release` | 15/16 | *2.8.0.* A production incident went to `requirement`, the only misroute in the set and an arguable label |
 | `cycle` | 12/13 | *go ahead and implement a redis cache*: work starting with no approved `CHG`, the indirect case the description claims and the hardest one |
 | `requirement` | 17/20 | raising an `EVP` threshold; adding to the parking lot of `OPEN.md`; and *the nightly batch failed again and nobody got scores*, which was not missed in August |
 | `start` | 11/12 | *we just closed the deal and I have the pitch deck, the offer PDF and the contract* -- the case the description is written for, missed for the first time |
