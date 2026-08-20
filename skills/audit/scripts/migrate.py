@@ -44,10 +44,17 @@ FRAMEWORK = Path(__file__).resolve().parents[3]
 REGISTRY_REL = "schemas/artifact-types.yaml"
 VALIDATE_REL = "skills/audit/scripts/validate.py"
 
-# The two findings `--adopt` clears by writing the number, rather than by anybody editing a
+# The findings `--adopt` clears by writing a number, rather than by anybody editing a
 # document. They are not migration work and are not repairs: they are the migration itself,
 # stated as a finding.
-ADOPT_CLEARS = ("FW001", "FW002")
+#
+# `FW003` was missing, and its absence deadlocked exactly the projects that took this
+# framework most seriously. A project that pins gets `FW003` the moment the framework moves;
+# `FW003` landed in NEW; `--adopt` refuses while NEW is non-empty; and the only thing that
+# clears `FW003` is `--adopt` writing the pin. So pinning made adopting impossible, and the
+# way out was to delete the pin -- the field's own purpose, undone by the tool that exists to
+# move it.
+ADOPT_CLEARS = ("FW001", "FW002", "FW003")
 
 SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 VERSION_LINE = re.compile(r"^version:\s*['\"]?(\d[\d.]*)", re.M)

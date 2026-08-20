@@ -267,7 +267,13 @@
 # message was the wrong one. And the workflow wrote the pull request body with `printf %b`,
 # which expands escapes in text somebody else wrote: a body carrying `\c` loses everything
 # after it, including the line naming the contract.
-version: "2.8.4"
+# 2.8.4 -> 2.8.5. Pinning made adopting impossible, which is a deadlock aimed exactly at the
+# projects taking this framework most seriously. `FW003` is what a pin produces the moment the
+# framework moves past it; it counted as migration work; `--adopt` refuses while migration
+# work is outstanding; and the only thing that clears `FW003` is `--adopt` writing the pin. So
+# the way out was to delete the pin -- the field's own purpose, undone by the tool that exists
+# to move it. `FW003` joins the two findings `--adopt` clears by writing a number.
+version: "2.8.5"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of

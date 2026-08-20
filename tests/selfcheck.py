@@ -2865,6 +2865,46 @@ def _migration_is_executable():
     # document. They are separated in the report and skipped by the adopt gate, and those
     # two have to be the same list: when they were not, the report told the reader to go
     # and fix something that `--adopt` was already ignoring.
+    # A PROJECT THAT PINS HAS TO BE ABLE TO ADOPT. `FW003` fires the moment the framework
+    # moves past the pin, it landed in NEW, `--adopt` refuses while NEW is non-empty, and the
+    # only thing that clears `FW003` is `--adopt` writing the pin. Pinning made adopting
+    # impossible, and the way out was deleting the pin -- the field's purpose undone by the
+    # tool that exists to move it. Asserted end to end, because the deadlock was invisible in
+    # every list: each name was a real check and each check was in the catalog.
+    with tempfile.TemporaryDirectory() as tmp:
+        proj = Path(tmp)
+        # A commit whose registry declares a version BEHIND this one, found rather than
+        # counted back to: one of the numbers in this history was declared and withdrawn, so
+        # `HEAD~4` picked a project that was ahead of the framework and the tool refused it
+        # for the right reason -- which tested the refusal instead of the deadlock.
+        now = migrate.semver(REGISTRY["version"])
+        old_commit = old_version = None
+        for sha in subprocess.run(["git", "-C", str(ROOT), "rev-list", "-40", "HEAD"],
+                                  capture_output=True, text=True).stdout.split():
+            v = migrate.registry_version(subprocess.run(
+                ["git", "-C", str(ROOT), "show", f"{sha}:{migrate.REGISTRY_REL}"],
+                capture_output=True, text=True).stdout)
+            sv = migrate.semver(v) if v else None
+            if sv and now and sv < now:
+                old_commit, old_version = sha, v
+                break
+        if old_version:
+            cfg = proj / "framework.yaml"
+            cfg.write_text(f'framework_version: "{old_version}"\n'
+                           f'framework_commit: "{old_commit}"\n')
+            subprocess.run([sys.executable,
+                            str(ROOT / "skills" / "audit" / "scripts" / "migrate.py"),
+                            "--root", str(proj), "--adopt"],
+                           capture_output=True, text=True)
+            after = cfg.read_text()
+            if REGISTRY["version"] not in after:
+                problems.append("a project that pins could not adopt: `FW003` is what the "
+                                "pin produces when the framework moves, and if it counts as "
+                                "migration work the only way to adopt is to stop pinning")
+            elif old_commit[:12] in after:
+                problems.append("adopting moved the version and left the pin behind, which "
+                                "is `FW003` for the rest of the week")
+
     for code in migrate.ADOPT_CLEARS:
         if code not in CHECKS["checks"]:
             problems.append(f"migrate.py treats {code} as cleared by --adopt, and it is "
