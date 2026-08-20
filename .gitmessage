@@ -1,0 +1,30 @@
+
+
+# WHAT A COMMIT MESSAGE HERE IS FOR
+#
+# The subject line says what changed and why it was wrong before, in a sentence somebody can
+# read a year from now without the diff. Not "fix REG010": what REG010 was doing, and what it
+# does instead.
+#
+# The body carries the reasoning the diff cannot. This repository's rule is that a check is
+# added when the failure it prevents has already happened once, and the commit is where that
+# once is written down -- which repository hit it, what the wrong answer looked like, and why
+# the cheap repair was the wrong one. If a decision was taken, the alternatives that lost go
+# here too: the next person to reopen the question starts from the argument instead of from
+# scratch.
+#
+# NO TRAILERS. No `Co-Authored-By`, no `Signed-off-by`, no `Generated with`. The message ends
+# at the last paragraph.
+#
+# Six commits carried a `Co-Authored-By: Claude ...` line before this file existed, and the
+# consequence was not cosmetic: GitHub derives its contributor list from commit metadata, so
+# an agent appeared as a contributor to the repository and the only way out was rewriting
+# fifteen commits and force pushing over a published branch. The line costs nothing to leave
+# out and cannot be removed cheaply once it is in.
+#
+# Turn this file on for the repository:
+#
+#     git config commit.template .gitmessage
+#
+# It is per clone -- git does not ship a template with the code -- so it has to be run once
+# by whoever clones, and `PROCESSES.md` says so where the processes are written down.

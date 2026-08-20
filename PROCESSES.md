@@ -756,6 +756,22 @@ script says which documents and why; the change is made by a person, or by an ag
 `audit`: `scripts/migrate.py` for the comparison, `scripts/validate.py --emit-index` to
 regenerate the indices, `tests/selfcheck.py` in the framework's own repository.
 
+## Committing
+
+`git config commit.template .gitmessage`, once per clone. Git does not ship a template with
+the code, so nothing runs it for you and the reminder has to live somewhere a person reads --
+which is here.
+
+What the template says, in one line: the message ends at the last paragraph. **No trailers**
+-- no `Co-authored-by`, no `Signed-off-by`, no `Generated with`.
+
+That rule is in the repository rather than in anybody's memory because it was broken by a
+session that did not have it. Six commits carried a `Co-authored-by` line naming an agent,
+and GitHub builds its contributor list out of commit metadata: an agent became a contributor
+to this repository, and taking it back out meant rewriting fifteen commits and force pushing
+over a branch other people could already have pulled. The line costs nothing to leave out and
+cannot be removed cheaply once it is in.
+
 ## What is not a process here
 
 Three pieces of work that were catalogued and are deliberately not processes. They are
