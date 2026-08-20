@@ -540,6 +540,47 @@ def _commitments_and_risks():
     return problems
 
 
+@check("a malformed map is reported and does not take the run down with it")
+def _malformed_maps_survive():
+    # `terms: [Freshness, Tenant]` is one bracket away from two rows under `terms:`, and it
+    # killed the validator: `.items()` on a list raises, the process died on the malformed
+    # document, and nothing was said about everything it had not reached. `entries:` has been
+    # guarded since the same thing happened to it; three maps added in one week were not,
+    # because each was written by copying the line above it.
+    #
+    # The schema already reports the shape -- that is what `FM002` is -- so what is asserted
+    # here is that the run finishes and says so.
+    shapes = {
+        "glossary": ("GLOSSARY.md", "terms", "[Freshness, Tenant]", ""),
+        "commitments": ("COMMITMENTS.md", "commitments", "[CMT-001]", "products: [alpha]\n"),
+        "risk-register": ("products/alpha/RSK.md", "risks", "[RSK-001]", "products: [alpha]\n"),
+        "open-register": ("OPEN.md", "entries", "[OD-001]", ""),
+        "operational-stack": ("STACK.md", "stack", "[postgres]", ""),
+    }
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / "framework.yaml").write_text(f"framework_version: {REGISTRY['version']}\n")
+        for atype, (rel, field, value, extra) in sorted(shapes.items()):
+            f = root / rel
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_text(f"---\nschema: framework/{atype}/v1\n"
+                         f"artifact_type: {atype}\nlifecycle: living\nstatus: active\n"
+                         f"owners: [o]\n{extra}created: 2026-01-01 09:00\n"
+                         f"last_review: 2026-08-01 09:00\n{field}: {value}\n---\n\n# X\n")
+            r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(root),
+                                "--json"], capture_output=True, text=True)
+            if not r.stdout.strip():
+                problems.append(f"{field} written as a list took the validator down: "
+                                f"{(r.stderr or '').strip().splitlines()[-1:] or '(silence)'}. "
+                                "Every artifact it had not reached goes unreported with it")
+            elif "FM002" not in {x["code"] for x in json.loads(r.stdout)["findings"]}:
+                problems.append(f"{field} written as a list was neither reported nor fatal, "
+                                "so the field reads as filled in and nothing looks at it")
+            f.unlink()
+    return problems
+
+
 @check("a citation to a term, and a decision that says what it left open, both resolve")
 def _references_with_a_second_end():
     # Two pairs that had one end each. A data contract sending a reader to the glossary for
@@ -547,7 +588,7 @@ def _references_with_a_second_end():
     # both were references, and nothing resolved either of them.
     fm = lambda **kw: "---\n" + "\n".join(f"{k}: {v}" for k, v in kw.items()) + "\n---\n\n"
 
-    def repo(terms: str, cite: str, leaves: str | None) -> dict:
+    def repo(terms: str, cite: str, leaves: str | None, sections: str = "") -> dict:
         dec = {"schema": "framework/decision-record/v1",
                "artifact_type": "decision-record", "id": "DEC-001",
                "lifecycle": "immutable", "status": "accepted", "scope": "architecture",
@@ -566,7 +607,7 @@ def _references_with_a_second_end():
             "GLOSSARY.md": fm(schema="framework/glossary/v1", artifact_type="glossary",
                               lifecycle="living", status="active", owners="[o]",
                               created="2026-01-01 09:00", last_review="2026-08-01 09:10",
-                              terms=terms) + "# Glossary\n",
+                              terms=terms) + "# Glossary\n\n" + sections,
             "decisions/DEC-001-slug.md": fm(**dec) + "# DEC-001\n",
             "products/alpha/contracts/DC-001-x.md": fm(
                 schema="framework/data-contract/v1", artifact_type="data-contract",
@@ -605,11 +646,22 @@ def _references_with_a_second_end():
                                   "| field | `GLOSSARY §Freshness` | routed |", "[]")):
             problems.append("a citation inside a table cell was reported: the match ran past "
                             "the cell and the term it names is not what the document wrote")
-        if "REF005" in codes(repo(defined, "see `GLOSSARY §Glossary`", "[]")):
-            problems.append("a citation naming a heading of the glossary was reported: "
-                            "pointing a reader at a section is a reference that resolves by "
+        # A section of the glossary, which is a reference that resolves by construction --
+        # and the section sign is what makes it one. Without requiring it, the exemption
+        # covered every heading in the file and handed back the hole `terms:` was added to
+        # close: a word defined only as `### Freshness` in the body resolved a citation.
+        if "REF005" in codes(repo(defined, "see `GLOSSARY §Domain terms`", "[]",
+                                  sections="## §Domain terms\n")):
+            problems.append("a citation naming a section of the glossary was reported: "
+                            "pointing a reader at one is a reference that resolves by "
                             "construction, and a check that only knows terms reports the one "
                             "form that cannot be wrong")
+        if "REF005" not in codes(repo(defined, "see `GLOSSARY §Tenant`", "[]",
+                                      sections="### Tenant\n")):
+            problems.append("a term written only as a heading in the glossary body resolved "
+                            "a citation. That is resolving against prose headings, which is "
+                            "what `terms:` exists to stop -- two checks here went quiet for "
+                            "it once already")
 
         if "REF005" in codes(repo(defined, "`GLOSSARY §Freshness` is the unit", "[]")):
             problems.append("a citation to a declared term was reported, so the field cannot "
@@ -2263,6 +2315,18 @@ def _registers_are_per_product():
                 problems.append(f"a heading reading {written!r} was not reported. It binds "
                                 "every entry under it and no `trigger` records it, so "
                                 "nothing will ever report it going stale")
+
+        # A `#` inside a fenced block is a comment in somebody's example. A bash snippet
+        # saying `# rigenerato il 2026-09-30` was reported as a heading carrying a date, and
+        # a false finding costs the trip to the document.
+        for written in ("```bash\n# rigenerato il 2026-09-30\n```",
+                        "```yaml\n# entro il 2026-09-30\nentries: {}\n```"):
+            (root / "products" / "beta" / "OPEN.md").write_text(head(written))
+            codes = [f["code"] for f in json.loads(run().stdout)["findings"]]
+            if "REG010" in codes:
+                problems.append("a comment inside a fenced block was reported as a heading "
+                                "carrying a date: it is somebody's example, and the finding "
+                                "sends a reader to a document that was right")
 
         for written in ("## Cost to reverse MEDIUM: changing it later costs a migration",
                         "## Cost to reverse HIGH"):

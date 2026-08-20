@@ -161,6 +161,10 @@ def build(name: str, spec: dict, registry: dict) -> dict:
                 if k not in props or other not in props:
                     raise SystemExit(f"{name}.maps.{field}.required_unless: "
                                      f"{k!r} or {other!r} is not a field")
+                if k not in row_required:
+                    raise SystemExit(f"{name}.maps.{field}.required_unless: {k!r} is not in "
+                                     "`required`, so there is nothing to make conditional. "
+                                     "List it there and name what answers instead.")
                 row_required.remove(k)
             value = {"type": "object", "properties": props,
                      "required": row_required,

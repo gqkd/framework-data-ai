@@ -169,6 +169,22 @@ class Report:
 # ─────────────────────────────────────────────────────────────────────────────
 # Reading
 
+def as_map(v) -> dict:
+    """A front matter map, or an empty one when what is there is not a map.
+
+    `terms: [Freshness, Tenant]` is one bracket away from `terms:` with two rows under it,
+    and it killed the validator: `.items()` on a list raises, the process died on the
+    malformed document, and nothing was said about the two hundred artifacts it had not
+    reached. The schema already reports the shape -- that is what `FM002` is -- so the job
+    here is only to let the run finish and report it.
+
+    `entries:` has been guarded since the same thing happened to it. Three maps added in one
+    week were not, because each was written by copying the line above it, which is how a
+    lesson stays learned in one place.
+    """
+    return v if isinstance(v, dict) else {}
+
+
 def as_list(v) -> list:
     if v is None:
         return []
@@ -774,10 +790,16 @@ MOVED_TO_INDEX = {
 # that has nothing to do with the glossary.
 GLOSSARY_CITE = re.compile(r"GLOSSARY`?\s*§\s*([^`\n,.;:)\]|]+)")
 
-# `§Metrics`, `§Domain terms` -- the headings of the glossary itself. Pointing a reader at a
-# section is a legitimate citation and resolves to no term by construction, so a check that
-# only knows terms reports the one form of reference that cannot be wrong.
-GLOSSARY_SECTION = re.compile(r"^#{1,6}\s*§?\s*(.+?)\s*$", re.M)
+# `§Metrics`, `§Domain terms` -- the headings of the glossary itself, and the section sign is
+# required. Pointing a reader at a section is a legitimate citation and resolves to no term
+# by construction, so a check that only knows terms would report the one form of reference
+# that cannot be wrong.
+#
+# WITHOUT THE `§` THIS EXEMPTED EVERY HEADING IN THE FILE, which handed back the hole the
+# `terms:` map was added to close: a word defined only as `### Freshness` in the body, absent
+# from the map, resolved a citation and reported nothing. That is resolving against prose
+# headings, which two checks here already went quiet for once.
+GLOSSARY_SECTION = re.compile(r"^#{1,6}\s*§\s*(.+?)\s*$", re.M)
 
 
 def declared_entries(arts: list[Artifact]) -> set[str]:
@@ -802,7 +824,7 @@ def check_glossary_terms(arts: list[Artifact], report: Report) -> None:
     declared: dict[str, tuple[str, dict]] = {}
     sections: set[str] = set()
     for g in glossaries:
-        for name, row in (g.meta.get("terms") or {}).items():
+        for name, row in as_map(g.meta.get("terms")).items():
             declared[str(name).strip().lower()] = (g.rel, row if isinstance(row, dict) else {})
         sections |= {m.group(1).strip().lower()
                      for m in GLOSSARY_SECTION.finditer(g.body)}
@@ -898,7 +920,7 @@ def check_commitments_and_risks(arts: list[Artifact], report: Report) -> None:
     """
     cmts = {cid: (a.rel, row)
             for a in arts if a.type == "commitments"
-            for cid, row in (a.meta.get("commitments") or {}).items()
+            for cid, row in as_map(a.meta.get("commitments")).items()
             if isinstance(row, dict)}
     risk_files = [a for a in arts if a.type == "risk-register"]
 
@@ -939,7 +961,7 @@ def check_commitments_and_risks(arts: list[Artifact], report: Report) -> None:
     for a in arts:
         if a.type != "risk-register":
             continue
-        for rid, row in sorted((a.meta.get("risks") or {}).items()):
+        for rid, row in sorted(as_map(a.meta.get("risks")).items()):
             if not isinstance(row, dict):
                 continue
             named = row.get("commitment")
@@ -1020,7 +1042,17 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
     # line starting with `#` is a structure a person wrote on purpose, and a date in one is
     # addressed to whoever files an entry underneath it.
     for a in opens:
+        # A `#` inside a fenced block is a comment in somebody's example, not a heading, and
+        # a bash snippet saying `# rigenerato il 2026-09-30` was reported as a heading
+        # carrying a date. A false finding costs the trip to the document, and the second
+        # trip is the one where somebody stops reading the output.
+        fenced = False
         for i, line in enumerate(a.body.splitlines(), 1):
+            if line.lstrip().startswith("```"):
+                fenced = not fenced
+                continue
+            if fenced:
+                continue
             if line.startswith("#") and DATE_IN_TEXT.search(line):
                 report.add("REG010", a.rel,
                            f"a heading carries a date: {line.strip()[:70]!r}. It applies to "
@@ -1686,7 +1718,7 @@ def check_stack(arts: list[Artifact], report: Report) -> None:
     for a in arts:
         if a.type != "operational-stack":
             continue
-        for cap, row in sorted((a.meta.get("stack") or {}).items()):
+        for cap, row in sorted(as_map(a.meta.get("stack")).items()):
             if not isinstance(row, dict):
                 continue
             status, dec = row.get("status"), row.get("decided_in")
@@ -1922,7 +1954,7 @@ def build_regions(root: Path, arts: list[Artifact]) -> dict[Path, dict[str, str]
     dirs = product_dirs(arts)
     rows = [(od, row, dirs.get(a.path.parent, (None, None))[0], a.rel)
             for a in opens
-            for od, row in (a.meta.get("entries") or {}).items()
+            for od, row in as_map(a.meta.get("entries")).items()
             if isinstance(row, dict) and row.get("status") == "open"]
 
     def cell(v) -> str:
@@ -2020,7 +2052,7 @@ def build_indices(root: Path, arts: list[Artifact]) -> dict[Path, str]:
     dirs = product_dirs(arts)
     open_entries = [(od, row, dirs.get(a.path.parent, (None, None))[0])
                     for a in arts if a.type == "open-register"
-                    for od, row in (a.meta.get("entries") or {}).items()
+                    for od, row in as_map(a.meta.get("entries")).items()
                     if isinstance(row, dict) and row.get("status") == "open"]
 
     for man in (a for a in arts if a.type == "product-manifest"):
