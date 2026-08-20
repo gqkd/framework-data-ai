@@ -261,7 +261,13 @@
 # with. `FW003` refused an uppercase hash git resolves, and told a pin that was never true
 # that the checkout had moved. `PR004` claimed a version had not moved when all it read was
 # whether the file was in the diff.
-version: "2.8.3"
+# 2.8.3 -> 2.8.4. Two more from the same hunt, both where the framework meets CI rather
+# than a document. `FW003` told a shallow checkout that its pin had never been true --
+# `actions/checkout` clones one commit, so almost nothing is present and the confident
+# message was the wrong one. And the workflow wrote the pull request body with `printf %b`,
+# which expands escapes in text somebody else wrote: a body carrying `\c` loses everything
+# after it, including the line naming the contract.
+version: "2.8.4"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of

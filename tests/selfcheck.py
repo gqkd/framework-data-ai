@@ -559,6 +559,68 @@ def _commitments_and_risks():
     return problems
 
 
+@check("a shallow framework checkout is not read as a pin that was never true")
+def _shallow_checkout():
+    # `actions/checkout` clones one commit by default, and the workflow this framework ships
+    # checks the framework out that way. In a shallow clone almost every commit is absent, so
+    # "this framework does not contain your pin" is true of nearly everything and means
+    # nothing -- and it is the more confident of the two messages, which is the wrong way
+    # round.
+    #
+    # The helpers are exercised directly against a shallow clone rather than by running the
+    # validator inside it: a clone carries the committed code, and a fix asserted through one
+    # cannot fail until after it is committed.
+    x = _load(VALIDATE, "validate")
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        clone = Path(tmp) / "shallow"
+        r = subprocess.run(["git", "clone", "--depth", "1", "-q", f"file://{ROOT}",
+                            str(clone)], capture_output=True, text=True)
+        if r.returncode != 0:
+            return ["a shallow clone could not be made here, so the check is not running"]
+        old = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD~3"],
+                             capture_output=True, text=True).stdout.strip()
+        real = x.FRAMEWORK
+        try:
+            x.FRAMEWORK = clone
+            if not x.framework_is_shallow():
+                problems.append("a one-commit clone was not recognised as shallow, so a pin "
+                                "it cannot contain reads as a pin that was never true")
+            if x.framework_has(old) is not False:
+                problems.append("a commit absent from a shallow clone was reported as "
+                                "present, which is the fact the message turns on")
+        finally:
+            x.FRAMEWORK = real
+        if x.framework_is_shallow():
+            problems.append("this checkout was called shallow, so the distinction collapses "
+                            "the other way and a pin that is genuinely wrong stops being "
+                            "reported as wrong")
+        if x.framework_has(old) is not True:
+            problems.append(f"{old[:12]} is in this repository's history and was reported "
+                            "absent")
+    return problems
+
+
+@check("the pull request body reaches the check as somebody wrote it")
+def _pr_body_is_not_expanded():
+    # `printf '%b'` expands backslash escapes in text somebody else wrote, and `\c` truncates
+    # everything after it: a body carrying one would lose the line citing the contract, and
+    # the gate would report a correct pull request for not citing one.
+    wf = ROOT / "ci" / "pull-request.yml"
+    if not wf.exists():
+        return ["ci/pull-request.yml is gone: the gate has no way to be switched on"]
+    text = wf.read_text(encoding="utf-8")
+    problems = []
+    if "printf '%b'" in text or 'printf "%b"' in text:
+        problems.append("the workflow writes the pull request body with `printf %b`, which "
+                        "expands escapes in text somebody else wrote -- `\\c` truncates the "
+                        "rest, and what is lost is the line naming the change contract")
+    if "$PR_TEXT" in text and "env:" not in text:
+        problems.append("the body reaches the shell without going through the environment: "
+                        "a backtick in a description becomes a command")
+    return problems
+
+
 @check("a pin that was never true is told apart from a checkout that moved")
 def _pin_shapes():
     # Both produce a hash that does not match, and the two need opposite responses: one is a

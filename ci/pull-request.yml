@@ -54,7 +54,12 @@ jobs:
           # backtick in a description becomes a command.
           PR_TEXT: "${{ github.event.pull_request.title }}\n${{ github.event.pull_request.body }}"
         run: |
-          printf '%b' "$PR_TEXT" > /tmp/pr.txt
+          # `%s` and not `%b`. The body is text somebody else wrote, and `%b` expands
+          # backslash escapes inside it: `\c` truncates the rest of the output, which would
+          # drop the line citing the contract and turn a correct pull request into `PR001`.
+          # The newline between title and body is already a newline: YAML resolves the
+          # escape in the double quoted value above.
+          printf '%s' "$PR_TEXT" > /tmp/pr.txt
           python3 .framework/skills/audit/scripts/validate.py \
             --root . \
             --pr-text-file /tmp/pr.txt \

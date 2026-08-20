@@ -1,7 +1,7 @@
 {
   "name": "framework-data-ai",
   "description": "Documentation framework for Data & AI projects: which documents exist, who writes them, when, and which question each one answers. Six skills that operate it, plus the validator that keeps it honest.",
-  "version": "2.8.3",
+  "version": "2.8.4",
   "author": {
     "name": "Giulio Quaglia"
   },

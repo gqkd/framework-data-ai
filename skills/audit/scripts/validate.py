@@ -1696,6 +1696,22 @@ def framework_has(commit: str) -> bool | None:
     return r.returncode == 0
 
 
+def framework_is_shallow() -> bool:
+    """Whether this framework checkout has had its history cut off.
+
+    `actions/checkout` clones one commit by default, and the CI job that matters here checks
+    the framework out that way. In a shallow clone every commit but one is absent, so "this
+    framework does not contain your pin" is true of almost everything and means nothing.
+    """
+    try:
+        r = subprocess.run(["git", "-C", str(FRAMEWORK), "rev-parse",
+                            "--is-shallow-repository"], capture_output=True, text=True,
+                           timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return r.returncode == 0 and r.stdout.strip() == "true"
+
+
 def check_framework_pin(project: dict, report: Report) -> None:
     """A repository that pins a commit, against the commit it is being checked by.
 
@@ -1727,7 +1743,7 @@ def check_framework_pin(project: dict, report: Report) -> None:
     # not match, and the two need opposite responses: one is a migration to read, the other
     # is a line that was never true. Sending somebody to look for the first when it is the
     # second is the trip that teaches them to stop making it.
-    if framework_has(pinned) is False:
+    if framework_has(pinned) is False and not framework_is_shallow():
         report.add("FW003", "framework.yaml",
                    f"pins the framework at {pinned}, and no such commit exists in the "
                    "framework being run. Either it was written by hand and never checked, "
@@ -1735,12 +1751,15 @@ def check_framework_pin(project: dict, report: Report) -> None:
                    "verified against it. There is no migration to read here: the pin has "
                    "never been true.")
         return
+    shallow = (" This checkout is shallow, so whether it even contains the pinned commit "
+               "cannot be answered here: `git fetch --unshallow` before reading the "
+               "difference as a migration." if framework_is_shallow() else "")
     report.add("FW003", "framework.yaml",
                f"pins the framework at {pinned}, and the framework being run is at "
                f"{head[:12]}. Either the checkout moved under this repository -- in which "
                "case the report you are reading was not produced by the rules this project "
                "declares -- or the pin was left behind by a migration. "
-               "`migrate.py --adopt` writes both lines together.")
+               "`migrate.py --adopt` writes both lines together." + shallow)
 
 
 def check_triage(arts: list[Artifact], report: Report) -> None:
