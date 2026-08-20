@@ -2731,7 +2731,13 @@ def _migration_is_executable():
         sha, why = migrate.commit_declaring(v, ROOT)
         if sha is None:
             problems.append(f"{v}: {why}")
-        if v not in notes and v != seen[-1]:
+        # THE CURRENT VERSION USED TO BE EXEMPT, AND THAT IS WHERE A MALFORMED NOTE HIDES.
+        # The parser wants a full stop after the number; a note written with a comma is not
+        # a note, and nothing said so until the next bump made it somebody else's problem --
+        # by which time the note that explains the version a project is pinned to is the one
+        # that silently does not exist. The note is written with the bump, so it can be
+        # required with the bump.
+        if v not in notes:
             problems.append(f"{v}: no `X -> {v}` note in the registry. The number moved and "
                             "nothing says what it asks a project to do, which is the half "
                             "of `FW001` a version comparison cannot supply")

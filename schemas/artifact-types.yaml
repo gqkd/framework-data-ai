@@ -56,7 +56,10 @@
 #           a new required field, a narrowed enum, a type removed, a check promoted to
 #           error. This is the one that asks a project to migrate.
 #   MINOR   something arrived and nothing broke: a new type, an optional field, a check at
-#           `warn`, a skill that does more than it did.
+#           `warn`, a skill that does more than it did. Suspended while the model is frozen:
+#           see the note under `version` for what is shipping as a patch instead, and why a
+#           number a consumer can pin against is worth more right now than a number that
+#           announces every check.
 #   PATCH   wording, a message, a fixture. Nothing about the framework moved.
 #
 # A three part string, so `1.10.0` sorts after `1.9.0` rather than before it. Quoted here
@@ -227,12 +230,31 @@
 # `AttributeError` and nothing at all was reported; `REF005` exempted every heading in the
 # glossary instead of only its sections, which handed back the hole `terms:` was added to
 # close; `REG010` read a `#` comment inside a fenced block as a heading.
-# 2.8.1 -> 2.9.0. `XP006` at `warn`: a commitment that names no products. And two silent
-# holes closed beside it -- `[all]` on a commitment was read as a product called `all`, so a
-# promise about the whole suite bound nothing; `LC005` tested for midnight and was blind to
-# `00:00` and to any value with seconds in it, which is the shape a script writes; `REG010`
-# knew backtick fences and not tilde ones.
-version: "2.9.0"
+# 2.8.1 -> 2.9.0. DECLARED AND WITHDRAWN: it existed for the eleven minutes between two
+# commits and never left as a release: what it carried shipped as 2.8.2, for the reason in
+# the note below. The note stays because the number is in the history of this file, and every
+# version this framework has declared has to stay reconstructible -- including one that was
+# a mistake, since the tool that rebuilds a validator does not know which is which.
+#
+# 2.8.1 -> 2.8.2. BY THE RULE ABOVE THIS SHOULD HAVE BEEN A MINOR. `XP006` is a check that
+# arrived, which is what MINOR is for. It is a patch here deliberately: the model has moved
+# nine times in three days, every move driven by one repository meeting it, and a consumer
+# cannot pin against that. The minor stays where it is until the freeze ends, and what
+# arrived is written here, which is the only place it was ever written.
+#
+# WHAT THAT COSTS, SO THAT NOBODY DISCOVERS IT INSTEAD. `FW001` is silent on a patch, so a
+# project running this validator gets `XP006` findings with no version saying the rules moved.
+# The finding itself is legible -- it names the field and what depends on it -- but the signal
+# that would have told a team "this is new, you did not break it" is not there. That trade is
+# taken knowingly: during a freeze, being able to trust the number is worth more than being
+# told about each check, and every bump here carries a note saying what came with it.
+#
+# What came with this one: `XP006` at `warn`, a commitment that names no products. And three
+# silent holes closed beside it -- `[all]` on a commitment was read as a product called
+# `all`, so a promise about the whole suite bound nothing; `LC005` tested for midnight and
+# was blind to `00:00` and to any value carrying seconds, which is the shape a script writes;
+# `REG010` knew backtick fences and not tilde ones.
+version: "2.8.2"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of
