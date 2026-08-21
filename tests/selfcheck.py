@@ -656,6 +656,44 @@ def _shallow_checkout():
     return problems
 
 
+@check("the suite that asks git for history is run in a checkout that has one")
+def _ci_fetches_history():
+    # THE RED THAT IS ABOUT THE CLONE AND NOT ABOUT THE FRAMEWORK. Two checks above ask git
+    # for commits that are not HEAD, and `actions/checkout` clones one commit unless it is
+    # told otherwise. The workflow was never told, so every push for a week ended in four
+    # problems that could not be fixed in the repository, because they were not about it.
+    # That state is worse than having no CI: a red that nobody can act on is a red nobody
+    # reads, and it is where a real failure arrives unnoticed.
+    #
+    # Asserted here rather than left to the next person reading the workflow, because this
+    # file is the thing that goes red and the workflow is the thing that has to change: the
+    # two are a day apart in a directory nobody opens twice.
+    wf = ROOT / ".github" / "workflows" / "framework.yml"
+    if not wf.exists():
+        return [".github/workflows/framework.yml is gone: this suite runs nowhere, and a "
+                "suite that runs nowhere reports nothing"]
+    jobs = (yaml.safe_load(wf.read_text()) or {}).get("jobs") or {}
+    problems, ran = [], False
+    for name, job in jobs.items():
+        steps = (job or {}).get("steps") or []
+        if not any("selfcheck.py" in str(s.get("run", "")) for s in steps):
+            continue
+        ran = True
+        depths = [(s.get("with") or {}).get("fetch-depth") for s in steps
+                  if str(s.get("uses", "")).startswith("actions/checkout")]
+        if not depths:
+            problems.append(f"{name}: runs this suite and checks nothing out")
+        elif 0 not in depths:
+            problems.append(f"{name}: checks out with `fetch-depth: {depths[0]!r}` and runs "
+                            "a suite that asks git for commits before HEAD. One commit is "
+                            "the default, `HEAD~3` is absent in a one-commit clone, and the "
+                            "pin checks then report the checkout instead of the framework")
+    if not ran:
+        problems.append("no job in the workflow runs tests/selfcheck.py: whatever is red on "
+                        "a push, it is not this file")
+    return problems
+
+
 @check("the pull request body reaches the check as somebody wrote it")
 def _pr_body_is_not_expanded():
     # `printf '%b'` expands backslash escapes in text somebody else wrote, and `\c` truncates

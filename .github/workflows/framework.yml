@@ -16,6 +16,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # THE HISTORY, AND NOT ONLY THE COMMIT. `actions/checkout` clones one commit
+          # unless it is told otherwise, and two checks in this suite ask git about commits
+          # that are not HEAD: a pin at an older commit of this framework has to read as a
+          # checkout that moved, and a pin at a commit that never existed has to read as a
+          # line nobody verified. In a one-commit clone every commit is absent, so both
+          # collapse into the second, and the suite went red on every push for a week --
+          # four problems, none of them about the framework, all of them about the clone.
+          # `ci/pull-request.yml` already asks for this on the project's own checkout.
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
