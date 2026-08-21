@@ -377,6 +377,13 @@ placeholders:
 id_prefixes: [PRB, HYP, EVD, CMP, DFB, SD, DEC, CHG, EVR, REL, RLM, DC,
               SIG, ANA, INC, OD, KI, RSK, CMT, ING, ICG]
 
+# The identifier families that are not `PREFIX-NNN`, written out. `ING-C03` is an ingestion
+# contradiction, there are twenty-two of them, and one sits in the `derives_from` of a `DEC`.
+# They go here and not into `id_prefixes` because the numeric half of the general form stays
+# strict: relaxing it would let typos through, which is the thing the form exists against.
+id_forms:
+- 'ING-C\d{2,}'
+
 # `id_fields` on a type declares a front matter field that holds an identifier or a list of
 # them, and generates the shape: absent, one id, or several. `supersedes` lived for weeks as a
 # convention -- read by the validator, written in a template, in no schema -- so `supersedes:
@@ -696,8 +703,19 @@ types:
         keys: "^[a-z][a-z0-9-]*$"
         fields:
           required: [tool, status]
-          optional: [decided_in, version, note]
-          lists: [used_by]
+          optional: [version, note]
+          # `decided_in` è una lista, e lo è diventata quando `risk-register` ha avuto
+          # bisogno della stessa cosa. Il framework tiene un invariante che non dichiara a
+          # parole e fa rispettare in `tests/selfcheck.py`: **un nome di campo, una forma
+          # sola**, perché uno snippet copiato da un template produce altrimenti un `FM002`
+          # nel progetto di qualcun altro -- è già successo con `depends_on` e `used_by`.
+          # Allargare qui invece di restringere là è la scelta nel merito e non un
+          # compromesso: uno strumento può essere ratificato da più decisioni, esattamente
+          # come una riga di rischio può seguire da più d'una. E si paga adesso che costa
+          # due righe di template e una di un solo `STACK.md`: con tre prodotti che ne
+          # hanno uno, la stessa scelta si presenterebbe con un costo che spinge verso lo
+          # scalare per la ragione sbagliata.
+          lists: [used_by, decided_in]
           enums:
             # `dropped` is the state this document could not describe, and every project
             # has some: a tool that was tried, is not in use, and that nobody decided
@@ -716,6 +734,7 @@ types:
     path: PLATFORM.md
     lifecycle: living
     status: [active, draft]
+    id_fields: [derives_from]
     # The shared substrate. Unlike ARC it is born on day one, before the code exists, so
     # it cannot require `verified_code`.
     #
@@ -785,6 +804,7 @@ types:
     path: products/<p>/PBR.md
     lifecycle: living
     status: [active, draft]
+    id_fields: [derives_from]
 
   problem-statement:
     id: PRB
@@ -806,6 +826,7 @@ types:
     path: initiatives/<i>/HYP-NNN.md
     lifecycle: immutable
     status: [open, confirmed, refuted, partially-confirmed]
+    id_fields: [derives_from]
 
   workflow:
     id: WF
@@ -816,6 +837,7 @@ types:
     path: products/<p>/WF.md
     lifecycle: living
     status: [active, draft]
+    id_fields: [derives_from]
     sections: [current, target, delta]
 
   evidence-brief:
@@ -827,7 +849,7 @@ types:
     path: initiatives/<i>/EVD-NNN.md
     lifecycle: immutable
     status: [active, superseded]
-    id_fields: [supersedes]
+    id_fields: [supersedes, derives_from]
 
   competitor-comparison:
     id: CMP
@@ -838,7 +860,7 @@ types:
     path: initiatives/<i>/CMP-NNN.md
     lifecycle: immutable
     status: [active, superseded]
-    id_fields: [supersedes]
+    id_fields: [supersedes, derives_from]
 
   data-feasibility:
     id: DFB
@@ -918,7 +940,13 @@ types:
     path: decisions/DEC-NNN-slug.md
     lifecycle: immutable
     status: [proposed, accepted, superseded]
-    id_fields: [supersedes]
+    id_fields:
+    - supersedes
+    # `derives_from` was read by the validator -- `REG002`, and the traceability view -- and
+    # was in no schema, so `derives_from: 12` was as legal as the thing anybody meant. It is
+    # `may_be_empty` because `DEC-018` carries `[]`, and there that is a statement and not a
+    # gap: the decision closes no register entry, and writing an `OD` in would be `REG002`.
+    - derives_from: {may_be_empty: true}
     enums:
       # The field that determines the nature of the decision. One register, one
       # numbering, one folder: separate registers would leave cross-product decisions,
@@ -934,6 +962,7 @@ types:
     path: products/<p>/ARC.md
     lifecycle: living
     status: [active, draft]
+    id_fields: [derives_from]
     # Three sections, for the reason `WF` has three: a target only means something set
     # against what exists, and the value is in the delta. Separate files would leave two
     # architectures diverging with nothing to say which one the code must match.
@@ -1182,6 +1211,13 @@ types:
         fields:
           required: [category, state]
           optional: [likelihood, impact, commitment]
+          # `decided_in` nomina la decisione di cui questa riga è conseguenza, ed è lo stesso
+          # campo che `STACK.md` porta sulle righe dello stack -- stesso nome, stessa forma.
+          # Una lista perché l'esposizione la crea una decisione e il presidio può venire da
+          # un'altra: `RSK-033`, la riga che ha prodotto questo campo, segue da due.
+          # Adozione solo in avanti: le righe esistenti non lo portano, e nessun check lo
+          # pretende finché l'adozione non c'è.
+          lists: [decided_in]
           enums:
             # `security` is not `compliance`: one is whether a rule is broken, the other is
             # whether somebody gets in, and a framework with `ai` and no `security` is a

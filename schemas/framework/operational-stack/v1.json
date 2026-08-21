@@ -45,10 +45,6 @@
               "dropped"
             ]
           },
-          "decided_in": {
-            "type": "string",
-            "minLength": 1
-          },
           "version": {
             "type": "string",
             "minLength": 1
@@ -58,6 +54,14 @@
             "minLength": 1
           },
           "used_by": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
+          },
+          "decided_in": {
             "type": "array",
             "items": {
               "type": "string",

@@ -11,7 +11,7 @@ stack:
   query-engine:
     tool: DuckDB
     status: chosen
-    decided_in: DEC-004
+    decided_in: [DEC-004]
     used_by: [product-a]
   table-format:
     tool: Apache Iceberg
@@ -20,7 +20,7 @@ stack:
   orchestration:
     tool: Airflow
     status: ruled-out
-    decided_in: DEC-007
+    decided_in: [DEC-007]
 ---
 
 # Operational stack

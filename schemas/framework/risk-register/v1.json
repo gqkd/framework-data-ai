@@ -73,6 +73,14 @@
           "commitment": {
             "type": "string",
             "minLength": 1
+          },
+          "decided_in": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
           }
         },
         "required": [

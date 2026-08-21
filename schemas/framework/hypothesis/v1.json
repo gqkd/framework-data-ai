@@ -26,7 +26,27 @@
       "type": "array",
       "minItems": 1
     },
-    "created": {}
+    "created": {},
+    "derives_from": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "pattern": "^(?:(?:(PRB|HYP|EVD|CMP|DFB|SD|DEC|CHG|EVR|REL|RLM|DC|SIG|ANA|INC|OD|KI|RSK|CMT|ING|ICG)-(\\d{3,}|NNN))|(?:ING-C\\d{2,}))$"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^(?:(?:(PRB|HYP|EVD|CMP|DFB|SD|DEC|CHG|EVR|REL|RLM|DC|SIG|ANA|INC|OD|KI|RSK|CMT|ING|ICG)-(\\d{3,}|NNN))|(?:ING-C\\d{2,}))$"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      ]
+    }
   },
   "required": [
     "schema",
