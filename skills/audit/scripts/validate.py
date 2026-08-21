@@ -1908,36 +1908,50 @@ def check_stack(arts: list[Artifact], report: Report) -> None:
         for cap, row in sorted(as_map(a.meta.get("stack")).items()):
             if not isinstance(row, dict):
                 continue
-            status, dec = row.get("status"), row.get("decided_in")
-            if status in ("chosen", "ruled-out") and not dec:
+            # `as_list`, like `used_by` two blocks down, and for the same reason one version
+            # later: 2.8.8 widened `decided_in` to a list, because a tool can be ratified by
+            # more than one decision. This line kept reading the raw value and reached it
+            # through `in` against a set, which hashes what it is given -- so the first
+            # repository to write the field got a `TypeError` out of `main()` instead of a
+            # report, and `--emit-index` went with it, since the generator shares this entry
+            # point. The field was declared and nothing exercised it: it shipped as a patch
+            # on the count that no repository carried one yet.
+            status, decs = row.get("status"), as_list(row.get("decided_in"))
+            named = ", ".join(repr(d) for d in decs)
+            if status in ("chosen", "ruled-out") and not decs:
                 report.add("STK001", a.rel,
                            f"{cap!r} is {status!r} and names no `decided_in`. It reads as a "
                            "decision and there is no record of one. `unratified` is for a "
                            "tool in use that nobody chose, and `dropped` for one that was "
                            "tried, is not in use, and that nobody decided against.")
-            elif status == "dropped" and dec:
+            elif status == "dropped" and decs:
                 # The word exists for the abandonment nobody ratified. With a decision
                 # behind it the row is `ruled-out`, and calling it dropped files a decision
                 # as an accident -- which is the direction that loses the reasoning.
                 report.add("STK001", a.rel,
-                           f"{cap!r} is `dropped` and names {dec!r}. `dropped` is what was "
+                           f"{cap!r} is `dropped` and names {named}. `dropped` is what was "
                            "abandoned without anybody deciding; with a decision behind it "
                            "the row is `ruled-out`, and the reasoning stays reachable.")
-            elif status == "unratified" and dec:
+            elif status == "unratified" and decs:
                 report.add("STK001", a.rel,
-                           f"{cap!r} is `unratified` and names {dec!r}. If the decision "
+                           f"{cap!r} is `unratified` and names {named}. If the decision "
                            "exists the row is `chosen`; leaving it unratified hides a "
                            "decision that was taken.")
-            if dec and dec not in known_dec:
-                report.add("STK001", a.rel,
-                           f"{cap!r} names {dec!r}, which is not a decision in this "
-                           "repository. The tool is presented as chosen and the reasoning "
-                           "cannot be reached.")
-            elif dec and dec not in accepted:
-                report.add("STK001", a.rel,
-                           f"{cap!r} names {dec!r}, which is not accepted. A tool chosen on "
-                           "a decision still in draft or already superseded is a tool whose "
-                           "reason has moved.")
+            for d in decs:
+                if not isinstance(d, str):
+                    # An id that is not a string is an `FM002`, reported by the schema and
+                    # said better there. Hashing it here is what killed the run.
+                    continue
+                if d not in known_dec:
+                    report.add("STK001", a.rel,
+                               f"{cap!r} names {d!r}, which is not a decision in this "
+                               "repository. The tool is presented as chosen and the "
+                               "reasoning cannot be reached.")
+                elif d not in accepted:
+                    report.add("STK001", a.rel,
+                               f"{cap!r} names {d!r}, which is not accepted. A tool chosen "
+                               "on a decision still in draft or already superseded is a "
+                               "tool whose reason has moved.")
             for p in as_list(row.get("used_by")):
                 if products and p not in products:
                     report.add("STK001", a.rel,

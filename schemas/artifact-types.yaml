@@ -330,7 +330,28 @@
 # against this framework, ZERO stack entries carry `decided_in` -- it is named there only in
 # prose -- and the two occurrences in `templates/STACK.md` are fixed in this same change. If
 # yours carries the field, this is one edit per entry and it is the whole migration.
-version: "2.8.8"
+
+# 2.8.8 -> 2.8.9. This is 2.8.8 finished. That change declared `decided_in` a list and told an
+# adopting repository to bracket every value it had written. The one check that reads the
+# field, `STK001`, kept reading the raw value and reached it through `in` against a set of
+# decision ids -- and a set hashes its operand, so a list raises `TypeError` inside `main()`.
+# Not a finding: a traceback, no report at all, and `--emit-index` with it, since the index,
+# the traceability matrix, the open register section and the per-product views are generated
+# through that same entry point. A repository that followed the migration note above lost the
+# gate and the generator on the first row it wrote.
+#
+# It stayed invisible for the reason it was allowed to be a patch. Zero stack entries carried
+# the field, so nothing in any repository exercised it -- and `tests/selfcheck.py` exercised
+# it seven times, in the scalar shape the schema had just stopped allowing. A test that writes
+# a field in a form no document may carry is not testing that field. The fixtures are
+# bracketed now, one of them names two decisions, and one keeps the pre-2.8.8 scalar to hold
+# the other half of the contract: a document caught mid-migration gets an `FM002` and never a
+# traceback.
+#
+# The fix is the idiom that was already in the function, two blocks below on `used_by`:
+# `as_list`, then one membership test per id, and a non-string skipped rather than hashed. It
+# widens nothing and narrows nothing. No document changes, in this repository or any other.
+version: "2.8.9"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of

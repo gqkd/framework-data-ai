@@ -1881,18 +1881,37 @@ def _claims_carry_their_record():
            "id: DEC-001\nlifecycle: immutable\nstatus: accepted\nscope: architecture\n"
            "owners: [o]\ncreated: 2026-01-01 09:00\n---\n\n# DEC-001\n")
     draft = dec.replace("id: DEC-001", "id: DEC-002").replace("accepted", "proposed")
+    second = dec.replace("DEC-001", "DEC-003")
 
     problems = []
+    # Every `decided_in` here is bracketed, and that is the point of the case rather than a
+    # detail of it. 2.8.8 declared the field a list and this block kept writing scalars, so
+    # nothing ran the check against the shape the schema now requires -- and the check was
+    # reading the raw value into a set membership test, which a list cannot survive. The
+    # first repository to write one lost the report and the generated index with it. A test
+    # that exercises a field in the shape no document is allowed to carry is not exercising
+    # it.
     for rows, want, what in [
-        ("stack:\n  db:\n    tool: PostgreSQL\n    status: chosen\n    decided_in: DEC-001\n",
+        ("stack:\n  db:\n    tool: PostgreSQL\n    status: chosen\n    decided_in: [DEC-001]\n",
          False, "a chosen tool naming an accepted decision"),
+        ("stack:\n  db:\n    tool: PostgreSQL\n    status: chosen\n"
+         "    decided_in: [DEC-001, DEC-003]\n",
+         False, "a chosen tool ratified by two accepted decisions, which is what the list is for"),
+        ("stack:\n  db:\n    tool: PostgreSQL\n    status: chosen\n"
+         "    decided_in: [DEC-001, DEC-404]\n",
+         True, "a list whose second entry is a decision that does not exist"),
+        # The shape a repository carries between reading the migration note and finishing it.
+        # It is an `FM002` and it has to stay one: a traceback out of `main()` takes the
+        # report, and `--emit-index` shares that entry point.
+        ("stack:\n  db:\n    tool: PostgreSQL\n    status: chosen\n    decided_in: DEC-001\n",
+         False, "the pre-2.8.8 scalar, which is a schema finding and must not be a crash"),
         ("stack:\n  db:\n    tool: PostgreSQL\n    status: chosen\n",
          True, "a chosen tool naming no decision at all"),
-        ("stack:\n  db:\n    tool: PostgreSQL\n    status: unratified\n    decided_in: DEC-001\n",
+        ("stack:\n  db:\n    tool: PostgreSQL\n    status: unratified\n    decided_in: [DEC-001]\n",
          True, "an unratified tool that names a decision, hiding one that was taken"),
-        ("stack:\n  db:\n    tool: PostgreSQL\n    status: chosen\n    decided_in: DEC-404\n",
+        ("stack:\n  db:\n    tool: PostgreSQL\n    status: chosen\n    decided_in: [DEC-404]\n",
          True, "a decision that does not exist"),
-        ("stack:\n  db:\n    tool: PostgreSQL\n    status: chosen\n    decided_in: DEC-002\n",
+        ("stack:\n  db:\n    tool: PostgreSQL\n    status: chosen\n    decided_in: [DEC-002]\n",
          True, "a decision that was never accepted"),
         ("stack:\n  db:\n    tool: PostgreSQL\n    status: unratified\n",
          False, "an unratified tool, which is the honest state and must stay quiet"),
@@ -1902,11 +1921,11 @@ def _claims_carry_their_record():
         # fault was that the words ran out.
         ("stack:\n  db:\n    tool: PostgreSQL\n    status: dropped\n",
          False, "an abandoned experiment nobody decided against, which is what `dropped` is"),
-        ("stack:\n  db:\n    tool: PostgreSQL\n    status: dropped\n    decided_in: DEC-001\n",
+        ("stack:\n  db:\n    tool: PostgreSQL\n    status: dropped\n    decided_in: [DEC-001]\n",
          True, "a dropped tool naming a decision, which is a decision filed as an accident"),
     ]:
         got = repo({"STACK.md": stack(rows), "decisions/DEC-001.md": dec,
-                    "decisions/DEC-002.md": draft})
+                    "decisions/DEC-002.md": draft, "decisions/DEC-003.md": second})
         if got is None:
             problems.append(f"the validator crashed on {what}")
         elif ("STK001" in got) != want:
