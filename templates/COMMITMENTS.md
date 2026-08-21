@@ -114,6 +114,19 @@ somebody acts on it.
 Neither belongs to any other document. `RSK` records risks you have accepted; these are
 sentences that are wrong, and the remedy is a conversation and not a mitigation.
 
+**The risk row is not the remedy, it is the name of whoever carries this until the
+conversation happens** — and it is expected: `RSK.md` lists leaving out the commercial risks
+among its anti-patterns, and says an out of reach commitment is the biggest risk in the
+project and belongs there too. `XP007` reports an out of reach or `unsatisfiable` row that no
+live risk names. The finding is not asking you to mitigate a promise: it is asking who is
+answerable for it in the meantime, because an exposure with no owner is one nobody
+renegotiates. It also guards something downstream: `ICG` §3 stops a triage on a candidate
+that contradicts a promise **still standing**, and passes over one that contradicts a row
+already written off — because stopping the build does not make the promise possible, and the
+alternative is the same conversation blocking the same candidates in every cycle. That is
+only safe if writing a row off cannot make it disappear quietly, and this check is what
+makes sure it cannot: written off, and somebody's name on it.
+
 ---
 
 ## Anti-patterns

@@ -556,6 +556,61 @@ def _commitments_and_risks():
                                        "    state: closed\n")):
             problems.append("a closed commercial risk was reported: the promise behind it "
                             "stopped mattering, and asking for it is asking about history")
+
+        # THE PROMISE THAT CANNOT BE KEPT, AND WHO CARRIES IT UNTIL SOMEBODY SAYS SO.
+        # `XP007` is the half of a carve-out: `ICG` §3 passes over a candidate that
+        # contradicts a promise already written off *when a risk owns it*, so that the share
+        # of commercial promises that were never buildable stops holding up every candidate
+        # that touches them. With nothing reporting the rows nobody owns, that carve-out
+        # would be a hole -- an unowned promise reads exactly like a live one.
+        beyond = ("\n  CMT-010:\n    to: a customer\n    status: open\n"
+                  "    feasibility: out-of-reach\n    products: [alpha]\n")
+        owner = ("\n  RSK-001:\n    category: commercial\n    state: open\n"
+                 "    commitment: CMT-010\n")
+        if "XP007" not in codes(repo(beyond, "\n  RSK-001:\n    category: technical\n"
+                                             "    state: open\n")):
+            problems.append("a commitment out of reach that no risk names was not reported: "
+                            "the renegotiation it is owed has nobody on the hook for it")
+        if "XP007" in codes(repo(beyond, owner)):
+            problems.append("a commitment out of reach whose exposure a risk owns was "
+                            "reported: the owner is what the check asks for, and reporting "
+                            "it anyway is what makes a triage stop on the same promise every "
+                            "cycle")
+        # A risk that is over is not an owner. Same pair `REF006` excludes, and the same
+        # reason: the row stopped being about anything.
+        if "XP007" not in codes(repo(beyond, owner.replace("state: open",
+                                                           "state: closed"))):
+            problems.append("a closed risk was read as the owner of an exposure that is "
+                            "still in the register")
+        # The three states where nothing is owed. `not-yet-issued` was said to nobody --
+        # `XP005` already declines to count it -- and the other two are rows where the
+        # conversation has happened.
+        for status, why in [
+            ("not-yet-issued", "the promise is in a deck nobody has received, so there is "
+                               "no exposure and the remedy is an internal edit"),
+            ("renegotiated", "the conversation this check asks for has already happened"),
+            ("met", "the promise was kept"),
+        ]:
+            quiet = beyond.replace("status: open", f"status: {status}")
+            if "XP007" in codes(repo(quiet, "\n  RSK-001:\n    category: technical\n"
+                                            "    state: open\n")):
+                problems.append(f"a `{status}` commitment out of reach was reported: {why}")
+        # `unsatisfiable` is the status saying it will not be delivered, and it is the same
+        # question from the other side: somebody still has to carry it until the customer
+        # has been told.
+        wont = beyond.replace("status: open", "status: unsatisfiable").replace(
+            "    feasibility: out-of-reach\n", "")
+        if "XP007" not in codes(repo(wont, "\n  RSK-001:\n    category: technical\n"
+                                           "    state: open\n")):
+            problems.append("an `unsatisfiable` commitment that no risk names was not "
+                            "reported: the status says it will not be delivered and nobody "
+                            "is answerable for having said it")
+        if "XP007" in codes(repo("\n  CMT-011:\n    to: a customer\n    status: open\n"
+                                 "    feasibility: feasible\n    products: [alpha]\n",
+                                 "\n  RSK-001:\n    category: technical\n"
+                                 "    state: open\n")):
+            problems.append("a feasible commitment was reported: the check is about promises "
+                            "declared beyond reach, not about promises with no risk")
     return problems
 
 

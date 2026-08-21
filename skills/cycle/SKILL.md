@@ -61,6 +61,18 @@ signed commitment is not a change to classify, and a candidate that contradicts 
 decision needs a `DEC` that supersedes rather than a `CHG` — an agent reading only `ARC`
 would file it as a routine increment and never see either.
 
+**Signed, and still standing.** Read the row before you stop on it. What stops a
+classification is a promise still standing: issued, and not written off. `not-yet-issued`
+was said to nobody; `renegotiated` and `met` are closed conversations; and a row that is
+`unsatisfiable` or whose `feasibility` is `out-of-reach` is a promise this project has
+already judged it will not deliver — owed a conversation with whoever received it, and not
+a boundary on the build, because stopping the candidate does not make the promise possible.
+Cite it in the `ICG` with the risk that owns the exposure and classify the candidate; where
+no risk owns it, `XP007` reports that, and it is a finding about responsibility rather than
+a reason to stop. The share of commercial promises that were never buildable is small and it
+is never zero, and a triage that treats each of them as binding stops the same candidates
+every cycle, on a call that has to be made once.
+
 When a candidate contradicts something already written, that is a conflict, and
 `references/routing-table.md` §4 says what to do with one: show both versions with their
 provenance and ask which holds. Do not resolve it inside the classification.

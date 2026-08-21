@@ -1021,6 +1021,17 @@ def check_commitments_and_risks(arts: list[Artifact], report: Report) -> None:
             if isinstance(row, dict)}
     risk_files = [a for a in arts if a.type == "risk-register"]
 
+    # WHICH PROMISES HAVE SOMEBODY BEHIND THEM. A risk that names a commitment is the
+    # exposure owned; `closed` and `expired` are the two states that say it is not owned any
+    # more, the same pair `REF006` already excludes. Read across every register and not only
+    # the ones of the products the promise binds: the question is whether anybody has taken
+    # responsibility at all, and a risk filed under the wrong product is `REG008`, said
+    # better there than by a second finding about the same row.
+    owned = {row.get("commitment")
+             for a in risk_files
+             for row in as_map(a.meta.get("risks")).values()
+             if isinstance(row, dict) and row.get("state") not in ("closed", "expired")}
+
     # Which products have a risk register, read off the directory the register sits in,
     # the same way a register's scope is read everywhere else here.
     dirs = product_dirs(arts)
@@ -1071,6 +1082,44 @@ def check_commitments_and_risks(arts: list[Artifact], report: Report) -> None:
                    "supposed to leave two marks: a risk somebody owns and an entry in the "
                    "register. With no `RSK.md` the first one has nowhere to be, and the "
                    "exposure lives only in the sentence that created it.")
+
+    # A PROMISE DECLARED BEYOND REACH, AND NOBODY ON THE HOOK FOR IT. `COMMITMENTS.md`
+    # §Owed a conversation is the mandatory section for the two rows whose next move is not
+    # building anything, and this is the first of them: out of technical reach, so it will
+    # not be delivered and somebody is planning around it. The remedy is a renegotiation and
+    # the register cannot hold one -- what it can hold is the name of whoever owns the
+    # exposure until the conversation happens, which is a risk row naming the promise.
+    #
+    # AND IT IS WHAT MAKES A CARVE-OUT SAFE. `ICG` §3 stops a triage on a candidate that
+    # contradicts a promise still standing and passes over one that contradicts a row
+    # already written off -- because stopping the candidate does not make the promise
+    # possible, and the alternative is the small share of commercial promises that were
+    # never buildable holding up every candidate that touches them, in every cycle, for a
+    # call that has to be made once. That is only safe while writing a row off cannot make
+    # it disappear quietly: `out-of-reach` would otherwise be the cheapest way to remove a
+    # promise from the triage's attention and from everybody's. This is the check that keeps
+    # the write-off honest -- somebody's name stays on it.
+    #
+    # `renegotiated` and `met` are settled, and `not-yet-issued` was said to nobody -- the
+    # state `XP005` already declines to count, for the same reason: no exposure yet, and the
+    # remedy is an internal document, not a phone call.
+    for cid, (rel, row) in sorted(cmts.items()):
+        status, feas = row.get("status"), row.get("feasibility")
+        if status in ("not-yet-issued", "renegotiated", "met") or cid in owned:
+            continue
+        if feas != "out-of-reach" and status != "unsatisfiable":
+            continue
+        which = ("is `unsatisfiable`" if status == "unsatisfiable"
+                 else "is out of technical reach")
+        report.add("XP007", rel,
+                   f"{cid} {which} and no live risk names it. §Owed a conversation says "
+                   "what this row is owed is a renegotiation, and a promise whose exposure "
+                   "nobody owns is not renegotiated by being filed: every triage from here "
+                   "reads it as a promise still standing and stops on the candidate that "
+                   "contradicts it. Give it a row in the risk register of a product it "
+                   f"binds, with `commitment: {cid}`, and the triage can cite the owner and "
+                   "carry on; move the status to `renegotiated` once the conversation has "
+                   "happened.")
 
     for a in arts:
         if a.type != "risk-register":

@@ -203,6 +203,16 @@ the **second pass of `audit`**, which is semantic: the pair *numeric promise in
 technical reach ↔ `RSK §state` and `OPEN`*. It is a reading, not a check, and it is worth
 exactly as much as somebody asking for it.
 
+One half of that second pair is now mechanical, and it is the half about responsibility
+rather than about truth: `XP007` reports a commitment out of technical reach, or
+`unsatisfiable`, that no live risk names. Whether the risk says something true, whether the
+entry in `OPEN.md` is there and whether the renegotiation has actually been had stay in the
+second pass, where they belong. The check exists because `ICG` §3 now passes over a candidate
+that contradicts a promise already written off — stopping it never made the promise possible,
+and the alternative is the same call blocking the same candidates in every cycle. That is
+only safe while a write-off cannot make a row disappear quietly, and `XP007` is what keeps
+it from doing so.
+
 ## P-03 · Collecting and sweeping the signals
 
 **Status:** runnable, integration still to build.

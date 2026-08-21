@@ -351,7 +351,40 @@
 # The fix is the idiom that was already in the function, two blocks below on `used_by`:
 # `as_list`, then one membership test per id, and a non-string skipped rather than hashed. It
 # widens nothing and narrows nothing. No document changes, in this repository or any other.
-version: "2.8.9"
+# 2.8.9 -> 2.8.10. `XP007` at `warn`, and the paragraph in `ICG` §3 that it exists to make
+# honest. Both are one change and it is about who an impossible promise is allowed to stop.
+#
+# The `ICG` stops a triage on a candidate that contradicts a `CMT`, which is right and was
+# unscoped: it said `CMT` and not "a promise still standing". In a company that sells before
+# it builds -- the case this framework opens by naming -- a small share of what the decks
+# promised was never buildable, and every one of those rows sat in the register reading
+# exactly like a signed contract. So the same candidates got stopped in every cycle, for a
+# call that has to be made once, and stopping them never made any promise more possible.
+# `ICG` §3 and `cycle` Step 2 now say which rows stop a classification: the ones still
+# standing, issued and not written off. `not-yet-issued` was said to nobody; `renegotiated`
+# and `met` are closed conversations; and `unsatisfiable`, or a `feasibility` of
+# `out-of-reach`, is a promise this project has already judged it will not deliver -- owed a
+# conversation with whoever received it, and not a boundary on the build. Those get cited,
+# with the risk that owns the exposure, and the candidate gets classified.
+#
+# THE CHECK IS WHAT MAKES THAT SAFE TO WRITE, WHICH IS WHY THEY SHIP TOGETHER. A carve-out
+# for written-off rows makes `out-of-reach` the cheapest way to take a promise out of the
+# triage's attention, and out of everybody's -- the customer still planning around it.
+# `XP007` reports a commitment that is `out-of-reach` or `unsatisfiable` and that no live
+# risk names: `COMMITMENTS.md` §Owed a conversation asked as a question a script can ask.
+# Not "is it mitigated", because the remedy is a conversation and not a mitigation, but who
+# is answerable for it until that conversation happens. `closed` and `expired` risks are not
+# owners, the same pair `REF006` excludes. `feasibility` was declared in 2.5.0 and until now
+# no check read it.
+#
+# What an adopting repository sees: nothing stops validating, and one new `warn` per promise
+# that is out of reach with no risk naming it. The repair is a row in the risk register of a
+# product it binds with `commitment: CMT-NNN`, which two other documents already ask for
+# -- `RSK.md` calls an out of reach commitment the biggest risk in the project, and the
+# `requirement` skill's cascade opens that row -- or `status: renegotiated` once the
+# conversation has happened. The second pass of `audit` keeps the half no check reaches: is
+# the `OPEN.md` entry there, does the risk say something true, was the call actually made.
+version: "2.8.10"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of

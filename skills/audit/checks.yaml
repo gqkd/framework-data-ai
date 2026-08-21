@@ -580,6 +580,33 @@ checks:
       repository has, so a promise about the whole suite bound nothing at all; it binds every
       product now.
 
+  XP007:
+    level: warn
+    title: a promise out of reach whose renegotiation nobody owns
+    prevents: >
+      The impossible promise being paid for twice: once by the customer who is planning
+      around it, and once every cycle by the triage that stops on it. `COMMITMENTS.md`
+      §Owed a conversation is explicit that a row out of technical reach is owed a
+      renegotiation and not a mitigation -- so the register itself cannot hold the remedy.
+      What it can hold is who carries the exposure until the conversation happens, and that
+      is a risk naming the promise.
+
+      This check is what makes a carve-out safe to write. `ICG` §3 stops a classification on
+      a candidate that contradicts a promise still standing, and passes over one that
+      contradicts a row already written off: stopping the candidate does not make the promise
+      possible, and the alternative is the small share of commercial promises that were never
+      buildable holding up every candidate that touches them, in every cycle, for a call that
+      has to be made once. That is only safe while a write-off cannot make a row disappear
+      quietly -- otherwise `out-of-reach` is the cheapest way to take a promise out of the
+      triage's attention, and out of everybody's. Written off is allowed; written off with
+      nobody's name on it is what this reports.
+
+      `not-yet-issued`, `renegotiated` and `met` are not counted. The first was said to
+      nobody, which is the state `XP005` already declines to count and the only one where
+      the remedy costs an afternoon; the other two are rows where the conversation has
+      already happened. And a risk in `closed` or `expired` is not an owner, which is the
+      same pair `REF006` excludes.
+
   FW001:
     level: warn
     title: the repository was written against a different version of the framework

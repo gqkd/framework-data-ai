@@ -111,6 +111,19 @@ ends with nothing here has usually stopped looking.
   explicit `PBR` exclusion is not a change to classify. `references/routing-table.md` §4
   says what to do: show both versions with their provenance and ask which one holds. Do not
   resolve it here.
+
+  **Which commitments stop a classification.** The ones still standing: issued, and not
+  written off. `not-yet-issued` was said to nobody. `renegotiated` and `met` are closed
+  conversations. And a row that is `unsatisfiable`, or whose `feasibility` is
+  `out-of-reach`, is a promise this project has already judged it will not deliver: what it
+  is owed is a conversation with whoever received it, and **stopping the candidate does not
+  make the promise possible**. In a company that sells before it builds, a small share of
+  what was promised was never buildable, and treating those rows as boundaries holds up
+  every candidate that touches them, in every cycle, for a call that has to be made once.
+
+  Cite the row in §2 with the risk that owns the exposure, and classify the candidate. If no
+  risk owns it, `XP007` says so — and that is a finding about who is answerable for the
+  promise, not an authorization to stop the work.
 - **Missing evidence.** Each `not-classifiable` candidate, with the measurement that would
   settle it.
 - **Precedence.** When one candidate's routing changes what another is worth, say so. An
