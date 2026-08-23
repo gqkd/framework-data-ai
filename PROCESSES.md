@@ -59,6 +59,7 @@ is being exercised.
 | P-11 | Semantic audit | runnable | ADMIN, DEV, UB for the commercial parts | every authoritative pair | `audit` |
 | P-12 | Adopting a version of the framework | runnable | ADMIN | `framework.yaml`, the migrated artifacts, the indices | `audit`: `scripts/migrate.py`, `--emit-index` |
 | P-13 | Superseding a decision | manual | whoever writes the new `DEC`, `ADMIN` where the cascade reaches the substrate | the new `DEC`, the superseded one's `status`, the entries that depended on it | `requirement` or `resolve` writes it, `audit` reports what stayed behind |
+| P-14 | Weekly business status | runnable | ADMIN assembles; business actors decide or act where requested | `_meta/business/SAL-NNN`, and nothing else: it writes no artifact | `business` |
 
 ## How they feed each other
 
@@ -876,6 +877,51 @@ The entry to the framework assumes the product has already been sold: Block A �
 the gates `G1`, `G2`, `G3` and the `MOR` — has no process here, on purpose. `FRAMEWORK.md §5`
 covers it and declares it elastic by design.
 
+## P-14 · Weekly business status
+
+**Status:** runnable.
+
+### Trigger
+
+The weekly steering meeting needs a non-technical view of movement, current state, direction,
+target, challenges and the decisions or contributions required outside development.
+
+### Actors
+
+- `ADMIN`: assembles the snapshot from authoritative sources; the snapshot itself has no
+  owner and introduces no claim.
+- `UB`: decides or acts on the items that require business input, and owns the assessment of
+  commercial commitments in their authoritative register.
+- `DEV`: consulted where what the product delivers today is not readable from `ARC#current`
+  and the last release.
+
+### How it runs
+
+```mermaid
+flowchart LR
+  gate["Validator first:<br/>errors, stale indices"] --> read["The artifacts, per the<br/>section-to-source table"]
+  read --> body["Movement · current state · target ·<br/>challenges and dependencies"]
+  body --> asks["Decisions and actions required<br/>outside development"]
+  asks --> snap(["SAL-NNN, dated,<br/>in _meta/business/"])
+```
+
+**It writes no artifact, and that is the process.** Every fact in the update is a retelling
+of one that lives in `PBR`, `ARC`, `COMMITMENTS`, the registers or a release, so storing it
+as a source would be the single principle broken in the one document nobody in the team
+rereads. It is a dated snapshot with no document owner, in a directory the validator does
+not scan, and the series answers a question no artifact does: what the business could see at
+each weekly checkpoint.
+
+If a fact appears here first, it does not belong here: it goes back through `P-02` for a
+promise or `P-04` for a question, and comes back into the next update from the document that
+now holds it.
+
+### Skill
+
+`business`. The gate before it is the validator: an update assembled from documents that
+contradict each other launders drift into a sentence somebody repeats in a meeting, which is
+worse than no update at all.
+
 ## Skill coverage
 
 | Skill | Processes |
@@ -886,8 +932,11 @@ covers it and declares it elastic by design.
 | `cycle` | P-06, the corrective `CHG` of P-09 |
 | `release` | P-08, shipping the fix from P-09 |
 | `audit` | P-02 and P-11 (second pass), P-07 (pull request mode), P-10 (the documents half of it), P-12 (`migrate.py`) |
+| `business` | P-14 |
 
-No new skill is needed. What is left are deterministic integrations and prose: the connectors
+One skill arrived after this table was first written, and it is `business`: P-14 has a
+reader nobody else here writes for. Nothing else is missing, and what is left are
+deterministic integrations and prose: the connectors
 towards the issue tracker and support (`P-03`), coordinated access to the state of the
 repositories and the deploys (`P-10`), the emergency protocol (`P-09`).
 

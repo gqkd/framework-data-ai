@@ -357,3 +357,23 @@ cases:
   expect: audit
 - prompt: è tutto a posto nel repo? fammi girare il validator su products/atlas e dimmi cosa esce
   expect: audit
+- prompt: facciamo il SAL settimanale di qosmos per il management: dove siamo, rischi e cosa serve
+    dagli altri uffici
+  expect: business
+  why: recurring non-technical status with explicit actions outside development
+- prompt: mi prepari l'aggiornamento settimanale per lo steering, con cosa è cambiato e cosa devono
+    decidere business e IT
+  expect: business
+  why: movement and cross-functional decisions belong to the business SAL
+- prompt: can you put together the weekly status for the whole suite for the steering committee
+  expect: business
+  why: suite-level weekly update
+- prompt: dove siamo con il progetto? fammi un SAL non tecnico per il management
+  expect: business
+- prompt: dove siamo con il ciclo? cosa costruiamo adesso che il change è chiuso
+  expect: cycle
+  why: 'trap: "dove siamo" about the cycle is intake and triage, not a business update'
+- prompt: spiega l'architettura al nuovo assunto che entra lunedì, in modo semplice
+  expect: none
+  why: 'trap: simple language, but the reader is inside the team — that is the README reading
+    order, and no skill owns onboarding'

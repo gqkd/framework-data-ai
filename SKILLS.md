@@ -1,8 +1,8 @@
 # The skills that operate the framework
 
-Six skills, distributed as a Claude Code plugin. The plugin is named `framework-data-ai`
+Seven skills, distributed as a Claude Code plugin. The plugin is named `framework-data-ai`
 and supplies the namespace, so the skills carry short names: `/framework-data-ai:start`,
-`:requirement`, `:resolve`, `:cycle`, `:release`, `:audit`.
+`:requirement`, `:resolve`, `:cycle`, `:release`, `:audit`, `:business`.
 
 The example phrasings are in both languages because the skills are: each description carries
 its trigger phrases in Italian and in English, and the measurement in `evals/trigger/`
@@ -16,6 +16,7 @@ covers both. They are examples of what somebody types, not a syntax.
 | **`cycle`** | *"cosa facciamo in questo ciclo"* · *"what do we build next"* | intake, `ICG`, reshaping, `CHG`, `IMP`, and the brief per change |
 | **`release`** | *"possiamo rilasciare?"* · *"are we ready to ship"* | the `RG` gate, `RLM`, `REL` |
 | **`audit`** | *"è tutto a posto?"* · *"check the docs are consistent"* | runs the validator, judges what to do with each finding, and on request reads both ends of the pairs that have to agree |
+| **`business`** | *"facciamo il SAL settimanale"*, *"dove siamo col progetto per il management"* · *"weekly steering update"* | a dated business SAL, one per product or for the suite: movement since the previous update, current state, direction, target, challenges and actions required outside development |
 
 ---
 
@@ -40,10 +41,10 @@ it would diverge from the version that runs in CI, which is the one that counts.
 
 ---
 
-## 2 · Why these six, and where the boundaries fall
+## 2 · Why these seven, and where the boundaries fall
 
 A skill is selected on its description, and a vague description triggers unreliably: it
-fires when it is not needed and stays quiet when it would help. So each of the six has to
+fires when it is not needed and stays quiet when it would help. So each of the seven has to
 own a sentence you would actually say, and no two may compete for the same one.
 
 **Information in, versus authorization out.** `requirement` brings information in and files
@@ -86,7 +87,20 @@ will ever say so. The pairs are not a new checklist either: they are
 `references/routing-table.md §2` read backwards, because a cascade that says *write A, then
 update B* is already the list of what has to agree.
 
-**Why cross-product work is not a seventh skill.** It is not a separate moment, it is a
+**Why the weekly business status is its own skill.** Every other skill here writes for two
+readers, a new person and an agent, and both are implementing or governing the system. This
+one writes for the people who steer, fund, enable, adopt or sell it. They need movement,
+business consequences and explicit requests, not the engineering record. It is also a
+distinct recurring moment: *"facciamo il SAL"* asks what changed and what others must do;
+*"cosa costruiamo nel ciclo"* asks for authorization of development work. Combining them
+would make a status meeting silently authorize scope.
+
+Its output is deliberately not an artifact and has no owner of its own. It lives in
+`_meta/business/`, excluded from the scan, because every fact in it is a dated retelling of
+one that lives somewhere authoritative. The sources retain their owners; assigning one to
+the summary would imply that the summary can attest facts independently.
+
+**Why cross-product work is not an eighth skill.** It is not a separate moment, it is a
 constraint running through the others: in the cascade of `requirement` (a glossary metric
 used by two products), in the checks of `audit` (single glossary, `DC` consumers), in the
 classification of `cycle` (a `DEC` with `scope: platform`). A dedicated skill would
@@ -96,7 +110,7 @@ duplicate all of it.
 
 ## 3 · What every skill shares
 
-These live once, at the plugin root, because six copies of them would be the framework
+These live once, at the plugin root, because seven copies of them would be the framework
 breaking its own single rule against itself. Counted in prose the number would go stale the
 next time one was added, which is how the sentence about two switched-off checks survived
 their being switched back on.

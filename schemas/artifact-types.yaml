@@ -384,7 +384,32 @@
 # `requirement` skill's cascade opens that row -- or `status: renegotiated` once the
 # conversation has happened. The second pass of `audit` keeps the half no check reaches: is
 # the `OPEN.md` entry there, does the risk say something true, was the call actually made.
-version: "2.8.10"
+# 2.8.10 -> 2.8.11. A seventh skill, `business`, and one line in `scan.skip_dirs` so that
+# what it writes is legal in a repository. The skill produces a weekly business SAL; no type,
+# field or check moves.
+#
+# WHAT IT ANSWERS, WHICH IS THE QUESTION `FRAMEWORK.md` §1 puts to every proposal. What the
+# product is, what changed, where it is going, which challenges matter and what non-development
+# actors must do -- written for weekly steering rather than engineering. `PBR` says what a product is, `REL` what changed in one
+# release, `RMP` in what order, `product.index.yaml` composes them for machines, and every one
+# of them is addressed to a reader who can check it. The market cannot: it acts on the document
+# and repeats it, which is why the register is commercial and why a commitment appears in it as
+# a claim with an exposure and never as a capability. The suite had it worse: at the root there
+# are four registers and no business status view at all.
+#
+# IT IS A SKILL AND NOT A TYPE, AND THE DIRECTORY IS THE INTERESTING HALF. Every fact in the
+# document is a retelling of one that lives in an artifact, so storing it as a source would
+# be the single principle broken in the one document nobody in the team rereads. It is a
+# dated snapshot -- `_meta/business/SAL-NNN-<product>-YYYY-MM-DD.md`, never edited once
+# written -- and the series answers something no artifact does: what the business could see
+# at each checkpoint. It has no owner: its sources retain theirs. The exclusion is a path and not a bare `business`, for the reason `extract`
+# already carries: a project may keep a directory of that name for artifacts of its own.
+#
+# What an adopting repository does: nothing. No document changes, no field is required, and a
+# project that never invokes the skill never grows the directory. The one thing to know is
+# that a file under `_meta/business/` is not validated by anything -- which is the trade the
+# choice makes, and the skill carries the rules the schema would otherwise have carried.
+version: "2.8.11"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of
@@ -544,6 +569,13 @@ scan:
   # warnings from fixtures that are supposed to have them. A generated output directory
   # holds no source document in any project, which is what makes it safe to name here.
   #
+  # `_meta/business` is the `business` skill's output: the weekly SAL for management and
+  # cross-functional actors. It is a dated snapshot and not a source -- every fact in
+  # it is a retelling of one that lives in an artifact, which is why it is excluded rather
+  # than typed. A path and not a bare name, for the reason `extract` carries two paragraphs
+  # up: a Data/AI project may perfectly well keep a `business/` directory of its own, and an
+  # exclusion that protects the framework's convenience is paid for by everyone using it.
+
   # `evals` is deliberately NOT here, and was for a day. Excluding it fixed the same
   # symptom by charging every real project a silent exclusion of a directory name a Data/AI
   # project plausibly uses for artifacts of its own. This repository is not a project and
@@ -552,7 +584,7 @@ scan:
   # already says a clean report on the wrong repository is worse than an error. An
   # exclusion that protects the framework's convenience is paid for by everyone using it.
   skip_dirs: [templates, skills, schemas, references, corpus,
-              "_meta/extract", ingest-out,
+              "_meta/extract", "_meta/business", ingest-out,
               build, node_modules, __pycache__]
 
   # Documents that speak *about* the framework rather than being produced *by* it.
@@ -1326,4 +1358,3 @@ types:
             # is a worse outcome than a wrong letter, because it is an invisible one.
             likelihood: [L, M, H, C]
             impact: [L, M, H]
-

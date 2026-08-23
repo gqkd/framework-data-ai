@@ -37,7 +37,7 @@ the way they will in front of a user:
 
 ```bash
 ln -s $PWD ~/.claude/skills/framework-data-ai
-claude plugin details framework-data-ai        # should list all six
+claude plugin details framework-data-ai        # should list all seven
 ```
 
 ## Where it stands

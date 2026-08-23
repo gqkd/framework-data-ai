@@ -26,8 +26,10 @@ Read, in this order:
 If the project has no `AGENTS.md`, it has not been set up: run the `start` skill instead of
 guessing a structure.
 
-**Then ask who owns what you are about to write, and ask it before the first write of the
-session.** One question, plainly, and the answer goes into `owners`.
+**Then ask who owns what you are about to write, and ask it before the first artifact write
+of the session.** One question, plainly, and the answer goes into `owners`. A generated
+non-artifact snapshot that has no `owners` field, such as the weekly SAL produced by
+`business`, does not acquire an owner and does not trigger this question.
 
 Do not deduce it. Not from the git config, not from the email address, not from the corpus,
 not from whoever the last document happened to name. `owners` is who to go to when the

@@ -1,7 +1,7 @@
 # Which repository each skill's prompts get measured in.
 #
 # A prompt only means what it means somewhere it could be acted on. The first full run put
-# all six skills in one repository whose open register was empty, so `risolviamo gli open,
+# every skill in one repository whose open register was empty, so `risolviamo gli open,
 # sono fermi da due mesi` had nothing to resolve. `resolve` scored 5 of 11 there and fired
 # in 6.6 seconds on a register with nine live entries, which says the fixture was being
 # measured and not the description.
@@ -36,6 +36,13 @@ fixtures:
   # Nine open decisions, deliberately shuffled, two of them filed under a heading that
   # contradicts the cost they declare.
   resolve: evals/fixtures/build/resolve/ordering-a
+
+  # A documented product with a `PBR`, an `ARC` carrying all three sections, a roadmap and
+  # a commitments register: the state where a weekly business SAL has evidence to assemble
+  # rather than a shape to fill in. The same fixture `requirement` uses, and for the mirror
+  # reason -- there, a statement needs somewhere to be filed; here, management needs current
+  # state, movement and actions grounded in sources.
+  business: evals/fixtures/build/requirement/seed
 
   # A project with business documents and no framework in it, which is the only state
   # `start` is written for. Measuring it in a documented repository asks it to set up

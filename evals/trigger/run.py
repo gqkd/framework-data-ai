@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Which of the six skills fires, for a prompt somebody would actually type.
+"""Which skill fires, for a prompt somebody would actually type.
 
     python evals/trigger/run.py --skill resolve
     python evals/trigger/run.py --skill none          # the shared negatives, once
     python evals/trigger/run.py --case "risolviamo*" --runs 3
 
 WHAT IT MEASURES, AND WHY IT IS NOT A BOOLEAN. Asking "did `audit` fire" per skill hides
-the failure that matters: the six overlap, and a prompt going to the wrong one is worse
+the failure that matters: the skills overlap, and a prompt going to the wrong one is worse
 than a prompt going nowhere, because the wrong skill will confidently do something. Each
 case names the one skill that should answer, or `none`, so a single run scores both
 whether a skill fires and whether it is the right one, and the confusion between siblings
@@ -14,18 +14,18 @@ comes out as a matrix rather than as a rumour.
 
 ONE SKILL AT A TIME, IN A REPOSITORY ITS WORK MAKES SENSE IN. Both halves matter. The
 whole set does not fit in a session, and a prompt only means what it means somewhere it
-could be acted on: run all six against one fixture with an empty open register and
+could be acted on: run every skill against one fixture with an empty open register and
 `resolve` scores 5 of 11 for declining to resolve nothing, which is the fixture answering
 and not the description. `fixtures.yaml` is that map.
 
 THE PLUGIN HAS TO BE INSTALLED. The measurement is only worth reading if the skills
-resolve the way they will in front of a user. An earlier version of this registered the
-six descriptions as `.claude/commands/*.md`, which is a different mechanism, and its
+resolve the way they will in front of a user. An earlier version of this registered
+the descriptions as `.claude/commands/*.md`, which is a different mechanism, and its
 numbers were low for reasons that had nothing to do with the descriptions. Install the
 plugin first, from a checkout:
 
     ln -s $PWD ~/.claude/skills/framework-data-ai      # loads as framework-data-ai@skills-dir
-    claude plugin details framework-data-ai            # should list all six
+    claude plugin details framework-data-ai            # should list all seven
 
 WHY NOT `claude plugin eval`. Because it is in early access and refuses to run on this
 account. It is the right tool the day it opens: it reads `evals/**/case.yaml`, resolves
@@ -159,7 +159,7 @@ def main() -> int:
     ap.add_argument("--with-none", action="store_true",
                     help="also run the negatives alongside a skill. Off by default: they "
                          "are the slowest cases, because nothing fires and there is "
-                         "nothing to stop early on, and they are the same 25 for all six")
+                         "nothing to stop early on, and they are shared by all skills")
     ap.add_argument("--runs", type=int, default=1, help="repeats per case (default 1)")
     ap.add_argument("--case", default="*", help="glob over the prompt text")
     ap.add_argument("--fixture", type=Path, help="override the fixture for every case")
@@ -181,7 +181,7 @@ def main() -> int:
         sys.exit(f"no case matches {args.case!r}")
 
     # A prompt only means what it means in a repository where it could be acted on. The
-    # first full run put all six in one fixture, and that fixture had an empty open
+    # first full run put every skill in one fixture, and that fixture had an empty open
     # register, so `risolviamo gli open` had nothing to resolve: the model declining to
     # start `resolve` there was arguably right, and it scored as a trigger failure. Each
     # skill gets a repository its work makes sense in, and the `none` cases run in

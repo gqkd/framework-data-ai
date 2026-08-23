@@ -1876,6 +1876,12 @@ def _skips_are_scoped():
     # one in a directory of that name, which is the mistake the registry already warns
     # about in the paragraph above the list. Bare names still work, and have to: `corpus`
     # means the same thing wherever it turns up.
+    #
+    # `_meta/business` is the second one of these and the temptation was stronger, because
+    # `business` reads like a word no Data/AI project would use for artifacts -- and a
+    # `business/` directory of domain models is exactly what several of them keep. The skill
+    # writes under `_meta/`, so the narrow form costs nothing and the broad one would have
+    # hidden somebody's documents from every check in the catalog.
     x = _load(VALIDATE, "validate")
     skips = set(x.REGISTRY_SCAN["skip_dirs"]) if hasattr(x, "REGISTRY_SCAN") \
         else set(yaml.safe_load((ROOT / "schemas" / "artifact-types.yaml")
@@ -1886,6 +1892,11 @@ def _skips_are_scoped():
         (("_meta", "extract", "gamma"), True, "a per-product folder inside it"),
         (("extract",), False, "an ETL directory called extract at the root"),
         (("pipelines", "extract"), False, "an extract step nested in a project's pipelines"),
+        (("_meta", "business"), True, "where the `business` skill writes its updates"),
+        (("_meta", "business", "archive"), True, "a folder somebody made inside it"),
+        (("business",), False, "a project's own business directory at the root"),
+        (("products", "alpha", "business"), False, "the same name under a product, which no "
+                                                   "skill writes and nothing may hide"),
         (("_meta", "corpus"), True, "the corpus under _meta"),
         (("products", "alpha", "corpus"), True, "a corpus left where older repos keep it"),
         (("_meta",), False, "_meta itself, which can hold artifacts and must be scanned"),

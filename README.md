@@ -15,11 +15,11 @@ decisions, products, initiatives and corpus, live in that project's repository, 
 | **`FRAMEWORK.md`** | The reference document. Start here |
 | `framework-flow.mermaid.md` | The lifecycle with its gates, drawn. It renders where you are reading it; the fence is what makes that happen, and the diagram inside it is importable into draw.io: *Arrange → Insert → Advanced → Mermaid* |
 | `Framework.drawio` | Where the layout came from, and not a second copy of the truth. The mermaid file is the one kept current; this one has not been redrawn since 2026-08-06 and is not maintained. Import the mermaid if you want a draw.io view of today |
-| `SKILLS.md` | The six skills that operate the framework, and where their boundaries fall |
-| `PROCESSES.md` | The twelve operating processes: who does what, what each one leaves written, and which of them the tooling actually carries today. Diagrammed, one per process |
+| `SKILLS.md` | The seven skills that operate the framework, and where their boundaries fall |
+| `PROCESSES.md` | The fourteen operating processes: who does what, what each one leaves written, and which of them the tooling actually carries today. Diagrammed, one per process |
 | `templates/` | One template per artifact, each with its anti-patterns at the bottom |
 | `schemas/` | The artifact catalog and what each type is allowed to be. `artifact-types.yaml` is the source; `generate.py` projects it into the JSON Schemas, into `FRAMEWORK.md §7` and into `templates/README.md` |
-| `skills/` | The six skills. `audit/` also carries the gate: `scripts/validate.py`, `scripts/migrate.py` and `checks.yaml` |
+| `skills/` | The seven skills. `audit/` also carries the gate: `scripts/validate.py`, `scripts/migrate.py` and `checks.yaml` |
 | `ci/` | Two files a project copies into `.github/`: the pull request template and the workflow that checks a change set against the `CHG` authorizing it |
 | `references/` | Shared by the skills: the common preamble and the routing table |
 | `tests/selfcheck.py` | The framework checked against itself. Runs in CI |
@@ -50,7 +50,7 @@ path:
 
 ## Using it with the skills
 
-Six skills run the framework from inside Claude Code. This section is how to start.
+Seven skills run the framework from inside Claude Code. This section is how to start.
 `SKILLS.md` says what each one does in detail.
 
 ### Turning it on
@@ -61,7 +61,7 @@ There are three separate things here, and only the last one is public.
 
 ```bash
 ln -s $PWD ~/.claude/skills/framework-data-ai
-claude plugin details framework-data-ai        # should list all six
+claude plugin details framework-data-ai        # should list all seven
 ```
 
 Use this while you are still changing the skills. Edit a skill and the change is live in
