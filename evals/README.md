@@ -7,15 +7,23 @@ here, and it needs a model to run, which is why it is not in CI.
 
 ## Triggering
 
-`trigger/cases.yaml` holds 112 prompts, each labelled with the one skill that should
+`trigger/cases.yaml` holds 118 prompts, each labelled with the one skill that should
 answer, or `none`.
 
+**Six of them have never been run, and for four days none of them could be.** `business`
+arrived in 2.8.11 with four cases of its own, one more for `audit` and one more negative,
+and the first of those carried an unquoted `management:` inside its prompt -- so
+`yaml.safe_load` at `run.py:177` raised on the file and the whole suite died before reaching
+a model. Nothing caught it: no self-check parses this file and nothing here runs in CI. The
+quoting is fixed; the six new cases are still unmeasured, and the table below is 112 rows of
+a 118 row set.
+
 Naming the expected skill rather than asking a yes/no per skill is the whole design. The
-six overlap, and a prompt going to the wrong sibling is worse than a prompt going nowhere:
+seven overlap, and a prompt going to the wrong sibling is worse than a prompt going nowhere:
 the wrong skill will confidently do something. One run scores both questions, and the
 confusion between siblings comes out as a matrix instead of as an impression.
 
-Twenty-five cases expect `none`, and about a third of those are lexical traps rather than
+Twenty-six cases expect `none`, and about a third of those are lexical traps rather than
 unrelated work: *release the lock on the postgres table*, *prepare a release of our internal
 python package to the private pypi*, *ingest these csvs into bigquery*, *validate this CSV
 against DC-001*, *where do I start debugging this*. Each one carries a word one of the six

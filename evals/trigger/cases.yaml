@@ -357,7 +357,8 @@ cases:
   expect: audit
 - prompt: è tutto a posto nel repo? fammi girare il validator su products/atlas e dimmi cosa esce
   expect: audit
-- prompt: facciamo il SAL settimanale di qosmos per il management: dove siamo, rischi e cosa serve
+- prompt: >-
+    facciamo il SAL settimanale di qosmos per il management: dove siamo, rischi e cosa serve
     dagli altri uffici
   expect: business
   why: recurring non-technical status with explicit actions outside development
