@@ -271,7 +271,7 @@ products: [atlas]
 owners: [g.quaglia]
 approvers: [m.rossi]
 created: 2026-06-20
-derives_from: [SIG-001, SIG-002, DEC-014]
+derives_from: [atlas:SIG-001, atlas:SIG-002, DEC-014]
 classification: internal
 ---
 
@@ -304,7 +304,7 @@ products: [atlas]
 owners: [g.quaglia]
 approvers: [m.rossi]
 created: 2026-07-01
-derives_from: [SIG-001]
+derives_from: [atlas:SIG-001]
 classification: internal
 ---
 

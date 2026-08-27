@@ -54,15 +54,18 @@ One entry per commitment. `CMT-NNN`.
 | Field | Content |
 |---|---|
 | **What was promised** | The words used, as faithfully as possible |
-| **To whom** | Customer, prospect, investor, partner |
 | **By whom and when** | Who said it and in what context |
-| **Products involved** | |
 | **Implicit or explicit deadline** | "by the end of the year" is a deadline too |
 | **Room for interpretation** | How binding the literal wording is |
 | **Technical translation** | What it actually takes to build |
-| **Feasibility** | feasible · feasible with reservations · **out of reach** · **not yet assessable** · not applicable |
 | **Architectural constraint that follows from it** | link to a `DEC` or an `OPEN.md` entry |
-| **Status** | **not yet issued** · **stated as done** · open · met · renegotiated · unsatisfiable |
+
+**Who received it, the status, the feasibility and the products are in `commitments:` above
+and are not rows here.** They were both until 3.0.0, and an empty map under a full body
+validated clean while `XP005`, `XP007` and `REF006` -- every check that joins a promise
+to anything -- read the map and therefore said nothing. `REG015` reports an entry present in
+one half and missing from the other. The vocabularies below describe those fields, and
+`§Owed a conversation` selects on them.
 
 **`not yet assessable` is the ordinary state of this file early on**, and it was missing
 from the vocabulary for as long as the vocabulary existed. This is the register of promises

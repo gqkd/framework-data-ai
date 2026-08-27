@@ -263,6 +263,31 @@ checks:
       easiest answer is a lie teaches the habit. `commitment: none` is the honest answer, and
       the finding now names both readings and asks which.
 
+  REF007:
+    level: warn
+    title: a qualified reference names a product the repository does not have
+    prevents: >
+      A reference that looks resolved and points nowhere. From 3.0.0 a reference to a `SIG`
+      or an `ANA` names the product whose register declares it -- `atlas:SIG-041` -- because
+      those registers exist once per product and a root level `DEC` naming a bare `SIG-041`
+      could not say whose signal it was. The bare form stops validating at the schema, which
+      is `FM002`; this is the other half, and it is here rather than in the schema because no
+      pattern knows which products a repository contains. A qualifier that is a typo, or a
+      product that was renamed, resolves to nothing while reading as the careful form.
+
+  REF008:
+    level: warn
+    title: a qualified reference names a product the document does not declare
+    prevents: >
+      A decision reaching into a product it does not claim to be about. `products:` says
+      which products a document binds and the qualifier says whose register a reference
+      resolves in, and when the second is not among the first one of the two is wrong: either
+      the decision binds a product it forgot to list -- in which case every join downstream,
+      `product.index.yaml` included, is missing it -- or it is citing a signal from a product
+      it has nothing to do with, which is the shape of a reference copied from another
+      document. Reported and not blocked, because the repair is a judgement about which of
+      the two fields is the mistaken one.
+
   # ── Discipline ─────────────────────────────────────────────────────────────
   RLM001:
     level: warn
@@ -303,14 +328,24 @@ checks:
 
   REG004:
     level: warn
-    title: open register with no structured entries
+    title: a register carries no structured map
     prevents: >
-      REG002 and REG003 having nothing to read while the register looks full. Both used to
-      match prose in the body -- `### OD-NNN`, and a line saying the cost to reverse -- so
-      renaming that label or translating it switched them off without a word. Reporting
-      nothing then read as "no high-cost decision is outstanding", which is the answer
-      somebody was hoping for. The two fields they need live in `entries:` now, and their
-      absence is a finding rather than a silence.
+      Every check that reads that register having nothing to read while the register looks
+      full. `REG002` and `REG003` used to match prose in the body -- `### OD-NNN`, and a line
+      saying the cost to reverse -- so renaming that label or translating it switched them
+      off without a word. Reporting nothing then read as "no high-cost decision is
+      outstanding", which is the answer somebody was hoping for. The fields they need live in
+      `entries:` now, and their absence is a finding rather than a silence.
+
+      FROM 3.0.0 IT ASKS THE SAME QUESTION OF ALL THREE REGISTERS, AND THE OTHER TWO ARE
+      WHERE IT WAS FOUND. A risk register with `risks:` absent or empty, or a commitments
+      register with `commitments:` absent or empty, has exactly this failure and had no
+      finding: `REF006`, `XP005` and `XP007` iterate those maps, so an empty one silences
+      three checks at once while §state still shows the rows to a person. Empty and absent
+      are still two claims and the distinction is kept -- a product may genuinely have
+      nothing open, which is why `entries: {}` is legal -- but an empty map on a register
+      whose body carries rows is `REG015`, and this is the one that reports the map nobody
+      wrote at all.
 
   REG005:
     level: warn
@@ -465,6 +500,32 @@ checks:
       nobody asked -- and `product.index.yaml` carries `open_unregistered` for the same
       reason, since a question with no entry cannot appear in a view built from registers.
 
+  REG015:
+    level: warn
+    title: a register's body and its map do not carry the same ids
+    prevents: >
+      Half a row. Until 3.0.0 the three registers held a map in front matter and repeated
+      its fields in the body, and nothing compared the two: `risks: {}` under a full §state
+      table validated clean, which is worse than a disagreement because every check that
+      joins risks reads the map and therefore said nothing, `XP005` was satisfied by the
+      file existing, and the second pass of `audit` enumerates from generated views built
+      out of the same empty map. Four ways of looking, all of them at the half that was
+      blank, while a person reading the document saw the risks.
+
+      The repair was to stop keeping the fields twice rather than to compare the copies, so
+      this is all that is left of the comparison and it is deliberately small: the same set
+      of ids in the map and in the body, both directions, and nothing about the fields --
+      they cannot disagree now, because they are in one place. An id in the body and not in
+      the map is a row no check will ever read; an id in the map and not in the body is a
+      row with no argument, no owner and no mitigation, which passes every schema and tells
+      a reader nothing.
+
+      A decided entry of an open register is exempt in one direction, and that is not an
+      oversight: taking a decision moves the prose out of §1 and leaves a cross-reference
+      line in §4 while the row stays in `entries:` for the `depends_on` of other entries to
+      resolve against. It is the only document in the framework that is supposed to get
+      shorter.
+
   # ── STACK ──────────────────────────────────────────────────────────────────
   STK001:
     level: warn
@@ -487,7 +548,7 @@ checks:
 
   XP005:
     level: warn
-    title: a product carries commitments and has no risk register
+    title: a product carries commitments and its risk register says nothing
     prevents: >
       The exposure living only in the sentence that created it. Promising something before
       it exists is the ordinary case in the projects this framework is written for, and it
@@ -505,6 +566,14 @@ checks:
       exactly the check that undoes it: somebody reads "eleven commitments", goes to look,
       finds one that was never said to anybody, and starts doubting the other ten. A count
       that does not survive being verified takes the finding down with it.
+
+      IT ASKED WHETHER THE FILE EXISTED UNTIL 3.0.0, WHICH IS NOT THE QUESTION. A product was
+      counted as covered by having an `RSK.md`, so a register with `risks:` empty satisfied
+      it -- and an empty map is exactly the state in which the other two checks that would
+      have caught the exposure, `REF006` and `XP007`, also have nothing to iterate. Three
+      checks silenced by one empty field, with the file on disk answering for all of them. It
+      asks whether the register declares anything now, and `REG004` reports the empty map on
+      its own account.
 
   # ── Attestation ────────────────────────────────────────────────────────────
   VER001:

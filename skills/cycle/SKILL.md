@@ -97,7 +97,7 @@ on the way, and one candidate can touch several.
 | `architecture` | an updated `ARC` **and** a `DEC` |
 | `data` | a `DC` version bump and notice to its consumers |
 | `ai` | a new `EVR` |
-| `risk-compliance` | a line in `RSK §state` |
+| `risk-compliance` | a risk: the entry in `risks:`, and its line in `RSK §state` |
 
 A data contract breaking with no product and no architecture movement routes `none` and
 carries `data`. Filing it as an architecture change because that was the closest available

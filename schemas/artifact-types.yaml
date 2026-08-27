@@ -225,6 +225,21 @@
 # job checking the framework out names a ref rather than a hash. Earlier versions are not
 # retro-tagged: inventing the tags after the fact would put a release label on commits that
 # were never released.
+#
+# FROM 3.0.0 EVERY BUMP IS TAGGED, AND THE RULE IS HERE BECAUSE THE OMISSION HAD A COST. The
+# sentence above was written at 2.8.0 and then ten versions shipped without a tag, so
+# `ci/pull-request.yml` -- which tells a project to pin `ref:` to "the commit, or the tag of
+# the version it declares" -- was giving an instruction that could not be followed for any
+# version a project was actually on. A bump is already a commit of its own: tagging it is one
+# command, and skipping it makes the other half of the instruction the only half that works.
+# `2.8.1` to `2.8.10` stay untagged for the reason above, and that gap is stated in the CI
+# template rather than papered over.
+#
+# NOT ASSERTED IN `tests/selfcheck.py`, DELIBERATELY. A check that the current version has a
+# tag goes red on the bump commit itself -- before anybody can tag it, since the tag names
+# that commit -- so the suite would fail during the one operation it exists to police, and
+# the way to get a green run would be to stop bumping. It is the shape of the `FW003` and
+# `--adopt` deadlock two notes down, where pinning made adopting impossible.
 # 2.8.0 -> 2.8.1. Three bugs in checks two days old, found by probing them: `terms`,
 # `commitments` and `risks` written as a list took the validator down with an
 # `AttributeError` and nothing at all was reported; `REF005` exempted every heading in the
@@ -409,7 +424,66 @@
 # project that never invokes the skill never grows the directory. The one thing to know is
 # that a file under `_meta/business/` is not validated by anything -- which is the trade the
 # choice makes, and the skill carries the rules the schema would otherwise have carried.
-version: "2.8.11"
+# 2.8.11 -> 3.0.0. TWO FORMAT BREAKS ON DOCUMENTS, ONE BUMP, ONE NOTE. MAJOR by the rule at
+# the top of this file: documents that validated stop validating. They ship together because
+# they are the same mistake seen twice -- a fact written in two places, and a reference that
+# does not say enough to resolve -- and because a project should be asked to migrate once.
+#
+# ONE · THE MAP IS THE ONLY SOURCE FOR THE FIELDS IT CARRIES. `OPEN.md`, `RSK.md` and
+# `COMMITMENTS.md` each carried a map in front matter and repeated its fields in the body: a
+# risk's category, likelihood, impact and state were in `risks:` and in the columns of
+# §state, a commitment's status, feasibility, products and recipient were in `commitments:`
+# and in its body table. The body keeps what the map does not hold -- the risk itself, the
+# mitigation, the owner, the words the promise was made in, who said it and what it would
+# take to build -- and nothing else.
+#
+# NOT A CHECK THAT THE TWO HALVES AGREE, WHICH IS WHAT WAS PROPOSED AND IS THE WRONG REPAIR.
+# The framework's own rule is that a fact has one authoritative place; a check comparing two
+# copies accepts the duplication and polices it forever. It also failed in the direction
+# nobody looks: `risks: {}` with a full §state table validated clean, every join that reads
+# the map went quiet, `XP005` was satisfied because the *file* existed, and the second pass
+# of `audit` enumerates from what is generated -- which comes from the map -- so the semantic
+# reading was looking at the empty half too. The template had already made this move for one
+# field, and said so: "The default itself is a field in `entries:` above, not a line here".
+# This is that sentence applied to the rest of them.
+#
+# `REG015` is what is left of the comparison, and it is deliberately small: the same set of
+# ids in the map and in the body, both directions, nothing about the fields. A row in one
+# half and not the other is a row somebody half-wrote; the fields cannot disagree any more
+# because they are not in two places. `REG004` now reports an absent map on all three
+# registers rather than on the open register alone, and `XP005` asks whether a risk register
+# says anything rather than whether the file is there.
+#
+# On the one field where the duplication was left: §1 of an open register groups entries
+# under `## Cost to reverse HIGH | MEDIUM | LOW`, which repeats `cost_to_reverse`. The
+# heading is navigation and the reading order of the document, and the generated §5 at the
+# root is the composed view of the same field across three registers. Removing it would
+# leave §1 an unordered list to solve a duplication nobody has ever got wrong. The templates
+# now say which of the two a check reads.
+#
+# TWO · A REFERENCE TO A PER-PRODUCT IDENTIFIER NAMES THE PRODUCT. `atlas:SIG-041`, and a
+# bare `SIG-041` in an `id_fields` field stops validating -- `FM002`, at the schema, because
+# the reference pattern and the declaration pattern are two patterns now and only the first
+# one narrowed. `REF007` reports the qualifier naming a product the repository does not have,
+# and `REF008` the qualifier naming a product the referencing document does not declare in
+# `products:`. See `qualified_reference_prefixes` for why the list is two prefixes and not
+# every per-product register, and for why declarations stay bare.
+#
+# WHY NOW AND NOT AFTER THE FIRST REAL PROJECT, WHICH IS THE ONLY REASON THIS IS A GOOD
+# TRADE. A semantic break costs what the installed base costs, and today that is zero. The
+# same change made after a project outside this repository has written its documents is the
+# same change made against somebody. `CHG` also gains `id_fields: [derives_from]`, which it
+# should have had since `CHG001` started reading the field.
+#
+# What an adopting repository does, in this order. `migrate.py` splits its findings into the
+# ones the move created and the ones that were already there; it does not rewrite documents,
+# and it is not going to for either of these. The column removal is mechanical but the
+# framework does not have tools that edit bodies. The reference qualification cannot be
+# automated where it matters: a `CHG` under `products/atlas/` could have its product read off
+# the path, but a `DEC` at the root naming `SIG-041` does not say which product's signal it
+# is, and that missing information is precisely what this change adds. Guessing it would
+# write the ambiguity down as a fact.
+version: "3.0.0"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of
@@ -525,6 +599,45 @@ inline_id_declarations:
   roadmap: [INC]
   signal-log: [SIG, ANA]
   ingestion-register: [ING]
+
+# The prefixes a reference has to qualify with a product: `atlas:SIG-041`, never `SIG-041`.
+#
+# WHY THIS IS NOT THE WHOLE LIST OF PER-PRODUCT REGISTERS, WHICH IS THE INTERESTING HALF.
+# Six families above define identifiers in a register's body, and four of those registers
+# exist once per product, so four of them could in principle collide. Only two are on this
+# list, and the test that put them there is not where the register lives -- it is whether
+# anything ever names one of its identifiers from outside the product that owns it:
+#
+#   RSK    nothing references a risk. No field in any template or schema names an `RSK-NNN`
+#          as a target; `REF006` and `XP007` join promises to risks by reading the map, not
+#          by resolving a written reference. Two products numbering their risks from 001 is
+#          the ordinary case and there is nothing to disambiguate.
+#   INC    referenced only by a `CHG`, which lives in `products/<p>/changes/`. Same product,
+#          always, by where both files sit.
+#   OD/KI  `REG007` already makes these one sequence across the three registers, and that is
+#          deliberate: the three compose into one view at the root ordered by cost to
+#          reverse, which is the only place "the most expensive thing still open" exists.
+#          Qualifying them would break that composition to solve a collision the check
+#          already reports.
+#   SIG    `DEC` lives at `decisions/DEC-NNN-slug.md` -- the root -- and its template
+#   ANA    prescribes `derives_from: [HYP-NNN, EVD-NNN, SIG-NNN]`. A root document that
+#          binds two products, naming a signal that belongs to one of them, by an id and
+#          nothing else. This is the case, and it is the prescribed shape rather than an
+#          edge one.
+#
+# So the rule is narrow on purpose: it is not "per-product registers get qualified", it is
+# "an identifier that can be named from outside its product gets qualified".
+#
+# DECLARATIONS STAY BARE. A signal log writes `SIG-041` in its own rows: the file is under
+# `products/<p>/`, so the directory already said whose it is, and a register that had to
+# repeat the product on every line would be repeating what its own path declares. It is the
+# reference that carries the qualifier, because a reference is read somewhere else.
+#
+# It applies to `id_fields` and not to map keys. An `ICG` keys its `routing` and `impacts`
+# maps on the candidates it classified -- signal ids -- and it lives in
+# `products/<p>/cycles/`: the candidates are that product's by construction, and asking a
+# product's own gate to qualify them is ceremony that buys nothing.
+qualified_reference_prefixes: [SIG, ANA]
 
 # What a validator built on this registry should look at.
 #
@@ -669,6 +782,16 @@ types:
     #
     # No fallback parser, and no transition. Nothing runs on this framework yet, so an
     # old-format register does not exist to protect.
+    #
+    # `body_ids` is what `REG015` compares: the ids the body still carries, against the keys
+    # of the map, both directions. Here the body is `### OD-NNN` headings and not a table,
+    # and a decided entry is exempt in one direction on purpose -- when a decision is taken
+    # the prose leaves §1 for a cross-reference line in §4 while the row stays in the map,
+    # which is the one document in the framework that is supposed to get shorter.
+    body_ids:
+      from: heading
+      map: entries
+      exempt_status: [decided]
     maps:
       entries:
         # `entries: {}` is legal here and nowhere else. A product must have a register --
@@ -725,6 +848,14 @@ types:
     # The body keeps the promise in the words that were used, who said it, how binding the
     # literal wording is, and what it would take to build. That is what a person reads
     # before renegotiating, and no field replaces it.
+    #
+    # From 3.0.0 it keeps *only* that: the recipient, the status, the feasibility and the
+    # products were rows of the body table and fields of the map at the same time, and now
+    # they are fields only. `body_ids` is the `### CMT-NNN` heading of each entry, which
+    # `REG015` compares against the keys of the map.
+    body_ids:
+      from: heading
+      map: commitments
     maps:
       commitments:
         may_be_empty: true
@@ -1282,6 +1413,14 @@ types:
     path: products/<p>/changes/CHG-NNN.md
     lifecycle: immutable
     status: [draft, approved, implemented, verified, rolled-back]
+    # DECLARED IN 3.0.0, AND READ BY THE VALIDATOR SINCE LONG BEFORE. `CHG002` and `CHG001`
+    # both read this field -- they look in it for the `DEC` and the `EVR` a classification
+    # demands -- and it was in no schema, so `derives_from: 12` was as legal here as it was
+    # on a `DEC` before 2.8.x closed the same hole there. It is also the field that names a
+    # `SIG` more often than any other in the framework, which is what made the omission
+    # matter once references had a shape: the type most likely to carry a qualified
+    # reference was the one type whose reference field nothing was checking.
+    id_fields: [derives_from]
     sections: [what-changes, what-must-not-change, how-we-know-it-worked]
 
   cycle-plan:
@@ -1324,6 +1463,16 @@ types:
     # The body keeps the mitigation, the owner and the argument. §acceptances and §events
     # stay prose entirely: an acceptance is somebody's signature under a sentence, and an
     # event is a story with a date.
+    #
+    # From 3.0.0 that sentence is the whole rule rather than an intention: the category, the
+    # likelihood, the impact and the state were columns of §state and fields of the map at
+    # once, and they are fields only now. `body_ids` is the first cell of each §state row,
+    # which `REG015` compares against the keys of the map. §events also names risks, and it
+    # is not read here: it is a history, and a closed risk keeps its events.
+    body_ids:
+      from: table
+      section: state
+      map: risks
     maps:
       risks:
         may_be_empty: true
@@ -1331,12 +1480,12 @@ types:
         fields:
           required: [category, state]
           optional: [likelihood, impact, commitment]
-          # `decided_in` nomina la decisione di cui questa riga è conseguenza, ed è lo stesso
-          # campo che `STACK.md` porta sulle righe dello stack -- stesso nome, stessa forma.
-          # Una lista perché l'esposizione la crea una decisione e il presidio può venire da
-          # un'altra: `RSK-033`, la riga che ha prodotto questo campo, segue da due.
-          # Adozione solo in avanti: le righe esistenti non lo portano, e nessun check lo
-          # pretende finché l'adozione non c'è.
+          # `decided_in` names the decision this row follows from, and it is the same field
+          # `STACK.md` carries on a stack row -- same name, same shape. A list, because the
+          # exposure is created by one decision and the guard against it can come from
+          # another: `RSK-033`, the row this field came from, follows from two. Adoption is
+          # forward only: existing rows do not carry it, and no check asks for it until they
+          # do.
           lists: [decided_in]
           enums:
             # `security` is not `compliance`: one is whether a rule is broken, the other is

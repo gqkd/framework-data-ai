@@ -56,6 +56,12 @@ That sentence used to read "one version, one day, every row", which was written 
 before the row that made it false, in the file that collects the numbers this directory got
 wrong.
 
+**The framework is at 3.0.0 and this table is not.** 3.0.0 broke two document formats and
+touched no `description:`, so by the rule above the rows are still comparable and are still
+the last measurement anybody made. Said plainly rather than left to be inferred: nothing here
+has been re-run since 08-19, and a table whose staleness is only visible by subtracting two
+version numbers is the kind of number this file exists to stop trusting.
+
 | | | miss |
 |---|---|---|
 | `audit` | 15/15 | |

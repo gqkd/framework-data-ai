@@ -128,7 +128,15 @@ F["COMMITMENTS.md"] = fm(schema="framework/commitments/v1", artifact_type="commi
     lifecycle="living", status="active", owners="[gq]", created="2026-01-12",
     last_review=review(), classification="internal",
     commitments="\n  CMT-001:\n    to: the customer named in the order form\n"
-                "    status: open\n    feasibility: feasible\n    products: [atlas]\n") + """\
+                "    status: open\n    feasibility: feasible\n    products: [atlas]\n"
+                # The body carried three rows and the map one, which `REG015` reports:
+                # `XP006`, `XP007` and `REF006` read the map, so the two undeclared
+                # promises were invisible to every one of them.
+                "  CMT-002:\n    to: all EU customers, in the Atlas DPA\n"
+                "    status: open\n    feasibility: feasible\n    products: [atlas]\n"
+                "  CMT-003:\n    to: Northwind, in the demo deck\n"
+                "    status: stated-as-done\n    feasibility: feasible\n"
+                "    products: [atlas]\n") + """\
 # Commercial commitments made
 
 | ID | Commitment | Where it was said | To whom | Technical constraint that follows |
@@ -296,6 +304,15 @@ Lowering any threshold requires a `DEC`.
 F["products/atlas/RSK.md"] = fm(schema="framework/risk-register/v1",
     artifact_type="risk-register", lifecycle="living", status="active",
     products="[atlas]", owners="[gq]", created="2026-03-01", last_review=review(),
+    # §state described three risks and there was no map at all, so `REG004` reported
+    # the register nothing can read and `XP005` the product whose promises no risk
+    # owns -- on a fixture that carries the risk for the signed 07:00 commitment.
+    risks="\n  RSK-001:\n    category: organisational\n    state: accepted\n"
+          "    likelihood: M\n    impact: H\n"
+          "  RSK-002:\n    category: technical\n    state: open\n"
+          "    likelihood: M\n    impact: H\n    commitment: CMT-001\n"
+          "  RSK-003:\n    category: compliance\n    state: open\n"
+          "    likelihood: L\n    impact: H\n    commitment: CMT-002\n",
     classification="internal") + """\
 # Atlas · risks
 

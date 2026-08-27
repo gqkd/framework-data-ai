@@ -28,8 +28,8 @@ apart, **ask**: it is the question that pays best in the whole skill.
 | **Hypothesis** | "if we did X then Y" | `HYP-NNN` | immutable |
 | **Request or feedback** | "the customer wants", "they asked for" | `LOG.md` → `SIG-NNN`, type `feedback` / `request` | append-only |
 | **Incident or anomaly** | "it went down", "the numbers look wrong" | `LOG.md` → `SIG-NNN`, type `incident` / `drift` | append-only |
-| **Constraint** | "we cannot", "the regulation requires", "it has to stay in the EU" | `RSK.md#state` + `PBR.md` constraints | living |
-| **Risk** | "there is a risk that", "if it happened" | `RSK.md#state` | living |
+| **Constraint** | "we cannot", "the regulation requires", "it has to stay in the EU" | `RSK.md` -- the entry in `risks:` and its row in `#state` -- plus `PBR.md` constraints | living |
+| **Risk** | "there is a risk that", "if it happened" | `RSK.md` -- the entry in `risks:` and its row in `#state` | living |
 | **Numeric target** | "a 30% reduction", "under 2 seconds" | `EVP.md` threshold, **and** `COMMITMENTS` if it was promised | living |
 | **Promised capability** | "the system will do", "it includes the module" | `PBR.md` capability | living |
 | **Correction of something written** | "actually no", "that changed" | depends on the document holding it → §3 | — |
@@ -70,7 +70,7 @@ mandatory, and the validator verifies some of them.
 | a `DEC` that closes an `OPEN.md` entry | move the entry to §4 **of the register it is already in**, with the cross reference, and carry `derives_from: [OD-NNN]` on the `DEC` |
 | a `GLOSSARY` entry for a term that is also a field of a `DC` | update the semantics of that `DC` and bump its version |
 | a `GLOSSARY` metric used by more than one product | check every product computes it with that formula. If they cannot, they are two metrics and need two names |
-| a `CMT` that is out of technical reach | open a row in `RSK#state` **and** an entry in `OPEN.md`, and tell the user it is the most urgent thing in the project |
+| a `CMT` that is out of technical reach | open a risk -- the entry in `risks:` and its row in `RSK#state` -- **and** an entry in `OPEN.md`, and tell the user it is the most urgent thing in the project |
 | a constraint on data (freshness, volume, residency) | update the **guarantees** of the relevant `DC`, not only its schema |
 | a threshold in `EVP` | if it lowers an existing threshold, it needs a `DEC` with the reason. Never silently |
 | a `SIG` that materialises a known risk | add a row to `RSK#events` |

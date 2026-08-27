@@ -750,6 +750,16 @@ def check_lifecycle(a: Artifact, stale_days: int, now: datetime, report: Report)
 def check_references(arts: list[Artifact], registry: dict, report: Report) -> None:
     id_re = re.compile(r"\b((?:%s)-\d{3,})\b" % "|".join(registry["id_prefixes"]))
     inline_decl = registry["inline_id_declarations"]
+    qualified_prefixes = set(registry.get("qualified_reference_prefixes") or ())
+    # `atlas:SIG-041`. The qualifier is a product directory name, which is what the schema's
+    # reference pattern accepts and what `product_dirs` keys on.
+    if qualified_prefixes:
+        qual_re = re.compile(r"^([a-z0-9][a-z0-9-]*):((?:%s)-\d{3,})$"
+                             % "|".join(sorted(qualified_prefixes)))
+    else:
+        qual_re = re.compile(r"(?!)")        # matches nothing, and has to be a pattern
+    dirs = product_dirs(arts)
+    products = {prod for prod, _ in dirs.values()}
 
     by_id: dict[str, Artifact] = {}
     for a in arts:
@@ -768,18 +778,63 @@ def check_references(arts: list[Artifact], registry: dict, report: Report) -> No
     # finding, and it fired exactly when someone followed the REF001 guidance to write in
     # prose that the target was missing.
     inline: set[str] = set()
+    # The same declarations, kept per product as well. A register under `products/<p>/`
+    # declares for `p` and for nobody else, which is what makes `atlas:SIG-041` answerable:
+    # until 3.0.0 every declaration went into one set and a reference resolved against all
+    # of them at once, so two products numbering their signals from 001 made every `DEC`
+    # citing one of them ambiguous, and the ambiguity resolved itself -- whichever register
+    # was read last won.
+    inline_per_product: dict[str, set[str]] = {}
     for a in arts:
         prefixes = inline_decl.get(a.type or "")
         if prefixes:
-            inline |= {i for i in a.ids if i.split("-", 1)[0] in prefixes}
+            declared = {i for i in a.ids if i.split("-", 1)[0] in prefixes}
+            inline |= declared
+            owner = dirs.get(a.path.parent, (None, None))[0]
+            if owner:
+                inline_per_product.setdefault(owner, set()).update(declared)
     known = set(by_id) | inline
     sup_edges: dict[str, list[str]] = {}
 
+    def resolve(ref: object, a: Artifact, field: str) -> None:
+        """One reference, in either form, reported once.
+
+        A bare id that names a qualified prefix does not reach here: the schema's reference
+        pattern rejects it, which is `FM002` and blocks. What is left for this to say is
+        about the qualifier -- a product that is not in the repository, or one the document
+        does not claim to bind -- and neither is expressible as a pattern.
+        """
+        if not isinstance(ref, str):
+            return
+        m = qual_re.match(ref)
+        if m:
+            prod, bare = m.group(1), m.group(2)
+            if prod not in products:
+                report.add("REF007", a.rel,
+                           f"{field} names {ref!r}, and this repository has no product "
+                           f"{prod!r}. The products it has are "
+                           f"{', '.join(sorted(products)) or 'none'}.")
+                return
+            named = [p for p in as_list(a.meta.get("products")) if isinstance(p, str)]
+            if named and ALL_PRODUCTS not in named and prod not in named:
+                report.add("REF008", a.rel,
+                           f"{field} resolves {ref!r} in {prod!r}, which is not among the "
+                           f"products this document declares ({', '.join(named)}). Either "
+                           "it binds a product it does not list -- and every view built "
+                           "from `products:` is missing it -- or the reference came from "
+                           "another document.")
+            if bare not in inline_per_product.get(prod, set()):
+                report.add("REF001", a.rel,
+                           f"{field} points at {ref!r}, and no register under {prod!r} "
+                           f"declares {bare}")
+            return
+        if id_re.fullmatch(ref) and ref not in known:
+            report.add("REF001", a.rel, f"{field} points at {ref!r}, which does "
+                                        "not exist anywhere in this repository")
+
     for a in arts:
         for ref in as_list(a.meta.get("derives_from")):
-            if isinstance(ref, str) and id_re.fullmatch(ref) and ref not in known:
-                report.add("REF001", a.rel, f"derives_from points at {ref!r}, which does "
-                                            "not exist anywhere in this repository")
+            resolve(ref, a, "derives_from")
         # One decision replacing two earlier ones is an ordinary thing to write, and
         # `supersedes: [DEC-001, DEC-004]` is how anyone would write it: `derives_from`
         # in the same front matter already takes a list. It used to be read only when it
@@ -1035,7 +1090,13 @@ def check_commitments_and_risks(arts: list[Artifact], report: Report) -> None:
     # Which products have a risk register, read off the directory the register sits in,
     # the same way a register's scope is read everywhere else here.
     dirs = product_dirs(arts)
-    covered = {dirs[a.path.parent][0] for a in risk_files if a.path.parent in dirs}
+    # A REGISTER THAT SAYS SOMETHING, AND NOT A FILE THAT EXISTS. Until 3.0.0 this was
+    # the set of products with an `RSK.md`, so `risks: {}` cleared the finding -- and an
+    # empty map is exactly the state in which `REF006` and `XP007` also have nothing to
+    # iterate, so one empty field took three checks down and the file on disk answered
+    # for all of them. `REG004` reports the map nobody wrote, on its own account.
+    covered = {dirs[a.path.parent][0] for a in risk_files
+               if a.path.parent in dirs and a.meta.get("risks")}
 
     # A PROMISE NOBODY HAS RECEIVED CREATES NO EXPOSURE, AND COUNTING IT WEAKENS THE
     # FINDING RATHER THAN STRENGTHENING IT. `not-yet-issued` is the row that exists in an
@@ -1077,11 +1138,12 @@ def check_commitments_and_risks(arts: list[Artifact], report: Report) -> None:
                  "been said to anybody yet, so there is no exposure to own.)" if held else "")
         report.add("XP005", f"products/{prod}/RSK.md",
                    f"{prod!r} carries {len(ids)} commitment(s) that have been made -- "
-                   f"{', '.join(sorted(ids))} -- and has no risk register.{aside} A promise "
-                   "made before the thing exists is the ordinary case here and it is "
-                   "supposed to leave two marks: a risk somebody owns and an entry in the "
-                   "register. With no `RSK.md` the first one has nowhere to be, and the "
-                   "exposure lives only in the sentence that created it.")
+                   f"{', '.join(sorted(ids))} -- and no risk register that declares "
+                   f"anything.{aside} A promise made before the thing exists is the "
+                   "ordinary case here and it is supposed to leave two marks: a risk "
+                   "somebody owns and an entry in the register. With no `risks:` to read "
+                   "the first one has nowhere to be, and the exposure lives only in the "
+                   "sentence that created it.")
 
     # A PROMISE DECLARED BEYOND REACH, AND NOBODY ON THE HOOK FOR IT. `COMMITMENTS.md`
     # §Owed a conversation is the mandatory section for the two rows whose next move is not
@@ -1148,6 +1210,108 @@ def check_commitments_and_risks(arts: list[Artifact], report: Report) -> None:
                            f"renegotiate -- or it is an exposure nobody promised, and "
                            f"`commitment: {NO_COMMITMENT}` says so. The two are different "
                            "risks with different remedies, and silence reads as the first.")
+
+
+def body_ids(a: Artifact, spec: dict) -> set[str] | None:
+    """The ids the body of a register still carries, or None when it has no body to read.
+
+    Two shapes, declared per type in the registry as `body_ids.from`. A table, where the id
+    is the first cell of each row inside one section -- §state of a risk register, and only
+    that section: §events names risks too and it is a history, so a closed risk keeps its
+    line there. Or a heading, `### CMT-001 · title`, which is how the other two write an
+    entry.
+
+    None and an empty set are different answers and the caller needs both apart. A register
+    whose §state section is missing entirely has no rows to compare, and reporting every id
+    in the map as missing from a section that does not exist says the wrong thing: `SEC001`
+    is the finding for an absent section.
+    """
+    id_in = re.compile(r"\b([A-Z]{2,4}-\d{3,})\b")
+
+    def rows_of(chunk: str) -> set[str]:
+        """The first cell of every table row in `chunk`, which is where a register puts the id."""
+        found = set()
+        for line in chunk.splitlines():
+            line = line.strip()
+            if line.startswith("|"):
+                found |= set(id_in.findall(line.strip("|").split("|", 1)[0]))
+        return found
+
+    # A GENERATED REGION IS NOT THIS REGISTER'S OWN WRITING, AND §5 OF A ROOT OPEN REGISTER IS
+    # THE CASE THAT MATTERS. `--emit-index` composes every register in the repository into a
+    # table there, ids in the first column, and those ids belong to the registers under each
+    # product. Read as body, the root register would appear to carry entries its own map does
+    # not declare -- a finding on precisely the arrangement the framework asks for, which is
+    # how a check gets switched off.
+    body = re.sub(r"<!-- generated:.*?-->.*?<!-- /generated -->", "", a.body, flags=re.S)
+
+    if spec.get("from") == "table":
+        marker = f"<!-- section: {spec['section']} -->"
+        if marker not in body:
+            return None
+        return rows_of(body.split(marker, 1)[1].split("<!-- section:", 1)[0])
+
+    # EITHER SHAPE, BECAUSE BOTH ARE WRITTEN. The templates give each entry a `### CMT-001 ·
+    # title` heading with the reasoning under it, and that is the shape this asks for; a
+    # register adopted from before the framework, or one written by somebody who preferred a
+    # table, puts the same ids in a first column. Both are the body saying the entry exists,
+    # and a check that recognised only one of them would report a register for its formatting
+    # while calling it a missing row.
+    headings = {m.group(1) for m in re.finditer(r"^#{2,4}\s+.*?\b([A-Z]{2,4}-\d{3,})\b",
+                                                body, re.M)}
+    return headings | rows_of(body)
+
+
+def check_register_halves(arts: list[Artifact], registry: dict, report: Report) -> None:
+    """The map and the body of a register carry the same ids, and the map exists at all.
+
+    What is left of a comparison that used to be worth making field by field, before the
+    fields stopped being in two places. `REG015` is the id sets, both directions; `REG004`
+    is the map that was never written -- reported here for the risk and commitments
+    registers, and at `check_open_register` for the open one, which has an exemption of its
+    own for the generated union at the root.
+    """
+    types = registry["types"]
+    for a in arts:
+        spec = types.get(a.type or "", {})
+        decl = spec.get("body_ids")
+        if not decl:
+            continue
+        field = decl["map"]
+        rows = a.meta.get(field)
+        if not isinstance(rows, dict):
+            # The open register says this itself, with the union exemption the other two
+            # cannot have: there is no composed view of risks or of commitments, because
+            # there is one of each in the repository.
+            if a.type != "open-register":
+                report.add("REG004", a.rel,
+                           f"no `{field}:` in the front matter. The body may say anything "
+                           f"it likes and every check that reads this register has nothing "
+                           f"to read, so it reports clean however it is filled in.")
+            continue
+        in_body = body_ids(a, decl)
+        if in_body is None:
+            continue
+        exempt = set(decl.get("exempt_status") or ())
+        missing_from_body = {
+            i for i, row in rows.items()
+            if i not in in_body
+            and not (isinstance(row, dict) and row.get("status") in exempt)
+        }
+        if missing_from_body:
+            report.add("REG015", a.rel,
+                       f"{', '.join(sorted(missing_from_body))} "
+                       f"{'is' if len(missing_from_body) == 1 else 'are'} in `{field}:` and "
+                       "nowhere in the body. The row validates and carries no argument, no "
+                       "owner and nothing a person can act on.")
+        missing_from_map = in_body - set(rows)
+        if missing_from_map:
+            report.add("REG015", a.rel,
+                       f"{', '.join(sorted(missing_from_map))} "
+                       f"{'is' if len(missing_from_map) == 1 else 'are'} written in the body "
+                       f"and not in `{field}:`. Every check here reads the map, so as "
+                       "written this is invisible to all of them while a person reading the "
+                       "document sees it.")
 
 
 def check_manifest_derived_fields(arts: list[Artifact], report: Report) -> None:
@@ -2443,6 +2607,7 @@ def main() -> int:
     check_framework_pin(project, report)
     check_open_register(arts, report)
     check_manifest_derived_fields(arts, report)
+    check_register_halves(arts, registry, report)
     check_key_typos(arts, registry, report)
     check_review_batches(arts, report)
     check_glossary_terms(arts, report)

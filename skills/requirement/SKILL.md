@@ -60,7 +60,7 @@ unmaintainable. Route by what the requirement *is*:
 | a guarantee about data | the relevant `DC`, in its **guarantees**, not only its schema |
 | a quality threshold | `EVP.md`, and `COMMITMENTS` too if it was promised |
 | a structural property of the system | `ARC.md#target`, and `#delta` if it is not there yet |
-| a thing we must not do | `PBR` out of scope, or `RSK#state` if it is a constraint |
+| a thing we must not do | `PBR` out of scope, or a risk if it is a constraint -- the entry in `risks:` and its row in `RSK#state` |
 | something nobody has decided | an `OD` with its cost to reverse, in the register of what it is about: `products/<p>/OPEN.md`, `platform/OPEN.md`, or the root when it is neither |
 
 If a statement does not fit any row, that is information: it is probably reasoning rather

@@ -9,7 +9,10 @@ products: [product-a, product-b]
 owners: [NAME]
 approvers: [NAME]
 created: YYYY-MM-DD HH:MM
-derives_from: [HYP-NNN, EVD-NNN, SIG-NNN]
+derives_from: [HYP-NNN, EVD-NNN, product-a:SIG-NNN]   # a reference to a signal names the
+                               # product whose log declares it: the registers are one per
+                               # product and this file is at the root, so `SIG-NNN` alone
+                               # does not say whose. Bare is `FM002` from 3.0.0
 supersedes: null
 classification: internal
 leaves_open: []                # the register entries this decision did NOT settle. `[]`

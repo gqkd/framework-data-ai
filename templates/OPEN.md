@@ -123,6 +123,13 @@ at first. The heading says what changing your mind costs, and nothing about when
 own `trigger`, which names an event, and `REG009` and `REG010` report a date written in
 either place.
 
+**The heading is navigation, and `cost_to_reverse` on the entry is what anything reads.**
+This is the one repetition 3.0.0 left in place, deliberately: the grouping is the reading
+order of the document, and the generated `§5` at the root composes the same field across
+three registers into the only list that answers "what is the most expensive thing still
+open". Removing it would leave this section unordered to close a duplication nobody has ever
+got wrong. If the two ever disagree, the field is right.
+
 ## Cost to reverse HIGH: changing it later means redoing work that already exists
 
 ### OD-001 · Title of the decision, in the form of a choice
@@ -132,19 +139,17 @@ either place.
   itself is a field in `entries:` above, not a line here: when nothing really is happening
   it is `none`, and together with a high cost that is the most expensive combination there
   is, which the validator flags for you.
-- **Depends on:** other `OD-NNN` entries that have to be decided first, if there are any.
 - **Leaning:** the direction we lean toward, and why. Optional, and it is not a decision:
   it is there so you do not start the reasoning over from scratch in two weeks.
-- **Trigger:** the observable event after which the decision can no longer be deferred:
-  the second customer, the first line of code written against it, the signature. **No
-  date belongs here**, in any form and not even beside the event -- `REG009` reports the
-  ones it can see, and "by the end of the quarter" is one it cannot. This entry is open
-  because nobody has decided; a date written on it is read as a commitment by the next
-  person, and nobody made one.
-- **Decide with:** other `OD-NNN` entries that have to be taken in the same sitting,
-  because deciding either one alone decides the other by implication. `Depends on` orders
-  two decisions, this one refuses to order them. Write it on both entries: nothing checks
-  that you did, because nothing can tell which of the two is wrong when only one says it.
+- **What the alternatives cost:** the comparison somebody will want in two weeks, and the
+  one thing no field can hold.
+
+**`trigger`, `depends_on` and `decide_with` are fields of the entry above and are not
+bullets here.** They were both until 3.0.0, which is the same duplication `default_in_force`
+was pulled out of one version earlier and for the same reason: the checks read the map, so a
+bullet rewritten or translated changed nothing and looked like it had. `REG009` reads
+`trigger`, `REG005` resolves `depends_on` and `decide_with`, and this section is where the
+reasoning lives -- the question, the leaning, and what the alternatives cost.
 
 ## Cost to reverse MEDIUM: changing it later costs a migration, not a rewrite
 
@@ -152,17 +157,12 @@ either place.
 
 - **Question:**
 - **The problem the default introduces:**
-- **Trigger:**
 
 ## Cost to reverse LOW: changing it later costs an afternoon
 
 ### OD-003 · Title
 
 - **Question:**
-- **Trigger:** the condition that makes it urgent. Nothing special about the low tier any
-  more: this is what the field says on all three, and it started here. There is no date by
-  which to decide any of them, there is an event after which each can no longer be
-  deferred.
 
 ---
 

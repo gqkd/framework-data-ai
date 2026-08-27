@@ -223,7 +223,12 @@ F["platform/OPEN.md"] = fm(
     entries="\n  OD-002:\n    status: open\n    cost_to_reverse: high\n"
             "    default_in_force: customer_id is shown in the orion UI today\n"
             "  OD-003:\n    status: open\n    cost_to_reverse: medium\n"
-            "    default_in_force: the atlas team maintains it, unasked",
+            "    default_in_force: the atlas team maintains it, unasked\n"
+            # §2 of the body accepts KI-001 and the map did not declare it, which
+            # `REG015` reports: a known issue nothing can read is one no view of
+            # what is open will ever list. A known issue carries neither a cost to
+            # reverse nor a default -- both are properties of a choice.
+            "  KI-001:\n    status: open",
     classification="internal") + """\
 # Open decisions and known issues of the substrate
 

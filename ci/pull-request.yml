@@ -32,6 +32,13 @@ jobs:
           # it declares. Not a branch: a job that follows the framework's main branch turns
           # every change made there into a build failure here, which is the confusion
           # `FW001` exists to prevent and `FW003` to catch.
+          #
+          # WHICH VERSIONS HAVE A TAG, SO THAT THE SENTENCE ABOVE IS TRUE AND NOT ROUGHLY
+          # TRUE. `v2.8.0`, and then every version from `v3.0.0` on -- each bump is tagged as
+          # it lands. `2.8.1` to `2.8.10` have none and will not get one: a tag invented
+          # afterwards is a release label on a commit that was never released. On one of
+          # those, pin the commit; `FW003` reports a report produced by any other one, so
+          # the commit form is the one that binds either way.
           ref: COMMIT_OR_TAG
           path: .framework
 

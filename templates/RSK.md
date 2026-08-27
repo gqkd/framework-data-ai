@@ -56,9 +56,15 @@ regimes in one file, split into sections, because separate files would diverge.
 
 Living. The current truth. One row per risk.
 
-| ID | Risk | Category | Likelihood | Impact | State | Mitigation | Owner | Reviewed |
-|---|---|---|---|---|---|---|---|---|
-| RSK-001 | | technical · data · AI · security · compliance · commercial · organisational · vendor | L/M/H/C | L/M/H | | | | YYYY-MM-DD |
+| ID | Risk | Mitigation | Owner | Reviewed |
+|---|---|---|---|---|
+| RSK-001 | what can go wrong, in a sentence | what is being done about it | NAME | YYYY-MM-DD |
+
+**The category, the likelihood, the impact and the state are in `risks:` above and are not
+columns here.** They were both until 3.0.0, and `risks: {}` under a full table validated
+clean: every check that joins risks reads the map, so the empty half silenced all of them
+while this table still showed the rows to a person. `REG015` reports an id in one half and
+not the other, which is all that is left to compare now that no field is in two places.
 
 `state`: `open` · `mitigated` · `accepted` · `transferred` · `closed` · `expired`
 

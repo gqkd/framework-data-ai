@@ -264,7 +264,11 @@ def _clean_repo():
                               # says the entry binds whatever this repository grows.
                               "    products: [all]\n"
                               "    default_in_force: nothing is scheduled\n")
-        + "# Open\n",
+        # THE BODY CARRIES THE ID TOO, AND `REG015` IS WHY. The map holds the fields a check
+        # reads and the body holds the reasoning; an entry present in one half and absent
+        # from the other is half a row, and this minimal repository has to be a correct one
+        # in both directions.
+        + "# Open\n\n## Cost to reverse LOW\n\n### OD-001 - the one open question\n",
         "decisions/DEC-001-slug.md": fm(
             schema="framework/decision-record/v1", artifact_type="decision-record",
             id="DEC-001", lifecycle="immutable", status="accepted", scope="architecture",
@@ -3276,6 +3280,188 @@ def _the_pin_is_read():
         elif ("FW003" in got) != want:
             problems.append(f"{what} was {'not ' if want else ''}reported")
     return problems
+
+@check("a register's two halves carry the same ids, and a generated view is not one of them")
+def _register_halves():
+    # THE FAILURE THAT PUT THIS HERE WAS A SILENCE, AND SILENCES ARE WHAT THIS SUITE IS FOR.
+    # Until 3.0.0 the three registers kept a map in front matter and repeated its fields in
+    # the body, and `risks: {}` under a full §state table validated clean: every check that
+    # joins risks reads the map, so all of them went quiet at once while the document still
+    # showed the rows to a person. Four ways of looking, all at the blank half.
+    #
+    # The repair was to stop keeping the fields twice, so what is asserted is what is left:
+    # the same ids in both halves, and the three exemptions that make the check survivable --
+    # a generated view is not the body, a decided entry keeps its row and loses its prose,
+    # and either body shape counts.
+    def repo(files: dict[str, str]) -> set[str] | None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "framework.yaml").write_text(
+                f"framework_version: {REGISTRY['version']}\n")
+            for rel, text in files.items():
+                f = root / rel
+                f.parent.mkdir(parents=True, exist_ok=True)
+                f.write_text(text)
+            r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(root),
+                                "--json", "--stale-days", "36500"],
+                               capture_output=True, text=True)
+            if not r.stdout.strip():
+                return None
+            return {f["code"] for f in json.loads(r.stdout)["findings"]}
+
+    def rsk(risks: str, body: str) -> dict[str, str]:
+        return {"products/alpha/product.yaml":
+                    ("---\nschema: framework/product-manifest/v1\n"
+                     "artifact_type: product-manifest\nlifecycle: living\nstatus: active\n"
+                     "products: [alpha]\nowners: [o]\ncreated: 2026-01-01 09:00\n"
+                     "last_review: 2026-08-01 09:00\n---\n\n# alpha\n"),
+                "products/alpha/RSK.md":
+                    ("---\nschema: framework/risk-register/v1\n"
+                     "artifact_type: risk-register\nlifecycle: living\nstatus: active\n"
+                     "products: [alpha]\nowners: [o]\ncreated: 2026-01-01 09:00\n"
+                     "last_review: 2026-08-01 09:00\n" + risks + "---\n\n# Risks\n\n"
+                     "<!-- section: state -->\n## State\n\n"
+                     "| ID | Risk | Mitigation | Owner | Reviewed |\n|---|---|---|---|---|\n"
+                     + body)}
+
+    one = "risks:\n  RSK-001:\n    category: technical\n    state: open\n"
+    row = "| RSK-001 | the thing | the mitigation | o | 2026-08-01 |\n"
+    problems = []
+
+    for what, files, want in [
+        ("a risk in the map and in §state", rsk(one, row), False),
+        ("a map with a row §state does not carry", rsk(one, ""), True),
+        ("a §state row the map does not declare", rsk("risks: {}\n", row), True),
+        ("an empty map under an empty §state", rsk("risks: {}\n", ""), False),
+    ]:
+        got = repo(files)
+        if got is None:
+            problems.append(f"the validator produced nothing on {what}")
+        elif ("REG015" in got) != want:
+            problems.append(f"{what} was {'not ' if want else ''}reported")
+
+    # `risks:` absent entirely is `REG004` and not `REG015`: there is no map to compare, and
+    # the finding has to say the register is unreadable rather than that a row is missing.
+    got = repo(rsk("", row))
+    if got is not None:
+        if "REG004" not in got:
+            problems.append("a risk register with no `risks:` at all was not reported by REG004")
+        if "REG015" in got:
+            problems.append("a register with no map was reported as a half-written row, "
+                            "which sends somebody to add a row rather than the map")
+
+    # THE GENERATED UNION IS NOT THE BODY OF THE REGISTER IT SITS IN. `--emit-index` composes
+    # every register in the repository into §5 at the root, ids in the first column, and
+    # those entries belong to the registers under each product. Read as body, the root
+    # register would be reported for entries it correctly does not declare -- a finding on
+    # exactly the arrangement the framework asks for.
+    union = ("---\nschema: framework/open-register/v1\nartifact_type: open-register\n"
+             "lifecycle: living\nstatus: active\nowners: [o]\ncreated: 2026-01-01 09:00\n"
+             "last_review: 2026-08-01 09:00\nentries:\n  OD-001:\n    status: open\n"
+             "    cost_to_reverse: low\n    products: [all]\n"
+             "    default_in_force: nothing\n---\n\n# Open\n\n"
+             "### OD-001 - the one at the root\n\n"
+             "<!-- generated: open-union -->\n"
+             "| ID | Register |\n|---|---|\n| OD-014 | products/alpha/OPEN.md |\n"
+             "<!-- /generated -->\n")
+    got = repo({"OPEN.md": union})
+    if got is not None and "REG015" in got:
+        problems.append("an id inside the generated union was read as the root register's "
+                        "own body, so the composed view reports the registers it composes")
+
+    # A decided entry keeps its row in the map and loses its prose from §1, which is the one
+    # document in the framework that is supposed to get shorter.
+    decided = ("---\nschema: framework/open-register/v1\nartifact_type: open-register\n"
+               "lifecycle: living\nstatus: active\nowners: [o]\ncreated: 2026-01-01 09:00\n"
+               "last_review: 2026-08-01 09:00\nentries:\n  OD-001:\n    status: decided\n"
+               "    cost_to_reverse: low\n    products: [all]\n"
+               "    default_in_force: nothing\n    closed_by: DEC-001\n---\n\n# Open\n\n"
+               "# §4 - closed\n\n- 2026-02-01 OD-001 -> DEC-001\n")
+    got = repo({"OPEN.md": decided})
+    if got is not None and "REG015" in got:
+        problems.append("a decided entry was reported for having left §1, which is what "
+                        "taking a decision is supposed to do")
+    return problems
+
+
+@check("a reference to a per-product identifier names the product")
+def _qualified_references():
+    # `DEC` lives at the root and its template prescribes `derives_from: [..., SIG-NNN]`,
+    # while signal logs are one per product: two products numbering their signals from 001
+    # made every such reference ambiguous, and it resolved itself -- whichever register was
+    # read last won. From 3.0.0 the reference names the product and the *declaration* does
+    # not, which is the asymmetry worth asserting: a log under `products/alpha/` has already
+    # said whose its rows are by sitting there.
+    def repo(dec_ref: str, dec_products: str = "[alpha]") -> set[str] | None:
+        files = {
+            "products/alpha/product.yaml":
+                ("---\nschema: framework/product-manifest/v1\n"
+                 "artifact_type: product-manifest\nlifecycle: living\nstatus: active\n"
+                 "products: [alpha]\nowners: [o]\ncreated: 2026-01-01 09:00\n"
+                 "last_review: 2026-08-01 09:00\n---\n\n# alpha\n"),
+            # The declaration, bare, in the register whose directory says whose it is.
+            "products/alpha/LOG.md":
+                ("---\nschema: framework/signal-log/v1\nartifact_type: signal-log\n"
+                 "lifecycle: append-only\nstatus: active\nproducts: [alpha]\n"
+                 "owners: [o]\ncreated: 2026-01-01 09:00\n---\n\n# Log\n\n"
+                 "| ID | What |\n|---|---|\n| SIG-001 | the observation |\n"),
+            "decisions/DEC-001-slug.md":
+                ("---\nschema: framework/decision-record/v1\n"
+                 "artifact_type: decision-record\nid: DEC-001\nlifecycle: immutable\n"
+                 "status: accepted\nscope: architecture\n"
+                 f"products: {dec_products}\nowners: [o]\ncreated: 2026-01-01 09:00\n"
+                 f"derives_from: [{dec_ref}]\nleaves_open: []\n---\n\n# DEC-001\n"),
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "framework.yaml").write_text(
+                f"framework_version: {REGISTRY['version']}\n")
+            for rel, text in files.items():
+                f = root / rel
+                f.parent.mkdir(parents=True, exist_ok=True)
+                f.write_text(text)
+            r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(root),
+                                "--json", "--stale-days", "36500"],
+                               capture_output=True, text=True)
+            if not r.stdout.strip():
+                return None
+            return {f["code"] for f in json.loads(r.stdout)["findings"]}
+
+    problems = []
+    cases = [
+        # the reference, the code that must appear, the code that must not, what it is
+        ("alpha:SIG-001", None, {"FM002", "REF001", "REF007", "REF008"},
+         "a qualified reference to a signal its product declares"),
+        ("SIG-001", "FM002", set(),
+         "a bare reference to a signal, which the schema's reference pattern rejects"),
+        ("beta:SIG-001", "REF007", set(),
+         "a qualifier naming a product this repository does not have"),
+        ("alpha:SIG-404", "REF001", {"REF007"},
+         "a qualified reference to a signal that product's register does not declare"),
+    ]
+    for ref, want, forbidden, what in cases:
+        got = repo(ref)
+        if got is None:
+            problems.append(f"the validator produced nothing on {what}")
+            continue
+        if want and want not in got:
+            problems.append(f"{what} was not reported by {want}: got {sorted(got)}")
+        for code in forbidden & got:
+            problems.append(f"{what} was reported by {code}, which is a different claim")
+
+    # THE QUALIFIER AGAINST `products:`, WHICH IS THE HALF NO PATTERN CAN SEE. A decision
+    # resolving a signal in a product it does not claim to bind is either missing a product
+    # from the field every downstream view is built from, or citing a signal copied out of
+    # another document.
+    got = repo("alpha:SIG-001", dec_products="[gamma]")
+    if got is not None and "REF008" not in got:
+        problems.append("a qualifier outside the document's own `products:` was not reported")
+    got = repo("alpha:SIG-001", dec_products="[all]")
+    if got is not None and "REF008" in got:
+        problems.append("`products: [all]` was read as naming no product, so a decision "
+                        "that binds every product cannot cite any product's signal")
+    return problems
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 

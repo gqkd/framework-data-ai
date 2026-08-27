@@ -72,6 +72,34 @@ def id_pattern(registry) -> str:
     return "^(?:" + "|".join(f"(?:{f})" for f in forms) + ")$"
 
 
+# A product name as it appears in a path: the directory under `products/`, which is what a
+# qualifier names. Lowercase, because that is what every product in every fixture and
+# template is and because two products differing only in case is a trap with no upside.
+PRODUCT = r"[a-z0-9][a-z0-9-]*"
+
+
+def reference_pattern(registry) -> str:
+    """The shape of an identifier *being referenced*, which is not the shape of one declared.
+
+    They were one pattern until 3.0.0, and that is how a bare `SIG-041` in the
+    `derives_from` of a root level `DEC` was as legal as anything: the same regex served the
+    keys of a register's map, where the file's own directory says which product it belongs
+    to, and the reference fields of a document that may sit nowhere near it.
+
+    So: declarations keep `id_pattern` untouched, and a reference to one of
+    `qualified_reference_prefixes` has to name the product -- `atlas:SIG-041`. Every other
+    prefix is unchanged, which is most of them, and the registry says next to that list why
+    it is two and not the four registers that exist once per product.
+    """
+    qualified = list(registry.get("qualified_reference_prefixes") or [])
+    bare = [p for p in registry["id_prefixes"] if p not in qualified]
+    forms = [rf"({'|'.join(bare)})-(\d{{3,}}|NNN)"]
+    if qualified:
+        forms.append(rf"{PRODUCT}:({'|'.join(qualified)})-(\d{{3,}}|NNN)")
+    forms += list(registry.get("id_forms") or [])
+    return "^(?:" + "|".join(f"(?:{f})" for f in forms) + ")$"
+
+
 def non_placeholder(placeholders: list[str]) -> dict:
     """A field that is present but still carries its template placeholder is missing.
 
@@ -240,7 +268,10 @@ def build(name: str, spec: dict, registry: dict) -> dict:
     # matter of a real artifact carries `approvers`, `classification`, `icg` and half a dozen
     # others that are nobody's business to enumerate. Declaring the field types the value,
     # not the name.
-    one_id = {"type": "string", "pattern": id_pattern(registry)}
+    # A REFERENCE AND NOT A DECLARATION, WHICH IS WHY IT IS THE OTHER PATTERN. `id_fields`
+    # are the fields that point at a document or an entry somewhere else; map keys, handled
+    # above, are where an id is created. Only the first of the two narrowed in 3.0.0.
+    one_id = {"type": "string", "pattern": reference_pattern(registry)}
     for entry in spec.get("id_fields", []):
         # AN ENTRY IS A NAME, OR A NAME WITH `may_be_empty: true`. The second exists because
         # `derives_from: []` on a decision that closes no register entry is a statement --

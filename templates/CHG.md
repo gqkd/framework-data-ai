@@ -9,7 +9,9 @@ owners: [NAME]
 approvers: [NAME]
 created: YYYY-MM-DD HH:MM
 icg: ICG-NNN
-derives_from: [SIG-NNN, INC-NNN, DEC-NNN]
+derives_from: [product-a:SIG-NNN, INC-NNN, DEC-NNN]    # the signal is qualified with its
+                               # product -- `REF008` reports a qualifier this document
+                               # does not carry in `products:`
 verified_by: null               # the EVR, once there is one. Empty until `status: verified`
 classification: internal
 ---
