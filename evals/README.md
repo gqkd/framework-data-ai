@@ -123,6 +123,49 @@ The failure across the set is entirely undertriggering: four cases that fired no
 one misroute between siblings. Undertriggering costs a user a repeated sentence; the other
 direction costs them a skill that starts rewriting documentation.
 
+### 3.0.2, the whole set on one fixture state
+
+**116 of 118, measured 2026-08-31 and 2026-09-01.** All eight rows, every one of them run
+against the same version and the same built fixtures.
+
+| | | miss |
+|---|---|---|
+| `audit` | 15/15 | |
+| `business` | 4/4 | |
+| `cycle` | 14/14 | |
+| `release` | 15/16 | the overnight incident, and it stays -- the label contradicts the skill it measures, above |
+| `requirement` | 20/20 | |
+| `resolve` | 11/11 | |
+| `start` | 12/12 | one of these does not reproduce; see 3.0.0 above |
+| negatives | 25/26 | *scrivimi la funzione python che fa il match fra movimenti bancari e scritture contabili* started `cycle` |
+
+**WHAT WAS VERIFIED BEFORE ADDING THESE UP, BECAUSE THE ROWS WERE NOT ALL MEASURED AT ONCE.**
+Three rows landed at 14:34 on 08-31 and five at 19:12, and the fixture migration for `REG016`
+rebuilt the repositories at 19:04:32 -- so the first three were re-run at 19:26 and the whole
+table is on one fixture state. Across the two versions the rows span, 3.0.1 and 3.0.2, the
+front matter of all seven skills is byte-identical -- the sha256 of the concatenated set
+matches -- the only change under `.claude-plugin/` is the version string, and the CLI reports
+the same always-on cost, ~2,271 tokens, on both. The other two changed files, `checks.yaml` and
+`validate.py`, are read on invocation and never in session.
+
+**IT DOES NOT COMPARE WITH THE 114, AND NOT BECAUSE OF THE VERSION.** Two variables moved
+between them: the descriptions, in 3.0.1, and the fixtures, in the `REG016` migration. A number
+that differs in two variables measures neither of them.
+
+**THE FIX IN 3.0.1 WAS A TRADE, AND THE MEASUREMENT IS WHAT SAYS SO.** It cleared three
+undertriggers and created one overtrigger, and the overtrigger is the expensive direction: an
+undertrigger costs a user a repeated sentence, this costs them `cycle` starting on a request to
+write a Python function. That attribution is narrow enough to make, which is why it is made
+here rather than hedged: the negatives run in `default`, which is `cycle/fixture-base`, whose
+generator has not changed since 08-27 at 11:15 -- nineteen minutes before the 114 was measured
+on it. For that row the fixture is the same and the descriptions are the only thing that moved.
+
+The widening that caught *go ahead and implement a redis cache in front of the scoring lookup,
+ARC#current says atlas-web queries the warehouse* also catches *scrivimi la funzione python che
+fa il match fra movimenti bancari e scritture contabili*. The first names the architecture and
+the second names nothing the framework owns, and the description does not carry that boundary.
+Whether it can is the open question the next version inherits.
+
 ### 3.0.1, the two rows that were touched
 
 **34 of 34, over 170 runs, on 2026-08-31.** `requirement` 20/20 and `cycle` 14/14, each case
