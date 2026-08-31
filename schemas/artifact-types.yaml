@@ -62,6 +62,20 @@
 #           announces every check.
 #   PATCH   wording, a message, a fixture. Nothing about the framework moved.
 #
+# AN OPEN QUESTION ABOUT THIS RULE, REGISTERED AND NOT ANSWERED. The three levels are decided
+# by one question -- does a document stop validating -- and everything that answers no falls
+# through MAJOR into MINOR, and while MINOR is suspended, into PATCH. 3.0.1 went there: it
+# changed which skill fires on which sentence, and it added ~195 always-on tokens to every
+# session of every project, whether or not a skill runs. No document stopped validating, so
+# by the rule it is a patch. It reached PATCH by exclusion rather than by anybody judging it
+# small.
+#
+# What the rule cannot currently say: a version can change agent behaviour and cost without
+# touching a document, and there is no level that means that. The reason to leave it alone
+# for now is that inventing a fourth level, or moving the boundary, on a framework with one
+# consumer is the kind of change this file spends its notes warning against -- and the answer
+# should come from the first project that is surprised by one of these, not from here.
+#
 # A three part string, so `1.10.0` sorts after `1.9.0` rather than before it. Quoted here
 # because YAML reads a bare `1.1` as a decimal and a bare `2` as a whole number, and both
 # of those stop being comparable with a version -- which `FW001` says in as many words when
