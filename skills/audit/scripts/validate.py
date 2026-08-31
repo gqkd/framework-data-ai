@@ -1314,6 +1314,52 @@ def check_register_halves(arts: list[Artifact], registry: dict, report: Report) 
                        "document sees it.")
 
 
+def check_body_repeats_a_field(arts: list[Artifact], registry: dict,
+                               report: Report) -> None:
+    """A label the map owns, standing at the head of a line in the body.
+
+    THE VOCABULARY IS DERIVED AND NOT LISTED. It is `maps.<field>.fields` in the registry --
+    required, optional and lists -- for the register being read, so the next field that moves
+    into a map is covered on the day it moves rather than on the day somebody remembers to
+    edit this function. A list written here would go stale in the direction that reads as
+    coverage.
+
+    AND IT MATCHES THE LABEL, NOT THE MEANING. `- **Trigger:** before the first backfill` is
+    caught; "va deciso prima del primo backfill", which says the same thing in a sentence, is
+    not, and no widening of this makes it so. A register writing its labels in another
+    language is not caught either. What it is for is the habit: the people who wrote these
+    documents wrote the label for months, and after a migration the first thing that comes
+    back is the shape of the hand, not the idea.
+    """
+    types = registry["types"]
+    for a in arts:
+        spec = types.get(a.type or "", {})
+        decl, maps = spec.get("body_ids"), spec.get("maps") or {}
+        if not decl:
+            continue
+        rule = (maps.get(decl["map"]) or {}).get("fields") or {}
+        owned = {f.lower() for key in ("required", "optional", "lists")
+                 for f in (rule.get(key) or ())}
+        if not owned:
+            continue
+        body = re.sub(r"<!-- generated:.*?-->.*?<!-- /generated -->", "", a.body, flags=re.S)
+        seen: dict[str, int] = {}
+        for n, line in enumerate(body.splitlines(), 1):
+            m = re.match(r"\s*(?:[-*]\s+)?\*{0,2}([A-Za-z_][A-Za-z_ ]{2,24}?)\*{0,2}\s*:", line)
+            if not m:
+                continue
+            label = m.group(1).strip().lower().replace(" ", "_")
+            if label in owned and label not in seen:
+                seen[label] = n
+        for label, n in sorted(seen.items(), key=lambda kv: kv[1]):
+            report.add("REG016", a.rel,
+                       f"line {n} writes `{label}` as a label in the body, and `{label}` is a "
+                       f"field of `{decl['map']}:` since 3.0.0. Two homes for one fact, and "
+                       "every check here reads the other one. Move the value into the entry "
+                       "and delete the line -- or, if the two say different things, decide "
+                       "which is true before deleting either.")
+
+
 def check_manifest_derived_fields(arts: list[Artifact], report: Report) -> None:
     """A manifest answering a question something else now answers.
 
@@ -2608,6 +2654,7 @@ def main() -> int:
     check_open_register(arts, report)
     check_manifest_derived_fields(arts, report)
     check_register_halves(arts, registry, report)
+    check_body_repeats_a_field(arts, registry, report)
     check_key_typos(arts, registry, report)
     check_review_batches(arts, report)
     check_glossary_terms(arts, report)

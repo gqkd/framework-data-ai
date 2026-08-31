@@ -526,6 +526,34 @@ checks:
       resolve against. It is the only document in the framework that is supposed to get
       shorter.
 
+  REG016:
+    level: warn
+    title: a field that lives in the map is written in the body again
+    prevents: >
+      The duplication coming back one entry at a time. 3.0.0 moved the fields of the three
+      registers into the map and took them out of the body, and the habit that wrote them
+      there does not end with a version bump: the people writing these documents wrote
+      `- **Trigger:** ...` under a heading for months, and the first one to do it again after
+      the migration re-creates the state where a fact has two homes and only one of them is
+      read.
+
+      WHAT IT CATCHES IS NARROWER THAN WHAT IT IS ABOUT, AND THE DIFFERENCE MATTERS. It looks
+      for the *label*: a bolded or bulleted `trigger`, `depends_on`, `category`, `state` --
+      whatever the registry declares as a field of that register's map -- standing at the head
+      of a line in the body. It does not read what follows it, and it cannot: the same fact
+      written as a sentence, "va deciso prima del primo backfill", is invisible to it and
+      always will be. It also sees only the field names the registry uses, so a register
+      keeping its labels in another language writes `Dipende da` and passes.
+
+      So this is a check against a habit, not a guarantee about a state. A repository with no
+      `REG016` findings is one where nobody re-created the duplication *in the shape the
+      framework's own templates used to have*. It is not one where the body carries no field
+      the map should own. Read it that way, or it will be read as the second thing by somebody
+      who was not here: the field list comes from `maps.<field>.fields` in the registry rather
+      than from a list written here, so a field that moves next lands in this check without
+      anybody remembering to add it -- which makes the coverage grow quietly and the false
+      confidence with it.
+
   # ── STACK ──────────────────────────────────────────────────────────────────
   STK001:
     level: warn

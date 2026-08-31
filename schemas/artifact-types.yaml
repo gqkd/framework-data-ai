@@ -512,7 +512,25 @@
 # incident the same way. The label contradicts the skill it measures, so widening the
 # description to make the case pass would be adapting the instrument to the result. It stays,
 # and the reason is written next to it in `evals/README.md`.
-version: "3.0.1"
+# 3.0.1 -> 3.0.2. `REG016`, and the fixtures it caught first. A check at `warn` and no
+# document changes, so PATCH; MINOR is suspended anyway.
+#
+# It reports a field of the map written as a label in the body again -- `- **Trigger:** ...`
+# under an entry, the shape 3.0.0 removed from the templates. The vocabulary is derived from
+# `maps.<field>.fields` rather than listed in the code, so the next field to move is covered
+# on the day it moves.
+#
+# WHAT IT DOES NOT DO, WHICH IS WRITTEN BESIDE THE CHECK AND REPEATED HERE BECAUSE IT IS THE
+# PART THAT GETS FORGOTTEN. It matches the label, never the meaning: the same fact written as
+# a sentence is invisible to it, and a register keeping its labels in another language passes.
+# A repository with no `REG016` findings has not re-created the duplication in the shape the
+# templates used to have. It is not a repository whose bodies carry no field the map owns.
+#
+# The first thing it found was this repository. Nine fixtures still wrote those bullets --
+# `audit/clean-repo`, whose whole description is that anything reported in it is invented,
+# among them -- because 3.0.0 migrated the templates and left the fixtures on the old shape.
+# The values were already in the maps; what came out were the duplicate halves.
+version: "3.0.2"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of

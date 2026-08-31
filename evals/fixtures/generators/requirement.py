@@ -104,20 +104,14 @@ FILES["products/riconciliazione/OPEN.md"] = fm(
 ### OD-001 · Which orchestrator runs the nightly pipeline
 
 - **Question:** Airflow already in house, or the managed scheduler of the cloud provider?
-- **Cost to reverse:** high.
-- **Default in force:** cron on the ingestion VM, written by whoever set it up first.
 - **The problem the default introduces:** no retry, no lineage, failures are silent.
-- **Trigger:** the first silent failure that reaches the customer's report.
 
 ## Cost to reverse MEDIUM: changing it later costs a migration, not a rewrite
 
 ### OD-002 · Tenancy model of the reconciliation product
 
 - **Question:** one database per customer, or one shared database with a tenant column?
-- **Cost to reverse:** medium.
-- **Default in force:** one shared database, no tenant column: today there is one customer.
 - **The problem the default introduces:** the second customer forces a migration.
-- **Trigger:** at the second signed customer.
 
 # §2 · Accepted known issues
 

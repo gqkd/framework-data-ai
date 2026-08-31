@@ -75,95 +75,66 @@ entries:
 
 - **Question:** do `retail-forecast` and `store-ops` authenticate against a single provider,
   or does each product keep its own?
-- **Cost to reverse:** high.
-- **Default in force:** none.
 - **The problem the default introduces:** the two teams are each about to wire their own
   login, and the first one that ships makes the choice for everybody.
-- **Trigger:** before the store-ops pilot opens to the 140 store managers.
 
 ### OD-005 · Where the curated layer lives
 
 - **Question:** managed warehouse (BigQuery / Snowflake) or a lakehouse on the client's own
   object storage?
-- **Cost to reverse:** high.
-- **Default in force:** a single Postgres instance one engineer set up for the pilot, which
   currently holds both raw and curated tables in the same schema.
 - **The problem the default introduces:** every model written against it now will have to be
   rewritten, and the client's DPO has not seen where the data sits.
-- **Depends on:** OD-008.
 - **Leaning:** managed warehouse, because nobody here wants to operate storage.
-- **Trigger:** the DPO review of where the curated data sits, which cannot be answered
   while it sits on a pilot VM.
 
 ### OD-004 · One tenancy model for both products, or one each
 
 - **Question:** is a store a tenant, is the chain a tenant, or is there no tenancy at all
   and everything is one installation per customer?
-- **Cost to reverse:** high.
 - **The problem the default introduces:** the pilot is single-customer, so the question
   never comes up, and it will come up on the day a second chain signs.
-- **Depends on:** OD-007.
-- **Trigger:** before the second customer.
 
 ### OD-007 · One repository for both products or one repository each
 
 - **Question:** monorepo with a shared package, or two repositories with a published
   internal library?
-- **Cost to reverse:** high.
-- **Default in force:** none.
 - **The problem the default introduces:** the shared forecasting utilities are currently
   copy-pasted between two branches of the same repository, and they have already diverged.
-- **Trigger:** before store-ops gets its own CI.
 
 ### OD-001 · How forecast output reaches the buyers' ordering system
 
 - **Question:** a synchronous API the ordering system calls, or a nightly file export it
   picks up?
-- **Cost to reverse:** medium.
-- **Default in force:** a CSV dropped on an SFTP server by hand every Monday by an analyst.
 - **The problem the default introduces:** it works, and because it works nobody is
   measuring how late it is.
-- **Trigger:** the first Monday the analyst who drops the CSV by hand is on leave.
 
 ## Cost to reverse MEDIUM: changing it later costs a migration, not a rewrite
 
 ### OD-008 · Which orchestrator runs the weekly pipeline
 
 - **Question:** Airflow on the client's Kubernetes, a managed scheduler, or keep cron?
-- **Cost to reverse:** medium.
-- **Default in force:** a crontab on the pilot VM, edited over SSH.
 - **The problem the default introduces:** nobody can tell whether last Sunday's run
   succeeded without logging into the box.
-- **Trigger:** the first missed Sunday run somebody has to explain to the client.
 
 ### OD-003 · Naming convention for the marts
 
 - **Question:** do mart tables carry the business domain first or the grain first?
-- **Cost to reverse:** medium.
-- **Default in force:** whatever the first dbt model happened to do, which is grain first.
 - **The problem the default introduces:** two more models a week get written against a
   convention nobody agreed.
-- **Trigger:** none stated.
 
 ## Cost to reverse LOW: changing it later costs an afternoon
 
 ### OD-006 · Which BI tool the store-ops digest is rendered in
 
 - **Question:** Metabase, Superset, or a rendered HTML mail with no BI tool at all?
-- **Cost to reverse:** low.
-- **Default in force:** a Metabase trial one of us started.
-- **Trigger:** the first time a store manager asks to change what is on the digest.
 
 ### OD-009 · Whether the override feedback loop retrains the model automatically
 
 - **Question:** does a buyer override feed the next training run automatically, or does
   somebody approve the batch first?
-- **Cost to reverse:** high.
-- **Default in force:** none, because there is no retraining at all yet.
 - **The problem the default introduces:** the overrides are being written to a table nobody
   reads, and the longer that goes on the more the model looks accidentally wrong.
-- **Depends on:** OD-011.
-- **Trigger:** before the first retraining.
 
 ---
 

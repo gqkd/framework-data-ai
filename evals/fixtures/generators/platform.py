@@ -240,20 +240,12 @@ F["platform/OPEN.md"] = fm(
 
 - **Question:** does `customer_id` become opaque for everyone, or does a second
   pseudonymous key live beside it for EU subjects only?
-- **Cost to reverse:** high. Every product joins on this column and one of them shows it
-  to customers.
-- **Default in force:** none. `CMT-003` is signed and the DPA names pseudonymisation,
-  which today is not implemented.
-- **Depends on:** nothing. It is the blocker, not the blocked.
-- **Trigger:** the DPA audit.
 
 ### OD-003 · Who owns `analytics.customer`
 
 - **Question:** the shared customer table sits under `products/atlas/contracts/` because
   the framework has nowhere else to put a contract, and atlas is one of its three
   consumers rather than its owner.
-- **Cost to reverse:** medium.
-- **Default in force:** atlas owns it by accident of where the file lives.
 
 # §2 · Accepted known issues
 
@@ -285,18 +277,15 @@ def _product_open(prod: str, num: str, title: str, body: str, cost: str, default
 
 _product_open("atlas", "OD-004", "Whether the nightly batch moves to hourly",
               "- **Question:** `CMT-001` promises 07:00 CET. Hourly would make the promise "
-              "cheap to keep and the warehouse bill three times larger.\n"
-              "- **Default in force:** nightly, and it has met 07:00 every day this year.",
+              "cheap to keep and the warehouse bill three times larger.\n",
               "medium", "nightly, and it has met 07:00 every day this year")
 _product_open("orion", "OD-005", "Which of the two dashboards is the product",
               "- **Question:** the operations view and the executive view were built for "
-              "two buyers and only one is sold.\n"
-              "- **Default in force:** both are maintained.",
+              "two buyers and only one is sold.\n",
               "low", "both are maintained")
 _product_open("vega", "OD-006", "Whether the export is a file or an API",
               "- **Question:** customers pull a CSV today. Three have asked for an "
-              "endpoint.\n"
-              "- **Default in force:** the nightly CSV drop.",
+              "endpoint.\n",
               "medium", "the nightly CSV drop")
 
 F["decisions/DEC-001-shared-warehouse.md"] = fm(

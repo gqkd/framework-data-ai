@@ -91,8 +91,6 @@ Run `validate.py --emit-index` to fill this in.
 ### OD-004 · Which warehouse for the gold layer
 
 - **Question:** Snowflake or BigQuery for the gold layer?
-- **Cost to reverse:** medium.
-- **Default in force:** BigQuery, because the landing zone is already there.
 
 # §4 · Decided, moved out
 
@@ -312,19 +310,13 @@ each decision still matters, which no generator can produce.
 ### OD-005 · Do we retain raw PII in the landing zone
 
 - **Question:** retain raw PII for 30 days, or hash on landing?
-- **Cost to reverse:** high.
-- **Default in force:** none.
 - **The problem the default introduces:** nobody knows what is in the bucket today.
-- **Trigger:** before the first model is written against the bucket.
 
 ## Cost to reverse MEDIUM: changing it later costs a migration, not a rewrite
 
 ### OD-004 · Which warehouse for the gold layer
 
 - **Question:** Snowflake or BigQuery for the gold layer?
-- **Cost to reverse:** medium.
-- **Default in force:** BigQuery, because the landing zone is already there.
-- **Trigger:** 2026-10-01.
 
 # §4 · Decided, moved out
 

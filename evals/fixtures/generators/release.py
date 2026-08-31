@@ -87,7 +87,6 @@ last_review: 2026-07-28 17:40
 
 ### OD-011 · Whether German goes to a separate fine-tuned model
 
-Cost to reverse: medium. Default in force: single multilingual model.
 
 ## 3 · Parking lot
 
