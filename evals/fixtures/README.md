@@ -25,6 +25,14 @@ project with a corpus and no framework in it.
 
 | | |
 |---|---|
+**THE DECLARED COUNTS ARE TRUE INSIDE A WINDOW, AND ONE OF THEM MOVES WITH THE CALENDAR.**
+`LC002` reports a living document unreviewed for longer than `stale_days`, which is 90, and
+`requirement/seed` carries a `last_review` that crossed that line on its own: the fixture went
+from one warning to two on 2026-08-31 without anybody touching it, because that was day 91.
+Every count written here is a count as of a date, and a fixture whose result depends on when it
+is run cannot be pinned by a sentence. Run `--stale-days` high to take the clock out of it, or
+read a count that is one off as this before reading it as a defect.
+
 | `audit/dirty-repo` | Real defects: front matter that does not parse, a `derives_from` pointing at a decision nobody wrote, a decision superseded by one that never moved it to `superseded`, a product with no open register of its own, an open entry carrying a date where its trigger belongs, one at the root that does not say which products it binds, a decision that does not say what it leaves open, a data contract citing a glossary term nobody defined, and a commitment recorded as delivered on a product with no risk register, and one entry at the root that binds a single product and belongs beside it. and a decision that says it leaves something open which no register holds. and a front matter key one letter from the field the checks read. Four errors and twenty-two warnings, by construction. |
 | `audit/clean-repo` | Nothing wrong with it. A checker that reports something here is inventing. It is also the smallest correct example of the register layout: the entries in `products/atlas/OPEN.md`, and a root register holding the parking lot and the union region. |
 | `cycle/fixture-base` | Ten signals, a roadmap, and the previous cycle's `ICG`. Two of its routings are traps: one `not-classifiable` that must come back, one `not-a-candidate` that must not be re-triaged. Six signals are in no `ICG` at all. |

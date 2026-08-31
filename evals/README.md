@@ -68,6 +68,23 @@ different, smaller set. Read this as a first number, not as an improvement over 
 | `start` | 12/12 | but see the paragraph below: one of these twelve does not reproduce |
 | negatives | 26/26 | |
 
+**AND THE FIXTURES IT WAS MEASURED IN HAVE SINCE MOVED, WHICH IS THE SECOND VARIABLE.** This
+table is a measurement of 3.0.0 *on the fixtures as they stood on 08-27*, and that second half
+is not decoration: `trigger/fixtures.yaml` maps every skill's prompts into one of the
+repositories `make.py` builds, and its own note says why -- "a prompt only means what it means
+somewhere it could be acted on", and the first full run scored `resolve` 5 of 11 in a repository
+whose open register was empty, "which says the fixture was being measured and not the
+description". On 08-31 the fixture migration for `REG016` removed the duplicated field labels
+from the bodies of six of them, `audit/dirty-repo`, `requirement/seed`, `resolve/ordering-a`,
+`release/F-clean-pass` and `cycle/fixture-base` -- which is `default`, where the 26 negatives
+run -- among them.
+
+The values those labels held are still in the maps, so the repositories carry the same facts and
+a prompt has the same thing to act on. Whether that moves any routing is **unmeasured**, and
+saying it does not would be the same unverified negative this file keeps having to correct. What
+follows from it is narrow and firm: the 114 and any later number differ in two variables rather
+than one, and a later number is not an improvement over this one. It is a different measurement.
+
 **THE TOTAL CONTAINS ONE POINT THAT DOES NOT REPRODUCE, AND IT IS IN `start`.** *we just
 closed the deal and I have the pitch deck, the offer PDF and the contract* passed in the row
 above, measured 13:19 on 08-27, and then scored **0 of 5** at 18:16 the same day. Nothing in
