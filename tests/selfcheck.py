@@ -3463,6 +3463,110 @@ def _qualified_references():
     return problems
 
 
+@check("the eval case files load, and the counts the README prints come from the same parse")
+def _eval_cases_load():
+    # THE MEASURING EQUIPMENT TURNS ON. This is not a check about the semantics of a
+    # document, which is what the rest of this suite is for and what the freeze covers: it is
+    # a check that the instruments switch on, and it is here because they did not. `business`
+    # arrived in 2.8.11 carrying `per il management: dove siamo` as an unquoted scalar, so
+    # `yaml.safe_load` at `evals/trigger/run.py:177` raised, the runner died before reaching
+    # a model, and it did so on every skill rather than only on the new one. It stayed broken
+    # for four days and nothing could have said so: the eval suite needs a model, which is
+    # why it is not in CI, and the cost of that is a data file whose breakage is invisible
+    # until somebody runs it by hand. Parsing needs no model.
+    #
+    # AND THE NUMBERS FALL OUT OF THE SAME PARSE. `evals/README.md` states how many prompts
+    # there are and, in the results table, how many cases each skill has as the denominator
+    # of its score. Both were written by hand and both were wrong the moment the set grew --
+    # it said 112 while holding 118. A number in prose that nothing derives is the thing this
+    # framework spends its own rules forbidding, and this is the cheap half of deriving it:
+    # not generating the line, but failing when it stops being true.
+    problems = []
+    trigger = ROOT / "evals" / "trigger" / "cases.yaml"
+    files = [trigger, ROOT / "evals" / "trigger" / "fixtures.yaml"]
+    files += sorted((ROOT / "evals" / "behaviour").glob("*/cases.yaml"))
+
+    loaded = {}
+    for f in files:
+        rel = f.relative_to(ROOT)
+        try:
+            loaded[rel] = yaml.safe_load(f.read_text(encoding="utf-8"))
+        except yaml.YAMLError as e:
+            mark = getattr(e, "problem_mark", None)
+            where = f" at line {mark.line + 1}" if mark else ""
+            problems.append(f"{rel} does not parse{where}: {getattr(e, 'problem', e)}. "
+                            "The runner loads it with `yaml.safe_load` and dies here, on "
+                            "every case rather than the one that broke it. An unquoted "
+                            "value containing `: ` is the way this has happened.")
+    if problems:
+        return problems                      # counts cannot be read from a file that broke
+
+    # The shape the runners actually index into, asserted per file rather than assumed.
+    for rel, doc in loaded.items():
+        if rel.name == "fixtures.yaml":
+            if not isinstance(doc, dict) or not isinstance(doc.get("fixtures"), dict):
+                problems.append(f"{rel}: no `fixtures:` map, which `run.py --fixtures` reads")
+            continue
+        cases = doc.get("cases") if isinstance(doc, dict) else None
+        if not isinstance(cases, list) or not cases:
+            problems.append(f"{rel}: no `cases:` list")
+            continue
+        # THE TWO RUNNERS INDEX DIFFERENTLY, AND THE CHECK ASKS WHAT EACH ONE READS. A
+        # behaviour case names a `fixture` and may inherit the prompt from the file --
+        # `behaviour/run.py:197` does `c.setdefault("prompt", spec.get("prompt"))` -- while a
+        # trigger case carries its own prompt and the label to score it against. Asserting
+        # one shape over both reported six correct files as broken, which is the failure this
+        # check is supposed to be the opposite of.
+        behaviour = rel.parts[1] == "behaviour"
+        for i, c in enumerate(cases):
+            if not isinstance(c, dict):
+                problems.append(f"{rel}: case {i + 1} is not a mapping")
+                continue
+            where = c.get("prompt") or c.get("fixture") or f"case {i + 1}"
+            if behaviour:
+                if "fixture" not in c:
+                    problems.append(f"{rel}: case {i + 1} names no `fixture`, which is the "
+                                    "repository the run happens in and its name")
+                if not (c.get("prompt") or doc.get("prompt")):
+                    problems.append(f"{rel}: {where!r} has no `prompt`, on the case or on "
+                                    "the file it inherits from")
+            else:
+                if "prompt" not in c:
+                    problems.append(f"{rel}: case {i + 1} has no `prompt`")
+                elif "expect" not in c:
+                    problems.append(f"{rel}: {str(where)[:40]!r} has no `expect`, so a run "
+                                    "of it cannot be scored either way")
+    if problems:
+        return problems
+
+    cases = loaded[trigger.relative_to(ROOT)]["cases"]
+    readme = (ROOT / "evals" / "README.md").read_text(encoding="utf-8")
+
+    stated = re.search(r"holds (\d+) prompts", readme)
+    if not stated:
+        problems.append("evals/README.md no longer says how many prompts the set holds, in "
+                        "the form `holds N prompts`, so nothing here can be compared")
+    elif int(stated.group(1)) != len(cases):
+        problems.append(f"evals/README.md says the set holds {stated.group(1)} prompts and "
+                        f"`cases.yaml` holds {len(cases)}")
+
+    # The denominator of each row of the results table is that skill's case count. A row
+    # whose denominator has drifted is a score being read against a set that no longer
+    # exists, which is how 112 survived a set of 118.
+    per_skill = collections.Counter(c.get("expect") for c in cases)
+    for label, expect in [(r"`(\w+)`", None), (r"negatives", "none")]:
+        for m in re.finditer(r"^\| " + label + r" \| (\d+)/(\d+) \|", readme, re.M):
+            skill = expect or m.group(1)
+            denom = int(m.group(len(m.groups())))
+            if skill not in per_skill and expect is None:
+                continue                     # a row about something that is not a skill
+            if denom != per_skill[skill]:
+                problems.append(
+                    f"evals/README.md scores {skill!r} out of {denom} and `cases.yaml` "
+                    f"labels {per_skill[skill]} case(s) with that `expect`")
+    return problems
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 print()

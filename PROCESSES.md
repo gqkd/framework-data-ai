@@ -201,7 +201,7 @@ field to run it over, because a promise with a date inside it is the same thing 
 refuses on an open decision. Whether a promise and its measurement still agree is left to
 the **second pass of `audit`**, which is semantic: the pair *numeric promise in
 `COMMITMENTS` ↔ threshold in `EVP`* is already in its table, together with *`CMT` beyond
-technical reach ↔ `RSK §state` and `OPEN`*. It is a reading, not a check, and it is worth
+technical reach ↔ `RSK` and `OPEN`*. It is a reading, not a check, and it is worth
 exactly as much as somebody asking for it.
 
 One half of that second pair is now mechanical, and it is the half about responsibility
@@ -602,7 +602,10 @@ flowchart TB
 **`ANA` is not a document.** It is an entry in the `LOG`, like `SIG`: the log is append-only,
 and at the moment of observation the cause and the remedy are not known yet. You do not
 update the signal's row, you add a linked event — `SIG-014` observed, `ANA-014` the analysis
-of `SIG-014`, `DEC-031` the decision taken on `ANA-014`, `CHG-052` the change it generated.
+of `SIG-014`, `DEC-031` the decision taken on `ANA-014`, `CHG-052` the change it generated. The
+first two are declared in the log and stay bare; the `DEC` is at the root, so it names the
+analysis with its product -- `derives_from: [<product>:ANA-014]` -- for the reason
+`qualified_reference_prefixes` gives.
 The analysis itself sits in `LOG §Analysis`: the cause, how it was worked out, and what would
 have caught it sooner. A full post-mortem only for the events that deserve one.
 

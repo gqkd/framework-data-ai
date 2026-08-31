@@ -50,39 +50,57 @@ claude plugin details framework-data-ai        # should list all seven
 
 ## Where it stands
 
-The whole trigger set, measured on **2026-08-19**. Six rows against **2.6.2** between 12:39
-and 16:05, and `release` against **2.8.0** at 22:45, because the framework moved twice that
-evening in work happening beside this.
-
-The rows are still comparable and the reason is narrow enough to state: triggering depends on
-the six `description:` fields and on nothing else, and the diff from 2.6.2 to 2.8.0 does not
-touch one of them. It changes checks, the migration script, the registry and the CI. If a
-version ever does move a description, a table like this one stops meaning anything and the
-rows have to be re-measured together.
-
-That sentence used to read "one version, one day, every row", which was written four hours
-before the row that made it false, in the file that collects the numbers this directory got
-wrong.
-
-**The framework is at 3.0.0 and this table is not.** 3.0.0 broke two document formats and
-touched no `description:`, so by the rule above the rows are still comparable and are still
-the last measurement anybody made. Said plainly rather than left to be inferred: nothing here
-has been re-run since 08-19, and a table whose staleness is only visible by subtracting two
-version numbers is the kind of number this file exists to stop trusting.
+**114 of 118, measured on 2026-08-27 against 3.0.0.** The first execution of this set, and
+that is the exact word: `cases.yaml` had not loaded for four days -- an unquoted
+`management:` in the `business` case, raising inside `yaml.safe_load` at `run.py:177` -- so
+the six new cases had never been run at all, and the 118 compare with nothing. The eight rows
+of 08-19 against 2.6.2 remain the last comparable number that exists, and they measured a
+different, smaller set. Read this as a first number, not as an improvement over it.
 
 | | | miss |
 |---|---|---|
 | `audit` | 15/15 | |
-| `release` | 15/16 | *2.8.0.* A production incident went to `requirement`, the only misroute in the set and an arguable label |
-| `cycle` | 12/13 | *go ahead and implement a redis cache*: work starting with no approved `CHG`, the indirect case the description claims and the hardest one |
-| `requirement` | 17/20 | raising an `EVP` threshold; adding to the parking lot of `OPEN.md`; and *the nightly batch failed again and nobody got scores*, which was not missed in August |
-| `start` | 11/12 | *we just closed the deal and I have the pitch deck, the offer PDF and the contract* -- the case the description is written for, missed for the first time |
-| `resolve` | 10/11 | closing an `OD` with a decision already taken, which is arguably `requirement` |
-| negatives | 24/25 | *spiegami cosa contiene un CHG*, an explanation, started `cycle` |
+| `business` | 4/4 | never measured before this run |
+| `cycle` | 13/14 | *go ahead and implement a redis cache*: work starting with no approved `CHG`, the indirect case the description claims and the hardest one |
+| `release` | 15/16 | *abbiamo avuto un incidente stanotte, l'accuracy in produzione e' crollata*, which went nowhere |
+| `requirement` | 18/20 | raising an `EVP` threshold; and adding to the parking lot of `OPEN.md` |
+| `resolve` | 11/11 | |
+| `start` | 12/12 | but see the paragraph below: one of these twelve does not reproduce |
+| negatives | 26/26 | |
 
-**104 of 112**, against 105 measured on 08-10 across seven versions of the framework. Read
-the two as the same number: `audit` gained one, `requirement` and `start` each lost one, and
-nothing here separates that from the noise.
+**THE TOTAL CONTAINS ONE POINT THAT DOES NOT REPRODUCE, AND IT IS IN `start`.** *we just
+closed the deal and I have the pitch deck, the offer PDF and the contract* passed in the row
+above, measured 13:19 on 08-27, and then scored **0 of 5** at 18:16 the same day. Nothing in
+this repository changed between those two timestamps -- not a description, not any file, which
+was checked by comparing the two states rather than remembered -- and
+`skills/start/SKILL.md` has not been touched since 08-18. So `start` is 12/12 in this table
+and one twelfth of it is a coin nobody can call. The adjacent fact points the wrong way to be
+an explanation: the run at 13:19 was the one right before the account ran out of quota, so it
+is the *degraded* condition, and it is the one that passed.
+
+**Read the four misses as four descriptions, not as noise.** `--runs 5` on each of them came
+back **0 of 5** every time: the redis cache of `cycle`, the overnight incident of `release`,
+and both of `requirement`. That is the first thing this directory has ever run five times, and
+it falsified the premise it was run under -- these were assumed to be flapping cases, and they
+are stable misses. The one case that had genuinely flapped, the negative *spiegami cosa
+contiene un CHG* which overtriggered `cycle` on 08-19, is now 5 of 5 correct.
+
+The failure across the set is entirely undertriggering: four cases that fired nothing, and not
+one misroute between siblings. Undertriggering costs a user a repeated sentence; the other
+direction costs them a skill that starts rewriting documentation.
+
+### The measurement before this one, kept
+
+The whole trigger set, measured on **2026-08-19**. Six rows against **2.6.2** between 12:39
+and 16:05, and `release` against **2.8.0** at 22:45, because the framework moved twice that
+evening in work happening beside this. It scored **104 of 112**, against 105 measured on 08-10
+across seven versions: `audit` gained one, `requirement` and `start` each lost one, and nothing
+there separated that from the noise. Kept because a first number with nothing behind it is
+worth less than a first number with a smaller, older set behind it.
+
+Triggering depends on the `description:` fields and on nothing else, which is the rule that
+made those rows comparable across 2.6.2 and 2.8.0 and makes them *not* comparable with the
+table above: the set itself grew by six cases.
 
 WHAT THE SET CANNOT TELL YOU YET, AND IT IS THE SAME THING EVERY TIME. One run per case is
 the default, so a case that flips is a coin nobody has flipped twice. `resolve`'s eleventh

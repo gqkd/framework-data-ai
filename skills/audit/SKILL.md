@@ -203,7 +203,7 @@ if the indices are stale, the enumeration you are about to build from them is st
 | accepted `DEC scope: platform` → `PLATFORM.md`, and `products:` | does the substrate document reflect it, and does the decision list **every** product |
 | `GLOSSARY` term that is also a field of a `DC` → that `DC` | the same definition on both sides, and did the contract's version bump |
 | a `GLOSSARY` metric used by more than one product → each product | does each compute it with that formula. If they cannot, they are two metrics and need two names |
-| `CMT` out of technical reach → `RSK#state` **and** `OPEN.md` | `XP007` now asks the mechanical half — is there a live risk naming the promise. What is left here is the half no check reaches: is the entry in `OPEN.md` there, does the risk say something true about the exposure, and has the renegotiation actually been had |
+| `CMT` out of technical reach → `RSK` **and** `OPEN.md` | `XP007` now asks the mechanical half — is there a live risk naming the promise. What is left here is the half no check reaches: is the entry in `OPEN.md` there, does the risk say something true about the exposure, and has the renegotiation actually been had |
 | a numeric promise in `COMMITMENTS` → an `EVP` threshold | the two must not come apart: a promise with no threshold is unmeasured, a threshold with no promise is unowned |
 | `ARC#delta` → `#current` and `#target` | is the delta still the difference between them. A stale delta is a silent lie |
 | `WF#delta` → `#current` and `#target` | the same |

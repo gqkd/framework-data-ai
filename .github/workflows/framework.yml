@@ -4,6 +4,14 @@
 # nothing was checking the definition that everything else is checked against. That is how
 # `templates/RLM.yaml` went without `status` and `owners` for as long as it did. This
 # workflow is what closes it.
+#
+# THE EVAL CASE FILES ARE COVERED HERE TOO, AND THERE IS NO SECOND STEP FOR THEM ON PURPOSE.
+# `evals/` needs a model, which is why the runs are not in CI -- but *loading* the case files
+# needs nothing, and `evals/trigger/cases.yaml` sat unparseable for four days because nothing
+# read it between manual runs. `tests/selfcheck.py` now parses every case file and checks the
+# counts `evals/README.md` prints against the same parse, so the step below already runs it.
+# A separate `python -c "import yaml..."` line here would be a second authority on the same
+# question, which is the thing this framework spends its rules against.
 
 name: framework
 
