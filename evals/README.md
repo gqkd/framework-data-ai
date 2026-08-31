@@ -78,7 +78,24 @@ and one twelfth of it is a coin nobody can call. The adjacent fact points the wr
 an explanation: the run at 13:19 was the one right before the account ran out of quota, so it
 is the *degraded* condition, and it is the one that passed.
 
-**Read the four misses as four descriptions, not as noise.** `--runs 5` on each of them came
+**One of the four is not a description gap, and it must not be fixed.** *abbiamo avuto un
+incidente stanotte, l'accuracy in produzione e' crollata a 0.62, dobbiamo tornare alla 1.6*
+is labelled `expect: release`, on the stated reasoning that rollback is release's other half.
+The skill says the opposite about itself, at `skills/release/SKILL.md:76`: "Rollback only
+exists after a deployment, when regressions show up in production, and **that path re-enters
+through `LOG` and change intake**" -- which is `requirement`, then `cycle`. `PROCESSES.md`
+P-09 routes an incident the same way, through four skills, starting with the signal. So the
+label contradicts the skill it measures, and widening `release`'s description until the case
+passes would be adapting the instrument to the result. The case stays as written and the row
+keeps its miss.
+
+Its history is worth keeping for the same reason. On 08-19 this case fired `requirement` and
+this file recorded it as "the only misroute in the set and an arguable label". It was not a
+misroute: it was the right answer, scored as wrong by a label that was already contradicted by
+the skill. What changed since is that it now fires nothing at all, which is a separate and
+worse behaviour, and it is not what a corrected label would fix.
+
+**Read the other three as descriptions, not as noise.** `--runs 5` on each of them came
 back **0 of 5** every time: the redis cache of `cycle`, the overnight incident of `release`,
 and both of `requirement`. That is the first thing this directory has ever run five times, and
 it falsified the premise it was run under -- these were assumed to be flapping cases, and they
@@ -88,6 +105,30 @@ contiene un CHG* which overtriggered `cycle` on 08-19, is now 5 of 5 correct.
 The failure across the set is entirely undertriggering: four cases that fired nothing, and not
 one misroute between siblings. Undertriggering costs a user a repeated sentence; the other
 direction costs them a skill that starts rewriting documentation.
+
+### 3.0.1, the two rows that were touched
+
+**34 of 34, over 170 runs, on 2026-08-31.** `requirement` 20/20 and `cycle` 14/14, each case
+run five times, and **not one case was less than unanimous**. The three stable misses that
+3.0.1 was written for went from 0 of 5 to 5 of 5:
+
+| | 3.0.0 | 3.0.1 |
+|---|---|---|
+| *aggiorna l'EVP di atlas: alzare la soglia a 0.93* | 0/5 | 5/5 |
+| *aggiungi al parcheggio di OPEN.md che potremmo vendere il forecast* | 0/5 | 5/5 |
+| *go ahead and implement a redis cache in front of the scoring lookup* | 0/5 | 5/5 |
+
+**This is not a set score and does not replace the 114.** Two rows out of eight were
+re-measured, because two descriptions were edited and six were not. The 114 of 118 above is
+the measurement of 3.0.0 and stays that; there is no whole-set number for 3.0.1.
+
+**AND THE RISK THIS CHANGE INTRODUCES IS THE PART THAT IS NOT MEASURED.** Triggering is a
+routing decision among seven descriptions, so widening two of them can pull cases *away* from
+the other five and from `none` -- and overtriggering is the expensive direction: it costs a
+user a skill that starts writing, where undertriggering costs them a repeated sentence. The
+26 negatives and the five untouched skills were not re-run. Nothing here says they did not
+move, only that nobody looked. That is the first thing to run before this number is quoted as
+an improvement.
 
 ### The measurement before this one, kept
 
