@@ -931,6 +931,23 @@ types:
           # commitment runs through this field and an empty one still reads as filled in.
           lists: [products]
           enums:
+            # ON `feasibility`, AND A DISTINCTION ITS FIVE VALUES CANNOT HOLD. A real
+            # register carries a promise that is feasible one at a time and out of reach
+            # as a set: eleven capabilities each buildable, the eleven together not,
+            # until somebody decides the scope. `feasible-with-reservations` understates
+            # it -- that is a boundary, not a reservation; `out-of-reach` overstates it,
+            # because each one alone is buildable; and `not-yet-assessable`, which the
+            # row carries today, is false: the assessment was made and produced two
+            # answers.
+            #
+            # LEFT AS IT IS RATHER THAN WIDENED, AND THE ROW KEEPS THE WRONG VALUE. A
+            # sixth value invented from one row is the move this file spends its notes
+            # warning against, and the field is optional, so the body carries the
+            # distinction the vocabulary cannot. It is written here so the next register
+            # to hit it finds this instead of picking the nearest value -- which is
+            # exactly the failure the note on closed vocabularies at the bottom
+            # describes, and the one case where that note's own advice does not resolve
+            # it: the missing value is not a form of "not yet".
             status: [not-yet-issued, stated-as-done, open, met, renegotiated, unsatisfiable]
             # THE VOCABULARY HAD THREE DEGREES OF DIFFICULTY AND NO WAY TO SAY "NOT YET".
             # This is the register of promises made before the thing was built -- that is
