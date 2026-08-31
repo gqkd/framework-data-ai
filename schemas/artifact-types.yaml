@@ -483,7 +483,36 @@
 # the path, but a `DEC` at the root naming `SIG-041` does not say which product's signal it
 # is, and that missing information is precisely what this change adds. Guessing it would
 # write the ambiguity down as a fact.
-version: "3.0.0"
+# 3.0.0 -> 3.0.1. TWO DESCRIPTIONS, AND THE NUMBER THEY INVALIDATE. `requirement` and
+# `cycle` say more accurately what they already did; no document changes, no field moves, no
+# check arrives, so it is a PATCH by the rule at the top -- and MINOR is suspended anyway.
+#
+# WHAT IT COSTS, WHICH IS THE HALF THAT IS EASY TO LEAVE OUT. Triggering depends on the
+# `description:` fields and on nothing else, so `evals/README.md` says in as many words that
+# a version moving a description makes its table stop meaning anything. The 114 of 118
+# measured on 08-27 was frozen *before* this edit for exactly that reason: it is the
+# measurement of 3.0.0 and it does not carry forward. Always-on cost went from ~2,076 to
+# ~2,271 tokens per session, which every project pays on every session whether or not a
+# skill fires.
+#
+# WHY THESE TWO AND NOT THE THIRD. Four cases missed in that run and `--runs 5` returned 0 of
+# 5 on each, so they are stable misses and not noise -- four descriptions to look at rather
+# than four coins. Three of them were description gaps: raising a threshold in an `EVP` is a
+# new value for something already recorded and was in no sentence here; the parking lot of
+# `OPEN.md` is a documented destination of `requirement` that its description never named;
+# and `cycle` claimed "work about to start on something that is not already an approved CHG"
+# in its last sentence while carrying no trigger phrase in the shape somebody actually uses
+# to say it.
+#
+# The fourth is not fixed and must not be. *abbiamo avuto un incidente stanotte, l'accuracy
+# e' crollata, dobbiamo tornare alla 1.6* is labelled `expect: release` on the reasoning that
+# rollback is release's other half -- and `skills/release/SKILL.md` says the opposite about
+# itself: "Rollback only exists after a deployment, when regressions show up in production,
+# and that path re-enters through `LOG` and change intake". `PROCESSES.md` P-09 routes an
+# incident the same way. The label contradicts the skill it measures, so widening the
+# description to make the case pass would be adapting the instrument to the result. It stays,
+# and the reason is written next to it in `evals/README.md`.
+version: "3.0.1"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of

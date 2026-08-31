@@ -2,14 +2,16 @@
 name: cycle
 description: >
   Open a development cycle: take the signals and roadmap increments that are candidates,
-  classify their impact through the ICG gate, reshape the product and architecture where
-  the classification says to, write the change contracts that authorize the work, plan the
-  cycle, and produce a brief per change that a coding agent can execute. Use when deciding
-  what to build next and when authorizing work. Triggers on "cosa facciamo in questo ciclo",
-  "cosa costruiamo adesso", "apriamo un ciclo", "prossimo sprint", "devo aggiungere",
-  "apriamo un change", "pianifica il ciclo", "dammi i task per gli agenti", "what do we
-  build next", "open a change", "plan this cycle", "give me the agent tasks". Use it
-  whenever work is about to start on something that is not already an approved CHG.
+  classify their impact through the ICG gate, reshape the product and architecture where the
+  classification says to, write the change contracts that authorize the work, plan the cycle,
+  and produce a brief per change that a coding agent can execute. Use when deciding what to
+  build next and when authorizing work. Triggers on "cosa facciamo in questo ciclo", "cosa
+  costruiamo adesso", "apriamo un ciclo", "prossimo sprint", "devo aggiungere", "apriamo un
+  change", "pianifica il ciclo", "dammi i task per gli agenti", "vai pure e implementa",
+  "procedi con", "what do we build next", "open a change", "plan this cycle", "give me the agent
+  tasks", "go ahead and implement", "go ahead and build". Use it whenever work is about to start
+  on something that is not already an approved CHG -- including when the instruction is to go
+  ahead and build a named thing, which is the same request with the authorization step left out.
 ---
 
 # cycle

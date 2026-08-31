@@ -1,18 +1,21 @@
 ---
 name: requirement
 description: >
-  Bring new information into the Data & AI documentation framework: a functional
-  requirement, a decision taken, a definition, a commitment, a constraint, a customer
-  request, an incident, or a correction of something already written. Classifies it, writes
-  it into its one authoritative document, propagates the linked updates, and flags
-  contradictions with what is already there. Use whenever the user states something worth
-  recording, even when they name no file at all. Triggers on "abbiamo deciso", "il cliente
-  vuole", "hanno chiesto", "aggiungi che", "registra che", "un cliente attivo è", "in realtà
-  il dato arriva ogni ora", "non possiamo far uscire i dati dall'UE", "serve anche che",
-  "requisito", "aggiungi questo requisito", "we decided", "the customer wants", "add that",
-  "record that", "actually it works like this", "new requirement". Use it also when the user
-  asks to update the documentation after a conversation, or to fix the files because
-  something changed.
+  Bring new information into the Data & AI documentation framework: a functional requirement, a
+  decision taken, a definition, a commitment, a constraint, a customer request, an incident, a
+  correction of something already written, or a new value for something already recorded -- a
+  threshold in an `EVP`, a date, a number. An unfinished thought that is not a requirement yet
+  goes to the parking lot of `OPEN.md`, which is one of this skill's destinations and not a
+  refusal. Classifies it, writes it into its one authoritative document, propagates the linked
+  updates, and flags contradictions with what is already there. Use whenever the user states
+  something worth recording, even when they name no file at all. Triggers on "abbiamo deciso",
+  "il cliente vuole", "hanno chiesto", "aggiungi che", "registra che", "un cliente attivo è",
+  "in realtà il dato arriva ogni ora", "non possiamo far uscire i dati dall'UE", "serve anche
+  che", "requisito", "aggiungi questo requisito", "aggiorna l'EVP", "alza la soglia", "aggiungi
+  al parcheggio", "we decided", "the customer wants", "add that", "record that", "actually it
+  works like this", "new requirement", "raise the threshold", "park this for now". Use it also
+  when the user asks to update the documentation after a conversation, or to fix the files
+  because something changed.
 ---
 
 # requirement
