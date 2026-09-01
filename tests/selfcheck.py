@@ -3381,6 +3381,37 @@ def _register_halves():
     if got is not None and "REG015" in got:
         problems.append("a decided entry was reported for having left §1, which is what "
                         "taking a decision is supposed to do")
+
+    # EITHER BODY SHAPE COUNTS, AND THIS IS THE ONE THE HEADING BRANCH TOLERATES. An open
+    # register writing its entries as a table instead of `### OD-001 - title` is the shape
+    # `rows_of` exists for, and the prefix filter must not take it away: the ids in that
+    # first column are the ones this type declares.
+    as_table = ("---\nschema: framework/open-register/v1\nartifact_type: open-register\n"
+                "lifecycle: living\nstatus: active\nowners: [o]\ncreated: 2026-01-01 09:00\n"
+                "last_review: 2026-08-01 09:00\nentries:\n  OD-001:\n    status: open\n"
+                "    cost_to_reverse: low\n    products: [all]\n"
+                "    default_in_force: nothing\n---\n\n# Open\n\n"
+                "| ID | Question |\n|---|---|\n| OD-001 | the one written as a row |\n")
+    got = repo({"OPEN.md": as_table})
+    if got is not None and "REG015" in got:
+        problems.append("an open register writing its entries as a table was reported, so "
+                        "the shape `rows_of` exists for is the shape that fails")
+
+    # And a row the map does not declare is still reported, or the tolerated shape would be
+    # a way to stop being checked rather than a way to write the register.
+    got = repo({"OPEN.md": as_table + "| OD-002 | the row nothing declares |\n"})
+    if got is not None and "REG015" not in got:
+        problems.append("a table row the map does not declare was not reported, so the "
+                        "tolerated shape is a way out of the check")
+
+    # A FOREIGN PREFIX IN A FIRST CELL IS A CITATION AND NOT A HALF-WRITTEN ENTRY, AND THE
+    # COST IS ASSERTED HERE RATHER THAN LEFT IMPLICIT. `entries:` is schema-forbidden to
+    # hold a `DEC`, so a `DEC` in the body can only be cited -- and the same silence covers
+    # a mistyped prefix, which is what this filter is paid for.
+    got = repo({"OPEN.md": as_table + "| DEC-001 | the decision this row argues about |\n"})
+    if got is not None and "REG015" in got:
+        problems.append("a `DEC` cited in the first cell of a table was read as an entry "
+                        "the map is missing, which `entries:` cannot hold")
     return problems
 
 

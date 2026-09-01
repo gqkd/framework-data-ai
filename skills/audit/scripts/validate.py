@@ -1212,7 +1212,7 @@ def check_commitments_and_risks(arts: list[Artifact], report: Report) -> None:
                            "risks with different remedies, and silence reads as the first.")
 
 
-def body_ids(a: Artifact, spec: dict) -> set[str] | None:
+def body_ids(a: Artifact, spec: dict, prefixes: tuple[str, ...] = ()) -> set[str] | None:
     """The ids the body of a register still carries, or None when it has no body to read.
 
     Two shapes, declared per type in the registry as `body_ids.from`. A table, where the id
@@ -1225,8 +1225,32 @@ def body_ids(a: Artifact, spec: dict) -> set[str] | None:
     whose §state section is missing entirely has no rows to compare, and reporting every id
     in the map as missing from a section that does not exist says the wrong thing: `SEC001`
     is the finding for an absent section.
+
+    AND ONLY THE PREFIXES THIS TYPE DECLARES, WHICH IS `inline_id_declarations` BEING READ BY
+    THE FUNCTION THAT NEEDED IT. That key exists to say which identifiers a body *defines*
+    rather than only cites, and its own comment says which half matters: "Every one of these
+    registers also cites identifiers it does not own, constantly". A register that argues in a
+    table -- one row per decision, the id in the first cell -- had every citation read as a
+    half-written entry, and there is no textual signal that separates the two:
+    `| DEC-011 | framework and products in two repositories |` is exactly the shape an
+    entry-in-a-table has. The prefix is the only signal, and it was already declared. Empty
+    `prefixes` means no filter, which is what a type with no row there gets.
+
+    TWO COSTS, WRITTEN HERE BECAUSE THIS IS WHAT THE SILENCE IS PAID WITH.
+    A MISTYPED PREFIX GOES QUIET. `### DEC-083 - ...` written where `OD-083` was meant is
+    reported today and is not after this. It bites only when the mistyped id *exists*, because
+    otherwise the reference checks report it dangling -- so the loss is narrow, but it is a
+    loss and not a refinement, and somebody widening this filter should know it was priced.
+    A REGISTER THAT RENAMES ITS FAMILY DISAGREES ASYMMETRICALLY. A project whose open register
+    held `QST-*` ids would have a silent body and a map reporting every row as missing from
+    it: loud in one direction and quiet in the other. That is the right way round, because the
+    map is the authority -- but somebody reading only the body half would see a clean register.
     """
     id_in = re.compile(r"\b([A-Z]{2,4}-\d{3,})\b")
+
+    def mine(ids: set[str]) -> set[str]:
+        """Only the ids this register type declares -- `inline_id_declarations`."""
+        return {i for i in ids if not prefixes or i.split("-", 1)[0] in prefixes}
 
     def rows_of(chunk: str) -> set[str]:
         """The first cell of every table row in `chunk`, which is where a register puts the id."""
@@ -1249,7 +1273,7 @@ def body_ids(a: Artifact, spec: dict) -> set[str] | None:
         marker = f"<!-- section: {spec['section']} -->"
         if marker not in body:
             return None
-        return rows_of(body.split(marker, 1)[1].split("<!-- section:", 1)[0])
+        return mine(rows_of(body.split(marker, 1)[1].split("<!-- section:", 1)[0]))
 
     # EITHER SHAPE, BECAUSE BOTH ARE WRITTEN. The templates give each entry a `### CMT-001 ·
     # title` heading with the reasoning under it, and that is the shape this asks for; a
@@ -1259,7 +1283,7 @@ def body_ids(a: Artifact, spec: dict) -> set[str] | None:
     # while calling it a missing row.
     headings = {m.group(1) for m in re.finditer(r"^#{2,4}\s+.*?\b([A-Z]{2,4}-\d{3,})\b",
                                                 body, re.M)}
-    return headings | rows_of(body)
+    return mine(headings | rows_of(body))
 
 
 def check_register_halves(arts: list[Artifact], registry: dict, report: Report) -> None:
@@ -1289,7 +1313,8 @@ def check_register_halves(arts: list[Artifact], registry: dict, report: Report) 
                            f"it likes and every check that reads this register has nothing "
                            f"to read, so it reports clean however it is filled in.")
             continue
-        in_body = body_ids(a, decl)
+        prefixes = tuple(registry.get("inline_id_declarations", {}).get(a.type) or ())
+        in_body = body_ids(a, decl, prefixes)
         if in_body is None:
             continue
         exempt = set(decl.get("exempt_status") or ())

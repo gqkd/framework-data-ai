@@ -544,7 +544,23 @@
 # `audit/clean-repo`, whose whole description is that anything reported in it is invented,
 # among them -- because 3.0.0 migrated the templates and left the fixtures on the old shape.
 # The values were already in the maps; what came out were the duplicate halves.
-version: "3.0.2"
+# 3.0.2 -> 3.0.3. `REG015` READS `inline_id_declarations`, WHICH WAS ALREADY THERE. A check
+# that reports less, and no document changes, so PATCH; MINOR is suspended anyway.
+#
+# `body_ids` harvested every identifier in the first cell of every table row of a register's
+# body and compared the lot against the map. A register that argues in tables -- one row per
+# decision, the id in the first cell -- had every citation read as a half-written entry: in
+# one repository three open registers reported twenty-two ids and ten were `DEC` numbers,
+# which `entries:` is schema-forbidden to hold. This key has said which prefixes each register
+# *defines* since before that check existed, and said in its own comment why the second half
+# is the part that matters. Nothing read it.
+#
+# WHAT IT COSTS, AND IT IS THE HALF THAT GETS LEFT OUT. A mistyped prefix goes quiet: a
+# heading written `DEC-083` where `OD-083` was meant was reported and is not any more. It
+# bites only when the mistyped id exists, because otherwise the reference checks catch it
+# dangling. Both costs are written beside the filter too, which is where somebody widening it
+# will be standing.
+version: "3.0.3"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of
