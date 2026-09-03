@@ -560,7 +560,78 @@
 # bites only when the mistyped id exists, because otherwise the reference checks catch it
 # dangling. Both costs are written beside the filter too, which is where somebody widening it
 # will be standing.
-version: "3.0.3"
+# 3.0.3 -> 3.1.0. A PLACE WHERE A PROJECT SAYS "I LOOKED AT THIS FINDING AND DECIDED",
+# and the end of the MINOR freeze. Nothing stops validating and nothing is required, so no
+# repository has to do anything about this: a project that writes no file sees exactly what
+# it saw before.
+#
+# WHY THIS IS A MINOR AND NOT THE FOURTH PATCH IN A ROW. The freeze was declared at 2.8.2
+# with a reason that is a measurable quantity: the model had moved nine times in three days,
+# every move driven by one repository meeting it, and a consumer cannot pin against that.
+# Counted from this file's own history, the twenty version declarations of 19-21 August are
+# about 6.7 a day; the five between 23 August and today are about 0.4. The condition the
+# freeze names is fifteen times further away than when it was written, so it stops here.
+#
+# The bounded version of the complaint, because the unbounded one would be untrue: MAJOR
+# went on working throughout, and 3.0.0 said what it had to say. What the freeze collapsed
+# is the distinction between "something arrived" and "nothing moved", and three releases in
+# a row landed in it -- an always-on token cost, a check that arrived, a check that reports
+# less -- each one a thing a consumer should have been told and was not.
+#
+# WHAT ARRIVED. `.framework/expected-findings.yaml`, read by the validator, one entry per
+# finding, `code`, `path`, `reason` and `clears_when` all four required. It is the shape a
+# real project converged on before the framework had one, and it is adopted rather than
+# redesigned. `clears_when` is an event and not a date, in the same form and for the same
+# reason as `trigger` on an open entry: a date written on something undecided is read as a
+# promise by whoever finds it next.
+#
+# The validator reads it, and that is the decision rather than a detail. `--adopt` reading
+# it would have unblocked the migration and left the annotation visible only inside the
+# command that runs least often of all; read here, it reaches CI, the report a person reads,
+# `--adopt` and anything written later, because they all read one report. It is also the
+# only arrangement in which a stale annotation can be caught at all, since deciding that an
+# annotation matches nothing needs the current set of findings, which is this file's job.
+#
+# WHY IT IS NOT A LIST OF EXEMPTIONS WITH A BETTER NAME. `AN001`: an annotation matching no
+# finding is an `error`. That is the whole guard, and it is an error rather than a warning
+# because the file is load-bearing on every run now and not only during a migration. `AN002`
+# refuses an annotation on a finding at `error` level, loudly rather than by ignoring it: an
+# error that can be explained away stops being an error, and a project that thinks it has
+# annotated one would find out only when the gate stayed red. `AN003` is the opposite guard
+# and it is opt-in: `require_all: true` beside `expected:` makes every unannotated warning an
+# error. Permissive is the default, because a repository is allowed to have warnings nobody
+# has ruled on yet -- and the report states the count either way, so the default hides
+# nothing and turning the strict form on is a decision rather than a discovery.
+#
+# The three are `error` in a catalog whose rule is that almost everything starts at `warn`,
+# for the reason `PR001` to `PR003` are: they cannot fire in a repository that has not opted
+# in by writing the file, so no pipeline that exists today can start failing because of them.
+#
+# WHERE THE FILE SITS, WHICH WAS FORCED AND NOT CHOSEN. `migrate.py` reconstructs the
+# validator of the declared version out of this repository's history, so that validator can
+# never be changed: an annotation has to be readable by the new tooling and invisible to
+# every validator already released. A key in `framework.yaml` exits on the unknown key and
+# takes the whole comparison with it; a field on a register entry is an `FM002`, which is an
+# error, because the entry schema is closed; a new artifact type is an `FM003` on every run.
+# A hidden path is the only slot with the property, and it has it by construction.
+#
+# `.claude/expected-findings.yaml` is read for this version only, because that is where the
+# first project had to put it, and the line saying to move it goes to stderr rather than
+# being decided in silence. When both exist the new path wins. Removed in 3.2.0.
+#
+# WHAT THE OUTPUT DOES NOT DO. An accepted finding keeps `level: "warn"` and gains a key
+# beside it; it is never reclassified and never leaves `findings`. A project checking its
+# own warnings keys on `level`, so moving them would take that check out of service without
+# a word. The counts arrive as new keys for the same reason.
+#
+# ALSO HERE, AND IT IS THE OTHER HALF OF THE SAME CIRCULARITY. Both entry points now say on
+# stderr, before scanning anything, that the checkout has moved away from the commit the
+# project pins. `FW003` already reported it, at the end of a report that a project whose gate
+# refuses to start never reaches -- and what makes that gate refuse is the divergence itself.
+# The check was inside the thing that stops running. The line is not a second check: it is
+# the same fact, said where it cannot be swallowed, and it is silent in exactly the cases
+# `FW003` is silent in.
+version: "3.1.0"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of
