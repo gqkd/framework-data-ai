@@ -207,6 +207,27 @@ def build(name: str, spec: dict, registry: dict) -> dict:
                                      "`required`, so there is nothing to make conditional. "
                                      "List it there and name what answers instead.")
                 row_required.remove(k)
+            # A FIELD LEFT EMPTY ON PURPOSE, SAID OUT LOUD. Every record of a map gets
+            # this key, and it is uniform rather than declared per map because the failure
+            # it answers is a property of the shape and not of one vocabulary: faced with a
+            # field no value of which is true, the careful writer omits it, and the omission
+            # is indistinguishable from never having looked. See the registry's note on
+            # closed vocabularies, which describes that failure and until now left it with
+            # no repair.
+            #
+            # `settled_by` is required and it is what keeps this from being a permit not to
+            # answer: it names the event after which the field would have a true value. A
+            # field that will never have one is not this -- it wants the value that names
+            # the state, which is the criterion written beside the note in the registry.
+            props["unanswerable"] = {
+                "type": "object",
+                "additionalProperties": {
+                    "type": "object",
+                    "properties": {"reason": {"type": "string", "minLength": 1},
+                                   "settled_by": {"type": "string", "minLength": 1}},
+                    "required": ["reason", "settled_by"],
+                    "additionalProperties": False},
+                "minProperties": 1}
             value = {"type": "object", "properties": props,
                      "required": row_required,
                      "additionalProperties": False}

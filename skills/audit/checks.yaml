@@ -704,6 +704,22 @@ checks:
       already happened. And a risk in `closed` or `expired` is not an owner, which is the
       same pair `REF006` excludes.
 
+  XP008:
+    level: warn
+    title: a product is named by a word that is reserved in `products:`
+    prevents: >
+      A field that says two things with one word. `all` and `none` are reserved: the first
+      means every product including the ones that do not exist yet, the second means the
+      subject is not a product at all. A product actually called one of those makes every
+      `products:` naming it ambiguous, and ambiguous in the direction nothing can see, since
+      both readings are legal and no check can ask which was meant.
+
+      It is `warn` and not `error` on purpose. A repository that has such a product today
+      validates and goes on validating; turning a name into an illegal state would be a
+      migration demanded of somebody in exchange for a collision nobody has had yet. The
+      finding is here so that the day it does happen, the report says so instead of the
+      views quietly disagreeing with the register.
+
   FW001:
     level: warn
     title: the repository was written against a different version of the framework
@@ -814,6 +830,58 @@ checks:
       check that reddened every repository on the day it arrived would be switched off in a
       week. The report states how many warnings carry an annotation whether or not this is on,
       so the default hides nothing and turning it on is a decision rather than a discovery.
+
+  # ── Fields a map entry declares it cannot answer ───────────────────────────
+  #
+  # These three run only where a record carries `unanswerable`, so they cannot fire in a
+  # repository that has not written one, which is why two of them are `error` in a catalog
+  # whose rule is that almost everything starts at `warn`.
+  #
+  # `UNA001` is to this what `AN001` is to the annotation file, and lowering it has the same
+  # shape of consequence: not a severity decision, but the decision to keep declarations that
+  # the document itself contradicts, which is the mechanism becoming a permit not to answer.
+
+  UNA001:
+    level: error
+    title: a field is declared unanswerable and carries a value
+    prevents: >
+      The declaration outliving the state it describes. `unanswerable` says no value of the
+      vocabulary is true yet and names the event that would change it; a row that says so and
+      also fills the field in is making both claims at once, and only one of them can hold.
+
+      This is the checkable half of a rule whose other half is not. Whether the event named in
+      `settled_by` has happened is not something a script can know, and `REG009` says the same
+      about a trigger. What a script can see is the document contradicting its own
+      declaration, which is what a stale one looks like from the outside once somebody has
+      filled the field in and left the paragraph behind.
+
+  UNA002:
+    level: error
+    title: a field declared unanswerable is not an optional field of that map
+    prevents: >
+      A declaration about nothing, which reads as an answer and is not one. Naming a field the
+      map does not have is a typo that no other check can catch: it validates, it looks
+      deliberate, and the field it was meant for is still empty and still silent.
+
+      Naming a *required* field is the other half and a different mistake. A required field is
+      one the framework has decided every row can answer. A row that genuinely cannot is an
+      argument that the vocabulary or the requirement is wrong, and that argument belongs
+      upstream where it changes the model for everybody, not inside one entry where it changes
+      it for one row and tells nobody.
+
+  UNA003:
+    level: warn
+    title: "`settled_by` names a date instead of an event"
+    prevents: >
+      The same failure `REG009` reports one field over. A date written on something nobody has
+      settled is a number nobody derived, and it is read as a promise by whoever finds it
+      next. What actually settles a field is an event: the decision on the scope, the second
+      customer, the first line of code written against it.
+
+      `warn` rather than `error`, and the same limit stated openly: this catches a year or a
+      day-first date, and it cannot catch "by the end of the quarter". The template says an
+      event, the catalog says an event, and this reports the half that can be reported without
+      guessing.
 
   ICG001:
     level: info    # the first `info` in this catalog, and the reason is below

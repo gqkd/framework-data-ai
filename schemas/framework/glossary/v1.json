@@ -42,6 +42,28 @@
           "blocked_by": {
             "type": "string",
             "minLength": 1
+          },
+          "unanswerable": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "settled_by": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "reason",
+                "settled_by"
+              ],
+              "additionalProperties": false
+            },
+            "minProperties": 1
           }
         },
         "required": [],

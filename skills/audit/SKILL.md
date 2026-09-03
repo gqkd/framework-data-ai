@@ -215,6 +215,49 @@ happen.
 for the same reason: a date written on something undecided is read as a promise by whoever
 finds it next.
 
+## A field no value of which is true
+
+The same failure one level down, and the one the registry describes about its own
+vocabularies: faced with a field where every value would be false, the careful writer leaves
+it empty, and the empty field is indistinguishable from one nobody read. There are two repairs
+and they are not interchangeable.
+
+> **The criterion.** If there is an event after which the field would have a true value, it is
+> `unanswerable`. If there is none, it is a value that names the state.
+
+**No event, so a value.** `products: [none]` on an open entry whose subject is the repository
+itself or the tooling it is checked with. It binds no product and never will, so there is no
+condition to write and none is asked for. The entry appears under no product heading and gets
+its own section in the generated union. `[all]` there would be untrue in the field almost
+everything joins on, and leaving it empty is what `REG011` exists to report.
+
+**An event, so a declaration.** On any record of any map:
+
+```yaml
+CMT-007:
+  to: the evaluation committee
+  status: open
+  unanswerable:
+    feasibility:
+      reason: >
+        each capability is buildable alone and the eleven together are not.
+      settled_by: >
+        the decision on the scope.
+```
+
+Both keys required, only fields the map declares, never a required one. `UNA001` reports a
+field declared unanswerable and filled in anyway, `UNA002` a field that is not an optional
+field of that map, `UNA003` a date where `settled_by` wants an event.
+
+**The test that separates the two:** try to write `settled_by`. If it means inventing an
+event, this is not `unanswerable`, and either a value names the state or the vocabulary is
+short one and that belongs in the framework rather than in the entry.
+
+The same rule as the annotation file applies here: **you may propose, you do not write one on
+your own.** A field declared unanswerable is a claim about what is knowable, and a validator
+going quiet is not evidence that it is true. What you may do unasked is the reverse: when a
+declared field has become answerable, say so, because it is a `UNA001` waiting to happen.
+
 ## The second pass: do the documents still agree with each other
 
 Everything above is the validator and what to do with what it says. The validator checks

@@ -3769,16 +3769,21 @@ def _the_annotation_file_has_one_home():
     # project cannot turn it back into an artifact, and that the move from the place the
     # first project had to invent is announced rather than silent.
     problems = []
+    # THE GRACE PERIOD ENDED WHERE THE NOTE SAID IT WOULD, AND SAYING SO IS THE HALF THAT
+    # STAYS. 3.1.0 read the old path and wrote down that 3.2.0 would stop; a note that says
+    # when something ends is a promise or it is decoration. What must not happen is the
+    # silent version: a file sitting in a repository doing nothing, discovered six months
+    # later by somebody wondering why an annotation stopped applying.
     legacy, err = _annotated_run(ANNOTATES_A_WARNING, at=".claude/expected-findings.yaml")
     if legacy is None:
-        return ["the validator crashed reading the old path"]
-    if not [f for f in legacy["findings"] if f.get("accepted")]:
-        problems.append("the old path was not read at all, so the repository that had "
-                        "nowhere else to put this file is broken by the framework catching "
-                        "up with it")
+        return ["the validator crashed on a repository carrying only the old path"]
+    if [f for f in legacy["findings"] if f.get("accepted")]:
+        problems.append("the old path is still being read, and the version note says it is "
+                        "not: one of the two is wrong and the note is the promise")
     if ".claude" not in err:
-        problems.append("the old path was read and nothing said so, so the move is "
-                        "discovered when it is removed")
+        problems.append("a file at the old path was ignored in silence. It has to be "
+                        "reported precisely because it is not read any more: nothing in it "
+                        "is applying, and that is invisible from the report otherwise")
 
     both, err = _annotated_run(ANNOTATES_A_WARNING, also={
         ".claude/expected-findings.yaml": """expected:
@@ -3795,9 +3800,9 @@ def _the_annotation_file_has_one_home():
         marked = {f["path"] for f in both["findings"] if f.get("accepted")}
         if marked != {"OPEN.md"}:
             problems.append(f"with both files present the annotations applied were "
-                            f"{sorted(marked)}: the new path wins, whole")
+                            f"{sorted(marked)}: only the new path is read")
         if ".claude" not in err:
-            problems.append("one of the two files was ignored in silence, which is how a "
+            problems.append("the leftover file was ignored in silence, which is how a "
                             "project ends up editing the one that is not read")
 
     # `skip_hidden: false` is a legal thing for a project to write, and it is what would
@@ -3853,6 +3858,196 @@ def _the_pin_is_said_before_the_scan():
         except json.JSONDecodeError:
             problems.append(f"stdout stopped being JSON for {what}: the line went to the "
                             "stream the callers parse")
+    return problems
+
+
+def _vocabulary_repo(tmp: Path, entries: str, extra: dict[str, str] | None = None) -> None:
+    """A root register with a product beside it, which is what `REG011` needs to ask at all."""
+    fm = lambda **kw: "---\n" + "\n".join(f"{k}: {v}" for k, v in kw.items()) + "\n---\n\n"
+    files = {
+        "framework.yaml": f"framework_version: {REGISTRY['version']}\n",
+        "OPEN.md": fm(schema="framework/open-register/v1", artifact_type="open-register",
+                      lifecycle="living", status="active", owners="[owner]",
+                      created="2026-01-01", last_review="2026-01-01 09:00",
+                      entries=entries)
+                   + "# Open\n\n<!-- generated: open-union -->\n\n<!-- /generated -->\n",
+        "products/alpha/product.yaml": fm(
+            schema="framework/product-manifest/v1", artifact_type="product-manifest",
+            lifecycle="living", status="active", products="[alpha]", owners="[owner]",
+            created="2026-01-01", last_review="2026-01-01 09:00",
+            stage="\n  phase: F4\n  since: 2026-01-01"),
+    }
+    files.update(extra or {})
+    for rel, text in files.items():
+        f = tmp / rel
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(text, encoding="utf-8")
+
+
+def _vocabulary_run(entries: str, extra: dict[str, str] | None = None, emit: bool = False):
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        _vocabulary_repo(root, entries, extra)
+        args = ["--emit-index"] if emit else []
+        r = subprocess.run([sys.executable, str(VALIDATE), "--root", tmp, "--json",
+                            "--stale-days", "36500", *args], capture_output=True, text=True)
+        if r.returncode not in (0, 1) or not r.stdout.strip():
+            return None, ""
+        return json.loads(r.stdout), (root / "OPEN.md").read_text(encoding="utf-8")
+
+
+BINDS_NOTHING = """
+  OD-001:
+    status: open
+    cost_to_reverse: low
+    products: [all]
+    default_in_force: nothing is scheduled
+  KI-002:
+    status: open
+    cost_to_reverse: low
+    products: [none]
+    default_in_force: the tooling defect stands
+"""
+
+
+@check("an entry that binds no product says so, and reaches the view without reaching a product")
+def _binds_no_product():
+    # `[none]` IS THE FOURTH ANSWER AND THE ONE THIS FILE'S OWN NOTE NAMED WITHOUT GIVING IT
+    # A VALUE: "not decided, not measurable, not applicable, not ours". The last one is the
+    # entry whose subject is the repository or the tooling it is checked with, and the two
+    # ways of writing it before were both wrong -- `[all]` says something untrue in the field
+    # everything joins on, absence says the thing `REG011` exists to remove.
+    #
+    # The half that is easy to get wrong is not the check, it is the view. An entry that
+    # binds nothing and appears nowhere would validate, satisfy every check, and be missing
+    # from the only composed list of what is open, which is the same disappearance from the
+    # other side.
+    problems = []
+    got, open_md = _vocabulary_run(BINDS_NOTHING, emit=True)
+    if got is None:
+        return ["the validator crashed on a register carrying `[none]`"]
+    if [f for f in got["findings"] if f["code"] in ("REG011", "REG013")]:
+        problems.append("`[none]` was reported as a missing or misfiled answer: it is an "
+                        "answer, and the whole point is that it is a different one from "
+                        "`[all]` and from silence")
+    region = open_md.split("<!-- generated: open-union -->", 1)[-1]
+    if "## Bound to no product at all" not in region:
+        problems.append("the generated union has no section for entries that bind nothing, "
+                        "so an entry saying its subject is not a product is absent from the "
+                        "one view that composes what is open")
+    else:
+        tail = region.split("## Bound to no product at all", 1)[1]
+        if "KI-002" not in tail:
+            problems.append("the entry that binds nothing did not reach its own section")
+        if "KI-002" in region.split("## Bound to no product at all", 1)[0]:
+            problems.append("the entry that binds nothing also appears under a product or "
+                            "among the ones that bind every product, which is the finding "
+                            "this value exists to remove, moved by a metre")
+    if "## none" in region:
+        problems.append("`none` was emitted as a product heading. It is a word, not a "
+                        "product, and this is the shape `all` had before it was one")
+
+    # A reserved word answers how many products are bound, so it cannot share the field.
+    beside = _vocabulary_run(BINDS_NOTHING.replace("products: [none]",
+                                                   "products: [none, alpha]"))[0]
+    if beside is None or not [f for f in beside["findings"] if f["code"] == "REG011"]:
+        problems.append("a reserved word sitting beside a named product was not reported, "
+                        "and the reader has to guess which half was the afterthought")
+
+    # And a product that carries one of the two names makes every use of the field ambiguous.
+    fm = lambda **kw: "---\n" + "\n".join(f"{k}: {v}" for k, v in kw.items()) + "\n---\n\n"
+    named = _vocabulary_run(BINDS_NOTHING, extra={"products/none/product.yaml": fm(
+        schema="framework/product-manifest/v1", artifact_type="product-manifest",
+        lifecycle="living", status="active", products="[none]", owners="[owner]",
+        created="2026-01-01", last_review="2026-01-01 09:00",
+        stage="\n  phase: F4\n  since: 2026-01-01")})[0]
+    if named is None or not [f for f in named["findings"] if f["code"] == "XP008"]:
+        problems.append("a product actually called `none` was not reported, so every "
+                        "`products:` naming it says two things and nothing says which")
+    return problems
+
+
+COMMITMENTS_WITH = """---
+schema: framework/commitments/v1
+artifact_type: commitments
+lifecycle: living
+status: active
+owners: [owner]
+products: [alpha]
+created: 2026-01-01
+last_review: 2026-01-01 09:00
+commitments:
+  CMT-001:
+    to: the committee
+    status: open
+    products: [alpha]
+    unanswerable:
+      feasibility:
+        reason: >
+          each capability is buildable alone and the set is not.
+        settled_by: >
+          the decision on the scope.
+%s
+---
+
+# Commitments
+
+### CMT-001 - the one that cannot be answered yet
+%s
+"""
+
+
+def _commitments(rows: str = "", headings: str = ""):
+    return {"COMMITMENTS.md": COMMITMENTS_WITH % (rows, headings)}
+
+
+@check("a field left empty on purpose is declared, counted, and cannot be declared and filled")
+def _unanswerable_is_declared_and_guarded():
+    # The registry's note on closed vocabularies describes this failure and left it without a
+    # repair for as long as it has existed: the careful writer omits the field, and the
+    # omission is the honest thing to write and the most invisible one. What is asserted here
+    # is that declaring it is visible -- the count -- and that the declaration cannot outlive
+    # the state it describes, which is the only part of the rule a script can hold. Whether
+    # the event in `settled_by` has happened is not knowable from here, and `REG009` says the
+    # same about a trigger one field over.
+    problems = []
+    clean = _vocabulary_run(BINDS_NOTHING, extra=_commitments())[0]
+    if clean is None:
+        return ["the validator crashed on a record carrying `unanswerable`"]
+    if clean["unanswerable"] != 1:
+        problems.append(f"the report counts {clean['unanswerable']} declared field(s) and "
+                        "the fixture declares one: the count is what makes a deliberate "
+                        "emptiness visible, and without it this is an omission again")
+    if [f for f in clean["findings"] if f["code"].startswith("UNA")]:
+        problems.append("a correct declaration produced a finding")
+
+    both = _vocabulary_run(BINDS_NOTHING, extra=_commitments(
+        rows="""    feasibility: feasible"""))[0]
+    if both is None or not [f for f in both["findings"] if f["code"] == "UNA001"]:
+        problems.append("a field declared unanswerable and filled in anyway was accepted. "
+                        "That is the declaration outliving its own state, and it is the one "
+                        "half of the rule a check can see")
+    elif [f for f in both["findings"] if f["code"] == "UNA001"][0]["level"] != "error":
+        problems.append("UNA001 is not an error. It is to this what AN001 is to the "
+                        "annotation file: without it the key is a permit not to answer")
+
+    for swap, what in (("      fesibility:", "a field the map does not have"),
+                       ("      status:", "a field the map requires")):
+        got = _vocabulary_run(BINDS_NOTHING, extra={
+            "COMMITMENTS.md": COMMITMENTS_WITH.replace("      feasibility:", swap)
+                              % ("", "")})[0]
+        if got is None or not [f for f in got["findings"] if f["code"] == "UNA002"]:
+            problems.append(f"{what} was accepted as a declaration: it reads as an answer "
+                            "given, and the field it was meant for is still silent")
+
+    dated = _vocabulary_run(BINDS_NOTHING, extra={
+        "COMMITMENTS.md": COMMITMENTS_WITH.replace(
+            "          the decision on the scope.",
+            "          2026-12-31, the end of the year.") % ("", "")})[0]
+    if dated is None or not [f for f in dated["findings"] if f["code"] == "UNA003"]:
+        problems.append("a date in `settled_by` was accepted. It takes the event after "
+                        "which the field would have a true value, for the reason REG009 "
+                        "gives one field over")
     return problems
 
 

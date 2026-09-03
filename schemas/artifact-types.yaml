@@ -651,6 +651,37 @@ version: "3.1.0"
 # question is first asked, before anybody has done the work. If that answer is not in the
 # list, the list is not finished, and the missing value is almost always some form of "not
 # yet" -- not decided, not measurable, not applicable, not ours.
+#
+# AND WHICH OF THE TWO REPAIRS TO REACH FOR, BECAUSE FROM 3.2.0 THERE ARE TWO AND CHOOSING
+# BETWEEN THEM AT RANDOM IS HOW ONE FACT ENDS UP WITH TWO SPELLINGS.
+#
+#   THE CRITERION, IN ONE LINE. If there is an event after which the field would have a true
+#   value, it is `unanswerable`. If there is none, it is a value that names the state.
+#
+# They are not two ways of saying one thing, and the difference is not a matter of taste:
+#
+#   a value that names the state       says NEVER. `products: [none]` on an entry whose
+#                                      subject is the repository or the tooling it is checked
+#                                      with; `commitment: none` on a risk that is not about a
+#                                      promise; `[unregistered]`, `not-applicable`. It carries
+#                                      no condition because there is no condition: nothing
+#                                      will happen that makes that entry bind a product.
+#
+#   `unanswerable` on the record       says NOT YET, and names the event. The case that
+#                                      produced it: eleven promised capabilities, each
+#                                      buildable alone and not as a set until somebody
+#                                      decides the scope, so every value of `feasibility` is
+#                                      false on one half of the judgement. That field becomes
+#                                      answerable the day the scope is decided, and
+#                                      `settled_by` is where that day is named.
+#
+# The test that separates them is whether `settled_by` can be filled in honestly. If writing
+# it means inventing an event, the answer is not `unanswerable`: the vocabulary is short a
+# value, and the list above is not finished after all.
+#
+# `UNA001` is what keeps the second from becoming a permit not to answer -- a field declared
+# unanswerable and filled in anyway is the declaration outliving its own state -- and no check
+# can do more, because whether an event has happened is not a thing a script knows.
 
 lifecycles: [living, immutable, append-only]
 
@@ -927,6 +958,18 @@ types:
     # `products: [all]` is that statement -- the reserved word and not a list of every
     # product, because a list means the same thing right up until a product is added, and
     # then it quietly means less.
+    #
+    # `products: [none]` is the fourth answer and it arrived in 3.2.0, because the field had
+    # three positions and the register has four subjects. An entry can be about the
+    # repository itself, or about the tooling the repository is checked with, and that entry
+    # binds no product and never will: `[all]` said something untrue in the field most things
+    # join on, and absence said the thing `REG011` exists to remove. `binds()` reads it, so
+    # the entry appears under no product heading and in no product's derived view, and the
+    # generated union gives it a section of its own -- without one it would validate, satisfy
+    # every check and be missing from the only composed view of what is open.
+    #
+    # Both are words and not products. `XP008` reports a product actually called `all` or
+    # `none`, at `warn`: while one exists every `products:` naming it says two things.
     # Numbering stays one sequence across all three -- `REG007` -- because `depends_on` and
     # the `derives_from` of a `DEC` name an entry by its id and nothing else.
     # `REG002` and `REG003` used to read the body: `### OD-NNN` headings and lines like

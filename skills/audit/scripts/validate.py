@@ -84,6 +84,19 @@ SECTION_MARK = re.compile(r"<!--\s*section:\s*([a-z0-9-]+)\s*-->")
 # listing everybody.
 ALL_PRODUCTS = "all"
 
+# THE FOURTH FLAVOUR, WHICH THE REGISTRY'S OWN NOTE NAMED AND NO VOCABULARY CARRIED. That note
+# says the value a closed list keeps leaving out is "some form of 'not yet': not decided, not
+# measurable, not applicable, not ours" -- four, and three of them got a value. This is the
+# fourth. An entry whose subject is the repository itself, or the tooling it is checked with,
+# binds no product and never will: written `[all]` it says something untrue in the field most
+# things join on, and written as an absence it says the same thing `REG011` exists to remove.
+#
+# It is not `unanswerable`, and the difference is the criterion: `unanswerable` is for a field
+# that has no true value *yet* and names the event that would give it one. This is for a field
+# that will never have one, so there is no event to name, and a mechanism that demanded one
+# would force somebody to invent it.
+NO_PRODUCTS = "none"
+
 # The third state of `leaves_open`, and the one a real repository needed four times in a
 # week: this decision did not settle everything, and what it left is not in any register
 # yet. A list of ids says where to look. Absence says nobody looked. This says somebody
@@ -357,18 +370,18 @@ def load_annotations(root: Path) -> tuple[list[dict], bool, str | None]:
     stays red for a reason nobody can see in the report.
     """
     here, was = root / ANNOTATIONS, root / ANNOTATIONS_WAS
-    path, rel = (here, ANNOTATIONS) if here.exists() else (
-        (was, ANNOTATIONS_WAS) if was.exists() else (None, None))
+    # THE GRACE PERIOD ENDED WHERE IT SAID IT WOULD. `3.1.0` read the old path and wrote down
+    # that `3.2.0` would stop, and a version note that says when something ends is a promise
+    # or it is decoration. What does not end is saying so: a file sitting there doing nothing
+    # is exactly the state that gets discovered six months later, so the path stops being
+    # read and does not stop being reported.
+    if was.exists():
+        print(f"framework-data-ai: {ANNOTATIONS_WAS} is not read any more. It moved to "
+              f"{ANNOTATIONS} in 3.1.0 and the old path was read for that one version. "
+              "Nothing in that file is applying. Move it.", file=sys.stderr)
+    path, rel = (here, ANNOTATIONS) if here.exists() else (None, None)
     if path is None:
         return [], False, None
-    if rel == ANNOTATIONS_WAS:
-        print(f"framework-data-ai: reading {ANNOTATIONS_WAS}. It moved to {ANNOTATIONS} "
-              "and the old place is read for one version only, so that a repository that "
-              "had nowhere else to put it keeps working. Move the file.", file=sys.stderr)
-    elif was.exists():
-        print(f"framework-data-ai: {ANNOTATIONS} and {ANNOTATIONS_WAS} both exist. "
-              f"Reading {ANNOTATIONS}; the other one is not read at all and its "
-              "annotations are doing nothing. Delete it.", file=sys.stderr)
 
     try:
         data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -1288,6 +1301,20 @@ def check_commitments_and_risks(arts: list[Artifact], report: Report) -> None:
                        "asks whether the exposure it creates has a home. Name the products "
                        "it binds, or `[all]` when the promise is about the whole suite.")
             continue
+        # `[none]` IS AN ANSWER ON AN OPEN ENTRY AND NOT ON A PROMISE. An open question can
+        # be about the repository or its tooling and bind no product; a commitment is
+        # something somebody was told, and a promise binding no product has no exposure to
+        # own, no risk register to reach and nothing an `EVP` could ever measure. Reported
+        # rather than silently bucketed under a product called `none`, which is the shape
+        # `[all]` had before it was a word.
+        if NO_PRODUCTS in named:
+            report.add("XP006", rel,
+                       f"{cid} declares `[{NO_PRODUCTS}]`. On an open entry that says the "
+                       "subject is not a product; on a promise it says nobody was promised "
+                       "anything about anything, and then the row is not a commitment. Name "
+                       f"the products it binds, or `[{ALL_PRODUCTS}]` when it is the whole "
+                       "suite.")
+            continue
         # `[all]` was being read as a product called `all`, which no repository has, so a
         # promise about the whole suite bound nothing. It binds every product there is.
         targets = every if ALL_PRODUCTS in named else named
@@ -1549,6 +1576,84 @@ def check_body_repeats_a_field(arts: list[Artifact], registry: dict,
                        "every check here reads the other one. Move the value into the entry "
                        "and delete the line -- or, if the two say different things, decide "
                        "which is true before deleting either.")
+
+
+def check_unanswerable(arts: list[Artifact], registry: dict, report: Report) -> int:
+    """Fields a map entry declares it cannot answer, and how many there are.
+
+    THE FAILURE THIS ANSWERS IS DESCRIBED IN THE REGISTRY AND WAS LEFT WITHOUT A REPAIR. Faced
+    with a vocabulary no value of which is true, the careful writer omits the field, and the
+    note beside the vocabularies says what that costs: the honest thing to write is the most
+    invisible one, indistinguishable from never having looked. A commitments register carried
+    three fields left empty on purpose, because the true assessment was composite and every
+    single value of the enum was false on one half of it, and nothing in the framework could
+    tell those three from the rows nobody had read.
+
+    WHAT IS CHECKABLE AND WHAT IS NOT, WHICH IS THE HONEST HALF. `settled_by` names an event,
+    and no script can know whether an event has happened -- the same limit `REG009` states
+    about a trigger. What a script can see is the declaration being contradicted by the
+    document that carries it: a field declared unanswerable and answered anyway. That is the
+    stale declaration made mechanical, and it is the analogue of `AN001` on the annotation
+    file, which is the same guard for the same reason.
+    """
+    types = registry["types"]
+    declared = 0
+    for a in arts:
+        maps = (types.get(a.type or "", {}) or {}).get("maps") or {}
+        for field, rule in maps.items():
+            spec = rule.get("fields")
+            if not spec:
+                continue
+            required = {f for f in (spec.get("required") or ())}
+            known = required | {f for key in ("optional", "lists")
+                                for f in (spec.get(key) or ())}
+            rows = a.meta.get(field)
+            if not isinstance(rows, dict):
+                continue
+            for key, row in sorted(rows.items()):
+                if not isinstance(row, dict):
+                    continue
+                said = row.get("unanswerable")
+                if not isinstance(said, dict):
+                    continue
+                for name, decl in sorted(said.items()):
+                    declared += 1
+                    if name not in known:
+                        report.add("UNA002", a.rel,
+                                   f"{key} declares {name!r} unanswerable, and `{field}:` "
+                                   f"has no field by that name. A declaration about a field "
+                                   "that does not exist reads as an answer given and is "
+                                   "none: nothing joins it, nothing reports it missing, and "
+                                   "the field it was meant for is still empty and still "
+                                   "silent.")
+                        continue
+                    if name in required:
+                        report.add("UNA002", a.rel,
+                                   f"{key} declares {name!r} unanswerable, and `{name}` is "
+                                   f"required by `{field}:`. A required field is one the "
+                                   "framework has decided every row can answer; if this row "
+                                   "genuinely cannot, that is an argument about the "
+                                   "vocabulary and it belongs upstream, not in one entry.")
+                        continue
+                    if row.get(name) not in (None, "", [], {}):
+                        report.add("UNA001", a.rel,
+                                   f"{key} declares {name!r} unanswerable and carries a "
+                                   f"value for it. One of the two is untrue. If the value is "
+                                   "right the declaration is stale and goes; if the "
+                                   "declaration is right the value is a guess, and a guess "
+                                   "in a field every check reads is worse than the emptiness "
+                                   "this was written to explain. It says it would be settled "
+                                   f"by: {' '.join(str(decl.get('settled_by', '')).split())}")
+                        continue
+                    if DATE_IN_TEXT.search(str(decl.get("settled_by") or "")):
+                        report.add("UNA003", a.rel,
+                                   f"{key} says {name!r} would be settled by a date. It takes "
+                                   "the event after which the field would have a true value, "
+                                   "in the form `trigger` takes on an open entry and for the "
+                                   "reason `REG009` gives: a date written on something nobody "
+                                   "has settled is read as a promise by whoever finds it "
+                                   "next.")
+    return declared
 
 
 def check_manifest_derived_fields(arts: list[Artifact], report: Report) -> None:
@@ -1874,13 +1979,21 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
                                "paste: ids are one sequence across every register here, so "
                                "the entry keeps its number and every `depends_on` and "
                                "`derives_from` naming it still resolves.")
-                elif ALL_PRODUCTS in named and len(named) > 1:
-                    others = [p for p in named if p != ALL_PRODUCTS]
+                elif len(named) > 1 and ({ALL_PRODUCTS, NO_PRODUCTS} & set(named)):
+                    # Both reserved words say how many products are bound, so neither can
+                    # share the field with a list, and the two together are the same fault
+                    # twice. Reported as one finding rather than three: what the reader has
+                    # to do is identical in every case, which is decide which half was meant.
+                    words = [w for w in (ALL_PRODUCTS, NO_PRODUCTS) if w in named]
+                    others = [p for p in named if p not in (ALL_PRODUCTS, NO_PRODUCTS)]
+                    said = " and ".join(f"`[{w}]`" for w in words)
                     report.add("REG011", a.rel,
-                               f"{od} declares `[{ALL_PRODUCTS}]` and also names "
-                               f"{', '.join(map(repr, others))}. Either it binds everything "
-                               "or it binds those, and as written the reader has to guess "
-                               "which half was the afterthought.")
+                               f"{od} declares {said}"
+                               + (f" and also names {', '.join(map(repr, others))}"
+                                  if others else "")
+                               + ". A reserved word answers how many products are bound, so "
+                               "it cannot sit beside anything else, and as written the "
+                               "reader has to guess which half was the afterthought.")
 
             if od in closed_by and row.get("status") == "open":
                 report.add("REG002", a.rel,
@@ -2440,6 +2553,26 @@ def check_stack(arts: list[Artifact], report: Report) -> None:
 def check_cross_product(arts: list[Artifact], report: Report) -> None:
     products = {p for a in arts for p in as_list(a.meta.get("products"))}
 
+    # A PRODUCT MAY NOT BE CALLED BY A WORD THAT ANSWERS A QUESTION ABOUT PRODUCTS. `all` and
+    # `none` are reserved in `products:`, and a product carrying either name makes every use
+    # of the field ambiguous in a way no reader can see: `products: [all]` would be at once
+    # "the whole suite" and "that one product there". Reported at `warn` and not `error`
+    # deliberately -- a repository that has such a product today validates and goes on
+    # validating, and turning a name into an illegal state is a migration nobody asked for
+    # in exchange for a collision nobody has had.
+    for a in arts:
+        if a.type != "product-manifest":
+            continue
+        for name in as_list(a.meta.get("products")):
+            if name in (ALL_PRODUCTS, NO_PRODUCTS):
+                report.add("XP008", a.rel,
+                           f"this product is called {name!r}, which is a reserved word in "
+                           f"`products:`: `[{ALL_PRODUCTS}]` means every product and "
+                           f"`[{NO_PRODUCTS}]` means the subject is not a product at all. "
+                           "While a product carries one of those names, every field naming "
+                           "it says two things and no check can tell which was meant. "
+                           "Rename the product.")
+
     glossaries = [a for a in arts if a.type == "glossary"]
     if len(glossaries) > 1:
         report.add("XP001", ", ".join(g.rel for g in glossaries),
@@ -2570,7 +2703,11 @@ def check_cross_product(arts: list[Artifact], report: Report) -> None:
 
     early = {p for a in arts if a.type == "product-manifest"
              for p in as_list(a.meta.get("products"))
-             if str((a.meta.get("stage") or {}).get("phase", "")).upper() in {"F1", "F2", "F3"}}
+             # `as_map` and not `or {}`: a `stage:` written as a string reached `.get` and
+             # took the whole run down with an AttributeError, so a repository with one
+             # malformed manifest got a traceback instead of a report about its other
+             # documents. Same fault, same repair and the same idiom as the maps in 2.8.1.
+             if str(as_map(a.meta.get("stage")).get("phase", "")).upper() in {"F1", "F2", "F3"}}
     with_pbr = {p for a in arts if a.type == "product-brief"
                 for p in as_list(a.meta.get("products"))}
     for p in sorted(products - with_pbr - early):
@@ -2607,6 +2744,12 @@ def binds(prod: str, row: dict, scope: str | None) -> bool:
     if scope is not None:
         return scope == prod
     named = as_list(row.get("products"))
+    # Before every other test, because it is the one answer that is not about which products:
+    # it says there are none. Read through the tests below it would fall to `prod in named`,
+    # be false for every product, and reach the same verdict by accident -- until somebody
+    # named a product `none`, at which point the accident would start binding it.
+    if NO_PRODUCTS in named:
+        return False
     # Silence still binds every product, and `REG011` reports it rather than this changing
     # its meaning: a repository written before the reserved word means what it meant, and a
     # composition rule that changes under a document nobody edited is the one kind of
@@ -2660,7 +2803,7 @@ def build_regions(root: Path, arts: list[Artifact]) -> dict[Path, dict[str, str]
     products = sorted(({scope for _, _, scope, _ in rows if scope} |
                        {p for _, row, scope, _ in rows if not scope
                         for p in as_list(row.get("products"))} |
-                       {p for p, _ in dirs.values()}) - {ALL_PRODUCTS})
+                       {p for p, _ in dirs.values()}) - {ALL_PRODUCTS, NO_PRODUCTS})
 
     lines = [f"*{GENERATED_MARK}. Edit the register named in the last column, never this "
              "table: the next run overwrites whatever is between the markers.*", "",
@@ -2684,6 +2827,19 @@ def build_regions(root: Path, arts: list[Artifact]) -> dict[Path, dict[str, str]
     lines += table(lambda r: r[2] is None
                    and (not as_list(r[1].get("products"))
                         or ALL_PRODUCTS in as_list(r[1].get("products"))))
+    # AND THE ENTRIES THAT BIND NOTHING, WHICH WOULD OTHERWISE APPEAR NOWHERE AT ALL. The
+    # section above holds what binds every product and counts it once; `[none]` is the
+    # opposite claim and belongs in neither that section nor a product heading. Without a
+    # place of its own an entry saying "this is about the tooling" would validate, satisfy
+    # every check, and be missing from the only composed view of what is open -- which is
+    # the same disappearance `REG011` was added to stop, arrived from the other side.
+    lines += ["## Bound to no product at all", "",
+              "Open entries whose subject is not a product and will not become one: the "
+              "repository itself, or the tooling it is checked with. They appear under no "
+              "heading above, which is what `products: [none]` says and why it is not the "
+              "same answer as the section before this one.", ""]
+    lines += table(lambda r: r[2] is None
+                   and NO_PRODUCTS in as_list(r[1].get("products")))
     return {target: {"open-union": "\n".join(lines).rstrip()}}
 
 
@@ -2875,6 +3031,7 @@ def main() -> int:
     check_framework_pin(project, report)
     check_open_register(arts, report)
     check_manifest_derived_fields(arts, report)
+    unanswerable = check_unanswerable(arts, registry, report)
     check_register_halves(arts, registry, report)
     check_body_repeats_a_field(arts, registry, report)
     check_key_typos(arts, registry, report)
@@ -2956,12 +3113,17 @@ def main() -> int:
             # New keys, never a move: `warnings` still counts every warning, annotated or
             # not, and every finding is still in `findings` at the level it was reported at.
             "annotated": len(accepted), "unannotated": len(unannotated),
+            # Counted and reported for the reason the annotation count is: a field left
+            # empty on purpose is invisible by construction, and the number is what tells a
+            # reader whether this repository has any and whether the mechanism exists at all.
+            "unanswerable": unanswerable,
             "generated": index_written, "out_of_date": index_stale,
             "hand_maintained": index_protected,
             "findings": [f.as_json() for f in report.findings],
         }, indent=2, ensure_ascii=False))
     else:
         print(f"Artifacts scanned: {len(arts)}")
+        print(f"Fields declared unanswerable: {unanswerable}")
         if index_written:
             print(f"Indices regenerated: {', '.join(index_written)}")
         for rel in index_stale:
