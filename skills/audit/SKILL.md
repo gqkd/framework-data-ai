@@ -169,6 +169,52 @@ Propose a diff and wait for everything else. In particular:
   the framework: an agent optimises what it was asked for and breaks what nobody named. The
   repair is to write the section, and only a person knows what belongs in it.
 
+## Findings the project has examined and left standing
+
+The two moves above are the cheap ways to make a finding disappear, and they are forbidden
+for the same reason: the finding stops being reported and nothing records that anybody
+decided anything. There is a third way, and it is the one to use, because it is the only one
+that leaves the decision where the next person will find it.
+
+`.framework/expected-findings.yaml`, at the project's root:
+
+```yaml
+require_all: false        # optional; `true` makes every unannotated warning an error
+expected:
+  - code: REG015
+    path: OPEN.md
+    reason: >
+      why it stays, in enough words that somebody who was not here can weigh it.
+    clears_when: >
+      the event after which it can no longer stay. An event, never a date.
+```
+
+All four fields are required on every entry. A warning named here is still reported, in its
+own group, with the reason and the condition printed under it, and the report says how many
+warnings carry an annotation whether or not `require_all` is on. Nothing is hidden and
+nothing is silenced: what changes is that the report can now tell a finding somebody ruled
+on from a finding nobody has read.
+
+Three things it will not let you do, and each is an `error`:
+
+| | |
+|---|---|
+| `AN001` | an annotation matching no finding. The claim is about nothing, and a reason left standing for a finding that is gone reads as current. When the finding is repaired, the annotation goes with it |
+| `AN002` | an annotation on a finding reported at `error`. An error that can be explained away in one project has stopped being an error. If the check is wrong the repair is in the framework, not in a paragraph here |
+| `AN003` | a warning with no annotation, only where `require_all: true` says the list has to be complete |
+
+**You may propose an annotation. You do not write one on your own.** It is a decision about
+what this repository accepts, with the same weight as `XP003: off` in `framework.yaml`, and
+the two failure modes are the same: an annotation written to make a report go green is the
+deletion of a finding with extra steps. Show the finding, say what you think it is, and let a
+person write the reason. What you may do without asking is the opposite direction: when a
+finding named in that file is gone, say so, because the entry is now `AN001` waiting to
+happen.
+
+`clears_when` is an event and not a date, in the same form as `trigger` on an open entry and
+for the same reason: a date written on something undecided is read as a promise by whoever
+finds it next.
+
 ## The second pass: do the documents still agree with each other
 
 Everything above is the validator and what to do with what it says. The validator checks
@@ -291,8 +337,12 @@ It also prints the migration note for every version crossed, read out of
 `schemas/artifact-types.yaml` where it is written beside the number it explains.
 
 `--adopt` writes the new number into the project's `framework.yaml`, and refuses while
-anything is still under **new**: that number is a claim that the migration is done. The
-migration itself is not automated and should not be — a `MAJOR` is, by this framework's
+anything is still under **new**: that number is a claim that the migration is done. A finding
+that is never going to leave, because it is a defect of the validator or a state this project
+has examined and decided to keep, belongs in `.framework/expected-findings.yaml` with its
+reason: it then prints under **examined and left standing** and stops counting as
+outstanding. That is the honest path through the guard, and it exists so that writing the
+version by hand is not. The migration itself is not automated and should not be — a `MAJOR` is, by this framework's
 definition, a document that used to validate and no longer does, and every rule on this page
 about what you may repair and what you must propose applies to each one of them.
 

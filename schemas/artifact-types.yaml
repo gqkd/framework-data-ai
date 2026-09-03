@@ -773,16 +773,29 @@ scan:
   # `evals/**/*.yaml` are the correct signal that `--root` is wrong, and the `audit` skill
   # already says a clean report on the wrong repository is worse than an error. An
   # exclusion that protects the framework's convenience is paid for by everyone using it.
+  # `.framework` holds what a project writes *for* the framework rather than what the
+  # framework asks it to write: today one file, the findings it has examined and left
+  # standing. It is hidden, so `skip_hidden` already covers it, and it is named here as
+  # well because `skip_hidden: false` is a legal thing for a project to write and would
+  # otherwise turn that file into an `FM001`, which is an error, on the very run it exists
+  # to inform.
   skip_dirs: [templates, skills, schemas, references, corpus,
               "_meta/extract", "_meta/business", ingest-out,
-              build, node_modules, __pycache__]
+              build, node_modules, __pycache__, ".framework"]
 
   # Documents that speak *about* the framework rather than being produced *by* it.
   # `framework.yaml` is the project's own validator configuration: without this line the
   # validator reads its own config as an artifact and reports it for having no front
   # matter, which is the kind of first impression a tool does not recover from.
+  #
+  # `expected-findings.yaml` is the same case one level down, and it is here rather than
+  # only in `skip_dirs` because `load_scan` unions the project's list with this one and
+  # never subtracts: a project can add to either key and can remove from neither, so the
+  # exclusion holds whatever a project writes under `scan:`. That is the property the file
+  # needs, because the validator reads it by an explicit path rather than through the scan,
+  # and reading it somewhere else does not stop `discover` from finding it.
   skip_files: [README.md, FRAMEWORK.md, SKILLS.md, INDEX.md, TRACEABILITY.md,
-               framework.yaml, product.index.yaml]
+               framework.yaml, product.index.yaml, expected-findings.yaml]
 
 # ON `sections`. A value here is the id of a marker in the body, not a heading:
 #

@@ -111,10 +111,33 @@ class Finding:
     path: str
     message: str
     level: str = "warn"
+    # Filled in by `apply_annotations` when the project has examined this finding and left
+    # it standing. It never changes `level`, and that is not tidiness: a project checking
+    # its own warnings keys on `level`, so a finding that quietly became something else
+    # would drop out of that check without a word. The annotation arrives beside the
+    # finding, never instead of it.
+    accepted: dict | None = None
 
     def line(self) -> str:
         icon = {"error": "x", "warn": "!", "info": "-"}[self.level]
-        return f"{icon} [{self.code}] {self.path}\n    {self.message}"
+        out = f"{icon} [{self.code}] {self.path}\n    {self.message}"
+        if self.accepted:
+            out += (f"\n    why it stays: {self.accepted['reason']}"
+                    f"\n    cleared by:   {self.accepted['clears_when']}")
+        return out
+
+    def as_json(self) -> dict:
+        """The finding as it goes into `--json`, with `accepted` only when there is one.
+
+        Written out rather than handed `__dict__`, so that a project reading this output
+        does not get an `accepted: null` on every finding it has ever seen -- and so that
+        the four keys that were there before are still the four keys, in the same order.
+        """
+        out = {"code": self.code, "path": self.path, "message": self.message,
+               "level": self.level}
+        if self.accepted:
+            out["accepted"] = dict(self.accepted)
+        return out
 
 
 @dataclass
@@ -299,6 +322,149 @@ def load_project(root: Path) -> dict:
         sys.exit(f"{path}: `scan` has to be a mapping")
     reject(sorted(set(scan) - SCAN_KEYS), " under `scan`", SCAN_KEYS)
     return project
+
+
+# WHERE A PROJECT SAYS "I LOOKED AT THIS FINDING AND DECIDED", AND WHY IT IS NOT IN
+# `framework.yaml`. The place was forced rather than chosen. `migrate.py` reconstructs the
+# validator of the version a project declares out of the framework's own git history, so
+# that validator can never be changed after the fact -- which means an annotation has to be
+# readable by the tooling arriving and invisible to every validator already released. A key
+# in `framework.yaml` exits on the unknown key and takes the whole comparison down with it;
+# a field on a register entry is an `FM002`, at `error`, because the entry schema is closed;
+# a new artifact type is an `FM003` on every run. A hidden path is the only slot left, and it
+# has the property by construction rather than by anybody maintaining it.
+#
+# The old path is where the first project to need this had to put it, and it is read for one
+# version so that repository is not broken by the framework catching up with it. When both
+# exist the new one wins and says so, because choosing in silence is how a project ends up
+# editing the file that is not being read.
+ANNOTATIONS = ".framework/expected-findings.yaml"
+ANNOTATIONS_WAS = ".claude/expected-findings.yaml"
+
+# All four required, and the shape is adopted rather than designed: it is what a real
+# repository converged on over five annotations before the framework had anything to offer.
+# `reason` without `clears_when` is a permanent exemption with a paragraph; `clears_when`
+# without `reason` is a condition nobody can weigh.
+ANNOTATION_FIELDS = ("code", "path", "reason", "clears_when")
+
+
+def load_annotations(root: Path) -> tuple[list[dict], bool, str | None]:
+    """The findings this project has examined and left standing, and whether all of them.
+
+    A malformed file stops the validator rather than being skipped, for the reason
+    `load_project` stops on an unknown key: a file that reads as applied and is not leaves
+    somebody believing they annotated a finding, and the first sign of it is a gate that
+    stays red for a reason nobody can see in the report.
+    """
+    here, was = root / ANNOTATIONS, root / ANNOTATIONS_WAS
+    path, rel = (here, ANNOTATIONS) if here.exists() else (
+        (was, ANNOTATIONS_WAS) if was.exists() else (None, None))
+    if path is None:
+        return [], False, None
+    if rel == ANNOTATIONS_WAS:
+        print(f"framework-data-ai: reading {ANNOTATIONS_WAS}. It moved to {ANNOTATIONS} "
+              "and the old place is read for one version only, so that a repository that "
+              "had nowhere else to put it keeps working. Move the file.", file=sys.stderr)
+    elif was.exists():
+        print(f"framework-data-ai: {ANNOTATIONS} and {ANNOTATIONS_WAS} both exist. "
+              f"Reading {ANNOTATIONS}; the other one is not read at all and its "
+              "annotations are doing nothing. Delete it.", file=sys.stderr)
+
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError as e:
+        sys.exit(f"{path}: does not parse as YAML.\n{str(e).strip()}")
+    if not isinstance(data, dict):
+        sys.exit(f"{path}: the top level has to be a mapping, with `expected:` under it.")
+    unknown = sorted(set(data) - {"expected", "require_all"})
+    if unknown:
+        sys.exit(f"{path}: unknown key(s) {', '.join(map(repr, unknown))}. "
+                 "This file holds: expected, require_all.")
+    strict = data.get("require_all", False)
+    if not isinstance(strict, bool):
+        sys.exit(f"{path}: `require_all` is {strict!r}: it has to be true or false. "
+                 "YAML reads a bare `no` as the boolean and a quoted one as a string, and "
+                 "a strictness that reads as on because of a quirk is worse than none.")
+    rows = data.get("expected") or []
+    if not isinstance(rows, list):
+        sys.exit(f"{path}: `expected` has to be a list of annotations.")
+
+    clean = []
+    for i, row in enumerate(rows, 1):
+        if not isinstance(row, dict):
+            sys.exit(f"{path}: entry {i} is not a mapping. One entry per finding, with "
+                     f"{', '.join(ANNOTATION_FIELDS)}.")
+        missing = [f for f in ANNOTATION_FIELDS if not str(row.get(f) or "").strip()]
+        if missing:
+            sys.exit(f"{path}: entry {i} carries no {', '.join(missing)}. An annotation "
+                     "with no reason, or with no event that removes it, is not an "
+                     "annotation: it is the warning it explains with one more line.")
+        # Folded, because these are written as YAML block scalars and land here with the
+        # line breaks of the file in them. What a reader needs is the sentence.
+        clean.append({f: " ".join(str(row[f]).split()) for f in ANNOTATION_FIELDS})
+    return clean, strict, rel
+
+
+def apply_annotations(report: Report, rows: list[dict], require_all: bool,
+                      where: str) -> None:
+    """Join the annotations onto the findings, on `(code, path)` and nothing finer.
+
+    THE KEY IS THE ONE `migrate.py` ALREADY USES, and that is the argument for it rather
+    than economy. `key()` there identifies a finding across two versions of the validator on
+    exactly this pair, with the reason written beside it: a reworded message is a PATCH by
+    this framework's own definition, so the message cannot be part of the identity. Two
+    tools that identify the same thing have to identify it the same way, or the day they
+    disagree neither of them is wrong on its own terms.
+
+    ONE ANNOTATION COVERS EVERY FINDING SHARING THE PAIR, which is a constraint on the
+    checks and not only on this function. A check that reports one finding per occurrence
+    where it used to report one per file would multiply a project's annotations by the
+    number of lines, so `REG016` states the count in its message rather than emitting a
+    finding for each: the join is what makes that the right shape, and the first repository
+    to annotate a `REG016` was relying on the single-finding behaviour without knowing it.
+    """
+    # Snapshotted before anything is added, so an `AN00x` cannot be annotated and cannot be
+    # counted as an unannotated warning. It is the report's own bookkeeping, not a finding
+    # about a document.
+    by_pair: dict[tuple[str, str], list[Finding]] = {}
+    for f in list(report.findings):
+        by_pair.setdefault((f.code, f.path), []).append(f)
+
+    for row in rows:
+        matched = by_pair.get((row["code"], row["path"]))
+        if not matched:
+            report.add("AN001", where,
+                       f"an annotation names [{row['code']}] {row['path']}, and nothing "
+                       "reports it. Either it was repaired, in which case the annotation "
+                       "goes with it, or it moved and this paragraph now explains nothing. "
+                       "A reason left standing for a finding that is gone reads as current "
+                       f"to whoever opens this file next. It says it is cleared by: "
+                       f"{row['clears_when']}")
+            continue
+        blocking = sorted({f.level for f in matched} & {"error"})
+        if blocking:
+            report.add("AN002", where,
+                       f"an annotation names [{row['code']}] {row['path']}, which is "
+                       "reported at `error`. An error is not annotatable: a level that can "
+                       "be explained away inside one project is a level that has stopped "
+                       "meaning anything. If the check is wrong, lower it or repair it in "
+                       "the framework; if it is right, the repair is the document. Refused "
+                       "rather than skipped, so that this is not discovered by the gate "
+                       "staying red with an explanation sitting beside it.")
+            continue
+        for f in matched:
+            f.accepted = {"reason": row["reason"], "clears_when": row["clears_when"]}
+
+    if not require_all:
+        return
+    for f in list(report.findings):
+        if f.level == "warn" and not f.accepted:
+            report.add("AN003", f.path,
+                       f"[{f.code}] carries no annotation, and this repository asked for "
+                       f"all of them with `require_all` in {where}. Write why it stays and "
+                       "the event that removes it, or repair it. The cost of an unexplained "
+                       "warning is not paid on this one: it is paid on the first warning "
+                       "that reports something true inside a list nobody reads any more.")
 
 
 def load_scan(registry: dict, project: dict) -> dict:
@@ -2135,6 +2301,33 @@ def check_framework_pin(project: dict, report: Report) -> None:
                "`migrate.py --adopt` writes both lines together." + shallow)
 
 
+def say_if_the_checkout_moved(root: Path, project: dict) -> None:
+    """`FW003`, said at the moment the framework is invoked rather than at the end of a report.
+
+    THE DEFECT THIS ANSWERS HIDES ITSELF, AND THAT IS STRUCTURAL RATHER THAN BAD LUCK. A
+    project whose own gate runs the validator of the version it declares stops running that
+    gate the moment the checkout moves past the pin -- correctly, because declared and
+    present disagree and it will not proceed. So in the window where the fault is present,
+    the report carrying `FW003` is the one nobody is running, and it is not being run
+    *because* the fault is present. The check is inside the thing that stops running.
+
+    This is not a second check and it takes no decision: same fact, same silences, said on
+    stderr before anything is scanned. Stderr and not stdout, which is not a preference:
+    stdout carries the JSON that every caller parses, `migrate.py` included, and a line
+    printed there would break the tool the message is telling somebody to run.
+    """
+    pinned = project.get("framework_commit")
+    if not isinstance(pinned, str) or not COMMIT.match(pinned.strip()):
+        return                      # `FW003` reports the malformed pin, in the report
+    pinned = pinned.strip()
+    head = framework_head()
+    if head is None or head.lower().startswith(pinned.lower()) or framework_is_shallow():
+        return
+    print(f"framework-data-ai: this checkout is at {head[:12]}, and "
+          f"{root / 'framework.yaml'} pins {pinned[:12]}. What follows was not produced by "
+          "the rules this project declares.", file=sys.stderr)
+
+
 def check_triage(arts: list[Artifact], report: Report) -> None:
     """Which signals has nobody looked at.
 
@@ -2636,8 +2829,12 @@ def main() -> int:
                  "the framework and not a file.")
     registry = yaml.safe_load(REGISTRY.read_text(encoding="utf-8"))
     project = load_project(root)
+    # Before anything is read, and before any check decides whether it runs: see the
+    # function for why the ordering is the whole point.
+    say_if_the_checkout_moved(root, project)
     config, stale_days = load_config(project)
     scan = load_scan(registry, project)
+    annotations, require_all, annotations_rel = load_annotations(root)
     if args.stale_days is not None:
         stale_days = args.stale_days
 
@@ -2688,6 +2885,10 @@ def main() -> int:
     check_triage(arts, report)
     check_stack(arts, report)
     check_cross_product(arts, report)
+    # Last, and it has to be: an annotation is a statement about the set of findings, so it
+    # cannot be joined until every check has finished producing them.
+    if annotations_rel is not None:
+        apply_annotations(report, annotations, require_all, annotations_rel)
 
     index_written: list[str] = []
     index_stale: list[str] = []
@@ -2738,14 +2939,26 @@ def main() -> int:
     errors = [f for f in report.findings if f.level == "error"]
     warns = [f for f in report.findings if f.level == "warn"]
     infos = [f for f in report.findings if f.level == "info"]
+    # STATED WHETHER OR NOT ANYBODY ASKED FOR IT, WHICH IS WHAT KEEPS THE PERMISSIVE
+    # DEFAULT HONEST. `require_all` is off unless a repository turns it on, and a default
+    # nobody changes is the behaviour of almost every project -- so if the report said
+    # nothing here, the half of this mechanism that matters would be switched off nearly
+    # everywhere by inaction. Two numbers instead: how many warnings there are, and how many
+    # of them somebody has ruled on. Turning the strict form on is then a decision rather
+    # than a discovery, and a repository that never writes the file is told the count exists.
+    accepted = [f for f in warns if f.accepted]
+    unannotated = [f for f in warns if not f.accepted]
 
     if args.json:
         print(json.dumps({
             "artifacts": len(arts),
             "errors": len(errors), "warnings": len(warns), "info": len(infos),
+            # New keys, never a move: `warnings` still counts every warning, annotated or
+            # not, and every finding is still in `findings` at the level it was reported at.
+            "annotated": len(accepted), "unannotated": len(unannotated),
             "generated": index_written, "out_of_date": index_stale,
             "hand_maintained": index_protected,
-            "findings": [f.__dict__ for f in report.findings],
+            "findings": [f.as_json() for f in report.findings],
         }, indent=2, ensure_ascii=False))
     else:
         print(f"Artifacts scanned: {len(arts)}")
@@ -2758,7 +2971,8 @@ def main() -> int:
                   "it is maintained by hand and regenerating it would drop whatever it "
                   "holds that front matter cannot express. Move that content elsewhere "
                   "first, or delete the file if it is genuinely derived.")
-        for group, label in ((errors, "ERRORS"), (warns, "WARNINGS"), (infos, "NOTES")):
+        for group, label in ((errors, "ERRORS"), (unannotated, "WARNINGS"),
+                             (accepted, "EXAMINED AND LEFT STANDING"), (infos, "NOTES")):
             if group:
                 print(f"\n-- {label} ({len(group)}) " + "-" * 40)
                 for f in group:
@@ -2767,7 +2981,7 @@ def main() -> int:
             print("\nNothing to report.")
         else:
             print(f"\nTotal: {len(errors)} errors | {len(warns)} warnings "
-                  f"| {len(infos)} notes")
+                  f"({len(accepted)} annotated) | {len(infos)} notes")
 
     # A refusal counts as a failure when a write was asked for and did not happen: a caller
     # that got exit 0 would carry on believing the file had been regenerated. Under

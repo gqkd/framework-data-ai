@@ -747,6 +747,74 @@ checks:
       not the same claim as violated, and where a pin actually matters, which is a CI job,
       the framework arrives by being checked out.
 
+      WHAT THIS CHECK CANNOT DO ON ITS OWN, RECORDED HERE BECAUSE IT IS A PROPERTY OF THE
+      DEFECT AND NOT OF THE CHECK. The divergence it reports is also, in a project whose own
+      gate runs the validator of the version it declares, what makes that gate refuse to
+      start -- correctly. So in the window where the fault is present, the report carrying
+      this finding is the one nobody is running, and it is not being run *because* the fault
+      is present. Reading this at the end of a report has a precondition that the fault
+      itself removes. Both entry points therefore say the same thing on stderr before they
+      scan anything; that line is not a second check and takes no decision, it is this
+      finding said where the circularity cannot swallow it.
+
+  # ── Findings a project has examined and left standing ──────────────────────
+  #
+  # These three run only in a repository that has written `.framework/expected-findings.yaml`.
+  # They are `error` in a catalog whose rule is that almost everything starts at `warn`, for
+  # the reason `PR001` to `PR003` are: a check that cannot fire until somebody wires it in on
+  # purpose cannot break a pipeline that exists today, and a gate that does not block is a
+  # comment.
+  #
+  # A project can lower any of them, as it can lower anything here. Lowering `AN001` is the
+  # one worth naming, because it is not a severity decision: it is the decision to keep
+  # annotations that no longer match anything, which is the file becoming the list of
+  # permanent exemptions it exists not to be.
+
+  AN001:
+    level: error
+    title: an annotation matches no finding the validator reports
+    prevents: >
+      The file turning into a list of permanent exemptions with a better name. An annotation
+      is a claim about a finding that is in front of somebody now: that it was read, that it
+      stays for a stated reason, and that a stated event removes it. When the finding is gone
+      the claim is about nothing, and the only thing left is a paragraph explaining why a
+      warning that no longer exists was acceptable -- which the next person reads as current.
+
+      It is an `error` and the two other members of this family are too, because the file is
+      load-bearing on every run and not only during a migration. A stale entry that reported
+      at `warn` would sit in the same list as the findings it explains, and the list is the
+      thing that has to stay true.
+
+  AN002:
+    level: error
+    title: an annotation names a finding reported at error level
+    prevents: >
+      An error that can be explained away, which is an error that has stopped being one. The
+      distinction between the two levels is the piece of the model this refuses to trade: a
+      warning is printed and a person decides, an error blocks and nobody decides. If a check
+      at `error` starts producing false positives the repair is in the framework -- lower it,
+      or fix it -- and never in a paragraph inside one project.
+
+      It refuses rather than ignoring, and that is the whole check. An annotation quietly
+      skipped would leave a project believing it had annotated the finding and discovering
+      otherwise only when the gate stayed red, with the explanation sitting in a file that
+      says it should not have.
+
+  AN003:
+    level: error
+    title: a warning carries no annotation, in a repository that asked for all of them
+    prevents: >
+      The half that makes the file worth having, switched off everywhere by a default. Three
+      annotated warnings are information and three anonymous ones are noise, and the cost is
+      not paid on those three: it is paid on the first warning that reports something true
+      inside a list nobody reads any more.
+
+      It fires only where `require_all: true` sits beside `expected:`, and permissive is the
+      default because a repository is allowed to hold warnings nobody has ruled on yet, and a
+      check that reddened every repository on the day it arrived would be switched off in a
+      week. The report states how many warnings carry an annotation whether or not this is on,
+      so the default hides nothing and turning it on is a decision rather than a discovery.
+
   ICG001:
     level: info    # the first `info` in this catalog, and the reason is below
     title: signals no impact classification has ever considered

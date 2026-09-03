@@ -13,6 +13,9 @@ ways:
     already there      reported by both. Documents to repair. Not migration work.
     new                reported only by the new validator. This is the migration.
     gone               reported only by the old one. Cleared by the move.
+    accepted           reported now, and annotated in the project with why it stays and
+                       what removes it. Examined, so not outstanding, so not a reason to
+                       refuse `--adopt`.
 
 The old validator is not kept anywhere: it is reconstructed from this repository's git
 history, at the commit where `schemas/artifact-types.yaml` last declared the version the
@@ -93,6 +96,40 @@ def declared_version(root: Path):
     if not isinstance(data, dict):
         return None, cfg, f"{cfg}: the top level has to be a mapping."
     return data.get("framework_version"), cfg, None
+
+
+COMMIT = re.compile(r"^[0-9a-fA-F]{7,40}$")
+
+
+def say_if_the_checkout_moved(root: Path, framework: Path) -> None:
+    """The same line `validate.py` prints, for the same reason, in the other entry point.
+
+    Written here rather than imported, and the duplication is the established shape of this
+    file: `semver` and `VERSION_LINE` are here twice already, because this tool has to run
+    against two validators and must not depend on either of them. Importing the current one
+    to say a sentence about git would be a dependency bought for a message.
+
+    Stderr, before anything is read. See `validate.py` for why the ordering is the point:
+    the fault this reports is the one that stops the report carrying it from being produced.
+    """
+    try:
+        cfg = yaml.safe_load((root / "framework.yaml").read_text(encoding="utf-8")) or {}
+    except (OSError, yaml.YAMLError):
+        return                       # `declared_version` reports an unreadable config
+    pinned = cfg.get("framework_commit") if isinstance(cfg, dict) else None
+    if not isinstance(pinned, str) or not COMMIT.match(pinned.strip()):
+        return
+    pinned = pinned.strip()
+    head = git(["rev-parse", "HEAD"], framework)
+    shallow = git(["rev-parse", "--is-shallow-repository"], framework)
+    if head.returncode != 0 or shallow.stdout.strip() == "true":
+        return
+    at = head.stdout.strip()
+    if at.lower().startswith(pinned.lower()):
+        return
+    print(f"framework-data-ai: this checkout is at {at[:12]}, and "
+          f"{root / 'framework.yaml'} pins {pinned[:12]}. What follows was not produced by "
+          "the rules this project declares.", file=sys.stderr)
 
 
 def registry_version(text: str):
@@ -275,6 +312,7 @@ def main() -> int:
     if not (framework / REGISTRY_REL).exists():
         sys.exit(f"{framework}: no {REGISTRY_REL} here, so this is not a checkout of the "
                  "framework. `--framework` is the definition, `--root` is the project.")
+    say_if_the_checkout_moved(root, framework)
 
     registry = (framework / REGISTRY_REL).read_text(encoding="utf-8")
     current = registry_version(registry)
@@ -283,7 +321,7 @@ def main() -> int:
 
     report = {"project": str(root), "declared": declared, "current": current,
               "up_to_date": False, "notes": [], "already_there": [], "new": [], "gone": [],
-              "version_line": [], "problems": []}
+              "version_line": [], "accepted": [], "problems": []}
 
     if unreadable and not args.from_version:
         report["problems"].append(unreadable)
@@ -337,12 +375,27 @@ def main() -> int:
                         # them under "this is the migration work" told the reader to go and
                         # fix something, while `--adopt` was ignoring them. One of the two
                         # was lying, and it was the report.
+                        # A FINDING THE PROJECT HAS EXAMINED AND LEFT STANDING IS NOT
+                        # MIGRATION WORK, AND FILING IT AS SUCH IS WHAT DEADLOCKED THIS
+                        # TOOL. `--adopt` refuses while NEW is non-empty, which is right:
+                        # the number it writes is the claim that the migration is done. But
+                        # what landed under NEW was every finding the new validator reports
+                        # and the old one did not, including the ones that are defects of
+                        # the validator itself -- and no amount of work on the documents
+                        # removes those. A project that had finished the migration and
+                        # written down why two findings stay could not say so, because
+                        # there was nowhere for that to be written and nothing here to read
+                        # it. There is now, and the guard keeps its meaning: it blocks on
+                        # work outstanding, and an examined finding is not outstanding.
                         where = ("version_line" if f["code"] in ADOPT_CLEARS
+                                 else "accepted" if k in new and new[k].get("accepted")
                                  else "already_there" if k in old and k in new
                                  else "new" if k in new else "gone")
-                        report[where].append(
-                            {"code": f["code"], "path": f["path"], "level": f["level"],
-                             "message": f["message"]})
+                        entry = {"code": f["code"], "path": f["path"], "level": f["level"],
+                                 "message": f["message"]}
+                        if where == "accepted":
+                            entry["accepted"] = new[k]["accepted"]
+                        report[where].append(entry)
                 finally:
                     shutil.rmtree(Path(tmp) / "old", ignore_errors=True)
 
@@ -350,7 +403,13 @@ def main() -> int:
         if report["new"] or report["problems"]:
             report["problems"].append(
                 "not adopted. `--adopt` writes the new number, which is the claim that the "
-                "migration is done; do it after the findings under NEW are gone.")
+                "migration is done; do it after the findings under NEW are gone. A finding "
+                "that is not going to go -- a defect of the validator, a state the project "
+                "has examined and decided to keep -- belongs in "
+                "`.framework/expected-findings.yaml` with the reason and the event that "
+                "clears it, and it stops counting as outstanding. That file is the honest "
+                "path through this guard, and it exists so that writing the number by hand "
+                "is not.")
         else:
             head = git(["rev-parse", "HEAD"], framework)
             commit = head.stdout.strip() if head.returncode == 0 else None
@@ -380,6 +439,9 @@ def main() -> int:
              "not a document to repair: `--adopt` writes it, once NEW is empty"),
             ("already_there", "ALREADY THERE: reported by both",
              "documents to repair, unrelated to the version"),
+            ("accepted", "EXAMINED AND LEFT STANDING",
+             "annotated in the project, with why and what clears each one: `--adopt` does "
+             "not block on these"),
             ("gone", "GONE: reported only by the old one",
              "cleared by the move, nothing to do")):
         group = report[key]
@@ -389,6 +451,9 @@ def main() -> int:
         print(f"   {why}")
         for f in group:
             print(f"   [{f['code']}] {f['path']}\n       {f['message'].splitlines()[0]}")
+            if f.get("accepted"):
+                print(f"       why it stays: {f['accepted']['reason']}")
+                print(f"       cleared by:   {f['accepted']['clears_when']}")
     if report.get("adopted"):
         print(f"\nAdopted: {cfg} now declares {report['adopted']}")
     print()

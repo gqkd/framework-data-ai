@@ -3598,6 +3598,264 @@ def _eval_cases_load():
     return problems
 
 
+# The repository every annotation check below is run against: two living documents that go
+# stale on demand, one file whose front matter does not parse, and nothing else. Two
+# warnings on two different paths and one error, which is the smallest shape that can
+# exercise a join, a stale entry and a refusal at once.
+def _annotation_fixture(tmp: Path, annotations: str | None = None,
+                        at: str = ".framework/expected-findings.yaml",
+                        also: dict[str, str] | None = None) -> None:
+    fm = lambda **kw: "---\n" + "\n".join(f"{k}: {v}" for k, v in kw.items()) + "\n---\n\n"
+    files = {
+        "framework.yaml": f"framework_version: {REGISTRY['version']}\n",
+        "OPEN.md": fm(schema="framework/open-register/v1", artifact_type="open-register",
+                      lifecycle="living", status="active", owners="[owner]",
+                      created="2026-01-01", last_review="2026-01-01 09:00",
+                      entries="\n  OD-001:\n    status: open\n"
+                              "    cost_to_reverse: low\n    products: [all]\n"
+                              "    default_in_force: nothing is scheduled\n")
+                   + "# Open\n\n## Cost to reverse LOW\n\n### OD-001 - the one question\n",
+        "products/alpha/PBR.md": fm(
+            schema="framework/product-brief/v1", artifact_type="product-brief",
+            lifecycle="living", status="active", products="[alpha]", owners="[owner]",
+            created="2026-01-01", last_review="2026-01-01 09:00") + "# Brief\n",
+        # Front matter that does not parse, which is `FM001` and an error. The one thing an
+        # annotation is not allowed to touch needs to be present to be refused.
+        "broken.md": "---\nartifact_type: [oops\n---\n\n# broken\n",
+    }
+    if annotations is not None:
+        files[at] = annotations
+    files.update(also or {})
+    for rel, text in files.items():
+        f = tmp / rel
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(text, encoding="utf-8")
+
+
+def _annotated_run(annotations: str | None, **kw) -> tuple[dict | None, str]:
+    """The validator over that repository, as parsed JSON and whatever went to stderr."""
+    with tempfile.TemporaryDirectory() as tmp:
+        _annotation_fixture(Path(tmp), annotations, **kw)
+        r = subprocess.run([sys.executable, str(VALIDATE), "--root", tmp, "--json",
+                            "--stale-days", "0"], capture_output=True, text=True)
+        if r.returncode not in (0, 1) or not r.stdout.strip():
+            return None, r.stderr
+        return json.loads(r.stdout), r.stderr
+
+
+ANNOTATES_A_WARNING = """expected:
+  - code: LC002
+    path: OPEN.md
+    reason: >
+      the register is read at every cycle and the date is what nobody moves.
+    clears_when: >
+      the next reading of the register, stamped with the instant it finished.
+"""
+
+
+@check("a finding a project has examined is reported, annotated, and never reclassified")
+def _annotations_are_read():
+    # THE POINT OF THE MECHANISM IS THE OPPOSITE OF SILENCING, AND THAT IS WHAT IS ASSERTED
+    # HERE. A project already had two ways to make a finding go away -- lower the severity,
+    # widen the scan -- and `audit/SKILL.md` forbids both because the finding stops being
+    # reported and nothing records that anybody decided. So the annotated finding has to
+    # still be in `findings`, still at `warn`, and carrying the two sentences; if any of
+    # those three slipped, this would have become the third way rather than the alternative
+    # to them.
+    problems = []
+    plain, _ = _annotated_run(None)
+    if plain is None:
+        return ["the validator crashed on a repository with no annotation file"]
+    if plain["warnings"] != 2 or plain["errors"] != 1:
+        return [f"the fixture no longer produces 2 warnings and 1 error: "
+                f"{plain['errors']} error(s), {plain['warnings']} warning(s)"]
+    if plain["annotated"] != 0 or plain["unannotated"] != 2:
+        problems.append(f"with no file at all the counts read {plain['annotated']} "
+                        f"annotated and {plain['unannotated']} unannotated")
+    if any("accepted" in f for f in plain["findings"]):
+        problems.append("a finding carries an `accepted` key in a repository that has "
+                        "annotated nothing: the key has to be absent, not null, or every "
+                        "consumer of this output grows a branch it never needed")
+
+    got, _ = _annotated_run(ANNOTATES_A_WARNING)
+    if got is None:
+        return problems + ["the validator crashed on a repository with an annotation"]
+    marked = [f for f in got["findings"] if f.get("accepted")]
+    if len(marked) != 1 or marked[0]["code"] != "LC002" or marked[0]["path"] != "OPEN.md":
+        problems.append(f"the annotation matched {len(marked)} finding(s) instead of the "
+                        "one it names")
+    elif marked[0]["level"] != "warn":
+        problems.append(f"the annotated finding is now at {marked[0]['level']!r}. It stays "
+                        "at `warn`: a project checking its own warnings keys on `level`, "
+                        "and a finding that quietly became something else drops out of that "
+                        "check without a word")
+    elif not marked[0]["accepted"].get("clears_when"):
+        problems.append("the annotation reached the finding without what clears it")
+    if got["warnings"] != 2:
+        problems.append(f"annotating one warning changed the warning count to "
+                        f"{got['warnings']}: the count is of what was reported, not of "
+                        "what is still unexplained")
+    if (got["annotated"], got["unannotated"]) != (1, 1):
+        problems.append(f"the counts read {got['annotated']} annotated and "
+                        f"{got['unannotated']} unannotated, and the fixture has one of each")
+    if any(f["code"].startswith("AN") for f in got["findings"]):
+        problems.append("a correct annotation produced an `AN` finding")
+    return problems
+
+
+@check("an annotation that explains nothing, or explains away an error, is refused")
+def _annotations_are_policed():
+    # The two ways this file rots, and both are errors because the file is load-bearing on
+    # every run now rather than only during a migration. A stale entry is a reason left
+    # standing for a finding that is gone, which the next reader takes as current; an
+    # annotation on an `error` is the level that blocks being talked out of blocking, one
+    # project at a time.
+    problems = []
+    stale, _ = _annotated_run("""expected:
+  - code: REG005
+    path: nowhere.md
+    reason: >
+      a finding that is not reported here.
+    clears_when: >
+      nothing, which is the whole problem.
+""")
+    if stale is None:
+        return ["the validator crashed on a stale annotation"]
+    an001 = [f for f in stale["findings"] if f["code"] == "AN001"]
+    if len(an001) != 1:
+        problems.append(f"a stale annotation produced {len(an001)} AN001")
+    elif an001[0]["level"] != "error":
+        problems.append(f"AN001 is at {an001[0]['level']!r}. It is the one line that keeps "
+                        "this file from becoming a list of permanent exemptions with a "
+                        "better name, and a warning is not that line")
+
+    on_error, _ = _annotated_run("""expected:
+  - code: FM001
+    path: broken.md
+    reason: >
+      an error, which this must not be able to explain away.
+    clears_when: >
+      the front matter parsing.
+""")
+    if on_error is None:
+        return problems + ["the validator crashed on an annotation naming an error"]
+    if not [f for f in on_error["findings"] if f["code"] == "AN002"]:
+        problems.append("an annotation on an `error` finding was accepted or ignored. "
+                        "Ignoring is the worse of the two: the project believes it has "
+                        "annotated and finds out when the gate stays red")
+    if [f for f in on_error["findings"] if f["code"] == "FM001" and f.get("accepted")]:
+        problems.append("the error was marked as accepted anyway")
+
+    strict, _ = _annotated_run("require_all: true\n" + ANNOTATES_A_WARNING)
+    if strict is None:
+        return problems + ["the validator crashed with require_all"]
+    an003 = [f for f in strict["findings"] if f["code"] == "AN003"]
+    if len(an003) != 1 or an003[0]["path"] != "products/alpha/PBR.md":
+        problems.append(f"`require_all` reported {len(an003)} unannotated warning(s), and "
+                        "the fixture leaves exactly one")
+    loose, _ = _annotated_run(ANNOTATES_A_WARNING)
+    if loose and any(f["code"] == "AN003" for f in loose["findings"]):
+        problems.append("AN003 fired without `require_all`: permissive is the default, and "
+                        "a check that reddened every repository on arrival would be off in "
+                        "a week")
+    return problems
+
+
+@check("the annotation file has one home, is never an artifact, and says so on stderr")
+def _the_annotation_file_has_one_home():
+    # Where this file sits was forced rather than chosen: it has to be readable by the
+    # tooling arriving and invisible to every validator already released, and a hidden path
+    # is the only slot with that property. Which makes two things worth asserting: that a
+    # project cannot turn it back into an artifact, and that the move from the place the
+    # first project had to invent is announced rather than silent.
+    problems = []
+    legacy, err = _annotated_run(ANNOTATES_A_WARNING, at=".claude/expected-findings.yaml")
+    if legacy is None:
+        return ["the validator crashed reading the old path"]
+    if not [f for f in legacy["findings"] if f.get("accepted")]:
+        problems.append("the old path was not read at all, so the repository that had "
+                        "nowhere else to put this file is broken by the framework catching "
+                        "up with it")
+    if ".claude" not in err:
+        problems.append("the old path was read and nothing said so, so the move is "
+                        "discovered when it is removed")
+
+    both, err = _annotated_run(ANNOTATES_A_WARNING, also={
+        ".claude/expected-findings.yaml": """expected:
+  - code: LC002
+    path: products/alpha/PBR.md
+    reason: >
+      an annotation in the file that is not read.
+    clears_when: >
+      nothing.
+"""})
+    if both is None:
+        problems.append("the validator crashed with both files present")
+    else:
+        marked = {f["path"] for f in both["findings"] if f.get("accepted")}
+        if marked != {"OPEN.md"}:
+            problems.append(f"with both files present the annotations applied were "
+                            f"{sorted(marked)}: the new path wins, whole")
+        if ".claude" not in err:
+            problems.append("one of the two files was ignored in silence, which is how a "
+                            "project ends up editing the one that is not read")
+
+    # `skip_hidden: false` is a legal thing for a project to write, and it is what would
+    # otherwise turn this file into an `FM001`, at `error`, on the run it exists to inform.
+    exposed, _ = _annotated_run(
+        ANNOTATES_A_WARNING,
+        also={"framework.yaml": f"framework_version: {REGISTRY['version']}\n"
+                                "scan:\n  skip_hidden: false\n"})
+    if exposed is None:
+        problems.append("the validator crashed with skip_hidden: false")
+    elif [f for f in exposed["findings"] if "expected-findings" in f["path"]]:
+        problems.append("the annotation file was reported as a document once the project "
+                        "stopped skipping hidden paths. The validator reads it by an "
+                        "explicit path, and that alone does not stop `discover` finding it: "
+                        "`scan.skip_files` is the half that holds, because `load_scan` "
+                        "unions and never subtracts")
+    return problems
+
+
+@check("the pin is said at the moment the framework is invoked, not only in the report")
+def _the_pin_is_said_before_the_scan():
+    # `FW003` reports this and cannot be relied on to: a project whose own gate runs the
+    # validator of the version it declares stops running that gate the moment the checkout
+    # moves, correctly, and the thing that makes it refuse is the divergence itself. So the
+    # report carrying the finding is the one nobody is running, and it is not being run
+    # because the fault is present. The line on stderr is the same fact said where the
+    # circularity cannot swallow it.
+    head = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"],
+                          capture_output=True, text=True)
+    if head.returncode != 0:
+        return ["git history is not available here, so the check is not running"]
+    problems = []
+    declared = f"framework_version: {REGISTRY['version']}\n"
+    for config, want, what in [
+        (declared, False, "a project that pins nothing"),
+        (declared + f'framework_commit: "{head.stdout.strip()}"\n', False,
+         "a pin that is being honoured"),
+        (declared + 'framework_commit: "0123456789abcdef"\n', True,
+         "a pin naming a commit that is not the one running"),
+    ]:
+        with tempfile.TemporaryDirectory() as tmp:
+            _annotation_fixture(Path(tmp), also={"framework.yaml": config})
+            r = subprocess.run([sys.executable, str(VALIDATE), "--root", tmp, "--json",
+                                "--stale-days", "0"], capture_output=True, text=True)
+        said = "this checkout is at" in r.stderr
+        if said != want:
+            problems.append(f"{what} was {'not ' if want else ''}announced on stderr")
+        # The line has to be on stderr and nowhere else. stdout carries the JSON every
+        # caller parses, `migrate.py` included, so a line printed there would break the
+        # tool the message exists to send somebody to.
+        try:
+            json.loads(r.stdout)
+        except json.JSONDecodeError:
+            problems.append(f"stdout stopped being JSON for {what}: the line went to the "
+                            "stream the callers parse")
+    return problems
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 print()
