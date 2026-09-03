@@ -631,7 +631,99 @@
 # The check was inside the thing that stops running. The line is not a second check: it is
 # the same fact, said where it cannot be swallowed, and it is silent in exactly the cases
 # `FW003` is silent in.
-version: "3.1.0"
+# 3.1.0 -> 3.2.0. WHAT A MODEL DOES WHEN NO VALUE OF A VOCABULARY IS TRUE, ANSWERED TWICE
+# BECAUSE THE QUESTION HAS TWO ANSWERS. MINOR: nothing stops validating, nothing becomes
+# required, and a repository that writes neither of the two things below sees what it saw.
+#
+# The note on closed vocabularies further up describes this failure and, until now, left it
+# without a repair: faced with a field no value of which is true, the careful writer omits it,
+# and the omission is the honest thing to write and the most invisible one, indistinguishable
+# from never having looked. Two cases arrived from two different registers within a week of
+# each other, and they turned out not to be the same case.
+#
+# ONE - `products: [none]`, WHICH COMPLETES A LIST THIS FILE HAD ALREADY WRITTEN. The note
+# names four flavours of the missing value: "not decided, not measurable, not applicable, not
+# ours". Three had a value. `not ours` did not, and it is the entry whose subject is the
+# repository itself or the tooling the repository is checked with. That entry binds no
+# product and never will. Written `[all]` it says something untrue in the field almost
+# everything joins on; written as an absence it says the thing `REG011` exists to remove.
+#
+# This is not a value invented from one row, which is the move this file spends its notes
+# warning against: it is the fourth item of an enumeration that was already here, and the
+# argument for it did not come from the case that raised it. The case that raised it is gone
+# -- that repository no longer exists -- and the class is not: two of the defects found in the
+# audit that produced this version are defects of a skill rather than of the validator, so
+# they produce no finding, so `.framework/expected-findings.yaml` cannot hold them, and a
+# known issue is where they belong.
+#
+# `binds()` reads it before anything else, so such an entry appears under no product heading
+# and in no product's derived view, and the generated union grows a section of its own for
+# them. Without that section the entry would validate, satisfy every check, and be absent
+# from the only composed view of what is open, which is the same disappearance `REG011` was
+# added to stop, arrived from the other side. `XP008` reports a product actually named `all`
+# or `none`, at `warn`. On a commitment `[none]` is not an answer and `XP006` says so: an open
+# question can be about the tooling, a promise binding no product was made to nobody about
+# nothing.
+#
+# TWO - `unanswerable` ON A RECORD OF ANY MAP, WHICH IS THE OTHER CASE AND NOT THE SAME ONE.
+# A commitments register carried three fields left empty on purpose, because the honest
+# assessment was composite -- eleven capabilities each buildable alone and not as a set until
+# somebody decides the scope, so every value of `feasibility` is false on one half of it. That
+# field is not unanswerable for ever: it becomes answerable the day the scope is decided.
+#
+#     CMT-007:
+#       to: ...
+#       status: open
+#       unanswerable:
+#         feasibility:
+#           reason: >
+#             each capability is buildable alone and the eleven together are not.
+#           settled_by: >
+#             the decision on the scope.
+#
+# Both keys required. `reason` without `settled_by` is a permanent exemption with a paragraph;
+# `settled_by` without `reason` is a condition nobody can weigh. Only fields the map declares,
+# and never a required one: a required field is one this file has decided every row can
+# answer, and a row that genuinely cannot is an argument about the vocabulary that belongs up
+# here where it changes the model for everybody. `UNA002` reports both misuses, `UNA003` a
+# date where an event belongs, for the reason `REG009` gives one field over.
+#
+# `UNA001` is the guard and it is the half that makes this safe to ship: a field declared
+# unanswerable and filled in anyway is the declaration outliving its own state. It is `error`,
+# like `AN001` and for the same reason. And the limit is stated rather than hidden: whether
+# the event in `settled_by` has happened is not a thing a script can know, so what is checked
+# is the document contradicting its own declaration, which is what a stale one looks like from
+# outside once somebody has answered the field and left the paragraph behind.
+#
+# THE CRITERION IS IN ONE PLACE AND IT IS NOT IN THIS NOTE: it sits beside the vocabularies it
+# governs, under the note on what closed lists leave out. If there is an event after which the
+# field would have a true value it is `unanswerable`; if there is none it is a value that
+# names the state. The test is whether `settled_by` can be filled in without inventing an
+# event.
+#
+# BOTH ARE COUNTED IN THE REPORT, for the reason the annotation count is: a field left empty
+# on purpose is invisible by construction, so the number is what tells a reader whether this
+# repository has any and that the mechanism exists at all.
+#
+# A RULE ABOUT ADOPTING, GENERAL AND NOT ABOUT THIS VERSION. This is the second time in two
+# versions that the same constraint has decided a design, so it is written here as a rule
+# rather than as a warning about one change:
+#
+#     ADOPT THE VERSION FIRST, WRITE THE NEW FIELD AFTERWARDS. NEVER THE REVERSE.
+#
+# A record's schema is closed. Any key this file adds is, to every validator already released,
+# a front matter error -- `FM002`, which blocks -- and `ci/pull-request.yml` tells a project to
+# pin its checks to the version it declares. A project that writes `unanswerable` before
+# adopting turns its own gate red on the edit meant to improve its documents. `migrate.py`
+# files those under GONE, so they never block the migration itself, and the working order is
+# still the one above.
+#
+# ALSO HERE: `.claude/expected-findings.yaml` IS NOT READ ANY MORE. `3.1.0` read it and wrote
+# down that this version would stop, and a note that says when something ends is a promise or
+# it is decoration. What does not end is saying so: the path stops being read and does not
+# stop being reported, because a file sitting there doing nothing is exactly the state that
+# gets discovered six months later. The one repository that ever needed the old path is gone.
+version: "3.2.0"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of
