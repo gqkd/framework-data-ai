@@ -4288,6 +4288,75 @@ def _reg016_leaves_what_was_left():
     return problems
 
 
+@check("a document changed after it was read is reported, and one reread after being changed is not")
+def _review_gap():
+    # THE BENCH FOR THIS HAD TO BE BUILT, AND THE MEASUREMENT THAT SAYS SO IS THE POINT. The
+    # six `release/` fixtures are git repositories with dated commits and looked like a bench:
+    # thirty of their living documents carried a gap between the instant they attest and the
+    # commit that last touched them. Twenty-nine were the first commit importing everything
+    # after those instants, in repositories where nothing had been edited. A check validated
+    # against that number would have been validated against its own worst failure mode.
+    #
+    # `review/gap` plants three commits that can each be said in a sentence, and the three
+    # properties are asserted here rather than in the shape of the fixture: the import is not a
+    # change, the reading is not a change, and a change that was never read is.
+    root = ROOT / "evals" / "fixtures" / "build" / "review" / "gap"
+    if not root.is_dir():
+        return ["the review fixture is not built"]
+    r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(root), "--json",
+                        "--stale-days", "36500"], capture_output=True, text=True)
+    if r.returncode not in (0, 1) or not r.stdout.strip():
+        return ["the validator crashed on the review fixture"]
+    out = json.loads(r.stdout)
+    said = [f for f in out["findings"] if f["code"] == "LC006"]
+    problems = []
+    paths = {f["path"] for f in said}
+    want = {"products/atlas/PBR.md", "products/atlas/contracts/DC-001-orders.md"}
+    if paths != want:
+        problems.append(f"the fixture reports {sorted(paths)} and plants {sorted(want)}. "
+                        "`ARC.md` is changed by the same commit and reread by the next one: "
+                        "reporting it means a reading is being counted as a change, and then "
+                        "every honest review carries a gap of the minutes it took to commit")
+    if len(out["findings"]) != len(said):
+        others = [f["code"] for f in out["findings"] if f["code"] != "LC006"]
+        problems.append(f"the fixture also reports {sorted(set(others))}. It has to be clean in "
+                        "every direction but the one it is planted in, or the finding it exists "
+                        "to produce arrives inside a list of unrelated ones")
+    for f in said:
+        if "11 day" not in f["message"]:
+            problems.append(f"{f['path']}: the gap is not stated as eleven days. The size is the "
+                            "finding: there is no floor, so what separates a document nobody "
+                            "reread from one reread a minute before committing is the number")
+    # Largest first, because an ordering that carries no meaning gets read as though it did.
+    order = [f["path"] for f in out["findings"] if f["code"] == "LC006"]
+    if len(order) > 1:
+        gaps = [int(f["message"].split(" day")[0].split()[-1]) for f in said]
+        if gaps != sorted(gaps, reverse=True):
+            problems.append(f"the findings come out in the order {gaps}, and they are ordered "
+                            "by gap descending or thirty of them are unreadable")
+
+    # And silence where there is no history. Not a fixture: those live inside this repository,
+    # so git answers with the framework's own history. A directory outside any repository is
+    # the case, and it is the one a project distributed as an archive is in.
+    with tempfile.TemporaryDirectory() as tmp:
+        outside = Path(tmp)
+        (outside / "framework.yaml").write_text(f"framework_version: {REGISTRY['version']}\n")
+        (outside / "OPEN.md").write_text(
+            "---\nschema: framework/open-register/v1\nartifact_type: open-register\n"
+            "lifecycle: living\nstatus: active\nowners: [owner]\ncreated: 2026-01-01\n"
+            "last_review: 2026-01-01 09:00\nentries:\n  OD-001:\n    status: open\n"
+            "    products: [all]\n---\n\n# Open\n\n### OD-001 - one question\n")
+        r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(outside), "--json",
+                            "--stale-days", "36500"], capture_output=True, text=True)
+        if r.returncode not in (0, 1) or not r.stdout.strip():
+            problems.append("the validator crashed outside a repository")
+        elif [f for f in json.loads(r.stdout)["findings"] if f["code"] == "LC006"]:
+            problems.append("a directory outside any git repository was reported. There is no "
+                            "history to ask there, and unverifiable is not the same claim as "
+                            "violated: that is the position FW003 already takes")
+    return problems
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 print()

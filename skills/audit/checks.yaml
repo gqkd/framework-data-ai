@@ -186,6 +186,53 @@ checks:
       not a reading, and a check that fired on every new repository would be switched off in
       a week.
 
+  LC006:
+    level: warn
+    title: a living document was changed after the instant it says somebody read it
+    prevents: >
+      Text nobody attested, read as current. `LC002` measures elapsed time and can only ever
+      guess when truth decays; `LC005` catches a batch of stamps written in one minute. Neither
+      compares the attested instant with when the document was last changed, and that
+      comparison is the one question `last_review` exists to answer: read and found still true,
+      or edited since and never reread. A document in the second state is silent to both, and
+      the field says a person confirmed it.
+
+      REGISTERING THAT YOU HAVE READ SOMETHING IS NOT MODIFYING IT. A reading is written down
+      by editing the document, so a commit whose only change to a file is its `last_review`
+      line is the reading and not a change: the comparison steps back to the commit before it.
+      Without that, every honest review leaves a gap of the minutes between the stamp and the
+      commit, and the report grows a tail of rows that are not the problem. The rows somebody
+      learns to skip are how a check dies.
+
+      A commit that moves the stamp AND changes something else counts, and the finding says so
+      where it is read, because whoever sees it has to know why it was not excluded.
+
+      AND THE COMMIT THAT INTRODUCES A FILE IS NOT A CHANGE TO IT. A repository whose history
+      begins after its documents do -- which is every project that adopted git once the
+      documentation already existed, and that is the ordinary way to arrive here -- has one
+      commit importing everything, dated after every `last_review` in it. Measured on this
+      repository's own fixtures before the exclusion existed: twenty-nine of thirty findings
+      were that import, in six repositories where nothing had been edited at all.
+
+      NO FLOOR, AND THE GAP IS STATED RATHER THAN JUDGED. Any threshold would have lost the low
+      end of the case that produced this, where the gaps ran from 45 minutes to 21 days. What
+      replaces it is the ordering: these findings come out largest first, because thirty sorted
+      by size get read and thirty sorted by path do not. The author date and not the commit
+      date, because a rebase moves the second without anybody touching the document, which is
+      the same family as the rename this cannot see through.
+
+      Silent where there is no history to ask, which is a project distributed as an archive
+      rather than cloned: unverifiable is not the same claim as violated, the same position
+      `FW003` takes. An uncommitted change is not counted either, and the report says in a line
+      how many living documents carry one, because the gap measured then is smaller than the
+      real one. That is a note and not a finding: a finding that appeared and vanished with
+      every save would teach people to ignore this between saves.
+
+      WHAT ITS YIELD IS, WE DO NOT KNOW. Zero on every fixture in this repository before the
+      bench for it was built, and two per repository on that bench, by construction. What a
+      real repository shows depends on how much of it was edited without being reread, and
+      there is no honest number for that until this runs against something nobody here wrote.
+
   # ── Identity and references ────────────────────────────────────────────────
   ID001:
     level: warn

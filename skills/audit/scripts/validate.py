@@ -926,6 +926,155 @@ def check_lifecycle(a: Artifact, stale_days: int, now: datetime, report: Report)
                    "an immutable has no last_review: it is not reviewed, it is superseded")
 
 
+def _git(args: list[str], cwd: Path) -> subprocess.CompletedProcess | None:
+    """git, or None when there is no answer to be had. Never an exception and never a guess."""
+    try:
+        return subprocess.run(["git", "-C", str(cwd), *args], capture_output=True,
+                              text=True, timeout=30)
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+
+REVIEW_LINE = re.compile(r"^[+-]last_review:", re.M)
+CHANGED_LINE = re.compile(r"^[+-](?![+-])", re.M)
+
+
+def _history(root: Path) -> tuple[dict[str, list[tuple[str, str]]], str] | None:
+    """Every tracked path under `root`, with the commits that touched it, newest first.
+
+    One pass over the log rather than one question per document. The alternative is a
+    subprocess per artifact, which on a repository of any size is the check paying for
+    itself in seconds on every run, and a check that is slow is a check somebody moves out
+    of the loop that runs it.
+
+    Only the newest two commits per path are kept, plus the count. That is everything the
+    comparison needs and it stops the map growing with the history rather than with the
+    repository.
+    """
+    where = _git(["rev-parse", "--show-prefix"], root)
+    if where is None or where.returncode != 0:
+        return None                      # not inside a repository: there is nothing to read
+    prefix = where.stdout.strip()
+    log = _git(["log", "--format=%x00%H%x00%aI", "--name-only", "--no-renames"], root)
+    if log is None or log.returncode != 0:
+        return None
+    seen: dict[str, list[tuple[str, str]]] = {}
+    counts: dict[str, int] = {}
+    sha = when = ""
+    for line in log.stdout.splitlines():
+        if line.startswith("\x00"):
+            _, sha, when = line.split("\x00")
+            continue
+        path = line.strip()
+        if not path:
+            continue
+        counts[path] = counts.get(path, 0) + 1
+        if len(seen.setdefault(path, [])) < 2:
+            seen[path].append((sha, when))
+    return {p: (v, counts[p]) for p, v in seen.items()}, prefix
+
+
+def check_review_gap(arts: list[Artifact], root: Path, report: Report) -> int:
+    """A living document changed after the instant it says somebody read it.
+
+    `LC002` measures elapsed time and can only ever guess when truth decays. `LC005` catches
+    a batch of stamps written in one minute. Neither compares the attested instant with when
+    the document was last changed, and that comparison is the one question separating the two
+    things `last_review` exists to distinguish: read and still true, or edited since and never
+    reread. A document edited after the instant it attests contains text nobody attested, and
+    both other checks are silent about it.
+
+    TWO EXCLUSIONS, AND THE FIRST IS NOT A REFINEMENT. THE COMMIT THAT INTRODUCES A FILE IS
+    NOT A CHANGE TO IT. A repository whose history begins after its documents do -- which is
+    every project that adopted git once the documentation already existed, and that is the
+    ordinary way to arrive at this framework -- has one commit importing everything, dated
+    after every `last_review` in it. Measured on this repository's own fixtures before the
+    exclusion existed: twenty-nine of thirty findings were that import, in six repositories
+    where nothing had been edited at all.
+
+    REGISTERING THAT YOU HAVE READ SOMETHING IS NOT MODIFYING IT. A reading is written down by
+    editing the document, so without this every honest review leaves a gap of the minutes
+    between the stamp and the commit, and the report grows a tail of rows that are not the
+    problem. The rows somebody learns to skip are how a check dies. So a commit whose only
+    change to this file is the `last_review` line is the reading, and the comparison steps
+    back to the one before it. A commit that moves the stamp AND anything else counts, which
+    is correct and is said in the message, because somebody looking at that finding has to
+    know why it was not excluded.
+
+    NO FLOOR, AND THE GAP IS STATED RATHER THAN JUDGED. Any threshold would have lost the low
+    end of the case that produced this: gaps from 45 minutes to 21 days in one repository.
+    What replaces it is the ordering, which is by gap and not by path, because thirty findings
+    sorted by size get read and thirty sorted alphabetically do not.
+
+    THE AUTHOR DATE AND NOT THE COMMIT DATE. A rebase moves the second without anybody
+    touching the document, which is the same family as the rename this check already cannot
+    see through. Returns how many living documents carry uncommitted changes, which the report
+    states as a note: those are excluded from the comparison, so a gap measured here can be
+    smaller than the real one, and that is worth a line rather than a finding that appears and
+    disappears with every save.
+    """
+    living = [a for a in arts if a.meta.get("lifecycle") == "living"
+              and parse_moment(a.meta.get("last_review")) is not None]
+    if not living:
+        return 0
+    read = _history(root)
+    if read is None:
+        return 0                         # no history to ask: unverifiable is not violated
+    history, prefix = read
+
+    dirty = set()
+    status = _git(["status", "--porcelain", "--", "."], root)
+    if status is not None and status.returncode == 0:
+        for line in status.stdout.splitlines():
+            name = line[3:].strip().strip('"')
+            if name.startswith(prefix):
+                dirty.add(name[len(prefix):])
+
+    found = []
+    for a in living:
+        rel = a.rel.replace("\\", "/")
+        entry = history.get(prefix + rel)
+        if entry is None:
+            continue                     # untracked: nothing recorded, nothing to compare
+        commits, count = entry
+        if count < 2:
+            continue                     # only the commit that brought it into the history
+        sha, when = commits[0]
+        why = ""
+        show = _git(["show", "--format=", "--unified=0", sha, "--", prefix + rel], root)
+        if show is not None and show.returncode == 0:
+            lines = CHANGED_LINE.findall(show.stdout)
+            if lines and len(lines) == len(REVIEW_LINE.findall(show.stdout)):
+                if count < 3:
+                    continue             # the reading, and before it only the import
+                sha, when = commits[1]
+            elif REVIEW_LINE.search(show.stdout):
+                why = (" That commit moved `last_review` and changed something else as well, "
+                       "so it counts: recording a reading is not a modification, and this was "
+                       "both.")
+        changed = parse_moment(when.split("+")[0].split("Z")[0].replace("T", " ")[:16])
+        attested = parse_moment(a.meta.get("last_review"))
+        if changed is None or attested is None or changed <= attested:
+            continue
+        found.append(((changed - attested), a, sha, changed, why))
+
+    # BY GAP AND NOT BY PATH. The lesson is one version old: a document came out first in a
+    # generated view because its directory sorted before the others, and being first was read
+    # as being foremost. An ordering that carries no meaning will be read as though it did.
+    for gap, a, sha, changed, why in sorted(found, key=lambda x: x[0], reverse=True):
+        days, rest = gap.days, gap.seconds // 60
+        size = (f"{days} day(s)" if days else f"{rest // 60}h {rest % 60}m" if rest >= 60
+                else f"{rest} minute(s)")
+        report.add("LC006", a.rel,
+                   f"last changed {size} after the instant it attests: `last_review` says "
+                   f"{a.meta.get('last_review')} and commit {sha[:12]} touched it on "
+                   f"{changed:%Y-%m-%d %H:%M}. Whatever changed in between is text nobody has "
+                   f"said is still true. `LC002` is quiet because the date is recent and "
+                   f"`LC005` because the instant is unique; this is the same claim examined "
+                   f"from the side a date cannot show.{why}")
+    return len(dirty & {a.rel.replace("\\", "/") for a in living})
+
+
 def check_references(arts: list[Artifact], registry: dict, report: Report) -> None:
     id_re = re.compile(r"\b((?:%s)-\d{3,})\b" % "|".join(registry["id_prefixes"]))
     inline_decl = registry["inline_id_declarations"]
@@ -3229,6 +3378,7 @@ def main() -> int:
     check_manifest_derived_fields(arts, report)
     unanswerable = check_unanswerable(arts, registry, report)
     unenforced = check_placement(arts, registry, report)
+    uncommitted = check_review_gap(arts, root, report)
     check_register_halves(arts, registry, report)
     check_body_repeats_a_field(arts, registry, report)
     check_key_typos(arts, registry, report)
@@ -3322,6 +3472,7 @@ def main() -> int:
             # except know that the check has a hole. A zero there is a line of noise about
             # somebody else's file.
             "placement_not_enforced": unenforced,
+            "uncommitted_living": uncommitted,
             "generated": index_written, "out_of_date": index_stale,
             "hand_maintained": index_protected,
             "findings": [f.as_json() for f in report.findings],
@@ -3335,6 +3486,16 @@ def main() -> int:
         # is the framework making a statement about its own registry, and a project can do
         # nothing with it except learn that the check has a hole. A zero there is a line of
         # noise about somebody else's file, printed on every run of every repository.
+        # A NOTE AND NOT A FINDING, DELIBERATELY. An uncommitted change is a modification
+        # nobody has recorded yet, which is a different claim from one the history carries,
+        # and a finding that appeared and vanished with every save would teach people to
+        # ignore the check between saves. But it is worth a line: `LC006` compares against
+        # what is committed, so where these exist the real gap is larger than the one
+        # measured, and in the case that produced that check the uncommitted edit was on a
+        # living register.
+        if uncommitted:
+            print(f"Living documents with uncommitted changes: {uncommitted}. The gaps below "
+                  "exclude them, so where one applies the real gap is larger.")
         if unenforced:
             print(f"Artifact types whose placement is not enforced: {unenforced}")
         if index_written:
