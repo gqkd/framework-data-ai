@@ -803,7 +803,53 @@
 # is the good outcome: it is a precaution and not a permit. The alternative was a pattern that
 # approximates, which would be a field claiming more than it is, which is this whole change
 # rebuilt inside its own repair.
-version: "3.3.0"
+# 3.3.0 -> 3.4.0. `REG016` GUARDA DUE VOLTE, PERCHE' NE SERVONO DUE. MINOR: a check that
+# reports more, no document stops validating, nothing becomes required.
+#
+# THE QUESTION IT KEPT BEING ASKED WAS WHY A CHECK COMPARING BODY WITH MAP NEEDS A VOCABULARY
+# AT ALL, and the answer is that it needed one only because it looked for the label. Looking
+# for the value needs none: values are the project's own text, not the framework's field
+# names. But the two are not interchangeable, and both blindnesses were measured here rather
+# than argued about:
+#
+#   label only    a risk table with columns `Likelihood` and `Impact` writing `medium` and
+#                 `high`, where the map holds `M` and `H`. The same fact in two spellings,
+#                 which is the duplication that costs most because the two halves cannot be
+#                 seen to agree. The value search finds nothing.
+#   value only    a commitments table whose column reads `To whom` and whose cells are the
+#                 `to:` of the map, verbatim. The label is a paraphrase of the field name, in
+#                 English, so a vocabulary of field names misses it without anybody changing
+#                 language. The label search finds nothing.
+#
+# Of the twenty-one fields the three registers' maps own, eight are enums whose values are
+# short common words, so a value is compared as a whole cell against a whole value and is
+# never searched for inside prose. That boundary was not a precaution: searching inside a line
+# reported `default_in_force: Italian only` against a body line asking whether the interface
+# should be `Italian only, or Italian and English?`, where the question is about that choice
+# and repeats nothing. Found in this repository's own fixtures, which is what they are for.
+#
+# THE MESSAGE SAYS WHICH OF THE TWO SPOKE, and that is a constraint rather than a nicety,
+# written in the catalog beside the check. Three cases, three repairs: label and value
+# together is a column to delete; label alone is two claims and which is true is not decidable
+# by any check; value alone is the duplication under a name nothing can recognise, so the
+# finding carries the lines. One finding per field per file with the count and the line
+# numbers, never one per occurrence: `.framework/expected-findings.yaml` joins on
+# `(code, path)` and a finding per line would multiply a project's annotations by the number
+# of lines.
+#
+# AND A FIXTURE THAT WRITES A REGISTER IN ANOTHER LANGUAGE, which is the part worth keeping.
+# Until it existed this defect could not be measured at all: every fixture wrote English
+# labels, so a check that only understood English reported clean on the whole corpus. The
+# bench reproduced the flaw of the thing it was testing, which is the most instructive thing
+# in this repair. `requirement/seed` now carries Italian column headers over cells that are
+# the map's values, and its four findings arrive entirely through the value with the label
+# contributing nothing. One line of Italian prose restating a likelihood in words is found by
+# neither, and that residue is written down as a limit instead of being left to be discovered.
+#
+# WHAT AN ADOPTING REPOSITORY SEES: one `warn` per field per register that still keeps a copy
+# of it in the body. Measured over the sixteen fixture roots, sixteen findings where there
+# were none, five of which only the label finds and five only the value.
+version: "3.4.0"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of
