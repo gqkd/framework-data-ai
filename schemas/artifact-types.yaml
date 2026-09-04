@@ -981,7 +981,31 @@
 # Two rules, and neither comes from these three: which case a rule is for, in the catalog's
 # preamble with the seven instances that produced it; and a migration note naming the check that
 # recognises its repair, at the top of this file with the versioning rule it belongs to.
-version: "3.5.2"
+# 3.5.2 -> 3.6.0. Due check che arrivano, `LOC002` e `PR005`, e un riferimento morto riparato.
+# MINOR: nessun documento smette di validare e niente diventa obbligatorio.
+#
+# `LOC002` is `REG008` written for a document instead of for an entry: an artifact filed under
+# one product's directory while declaring another. Seventeen of the thirty types carry `<p>` in
+# their placement, so for seventeen the directory names the product. A code of its own rather
+# than `REG008` widened, because an annotation covers every finding sharing `(code, path)`
+# including ones that arrive later, and growing an existing code with a new class would make
+# those born explained by a reason written about something else.
+#
+# `PR005` reports a change set that edits a living document and does not move its
+# `last_review`. One finding for the change set and not one per document, and `LC006` goes quiet
+# about what it names. It asks rather than asserts, which is `PR004`'s position: a typo in a
+# sentence nobody has to reread is a change and no check can tell it from a change of meaning.
+# Silent without `--changed-files`, like the rest of its family, and its yield is unknown for
+# the same reason `LC006`'s is.
+#
+# AND THE CATALOG STOPS CITING A SECTION THAT DOES NOT EXIST. It said the two checks that block
+# on day one are "the two `SKILLS.md §9` names". That file has seven sections and never mentions
+# front matter. The reference had been there long enough to be quoted back as an authority, in
+# an issue arguing those two are declared absolute somewhere while the code does not know it.
+# Nothing declares them absolute. They are `error` by default, and a project may lower any check
+# here, `AN001` included -- which is worth naming, because lowering that one is not a severity
+# decision but the decision to keep annotations that match nothing.
+version: "3.6.0"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of
