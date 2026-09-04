@@ -751,7 +751,7 @@ python3 skills/audit/scripts/migrate.py --root <project>
 
 It reads the project's `framework_version`, rebuilds from the framework's own git history
 the version in which that number was current, runs **that** validator and the current one
-over the same project, and splits the findings three ways. It is the distinction `FW001`
+over the same project, and splits the findings four ways. It is the distinction `FW001`
 exists to make possible, made finding by finding instead of as a general warning: getting it
 wrong twice is how a team stops reading the validator.
 

@@ -404,9 +404,39 @@ def counts(registry: dict) -> str:
             "each catalogued with the failure it prevents written next to it.")
 
 
+def cost() -> str:
+    """What every session pays for the skills existing, measured rather than remembered.
+
+    The line this replaced said six skills and about 1,500 tokens. There were seven, and the
+    registry's own note recorded a larger figure, so the sentence was wrong twice and
+    contradicted another document in this repository. It sat three lines below a paragraph
+    saying that a number nobody regenerates is a number waiting to be false, which is as good
+    a demonstration of the rule as the rule is likely to get.
+
+    WHAT IS COUNTED IS SAID, because a number whose method is not stated cannot be compared
+    with anything. This is the `name` and `description` of each skill, which is what a plugin
+    loads into every session; the registry's note tracks a wider figure that includes what
+    else the plugin carries, and the two are a part and a whole rather than a disagreement.
+    """
+    skills = sorted(p for p in (HERE.parent / "skills").iterdir()
+                    if (p / "SKILL.md").exists())
+    chars = 0
+    for d in skills:
+        text = (d / "SKILL.md").read_text(encoding="utf-8")
+        head = text[4:text.find("\n---", 4)]
+        chars += sum(len(l) for l in head.splitlines()
+                     if l.startswith(("name:", "description:")) or l.startswith(" "))
+    return (f"*Generated from the skills themselves. Edit those, not this line.*\n\n"
+            f"**{len(skills)} skills**, whose names and descriptions are about "
+            f"{chars:,} characters, so roughly **{round(chars / 4):,} tokens** loaded into "
+            "every session at four characters each, whether or not a skill runs. Each one "
+            "costs another two to three thousand when it does.")
+
+
 def catalogs(registry: dict) -> dict[str, str]:
     return {
         "counts": counts(registry),
+        "cost": cost(),
         "catalog": catalog_table(
             registry, ["ID", "Name", "Class", "Axis", "Born in"],
             lambda s: f"| `{s['id']}` | {s['name']} | {artifact_class(s)} "

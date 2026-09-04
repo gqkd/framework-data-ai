@@ -1005,7 +1005,33 @@
 # Nothing declares them absolute. They are `error` by default, and a project may lower any check
 # here, `AN001` included -- which is worth naming, because lowering that one is not a severity
 # decision but the decision to keep annotations that match nothing.
-version: "3.6.0"
+# 3.6.0 -> 3.6.1. Quattro numeri sbagliati in documenti pubblici, due dei quali adesso si
+# generano invece di essere corretti. PATCH: nessuna regola si muove.
+#
+# `README.md` said "the six skills add about 1,500 tokens to every session". There are seven,
+# since 2.8.11, and the figure was low. It sat three lines below a paragraph saying that a
+# number nobody regenerates is a number waiting to be false, which is as good a demonstration
+# of that rule as it is likely to get. Both numbers are generated now, from the skills
+# themselves, and the line says what it counts: the `name` and `description` a plugin loads
+# into every session. The wider figure this file has tracked since 3.0.1 includes what else
+# the plugin carries, so the two are a part and a whole rather than a disagreement.
+#
+# The same page said "everything else warns, and two report at `info`". Ten checks are `error`.
+# The clause that survives is that only two can block a repository on its first day, because
+# the other eight cannot fire until a project has opted in by writing a file or wiring the
+# pull request context through. The split by severity is in the generated line twelve lines
+# above and is not restated.
+#
+# `PROCESSES.md` P-12 said `migrate.py` splits the findings three ways. It has been four since
+# 3.1.0.
+#
+# WHY THESE FOUR AND NOT THE REST OF WHAT THE READING FOUND. They are facts something else
+# already knows, which is the half of prose this repository can verify, and two of them are now
+# derived rather than asserted. What the same reading found and this does not touch is a
+# different kind: five mechanisms that arrived between 3.1.0 and 3.6.0 and are documented in
+# the skill that executes them and in no prose that explains them. That is not a wrong number,
+# it is an absence, and it is measured before it is repaired.
+version: "3.6.1"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of
