@@ -13,6 +13,22 @@ classification: internal
 # deciding, and no field replaces them. `REG002` and `REG003` read this map and nothing else,
 # because they used to match the prose and went quiet the first time a label was reworded.
 entries:
+  # A FIELD NO VALUE OF WHICH IS TRUE IS DECLARED, NOT LEFT EMPTY. Leaving it out is the
+  # honest thing to write and the most invisible: nothing can tell it from a row nobody
+  # read. If there is an event after which the field would have a true value, say so and
+  # name the event; if there is none, the answer is a value that names the state, such as
+  # `products: [none]` for an entry whose subject is the tooling.
+  #
+  #   OD-002:
+  #     status: open
+  #     unanswerable:
+  #       cost_to_reverse:
+  #         reason: > what makes it composite, in enough words to be weighed
+  #         settled_by: > the event after which it has one answer
+  #
+  # `UNA001` reports a field declared unanswerable and filled in anyway, `UNA002` a field
+  # this map does not have or one it requires, `UNA003` a date where `settled_by` wants an
+  # event.
   OD-001:
     status: open
     cost_to_reverse: high

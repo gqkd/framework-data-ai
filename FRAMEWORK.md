@@ -125,6 +125,9 @@ repo/
 ├── PLATFORM.md                  only if you share a substrate. See §9
 ├── STACK.md                     which tool for which job, and who decided
 ├── framework.yaml               validator configuration, at the root like any other
+├── .framework/                  what the project writes FOR the framework, not what the
+│   └── expected-findings.yaml   framework asks it to write: the findings it has examined
+│                                and left standing, each with why and what clears it
 ├── _meta/                       about the framework, not about the product
 │   ├── README.md                which of these can be deleted and which cannot
 │   ├── corpus/                  every business document, by product. IRREPLACEABLE
@@ -471,13 +474,24 @@ Four rules, and they hold whether or not you share a substrate.
    broken and nobody has noticed. This is the rule that matters most when the products
    share *nothing* technical, because then the glossary is the only thing holding them
    together.
-2. **One `decisions/` register only**, with a `products` field. Cross-product decisions are
+2. **`products:` has four positions and they are four different statements.** A list of
+   names binds those products. `[all]` binds every product including the ones that do not
+   exist yet, which is why it is a reserved word and not a list of every name: a list means
+   the same thing right up until somebody adds a product, and then it quietly means less.
+   `[none]` binds no product and never will, and it is what an entry whose subject is the
+   repository itself, or the tooling the repository is checked with, says about itself.
+   Absence is the fourth, it means the scope is read off the directory, and at the root
+   there is no directory to read, which is why `REG011` asks for one of the other three
+   there. The difference between `[all]` and `[none]` is not a matter of degree: one appears
+   under every product in the generated union, the other under none of them and in a section
+   of its own. A product may not be called `all` or `none`, and `XP008` says so.
+3. **One `decisions/` register only**, with a `products` field. Cross-product decisions are
    the most expensive ones and in separate registers they would end up in the register of
    whichever product you were working on that day.
-3. **The data contracts *between* your own products come before the ones facing outward.**
+4. **The data contracts *between* your own products come before the ones facing outward.**
    They are contracts with yourself six months from now, and they are the ones you will
    break in silence.
-4. **One `OPEN.md` per product, and this is the register that does *not* follow rule 2.**
+5. **One `OPEN.md` per product, and this is the register that does *not* follow rule 3.**
    The difference from `decisions/` is which question each file answers. A decision is
    consulted by whoever asks *why*, from anywhere, so one register keeps the answer in one
    place. The open register is consulted by whoever is about to *act*, on one product, and
@@ -504,11 +518,11 @@ Four rules, and they hold whether or not you share a substrate.
 Two more rules join them, and `PLATFORM.md` is born with the decision that creates it, not
 before.
 
-5. **`PLATFORM.md` plus one short `ARC` per product.** Not one full architecture per
+6. **`PLATFORM.md` plus one short `ARC` per product.** Not one full architecture per
    product: one shared substrate (identity, data access, deploy, observability,
    conventions) plus the domain delta of each. Without `PLATFORM.md` the `ARC` files are
    full architectures and there is no delta to speak of.
-6. **The substrate gets a directory, `platform/`, beside `products/` and never inside it.**
+7. **The substrate gets a directory, `platform/`, beside `products/` and never inside it.**
    A substrate has a repository and people in it, so it needs what a product's team needs:
    `OPEN.md`, `RB.md`, `changes/`. What it must not become is a product. The list of
    products in a repository is the union of every `products:` field in it, so one

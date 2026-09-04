@@ -763,6 +763,14 @@ It also prints the migration note for every version crossed, read out of
 `--adopt` writes the new `framework_version` into the project — but refuses while anything
 is still under *new*, because that number is the claim that the migration is done.
 
+A finding that is never going to leave, because it is a defect of the validator or a state
+this project has examined and decided to keep, goes in `.framework/expected-findings.yaml`
+with its reason and the event that clears it. It then prints under *examined and left
+standing* and stops counting as outstanding, which is the honest path through that guard and
+the reason writing the version by hand is not one. `AN001` is what keeps that file true: an
+annotation matching no finding is an error, so the file cannot quietly become a list of
+exemptions.
+
 ### What stays by hand
 
 Migrating the artifacts. A `MAJOR` is, by the framework's own definition, a document that

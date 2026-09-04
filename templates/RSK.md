@@ -19,6 +19,19 @@ classification: confidential
 # ordinary case for a market hypothesis nobody has tested or an IP transfer nobody completed.
 # Silence is `REF006`, and it reads as the first: a promise made and recorded nowhere.
 risks:
+  # ON A FIELD WHOSE VALUE IS NOT YET TRUE. `likelihood` and `impact` are the ones that
+  # invite a guess, and a guess in a field every ordering reads is worse than the emptiness
+  # it replaces. If no value is true yet, declare it rather than omitting it:
+  #
+  #   RSK-002:
+  #     category: data
+  #     state: open
+  #     unanswerable:
+  #       likelihood:
+  #         reason: > it has not happened and the base rate is not measured
+  #         settled_by: > the first month of the load running in production
+  #
+  # `UNA001` reports a field declared unanswerable and carrying a value anyway.
   RSK-001:
     category: technical
     state: open

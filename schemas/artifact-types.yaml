@@ -74,6 +74,25 @@
 # `unanswerable` on a map field. At three it is a property of this model and not a habit: where
 # something cannot be checked, the thing that cannot be checked is declared rather than assumed.
 #
+# AND THE SAME RULE ON THE OTHER SURFACE, WHICH IS WHERE THE DEFECT HAS ARRIVED TWICE.
+#
+#     PROSE THAT SAYS WHAT TO WRITE NAMES THE CHECK THAT REPORTS SOMEBODY WRITING IT
+#     DIFFERENTLY. WHERE NO CHECK DOES, THE PROSE SAYS SO.
+#
+# The note above is about a migration note, which is read once. This is about a template and a
+# process, which are read every time somebody writes a document, and they are the prose a
+# project copies. `templates/AGENTS.md` carried three statements about where files live that
+# were false, one of them a form this registry never had, and it is the first thing an agent
+# reads in every repository that copied it. Nothing saw them, because a template prescribes and
+# nothing verifies a prescription.
+#
+# Naming the check does not make the prose checkable. What it does is make the prose describe
+# something that is: the check is asserted in `tests/selfcheck.py`, so a sentence that
+# describes it stops being an independent claim, and somebody reading the template learns what
+# happens if they do the other thing. `UNA001` beside `unanswerable` in the three templates
+# that own a map, `REG011` beside the `products:` vocabulary, `AN001` beside the annotation
+# file in the process that adopts a version: those are the three that exist.
+#
 #   MAJOR   a document that validated stops validating, or starts meaning something else:
 #           a new required field, a narrowed enum, a type removed, a check promoted to
 #           error. This is the one that asks a project to migrate.
@@ -1031,7 +1050,31 @@
 # different kind: five mechanisms that arrived between 3.1.0 and 3.6.0 and are documented in
 # the skill that executes them and in no prose that explains them. That is not a wrong number,
 # it is an absence, and it is measured before it is repaired.
-version: "3.6.1"
+# 3.6.1 -> 3.6.2. Prosa: cinque menzioni, una parola, e la seconda delle due regole su ciò che
+# la prosa deve nominare. PATCH, nessuna regola si muove e nessun documento cambia.
+#
+# WHAT A READING OF THE WHOLE DOCUMENTATION FOUND, AND THE NUMBER WAS SMALLER THAN THE
+# IMPRESSION. Seven of `FRAMEWORK.md`'s eleven sections describe the model, and the model has
+# not moved in nine versions: what moved is the machinery, which those two documents barely
+# name. So there was no decayed description to rewrite. There were five absences, all of them
+# the same absence: everything built between 3.1.0 and 3.6.0 lived in the skill that executes
+# it and in no prose that explains it.
+#
+# `.framework/` is in the repository tree. `products:` has its four positions written out where
+# the multi-product rules are, with the difference between `[all]` and `[none]` said rather
+# than implied. The annotation file is named where the gate is described and in the process
+# that adopts a version. The three templates that own a map say what to do with a field no
+# value of which is true. And one more restatement of "three ways" became four.
+#
+# AND THE CLAIM THAT MATTERED MOST IS SAID IN STRICT FORM NOW. `README.md` said nothing here
+# had been used on a real project for a full cycle. True, and silent about what did happen: a
+# complete `MAJOR` migration on a real repository, carried out and verified, which produced
+# eleven defects in the framework and all eleven are repaired. Both halves are written, and the
+# evidence offered is the issues rather than the repository, because the issues are public and
+# carry their cases and the repository is neither. With it, in one place rather than repeated:
+# several checks report nothing on every fixture here, and that is zero out of everything
+# observable rather than zero.
+version: "3.6.2"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of

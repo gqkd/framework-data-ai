@@ -18,6 +18,22 @@ classification: confidential
 # received. `stated-as-done` is the sentence in the present tense about something that does
 # not exist yet.
 commitments:
+  # `feasibility` IS THE ONE THAT MOST OFTEN HAS NO TRUE VALUE, and the case is real: a
+  # promise feasible one capability at a time and out of reach as a set, until somebody
+  # decides the scope. Every value of the enum is false on one half of that. Do not pick the
+  # nearest one and do not leave the field out: declare it, with the reason and the event
+  # that settles it.
+  #
+  #   CMT-002:
+  #     to: ...
+  #     status: open
+  #     unanswerable:
+  #       feasibility:
+  #         reason: > each one is buildable alone and the set is not
+  #         settled_by: > the decision on the scope
+  #
+  # `UNA001` reports it declared and filled in at the same time, which is the way that
+  # declaration goes stale.
   CMT-001:
     to: the customer who received it, by name
     status: open

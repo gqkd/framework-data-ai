@@ -265,6 +265,15 @@ thing it prevents has actually happened, and not before.**
 If turning a check on costs a commit of code, nobody does it. And twelve checks turned on
 in advance all get turned off together, the first time they get in the way.
 
+A project can also record what it has examined and decided to leave standing.
+`.framework/expected-findings.yaml` carries one entry per finding, with `code`, `path`, a
+`reason` and the event that `clears_when`, and the validator reports those findings in a
+group of their own with both sentences printed under them. Nothing is silenced: what changes
+is that a finding somebody has ruled on stops reading like one nobody has opened, and
+`migrate.py --adopt` stops treating it as work outstanding. An annotation that matches no
+finding is an error, which is what keeps the file from becoming a list of permanent
+exemptions with a better name.
+
 The same file says which files are artifacts in the first place. The validator reads every
 `.md` and `.yaml` under the root, and a project that also holds code holds a great deal of
 neither:
@@ -366,17 +375,31 @@ without `status` and `owners` for as long as it did. The self check runs in CI h
 
   `skills/audit/scripts/migrate.py` answers it finding by finding. It rebuilds the validator
   the project pinned out of this repository's git history, runs it and the current one over
-  the same project, and reports what is new, what was already there and what is gone. No tag
-  and no release are needed for that: the history is the archive. The note explaining each
+  the same project, and reports what is new, what was already there, what is gone, and what
+  the project has examined and left standing. No tag and no release are needed for that: the
+  history is the archive. The note explaining each
   version sits beside the number in `schemas/artifact-types.yaml`, and the tool reads it out
   rather than keeping a second copy.
 
   `version:` in that file explains when the number goes up. It is the plugin's version too —
   one artifact, one number — which is a reversal of what stood here, and `tests/selfcheck.py`
   keeps the three files that state it from disagreeing.
-- **A reference implementation.** Nothing here has been used on a real project for a full
-  cycle. Every fixture in `evals/` was written by somebody who already understood the
-  framework, which is the one limit more fixtures cannot fix.
+- **A reference implementation.** Said in strict form, because the two halves are different
+  claims and only one of them is the flattering one.
+
+  **What has been exercised:** a complete `MAJOR` migration, on a real repository, carried
+  out and verified. It produced eleven defects in the framework itself, and all eleven are
+  repaired. They are [the issues of this repository](../../issues?q=is%3Aissue), with the
+  case that proves each one written inside, and that is the part worth checking: the
+  repository is not public and is not the evidence, the issues are, and they can be read by
+  anybody without being asked to take somebody's word for it.
+
+  **What has not:** a full lifecycle, `F1` through `F6`. That migration was a test bench, and
+  **no project is using this framework today**. Every fixture in `evals/` was written by
+  somebody who already understood the framework, which is the one limit more fixtures cannot
+  fix, and the same limit reaches the gate: several checks report nothing at all on every
+  repository here, which is zero out of everything observable rather than zero. What each one
+  is worth is not knowable until it runs against something nobody here wrote.
 
 
 ## One product or several
