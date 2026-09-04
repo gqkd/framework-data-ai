@@ -849,7 +849,58 @@
 # WHAT AN ADOPTING REPOSITORY SEES: one `warn` per field per register that still keeps a copy
 # of it in the body. Measured over the sixteen fixture roots, sixteen findings where there
 # were none, five of which only the label finds and five only the value.
-version: "3.4.0"
+# 3.4.0 -> 3.5.0. `LC006`: UN DOCUMENTO LIVING CAMBIATO DOPO L'ISTANTE CHE ATTESTA. MINOR: a
+# check arrives, nothing stops validating, nothing becomes required.
+#
+# `LC002` measures elapsed time and can only guess when truth decays. `LC005` catches a batch
+# of stamps written in one minute. Neither compares the attested instant with when the document
+# was last changed, and that is the one question `last_review` exists to answer: read and found
+# still true, or edited since and never reread. In one repository, twenty-one living documents
+# out of twenty-one had been modified after the instant they attest, with gaps from 45 minutes
+# to 21 days, and both existing checks were silent on sixteen of them.
+#
+# TWO EXCLUSIONS, AND THE FIRST IS NOT A REFINEMENT. THE COMMIT THAT INTRODUCES A FILE IS NOT A
+# CHANGE TO IT. A repository whose history begins after its documents do has one commit
+# importing everything, dated after every `last_review` in it -- and that is every project that
+# adopted git once the documentation existed, which is the ordinary way to arrive at this
+# framework. Measured on this repository's own fixtures before the exclusion existed:
+# twenty-nine of thirty findings were that import, in six repositories where nothing had been
+# edited at all. Without it this check would have shipped reporting every document of the first
+# real repository it met.
+#
+# REGISTERING THAT YOU HAVE READ SOMETHING IS NOT MODIFYING IT. A reading is written down by
+# editing the document, so a commit whose only change to a file is its `last_review` line is the
+# reading, and the comparison steps back to the one before it. Without that, every honest review
+# leaves a gap of the minutes between the stamp and the commit, and the report grows a tail of
+# rows that are not the problem. A commit that moves the stamp and changes something else counts,
+# and the finding says so where it is read.
+#
+# NO FLOOR. Any threshold would have lost the low end of the case that produced this. What
+# replaces it is the ordering: largest gap first, because thirty findings sorted by size get read
+# and thirty sorted by path do not. That lesson is one version old, from a file that came out
+# first in a generated view because its directory sorted before the others.
+#
+# The author date and not the commit date: a rebase moves the second without anybody touching the
+# document, which is the same family as the rename this cannot see through. Silent where there is
+# no history to ask, which is a project distributed as an archive: unverifiable is not violated,
+# the position `FW003` already takes. An uncommitted change is not counted, and the report says in
+# a line how many living documents carry one, because the gap measured then is smaller than the
+# real one -- a note and not a finding, since a finding that appeared and vanished with every save
+# would teach people to ignore this between saves.
+#
+# A BENCH THAT HAD TO BE BUILT, AND THE MEASUREMENT THAT SAYS SO. The six `release/` fixtures are
+# git repositories with dated commits and looked like a bench for this. They were the import,
+# twenty-nine times out of thirty. `evals/fixtures/generators/review.py` plants three commits that
+# can each be said in a sentence: the first documented set; the contract gains a column and the
+# architecture and the brief follow it, none of the three reread; the architecture is reread and
+# stamped. Two findings by construction and one document that produces none because it was
+# reread, which is the case that costs this check its floor.
+#
+# WHAT ITS YIELD IS, WE DO NOT KNOW, and that is written in the catalog rather than guessed here:
+# zero on every fixture in this repository before the bench existed, two on the bench by
+# construction, and no honest number for a real repository until this runs against one nobody
+# here wrote.
+version: "3.5.0"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of
