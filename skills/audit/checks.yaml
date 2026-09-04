@@ -831,6 +831,33 @@ checks:
       week. The report states how many warnings carry an annotation whether or not this is on,
       so the default hides nothing and turning it on is a decision rather than a discovery.
 
+  LOC001:
+    level: warn
+    title: an artifact is not where its type says it lives
+    prevents: >
+      A document that is not the artifact being counted as the artifact. The case: a working
+      directory held a derived planning document declaring `artifact_type: roadmap`, `living`
+      and a product, with legal front matter and a `last_review` fresher than the real
+      roadmap's. Every check passed, it was counted among the repository's artifacts, and
+      because the derived view lists living artifacts by path it came out *above* the document
+      it was derived from, with the most recent date beside it. The view an agent is told to
+      read first, opening on a draft.
+
+      Front matter is the half tools read, and until now nothing read where a file sat. The
+      registry has always declared where each type lives; that field was a sentence rather
+      than a rule, in five notations nothing parsed, and two of its thirty values were false
+      about this repository's own files for months. A field wrong for months is a field nobody
+      reads.
+
+      `warn` and not `error`, and the reason is a limit on the evidence rather than on the
+      rule. Measured over every fixture here no artifact sits anywhere its type does not
+      describe, and that is zero out of everything observable rather than zero: there is one
+      body of fixtures and the same hand wrote it and the patterns. Promotion is worth
+      revisiting the first time this runs against a repository nobody here wrote. A project
+      that legitimately keeps artifacts elsewhere annotates the findings with the reason and
+      what would end it, which is a door that did not exist when this check was first proposed
+      and is what makes it affordable now.
+
   # ── Fields a map entry declares it cannot answer ───────────────────────────
   #
   # These three run only where a record carries `unanswerable`, so they cannot fire in a

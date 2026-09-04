@@ -1578,6 +1578,85 @@ def check_body_repeats_a_field(arts: list[Artifact], registry: dict,
                        "which is true before deleting either.")
 
 
+# The notation a `path` pattern is written in, and the whole of it. Four tokens and nothing
+# else, so that a pattern can be read by a person and by this function and mean the same thing.
+# Written here because the registry declares the same four beside the patterns: two statements
+# of one rule is what this check exists to stop, and the fix is that the registry's is the
+# prose and this is the parser, not two parsers.
+#
+# `-slug` INCLUDES ITS HYPHEN AND IS OPTIONAL, which is the token that carries the correction.
+# Thirteen types number their files and until 3.3.0 exactly one of them said so; the other
+# twelve declared `PREFIX-NNN.md` while real files carry `PREFIX-001-some-words.md`. The
+# convention was one rule written out thirteen times by hand, which is the shape this whole
+# area is about.
+PLACEMENT_TOKENS = ((("<p>", "<i>"), "[^/]+"),
+                    (("-slug",), "(?:-[^/]+)?"),
+                    (("NNN",), r"\d{3,}"))
+
+
+def placement_pattern(one: str) -> re.Pattern:
+    """One declared placement, as something that can be matched against a path."""
+    marks: dict[str, str] = {}
+    s = one.strip()
+    for i, (tokens, rx) in enumerate(PLACEMENT_TOKENS):
+        mark = f"QQ{i}QQ"                      # letters and digits: `re.escape` leaves it alone
+        for tok in tokens:
+            s = s.replace(tok, mark)
+        marks[mark] = rx
+    s = re.escape(s)
+    for mark, rx in marks.items():
+        s = s.replace(mark, rx)
+    return re.compile("^" + s + "$")
+
+
+def check_placement(arts: list[Artifact], registry: dict, report: Report) -> int:
+    """Where an artifact sits, against where its type says it lives.
+
+    THE FILE THAT PRODUCED THIS WAS NOT BROKEN, IT WAS SOMEWHERE ELSE. A working directory
+    held a derived planning document that declared `artifact_type: roadmap`, `living`, and a
+    product, with legal front matter and a `last_review` fresher than the real roadmap's.
+    Every check passed. It was counted as an artifact, it was joined by everything that reads
+    `products:` and `lifecycle:`, and because the derived view lists living artifacts by path
+    it came out *above* the document it was derived from, with the most recent date beside it.
+    A view an agent is told to read first, whose first line is a draft.
+
+    UNTIL NOW `path` COULD NOT HAVE CAUGHT IT, AND NOT BECAUSE NOBODY WIRED IT UP. The field
+    was a sentence: five notations nothing declared, three placements for one type separated
+    by a typographic bullet, and two declarations that were simply false about this
+    repository's own files and had been for months. A field wrong for months is a field
+    nobody reads. It is a list of patterns now, the catalog sentence is generated from it, and
+    this is the only thing that reads it.
+
+    IT IS A WARNING AND THE REASON IS A LIMIT ON THE EVIDENCE. Measured over every fixture
+    here, no artifact sits anywhere its type does not describe -- which is zero out of
+    everything that can be observed, and not zero. There is one body of fixtures and it was
+    written by the same hand as the patterns. A project that legitimately keeps its artifacts
+    elsewhere annotates the findings in `.framework/expected-findings.yaml` with the reason
+    and what would end it, which is a door that did not exist when this check was first
+    proposed and is what makes it affordable now.
+    """
+    types = registry["types"]
+    exempt = sum(1 for spec in types.values() if spec.get("path_not_enforced"))
+    for a in arts:
+        spec = types.get(a.type or "")
+        if not spec or not spec.get("path") or spec.get("path_not_enforced"):
+            continue
+        rel = a.rel.replace("\\", "/")
+        where = as_list(spec["path"])
+        if any(placement_pattern(one).match(rel) for one in where):
+            continue
+        report.add("LOC001", a.rel,
+                   f"this declares `artifact_type: {a.type}`, and a {a.type} lives at "
+                   f"{' or '.join('`' + w + '`' for w in where)}. Being somewhere else is not "
+                   "a filing preference: the front matter is the half tools read, so this "
+                   "file is counted among the repository's artifacts, joined by every check "
+                   "that reads `products:` and `lifecycle:`, and listed in the derived view "
+                   "of the product it names. If it is the artifact, move it. If it is "
+                   "something derived from the artifact, the front matter is what makes it "
+                   "claim otherwise.")
+    return exempt
+
+
 def check_unanswerable(arts: list[Artifact], registry: dict, report: Report) -> int:
     """Fields a map entry declares it cannot answer, and how many there are.
 
@@ -3047,6 +3126,7 @@ def main() -> int:
     check_open_register(arts, report)
     check_manifest_derived_fields(arts, report)
     unanswerable = check_unanswerable(arts, registry, report)
+    unenforced = check_placement(arts, registry, report)
     check_register_halves(arts, registry, report)
     check_body_repeats_a_field(arts, registry, report)
     check_key_typos(arts, registry, report)
@@ -3132,6 +3212,14 @@ def main() -> int:
             # empty on purpose is invisible by construction, and the number is what tells a
             # reader whether this repository has any and whether the mechanism exists at all.
             "unanswerable": unanswerable,
+            # How many types the placement check does not run on. Always in the JSON and
+            # printed only when it is not zero, which is an asymmetry with the two counts
+            # above and a deliberate one: those are states a repository can put itself in, so
+            # a zero tells a reader the mechanism is there to use. This one is a statement the
+            # framework makes about its own registry, and a project can do nothing with it
+            # except know that the check has a hole. A zero there is a line of noise about
+            # somebody else's file.
+            "placement_not_enforced": unenforced,
             "generated": index_written, "out_of_date": index_stale,
             "hand_maintained": index_protected,
             "findings": [f.as_json() for f in report.findings],
@@ -3139,6 +3227,8 @@ def main() -> int:
     else:
         print(f"Artifacts scanned: {len(arts)}")
         print(f"Fields declared unanswerable: {unanswerable}")
+        if unenforced:
+            print(f"Artifact types whose placement is not enforced: {unenforced}")
         if index_written:
             print(f"Indices regenerated: {', '.join(index_written)}")
         for rel in index_stale:

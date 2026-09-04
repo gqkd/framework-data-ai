@@ -30,16 +30,16 @@ here.
 | **Which tool to use, and which not to** | `STACK.md`. A row with no `DEC` was never decided |
 | What shape it is going to have | `products/<p>/ARC.md#target` |
 | What is missing to get there | `products/<p>/ARC.md#delta`, ordered by `RMP.md` |
-| Why it is built that way | `decisions/DEC-NNN.md` |
+| Why it is built that way | `decisions/DEC-NNN-slug.md` |
 | What the product does and for whom | `products/<p>/PBR.md` |
 | What a term or a metric means | `GLOSSARY.md` |
-| What a piece of data guarantees | `products/<p>/contracts/DC-NNN.md` |
+| What a piece of data guarantees | `products/<p>/contracts/DC-NNN-slug.md` |
 | How to operate it in production | `products/<p>/RB.md` |
 | What was promised to a customer | `COMMITMENTS.md` |
 | **What is NOT decided, about the product you are on** | `products/<p>/OPEN.md`. One per product, and it is the one you read |
 | What is not decided about the shared substrate | `platform/OPEN.md` |
 | What is not decided above the products | `OPEN.md` at the root. Its `§5` is the generated union of all three, ordered by cost to reverse |
-| What you are authorized to build right now | `products/<p>/changes/CHG-NNN.md` |
+| What you are authorized to build right now | `products/<p>/changes/CHG-NNN-slug.md` |
 
 ## Non negotiable rules
 

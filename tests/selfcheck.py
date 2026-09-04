@@ -4061,6 +4061,116 @@ def _unanswerable_is_declared_and_guarded():
     return problems
 
 
+@check("every artifact sits where the registry says its type lives, and the patterns parse")
+def _placement_is_declared_and_true():
+    # THE INVARIANT THAT CATCHES THE CLASS INSTEAD OF THE INSTANCE, which is the rule this
+    # suite is written to. Two of the thirty placements were false about this repository's own
+    # files -- `CHG-NNN.md` and `DC-NNN.md`, while every real one carries a slug -- and they
+    # were false for months, because the field was read by one line of the generator and by
+    # nothing else. Writing the patterns out found twelve more of the same mistake.
+    #
+    # So what is asserted is not "those two are fixed", it is that no fixture artifact sits
+    # anywhere its type does not describe. That fails on the day somebody writes a placement
+    # that does not match the files, and it fails on the day somebody files a document
+    # somewhere new without saying so in the registry, which are the two directions the
+    # mistake arrives from.
+    v = _load(VALIDATE, "validate")
+    problems = []
+    for name, spec in sorted(REGISTRY["types"].items()):
+        where = spec.get("path")
+        if not isinstance(where, list) or not where:
+            problems.append(f"{name}: `path` is {where!r} and has to be a list of placements. "
+                            "As a string it was a sentence, and a sentence is what nothing "
+                            "could read")
+            continue
+        for one in where:
+            try:
+                v.placement_pattern(one)
+            except re.error as e:
+                problems.append(f"{name}: {one!r} does not compile as a placement: {e}")
+        if "path_not_enforced" in spec and not str(spec["path_not_enforced"]).strip():
+            problems.append(f"{name}: declares `path_not_enforced` with no reason. The point "
+                            "of the key is the reason: without it, it is the check switched "
+                            "off for one type and nothing saying why")
+
+    roots = sorted(p.parent for p in (ROOT / "evals" / "fixtures").rglob("AGENTS.md"))
+    if not roots:
+        return problems + ["no fixture roots found: the check is not running"]
+    seen = 0
+    for root in roots:
+        scan = v.load_scan(REGISTRY, v.load_project(root))
+        for a in v.discover(root, scan, REGISTRY, v.Report({})):
+            spec = REGISTRY["types"].get(a.type or "")
+            if not spec or not spec.get("path") or spec.get("path_not_enforced"):
+                continue
+            seen += 1
+            rel = a.rel.replace("\\", "/")
+            if not any(v.placement_pattern(one).match(rel) for one in spec["path"]):
+                problems.append(
+                    f"{root.name}/{rel}: a {a.type} sits where the registry does not say one "
+                    f"lives ({' or '.join(spec['path'])}). Either the file is misfiled or the "
+                    "placement is wrong, and the second is how this field came to be false "
+                    "about two types for months")
+    if seen < 100:
+        problems.append(f"only {seen} typed artifacts were examined: the fixtures are not "
+                        "built, so this ran against almost nothing")
+    return problems
+
+
+@check("a document that declares a type in the wrong place is reported, and an exempt type is not")
+def _misplaced_artifact_is_reported():
+    # The case, rebuilt: a derived planning document in a working directory, declaring
+    # `artifact_type: roadmap`, `living`, a product, and a `last_review` fresher than the real
+    # roadmap's. Everything about it validated. It was counted as an artifact and it came out
+    # first in the derived view of that product, because that list is ordered by path and a
+    # working directory sorts before `products/`.
+    v = _load(VALIDATE, "validate")
+    fm = lambda **kw: "---\n" + "\n".join(f"{k}: {v}" for k, v in kw.items()) + "\n---\n\n"
+    stray = fm(schema="framework/roadmap/v1", artifact_type="roadmap", lifecycle="living",
+               status="active", products="[alpha]", owners="[owner]", created="2026-01-01",
+               last_review="2026-01-01 09:00") + "# A draft derived from the real roadmap\n"
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        for rel, text in {
+            "framework.yaml": f"framework_version: {REGISTRY['version']}\n",
+            "products/alpha/RMP.md": stray,
+            "_work/planning/draft.md": stray,
+        }.items():
+            f = root / rel
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_text(text, encoding="utf-8")
+        r = subprocess.run([sys.executable, str(VALIDATE), "--root", tmp, "--json",
+                            "--stale-days", "36500"], capture_output=True, text=True)
+        if r.returncode not in (0, 1) or not r.stdout.strip():
+            return ["the validator crashed on a misplaced artifact"]
+        got = json.loads(r.stdout)
+    said = [f for f in got["findings"] if f["code"] == "LOC001"]
+    if len(said) != 1 or said[0]["path"] != "_work/planning/draft.md":
+        problems.append(f"the misplaced roadmap produced {len(said)} LOC001, and the one in "
+                        "`products/alpha/` must not be among them: a check that reports the "
+                        "correct file too is a check that gets switched off")
+    elif "roadmap" not in said[0]["message"]:
+        problems.append("the finding does not name the type, so a reader cannot tell which "
+                        "of the two claims about the file is the wrong one")
+
+    # A type the registry declares unenforceable is skipped, and counted rather than silent.
+    fake = {"types": {"roadmap": {**REGISTRY["types"]["roadmap"],
+                                  "path_not_enforced": "a reason"}}}
+    rep = v.Report({})
+    art = v.Artifact(Path("x"), "anywhere/else.md",
+                     {"artifact_type": "roadmap"}, "")
+    exempt = v.check_placement([art], fake, rep)
+    if rep.findings:
+        problems.append("a type declared `path_not_enforced` was still reported: the key is "
+                        "the framework saying it cannot write the pattern, and reporting "
+                        "anyway makes the declaration a comment")
+    if exempt != 1:
+        problems.append(f"the count of unenforced types came back {exempt}: the report says "
+                        "how many types the check does not run on, or the hole is invisible")
+    return problems
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 print()

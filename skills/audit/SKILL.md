@@ -164,6 +164,16 @@ Propose a diff and wait for everything else. In particular:
   the document stops being reported because it stopped being looked at, and unlike a
   severity there is no record in the report that anything was excluded. Adding `notebooks/`
   is configuration. Adding `products/` is the deletion of every finding inside it.
+- **Clear a `LOC001` by widening `scan`.** It is the entry above, arrived from a direction
+  that looks reasonable: the file is in a working directory, so excluding the directory seems
+  like configuration. It is not, and the finding is rarely about the place. A document sitting
+  outside its type's home while declaring that type is making a claim about itself, and the
+  question is which half is wrong. If it is the artifact, move it. If it is derived from the
+  artifact, the front matter is the wrong half: a draft that declares `artifact_type` and
+  `lifecycle: living` is counted, joined and listed in the product's derived view, above the
+  document it was derived from when its date is fresher. Removing `artifact_type` costs
+  nothing and is usually the honest repair. Excluding the directory hides a file that is
+  claiming to be something it is not, and the claim survives.
 - **Add a section marker without the section.** `SEC001` on a `CHG` usually means the
   document is genuinely missing "what must NOT change", which is the most expensive gap in
   the framework: an agent optimises what it was asked for and breaks what nobody named. The

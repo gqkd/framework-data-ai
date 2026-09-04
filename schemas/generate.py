@@ -414,7 +414,11 @@ def catalogs(registry: dict) -> dict[str, str]:
         "catalog-templates": catalog_table(
             registry, ["File", "Artifact", "Class", "Naming"],
             lambda s: f"| `{Path(s['template']).name}` | {s['name']} "
-                      f"| {artifact_class(s)} | `{s['path']}` |"),
+                      # `path` is a list of patterns now, and the catalog renders it as the
+                      # one sentence it used to be. That is the whole point of the change:
+                      # the prose is generated from the constraint instead of standing
+                      # beside it, so the two cannot say different things.
+                      f"| {artifact_class(s)} | `{' · '.join(s['path'])}` |"),
     }
 
 
