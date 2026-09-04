@@ -1617,15 +1617,40 @@ def body_ids(a: Artifact, spec: dict, prefixes: tuple[str, ...] = ()) -> set[str
             return None
         return mine(rows_of(body.split(marker, 1)[1].split("<!-- section:", 1)[0]))
 
-    # EITHER SHAPE, BECAUSE BOTH ARE WRITTEN. The templates give each entry a `### CMT-001 ·
-    # title` heading with the reasoning under it, and that is the shape this asks for; a
-    # register adopted from before the framework, or one written by somebody who preferred a
-    # table, puts the same ids in a first column. Both are the body saying the entry exists,
-    # and a check that recognised only one of them would report a register for its formatting
-    # while calling it a missing row.
-    headings = {m.group(1) for m in re.finditer(r"^#{2,4}\s+.*?\b([A-Z]{2,4}-\d{3,})\b",
-                                                body, re.M)}
-    return mine(headings | rows_of(body))
+    # EITHER SHAPE, BECAUSE BOTH ARE WRITTEN, AND THE SECOND IS AN ALTERNATIVE RATHER THAN AN
+    # ADDITION. The templates give each entry a `### CMT-001 · title` heading with the
+    # reasoning under it; a register adopted from before the framework, or one written by
+    # somebody who preferred a table, puts the same ids in a first column. Both are the body
+    # saying the entry exists, and a check that recognised only one would report a register
+    # for its formatting while calling it a missing row.
+    #
+    # SO THE TABLE IS READ ONLY WHERE THE HEADINGS SAY NOTHING. The sentence above was written
+    # about a register that has no headings, and it was applied as "read the tables too",
+    # which is wider than the case it was written for. What that cost: a register keeping a
+    # section to declare an identifier space retired from another repository -- a table
+    # mapping *there* to *here*, prefixes identical because the collision is between two
+    # repositories -- had those ids read as entries of its own, and the finding landed on the
+    # one section that exists to prevent the confusion the finding described. No prefix filter
+    # can separate them, because there is nothing textual to separate.
+    #
+    # WHAT IT COSTS, AND THE COST IS VISIBLE RATHER THAN SILENT. A register caught halfway
+    # through migrating from one shape to the other -- some entries already headings, the rest
+    # still rows -- loses the rows. They do not disappear: they come back as `REG015` saying
+    # they are in the map and nowhere in the body, which is a different finding that somebody
+    # reads. A cost that shows up as another finding is a cost somebody sees.
+    #
+    # EVERY ID IN THE HEADING AND NOT THE FIRST. `### OD-038 and OD-039 moved down to the
+    # product register` is one line declaring two entries, and taking the first made the
+    # composition of a finding depend on the order the prose happened to use. The price is the
+    # other direction: a heading that cites an entry rather than declaring one now counts as
+    # declaring it, and that is a silence. It is the narrower risk, because a register's
+    # headings name their own entry and citations live in the prose under them.
+    headings = set()
+    for line in body.splitlines():
+        if re.match(r"^#{2,4}\s", line):
+            headings |= set(id_in.findall(line))
+    headings = mine(headings)
+    return headings or mine(rows_of(body))
 
 
 def check_register_halves(arts: list[Artifact], registry: dict, report: Report) -> None:

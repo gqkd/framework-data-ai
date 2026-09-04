@@ -40,6 +40,7 @@ GENERATED = {
     "release": ("release.py", None),          # writes its own tree, six of them
     "platform": ("platform.py", "platform"),
     "review": ("review.py", "review/gap"),
+    "coherence": ("coherence.py", "coherence/contradiction"),
 }
 STATIC = {
     "resolve/ordering-a": "ordering-a",

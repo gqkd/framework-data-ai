@@ -52,6 +52,28 @@
 # for -- MAJOR is the answer to "do I have to do something", and the other two are the
 # answer to "no".
 #
+# ON A MIGRATION NOTE THAT PRESCRIBES A REPAIR, AND IT IS A RULE RATHER THAN A PREFERENCE.
+#
+#     A NOTE THAT PRESCRIBES A REPAIR NAMES THE CHECK THAT RECOGNISES THE REPAIR AS DONE.
+#     WHERE NO CHECK CAN, THE NOTE SAYS SO.
+#
+# Every other kind of prose in this repository is verified: a version is compared against the
+# registry, a count in prose against the fixture that produces it, a check code against the
+# catalog, a skill's flags against the scripts it ships, a phase against the table that
+# enumerates it. They have one thing in common, which is that they state a fact something else
+# already knows, so something else can contradict them.
+#
+# A prescription states a procedure, and that is knowledge existing nowhere else. Nothing could
+# contradict "the repair is a deletion", so it was wrong for one of the two shapes it addressed
+# from 3.0.0 until 3.5.2, and the only way anybody found out was a project doing the work and
+# noticing that the deletion would have destroyed an argument. Naming the check closes that: the
+# note then describes something the suite asserts, and the two cannot drift because one of them
+# is tested.
+#
+# It is the third time this discipline is written down, after `path_not_enforced` on a type and
+# `unanswerable` on a map field. At three it is a property of this model and not a habit: where
+# something cannot be checked, the thing that cannot be checked is declared rather than assumed.
+#
 #   MAJOR   a document that validated stops validating, or starts meaning something else:
 #           a new required field, a narrowed enum, a type removed, a check promoted to
 #           error. This is the one that asks a project to migrate.
@@ -450,6 +472,31 @@
 # and in its body table. The body keeps what the map does not hold -- the risk itself, the
 # mitigation, the owner, the words the promise was made in, who said it and what it would
 # take to build -- and nothing else.
+#
+# WHAT THE REPAIR IS, CORRECTED IN 3.5.2 AND WRONG UNTIL THEN. This note said the repair is a
+# deletion. That is true of the shape it was written against, a column of values under a
+# header, where dropping the column loses nothing because the map holds the value. It was
+# applied to a shape it was not written for: a register that writes one row per field, the
+# label on the left and prose on the right, where the right-hand cell begins with the map's
+# value and goes on to say something the map has no field for. Deleting that deletes an
+# argument. Counted in one commitments register: 68 cells, 38 the value alone, 27 the value
+# plus reasoning, 3 where the map's field is deliberately empty and the body carries the only
+# assessment there is.
+#
+# `REG016` DISTINGUISHES THE THREE NOW, AND THIS NOTE IS A DESCRIPTION OF WHAT IT REPORTS
+# RATHER THAN A SECOND STATEMENT OF THE RULE:
+#
+#   the label and the value    the body names the field and carries what the map holds. This
+#                              is the deletion, and it is the only one.
+#   the label alone            the body names the field and writes something else underneath.
+#                              Two claims, not one repeated. Which is true is not decidable by
+#                              any check: decide, then delete one.
+#   the value alone            the body carries the value under a name the check cannot
+#                              recognise. Same duplication, and the finding carries the lines
+#                              because nothing else will find them.
+#
+# The third case of the count above, a map field left empty on purpose, has had a declared form
+# since 3.2.0: `unanswerable`, with the reason and the event that would settle it.
 #
 # NOT A CHECK THAT THE TWO HALVES AGREE, WHICH IS WHAT WAS PROPOSED AND IS THE WRONG REPAIR.
 # The framework's own rule is that a fact has one authoritative place; a check comparing two
@@ -929,6 +976,11 @@ version: "3.5.1"
 # an omitted `feasibility` makes a promise look unexamined rather than unexaminable. The
 # careless answer is worse and more likely: pick the nearest value, and the register now says
 # something false that nothing will ever contradict.
+#
+# AND THE SAME DISCIPLINE ONE STEP OUT, WHICH IS WRITTEN WHERE A CHECK IS ADDED RATHER THAN
+# HERE: write down which case a rule is for, because the way it is expressed will be read as
+# its scope. `skip_dirs` and `sections` are the two instances of it that live in this file. The
+# list of seven is in the preamble of `skills/audit/checks.yaml`.
 #
 # So when adding or reviewing a vocabulary here: write down what the answer is on the day the
 # question is first asked, before anybody has done the work. If that answer is not in the

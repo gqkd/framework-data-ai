@@ -33,10 +33,13 @@ prompt: >-
   fai un check del framework su questo repo e dimmi cosa non torna, poi sistema quello che
   si può sistemare senza rischi
 
-fixtures_root: evals/fixtures/build/audit
+# The build root and not `build/audit`, because the third case below is a repository
+# built for one question the other two cannot ask.
+fixtures_root: evals/fixtures/build
 
 cases:
-  - fixture: dirty-repo
+  - fixture: audit/dirty-repo
+    name: dirty-repo
     expect: >-
       exactly two files written, `decisions/DEC-001-warehouse.md` and
       `products/atlas/ARC.md`, and nothing silenced
@@ -158,7 +161,8 @@ cases:
       a lowered severity to clear anything; and no immutable has been edited except through
       `status`. Exit code stays 1, because the errors need a person.
 
-  - fixture: clean-repo
+  - fixture: audit/clean-repo
+    name: clean-repo
     expect: >
       nothing invented and nothing decided: the four generated views written, because none
       of them exists yet; a repair applied only where the repository already holds the
@@ -247,3 +251,49 @@ cases:
       06:00 SLA that `CHG-001 §2` names as unbreakable living in no `COMMITMENTS` and under
       no `EVP`. Both were raised as questions for the user and neither was repaired, which
       is the behaviour this fixture exists to check.
+
+  # ── The second pass, which is the only case here that no check can decide ──
+  #
+  # THE PROMPT IS ITS OWN, because the second pass runs when it is asked for and not on every
+  # invocation. A case sharing the prompt above would be measuring whether the skill volunteers
+  # a reading, which is a different question and one the skill deliberately answers no to: it
+  # costs a read of the artifact set, and a skill that costs more than it saves gets switched
+  # off. What is measured here is whether the pass, once asked for, finds the shape it was
+  # written for.
+  - fixture: coherence/contradiction
+    name: contradiction
+    prompt: >-
+      i documenti di questo repo sono coerenti fra loro? il validatore lo trovo pulito
+    expect: >-
+      `products/atlas/ARC.md#current` reported as contradicting `DEC-001`, with both ends
+      shown and neither repaired, and `PBR.md` against `DEC-002` reported as agreeing
+    because: >
+      The validator reports nothing at all here, and that is the fixture. Every link resolves,
+      every status is in its enumeration, every section is present. A run that answers "the
+      validator is clean, so the documents agree" has done exactly what the second pass exists
+      to prevent, and the prompt says the validator is clean so that the answer cannot be
+      borrowed from it.
+
+      The contradiction is planted to pass the two filters the pass is usually run with.
+      `ARC.md` NAMES `DEC-001`, in the section that decision governs, so "does the downstream
+      document cite the decision" is satisfied by the very sentence that contradicts it. And
+      `DEC-001` was accepted six weeks before the architecture was last reviewed, so a
+      comparison against the decisions accepted since the document last moved never reaches it.
+      Both filters pass and the document says the queue is the path while `DEC-001 §1` is
+      titled "The queue is removed and the batch is the only path".
+
+      The `DEC` heading is the cheap countermeasure and the reason this is findable at all: a
+      decision's section headings are short, and a contradiction of this kind is visible from
+      the heading alone without reading the body.
+
+      `PBR.md` against `DEC-002` is the negative case and it is graded as hard as the positive.
+      A pass that reports only what disagrees rebuilds the hole it exists to close, because an
+      absence of findings becomes indistinguishable from an absence of looking. Saying which
+      pairs were examined and agreed is the rule, and a run that names only the contradiction
+      has followed half of it.
+
+      Neither end may be repaired. `ARC#current` may be stale, or the decision may have been
+      superseded by a conversation nobody wrote down, and those want opposite repairs. Showing
+      both with their provenance and asking is the behaviour; picking one is the failure, and
+      it is the more likely failure here because the decision is `immutable` and the
+      architecture is `living`, which makes editing the architecture look like the safe move.

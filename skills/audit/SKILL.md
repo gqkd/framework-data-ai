@@ -310,6 +310,32 @@ if the indices are stale, the enumeration you are about to build from them is st
 | `OPEN.md` open entries → the accepted `DEC` set | is a question still listed as open that a decision already answers. `REG002` catches this only when the `DEC` names the entry in `derives_from`, which is the minority of the cases: the rest are here |
 | each register → the product whose directory it sits in | is every entry actually about that product. `REG008` catches the ones that declare another product; the ones that declare nothing and are still misfiled are here, and they are the common shape — an entry written while working on one product and filed where the session happened to be |
 
+### The way this pass fails, which is not by missing a pair
+
+Two filters make the enumeration affordable, and both are worth having: **does the downstream
+document name the decision**, which is cheap and finds absence, and **what has been accepted
+since this document last moved**, which bounds the reading. A document that **names a decision
+and contradicts it passes both**. The citation resolves, so the first is satisfied by the very
+sentence that contradicts it; and if the contradiction is older than the window, the second
+never looks at it.
+
+It is not hypothetical. A platform architecture carried a paragraph listing five choices as
+deliberately left outside two decisions, and one of the five was decided by one of those two
+decisions in its own first section. The document cited, in the same sentence, the decision that
+contradicted it. It stood for thirteen days, through a coherence pass run inside that window.
+
+**The countermeasure is cheap and it is where to spend the reading.** For each accepted decision
+whose scope maps to a document, read that decision's **section headings** against what the
+downstream document says about the same subject. A decision's `§` headings are one line each and
+state what was decided, so a contradiction of this kind is visible from the heading alone,
+without reading either body. Naming the decision is not evidence of agreeing with it, and that
+is the sentence to carry into the pass.
+
+`evals/behaviour/audit/cases.yaml` carries a repository built for exactly this shape, where the
+validator reports nothing at all and one document cites a decision and describes the arrangement
+that decision removed. It runs only by hand, because the eval suite needs a model and is not in
+CI, and it is the only thing that measures whether this section works.
+
 ### The three rules of this pass
 
 **It proposes, it never applies.** A structural finding can sometimes be repaired by

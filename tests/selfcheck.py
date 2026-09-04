@@ -4407,6 +4407,70 @@ def _review_gap():
     return problems
 
 
+@check("a table in a register that argues in headings is not read as its entries")
+def _tables_are_the_other_shape():
+    # "A register adopted from before the framework, or one written by somebody who preferred a
+    # table, puts the same ids in a first column" was written about a register that has no
+    # headings, and was applied as "read the tables too". What that cost: a register keeping a
+    # section to declare an identifier space retired from another repository had those ids read
+    # as its own, and the finding landed on the one section written to prevent exactly the
+    # confusion the finding described. The prefixes are identical, because the collision is
+    # between two repositories, so no filter could have separated them.
+    fm = lambda **kw: "---\n" + "\n".join(f"{k}: {v}" for k, v in kw.items()) + "\n---\n\n"
+    head = fm(schema="framework/open-register/v1", artifact_type="open-register",
+              lifecycle="living", status="active", owners="[owner]", created="2026-01-01 09:00",
+              last_review="2026-01-01 09:00",
+              entries="\n  OD-011:\n    status: open\n    cost_to_reverse: low\n"
+                      "    products: [all]\n    default_in_force: nothing is scheduled\n")
+
+    def codes(body: str, entries: str | None = None) -> set[str] | None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "framework.yaml").write_text(f"framework_version: {REGISTRY['version']}\n")
+            (root / "OPEN.md").write_text((entries or head) + body, encoding="utf-8")
+            r = subprocess.run([sys.executable, str(VALIDATE), "--root", tmp, "--json",
+                                "--stale-days", "36500"], capture_output=True, text=True)
+            if r.returncode not in (0, 1) or not r.stdout.strip():
+                return None
+            return {f["code"] for f in json.loads(r.stdout)["findings"]}
+
+    retired = ("# Open\n\n### OD-011 - the one open question here\n\n"
+               "## The retired register\n\n"
+               "The identifiers below are not this file's.\n\n"
+               "| There | Here |\n|---|---|\n| OD-001 | OD-011 |\n| OD-002 | none |\n")
+    problems = []
+    got = codes(retired)
+    if got is None:
+        return ["the validator crashed on a register carrying a retired identifier space"]
+    if "REG015" in got:
+        problems.append("the retired table was read as this register's entries. The headings "
+                        "already said what the entries are, so the table is the other shape "
+                        "and not a second source")
+
+    # And the shape the table harvest exists for still works: a register with no headings at
+    # all keeps its rows read, or a register that argues in tables reports every row as missing.
+    rows_only = ("# Open\n\n| ID | Question |\n|---|---|\n"
+                 "| OD-011 | the one open question here |\n")
+    got = codes(rows_only)
+    if got is None or "REG015" in got:
+        problems.append("a register that argues in tables and has no headings stopped being "
+                        "read. The fallback is the whole reason the table shape is recognised: "
+                        "without it such a register is reported for its formatting")
+
+    # Every id in a heading, not the first: an entry moved down to a product register leaves a
+    # line naming two, and taking the first made a finding depend on the order of the prose.
+    two = fm(schema="framework/open-register/v1", artifact_type="open-register",
+             lifecycle="living", status="active", owners="[owner]", created="2026-01-01 09:00",
+             last_review="2026-01-01 09:00",
+             entries="\n  OD-038:\n    status: open\n    products: [all]\n"
+                     "  OD-039:\n    status: open\n    products: [all]\n")
+    got = codes("# Open\n\n### OD-038 and OD-039 moved down to the product register\n", two)
+    if got is None or "REG015" in got:
+        problems.append("a heading naming two entries declared only one of them, so which of "
+                        "the two is reported depends on the order somebody wrote them in")
+    return problems
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 print()

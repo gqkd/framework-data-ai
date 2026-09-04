@@ -25,6 +25,40 @@
 # repository to finish answering, twenty entries left `§5` reading "Nothing open". Nothing
 # looked wrong. The register was right and the check was satisfied.
 #
+# AND THE SECOND QUESTION, WHICH HAS SEVEN INSTANCES IN THIS REPOSITORY'S OWN HISTORY.
+#
+#     WRITE DOWN WHICH CASE THE RULE IS FOR, BECAUSE THE WAY YOU EXPRESS IT WILL BE READ AS
+#     ITS SCOPE.
+#
+# A rule gets written for a case, correctly. It gets expressed in terms wider than the case --
+# a type name, a bare directory name, a pattern, a field -- and from then on it applies where
+# it is false, and nobody wrote down what the case was. Every one of these was found by a
+# repository meeting it, and every repair was the same: narrow the expression to the case, and
+# say the case out loud.
+#
+#   `REF006`      right for a commercial risk that is about a promise, applied to every
+#                 commercial exposure, "which is false of every commercial risk that is not a
+#                 promise". The cheapest way to silence it was a category that was untrue.
+#   `ICG` §3      right for a promise still standing, applied to every `CMT` row: "which is
+#                 right and was unscoped: it said `CMT` and not a promise still standing".
+#   `skip_dirs`   right for `corpus`, which means the same thing wherever it turns up, applied
+#                 to every bare name, and `extract` would have silently excluded the extraction
+#                 step of every ETL project keeping one.
+#   `REF005`      right for a citation in prose, applied inside a table cell where the match
+#                 ran to the end of the row.
+#   `PR001`       right for a written `no-chg:` exemption, applied to an example of one, which
+#                 the pull request template shipped inside a comment. The gate was off in every
+#                 repository using the template it comes with.
+#   `FW003`       right for a full clone, where an absent commit is a pin that was never true,
+#                 applied to a shallow one where almost everything is absent.
+#   `sections`    right for the headings of the day it was written, which were Italian, applied
+#                 to every heading, and the translation would have left every section check
+#                 matching nothing at all and saying nothing about it.
+#
+# One of the seven is already an assertion: `tests/selfcheck.py` carries "an exclusion names a
+# path when a bare name would be too blunt". The shape had been recognised once and never
+# written down, which is why it went on happening.
+#
 # The question is mechanical and the answer is almost always in the same two places:
 # `--emit-index`, which composes the registers into the views, and the skills, which tell an
 # agent what a field means. Grep the state, not the check. And the invariant that catches
