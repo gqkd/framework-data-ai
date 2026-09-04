@@ -15,11 +15,13 @@ just broken something.
 
 from __future__ import annotations
 
+import atexit
 import collections
 import importlib.util
 import io
 import json
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -54,6 +56,54 @@ def _load(path: Path, name: str):
 
 
 GENERATED_MARK = _load(VALIDATE, "validate").GENERATED_MARK
+
+# HOW A CHECK GETS THE FIXTURES IT NEEDS, AND WHY IT DOES NOT JUST READ THEM OFF DISK.
+# `evals/fixtures/build/` is generated output and is gitignored, so in a fresh checkout it does
+# not exist -- and a fresh checkout is exactly what CI is. Four checks written against that
+# directory measured nothing there and said so in their own words, which is the worse of the
+# two available failures: a suite that reports "the fixtures are not built" reads as a
+# configuration problem rather than as the assertion having stopped running.
+#
+# So a check builds what it needs, once per run, into a temporary tree. The map of which
+# generator writes where is read out of `make.py` rather than restated, for the reason
+# everything else here is read rather than restated.
+_MAKE = _load(ROOT / "evals" / "fixtures" / "make.py", "make")
+_BUILT: dict[str, Path] = {}
+_BUILD_DIR: list[Path] = []
+
+
+def built(name: str) -> Path | None:
+    """One generated fixture, built into a temporary tree that lives as long as the run."""
+    if name in _BUILT:
+        return _BUILT[name]
+    spec = _MAKE.GENERATED.get(name)
+    if spec is None:
+        return None
+    if not _BUILD_DIR:
+        d = Path(tempfile.mkdtemp(prefix="selfcheck-fixtures-"))
+        _BUILD_DIR.append(d)
+        atexit.register(shutil.rmtree, str(d), True)
+    script, dest = spec
+    target = _BUILD_DIR[0] / (dest or name)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    r = subprocess.run([sys.executable,
+                        str(ROOT / "evals" / "fixtures" / "generators" / script), str(target)],
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        return None
+    _BUILT[name] = target
+    return target
+
+
+def corpus() -> list[Path]:
+    """Every fixture repository there is: the generated ones, built, and the static ones."""
+    roots: list[Path] = []
+    for name in _MAKE.GENERATED:
+        target = built(name)
+        if target:
+            roots += [p.parent for p in target.rglob("AGENTS.md")]
+    roots += [p.parent for p in (ROOT / "evals" / "fixtures" / "static").rglob("AGENTS.md")]
+    return sorted(roots)
 
 failures: list[str] = []
 
@@ -4093,9 +4143,9 @@ def _placement_is_declared_and_true():
                             "of the key is the reason: without it, it is the check switched "
                             "off for one type and nothing saying why")
 
-    roots = sorted(p.parent for p in (ROOT / "evals" / "fixtures").rglob("AGENTS.md"))
+    roots = corpus()
     if not roots:
-        return problems + ["no fixture roots found: the check is not running"]
+        return problems + ["no fixture roots could be built: the check is not running"]
     seen = 0
     for root in roots:
         scan = v.load_scan(REGISTRY, v.load_project(root))
@@ -4193,7 +4243,7 @@ def _reg016_looks_twice():
     # finds a column headed `To whom` whose cells are the `to:` of the map verbatim, which no
     # vocabulary of field names can recognise because the label is a paraphrase. Drop either
     # half and one of those two goes silent, in English, with nobody the wiser.
-    roots = sorted(p.parent for p in (ROOT / "evals" / "fixtures").rglob("AGENTS.md"))
+    roots = corpus()
     kinds = collections.Counter()
     for root in roots:
         for f in _reg016(root):
@@ -4224,9 +4274,9 @@ def _reg016_does_not_need_english():
     # the labels are in another language, and the residue stays a residue. A sentence restating
     # a likelihood in Italian words is found by neither mechanism, which is written in the
     # catalog as a limit and has to stay true or the limit is a guess.
-    root = ROOT / "evals" / "fixtures" / "build" / "requirement" / "seed"
-    if not root.is_dir():
-        return ["the requirement fixture is not built"]
+    root = built("requirement")
+    if root is None:
+        return ["the requirement fixture would not build"]
     found = _reg016(root)
     problems = []
     if not found:
@@ -4300,9 +4350,9 @@ def _review_gap():
     # `review/gap` plants three commits that can each be said in a sentence, and the three
     # properties are asserted here rather than in the shape of the fixture: the import is not a
     # change, the reading is not a change, and a change that was never read is.
-    root = ROOT / "evals" / "fixtures" / "build" / "review" / "gap"
-    if not root.is_dir():
-        return ["the review fixture is not built"]
+    root = built("review")
+    if root is None:
+        return ["the review fixture would not build"]
     r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(root), "--json",
                         "--stale-days", "36500"], capture_output=True, text=True)
     if r.returncode not in (0, 1) or not r.stdout.strip():

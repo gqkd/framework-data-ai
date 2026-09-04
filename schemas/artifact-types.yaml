@@ -900,7 +900,21 @@
 # zero on every fixture in this repository before the bench existed, two on the bench by
 # construction, and no honest number for a real repository until this runs against one nobody
 # here wrote.
-version: "3.5.0"
+# 3.5.0 -> 3.5.1. Four checks in `tests/selfcheck.py` read `evals/fixtures/build/`, which is
+# generated output and gitignored, so in a fresh checkout it does not exist. A fresh checkout is
+# what CI is. A fixture, so a PATCH: no rule moved and no document changes.
+#
+# WHAT THAT COST, AND IT IS THE WORSE OF THE TWO AVAILABLE FAILURES. The checks did not pass
+# quietly: they reported "the fixtures are not built", which reads as a configuration problem
+# and not as four assertions having stopped running. The three that arrived in 3.3.0 and 3.4.0
+# have therefore never run outside a working tree that happened to have the fixtures on disk,
+# which is the state this suite exists to make impossible for everybody else.
+#
+# A check builds what it needs now, once per run, into a temporary tree, and the map of which
+# generator writes where is read out of `make.py` rather than restated. Found by moving the
+# build directory aside and running the suite, which is the cheapest possible imitation of CI
+# and was not being done.
+version: "3.5.1"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of
