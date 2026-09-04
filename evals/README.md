@@ -143,7 +143,7 @@ against the same version and the same built fixtures.
 Three rows landed at 14:34 on 08-31 and five at 19:12, and the fixture migration for `REG016`
 rebuilt the repositories at 19:04:32 -- so the first three were re-run at 19:26 and the whole
 table is on one fixture state. Across the two versions the rows span, 3.0.1 and 3.0.2, the
-front matter of all seven skills is byte-identical -- the sha256 of the concatenated set
+front matter of every skill is byte-identical -- the sha256 of the concatenated set
 matches -- the only change under `.claude-plugin/` is the version string, and the CLI reports
 the same always-on cost, ~2,271 tokens, on both. The other two changed files, `checks.yaml` and
 `validate.py`, are read on invocation and never in session.

@@ -1074,7 +1074,29 @@
 # carry their cases and the repository is neither. With it, in one place rather than repeated:
 # several checks report nothing on every fixture here, and that is zero out of everything
 # observable rather than zero.
-version: "3.6.2"
+# 3.6.2 -> 3.6.3. Quante sono le skill smette di essere un numero scritto a mano. PATCH: una
+# riga generata, nessuna regola si muove.
+#
+# It was in five places and a sixth had said six since the seventh skill arrived in 2.8.11.
+# That is the arithmetic of a number nobody derives: five copies, one divergence, and nothing
+# that could have reported it. The four that did not need a number stopped carrying one, and the
+# two where a reader wants it are generated, so there is no copy left to diverge from.
+# `generate.py --check` reports drift there the way it reports the tables, which the self check
+# runs, so falsifying the number by hand now fails in CI.
+#
+# THE REPAIR IS THE SHAPE AND NOT THE NUMBER. Correcting five copies would have left five copies.
+# What was wrong was that a number derivable by listing a directory was being remembered, and the
+# only repair that does not invite being repeated in six months is the one that removes the
+# remembering. Two of the four corrections in 3.6.1 were made the same way, for the same reason.
+#
+# The other three rows of that reading stay in the issue with their reasons: "one file, three
+# sections" is a count nobody reads as one, so the risk is real and the evidence that it has
+# happened is not there; the eval case counts are already asserted for the table, so half the
+# work is done and the other half is worth less. A fourth was added to it that is not a number at
+# all and is the same family: a positional cross-reference inside a document, "the register that
+# does not follow rule 2", which broke in 3.6.2 when an item was inserted above it and was caught
+# by reading a diff rather than by any check.
+version: "3.6.3"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of
