@@ -2555,11 +2555,26 @@ def check_cross_product(arts: list[Artifact], report: Report) -> None:
 
     # A PRODUCT MAY NOT BE CALLED BY A WORD THAT ANSWERS A QUESTION ABOUT PRODUCTS. `all` and
     # `none` are reserved in `products:`, and a product carrying either name makes every use
-    # of the field ambiguous in a way no reader can see: `products: [all]` would be at once
-    # "the whole suite" and "that one product there". Reported at `warn` and not `error`
+    # of the field ambiguous in a way no reader can see. Reported at `warn` and not `error`
     # deliberately -- a repository that has such a product today validates and goes on
     # validating, and turning a name into an illegal state is a migration nobody asked for
     # in exchange for a collision nobody has had.
+    #
+    # WHICH PUTS THE WHOLE WEIGHT ON THE MESSAGE, so the message says what it costs rather
+    # than that the name is reserved. Measured on a repository with a product called `none`
+    # and a root entry naming it: the product gets no heading at all in the generated union,
+    # and its own `open_decisions` comes back empty while the entry that named it is filed
+    # under the entries that bind nothing. A warning whose damage is a silent disappearance
+    # has to say so, or somebody reads "reserved word", decides the name is fine here, and
+    # never connects the missing section to it.
+    consequence = {
+        ALL_PRODUCTS: "every entry naming it binds the whole suite instead of this product, "
+                      "so it collects what was never meant for it",
+        NO_PRODUCTS: "every entry naming it is read as binding no product at all: it gets "
+                     "no heading in the generated union, and its own `open_decisions` "
+                     "comes back empty while those entries are filed under the ones that "
+                     "bind nothing",
+    }
     for a in arts:
         if a.type != "product-manifest":
             continue
@@ -2569,9 +2584,9 @@ def check_cross_product(arts: list[Artifact], report: Report) -> None:
                            f"this product is called {name!r}, which is a reserved word in "
                            f"`products:`: `[{ALL_PRODUCTS}]` means every product and "
                            f"`[{NO_PRODUCTS}]` means the subject is not a product at all. "
-                           "While a product carries one of those names, every field naming "
-                           "it says two things and no check can tell which was meant. "
-                           "Rename the product.")
+                           f"What that costs here, and it is not only ambiguity: "
+                           f"{consequence[name]}. No check can tell the two readings apart, "
+                           "because both are legal. Rename the product.")
 
     glossaries = [a for a in arts if a.type == "glossary"]
     if len(glossaries) > 1:

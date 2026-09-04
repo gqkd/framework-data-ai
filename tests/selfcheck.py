@@ -3961,9 +3961,19 @@ def _binds_no_product():
         lifecycle="living", status="active", products="[none]", owners="[owner]",
         created="2026-01-01", last_review="2026-01-01 09:00",
         stage="\n  phase: F4\n  since: 2026-01-01")})[0]
-    if named is None or not [f for f in named["findings"] if f["code"] == "XP008"]:
+    said = [f for f in (named or {}).get("findings", []) if f["code"] == "XP008"]
+    if named is None or not said:
         problems.append("a product actually called `none` was not reported, so every "
                         "`products:` naming it says two things and nothing says which")
+    elif "open_decisions" not in said[0]["message"]:
+        # The check is `warn`, so the message carries the whole weight. What it costs is a
+        # silent disappearance -- no heading in the generated union, an empty derived view --
+        # and a warning that says only "reserved word" gets read as a naming preference by
+        # somebody who then never connects the missing section to it.
+        problems.append("XP008 says the name is reserved and not what it costs. A warning "
+                        "whose damage is a product vanishing from the composed view has to "
+                        "name the damage: whoever reads it is deciding what ignoring it "
+                        "costs them")
     return problems
 
 

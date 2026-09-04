@@ -723,7 +723,19 @@
 # it is decoration. What does not end is saying so: the path stops being read and does not
 # stop being reported, because a file sitting there doing nothing is exactly the state that
 # gets discovered six months later. The one repository that ever needed the old path is gone.
-version: "3.2.0"
+# 3.2.0 -> 3.2.1. `XP008` says what it costs instead of saying that the name is reserved. A
+# message, so a PATCH: no check arrives, no field moves, no document changes.
+#
+# The check is `warn` by a deliberate choice -- a repository with a product called `all` or
+# `none` validates today and turning a name into an illegal state is a migration asked for in
+# exchange for a collision nobody has had -- and that choice puts the whole weight on the
+# sentence. Measured on a repository with a product called `none` and a root entry naming it:
+# the product gets no heading at all in the generated union, and its own `open_decisions`
+# comes back empty while the entry that named it is filed under the ones that bind nothing.
+# That is a silent disappearance, not an ambiguity, and the first message said "reserved
+# word" and stopped. Somebody reading it decides whether the name is worth keeping, and they
+# cannot decide that from a fact about vocabulary.
+version: "3.2.1"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of
