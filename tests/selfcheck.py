@@ -4471,6 +4471,86 @@ def _tables_are_the_other_shape():
     return problems
 
 
+@check("a document filed under one product and declaring another is reported, once")
+def _product_of_the_directory():
+    # `REG008` written for a document instead of for an entry. It is a code of its own and not
+    # that one widened, because an annotation covers every finding sharing `(code, path)`
+    # including ones that arrive later: growing `REG008` with a class nobody had in mind when
+    # they annotated it would make those born explained by a reason about something else.
+    root = built("cycle")
+    if root is None:
+        return ["the cycle fixture would not build"]
+    stray = (root / "products" / "atlas" / "RMP.md").read_text(encoding="utf-8")
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        work = Path(tmp) / "repo"
+        shutil.copytree(root, work)
+        (work / "products" / "beta").mkdir(parents=True, exist_ok=True)
+        (work / "products" / "beta" / "RMP.md").write_text(stray, encoding="utf-8")
+        r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(work), "--json",
+                            "--stale-days", "36500"], capture_output=True, text=True)
+        if r.returncode not in (0, 1) or not r.stdout.strip():
+            return ["the validator crashed on a misfiled artifact"]
+        found = [f for f in json.loads(r.stdout)["findings"] if f["code"] == "LOC002"]
+    if len(found) != 1 or found[0]["path"] != "products/beta/RMP.md":
+        problems.append(f"a roadmap under one product declaring another produced "
+                        f"{[f['path'] for f in found]}: one finding, on the misfiled file")
+    elif "beta" not in found[0]["message"] or "atlas" not in found[0]["message"]:
+        problems.append("the finding does not name both the directory and the field, so a "
+                        "reader cannot see which two statements disagree")
+    if built("review") and [f for f in found if f["code"] != "LOC002"]:
+        problems.append("something else was reported as well")
+    return problems
+
+
+@check("a change set that edits a living document without rereading it is one finding, not thirty")
+def _change_set_review():
+    # `LC006` measures the state; this stops it being reached, at the moment the edit is
+    # proposed and addressed to whoever made it. One finding for the change set, because a
+    # migration touches thirty documents and thirty findings on the pull request with the best
+    # reason to exist is a wall in the worst place. And `LC006` goes quiet about what this
+    # names, or the same document is reported twice on one run.
+    root = built("review")
+    if root is None:
+        return ["the review fixture would not build"]
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        listing = Path(tmp) / "changed.txt"
+        listing.write_text("products/atlas/PBR.md\n"
+                           "products/atlas/contracts/DC-001-orders.md\n", encoding="utf-8")
+        r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(root), "--json",
+                            "--stale-days", "36500", "--changed-files", str(listing)],
+                           capture_output=True, text=True)
+        if r.returncode not in (0, 1) or not r.stdout.strip():
+            return ["the validator crashed with a change set"]
+        out = json.loads(r.stdout)
+    pr = [f for f in out["findings"] if f["code"] == "PR005"]
+    lc = [f for f in out["findings"] if f["code"] == "LC006"]
+    if len(pr) != 1:
+        problems.append(f"a change set touching two unreread documents produced {len(pr)} "
+                        "PR005: it is one finding for the change set, whatever the count")
+    elif not all(n in pr[0]["message"] for n in ("PBR.md", "DC-001-orders.md")):
+        problems.append("the finding does not name the documents, so it says a number and "
+                        "sends nobody anywhere")
+    if lc:
+        problems.append(f"LC006 also reported {[f['path'] for f in lc]}. A document the change "
+                        "set touches belongs to PR005 alone, or the pull request carries the "
+                        "same document twice")
+    # And without the flag it stays silent, like every other check in its family.
+    r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(root), "--json",
+                        "--stale-days", "36500"], capture_output=True, text=True)
+    if r.returncode in (0, 1) and r.stdout.strip():
+        out = json.loads(r.stdout)
+        if [f for f in out["findings"] if f["code"] == "PR005"]:
+            problems.append("PR005 fired without a change set. It cannot know what a change "
+                            "set touched without being told, and a check that guesses at that "
+                            "reports every document in the repository")
+        if len([f for f in out["findings"] if f["code"] == "LC006"]) != 2:
+            problems.append("without the flag LC006 no longer reports both documents, so the "
+                            "suppression is leaking into runs that have no change set")
+    return problems
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 print()

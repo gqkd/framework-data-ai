@@ -974,7 +974,8 @@ def _history(root: Path) -> tuple[dict[str, list[tuple[str, str]]], str] | None:
     return {p: (v, counts[p]) for p, v in seen.items()}, prefix
 
 
-def check_review_gap(arts: list[Artifact], root: Path, report: Report) -> int:
+def check_review_gap(arts: list[Artifact], root: Path, report: Report,
+                     changed: set[str] | None = None) -> tuple[int, list]:
     """A living document changed after the instant it says somebody read it.
 
     `LC002` measures elapsed time and can only ever guess when truth decays. `LC005` catches
@@ -1016,10 +1017,10 @@ def check_review_gap(arts: list[Artifact], root: Path, report: Report) -> int:
     living = [a for a in arts if a.meta.get("lifecycle") == "living"
               and parse_moment(a.meta.get("last_review")) is not None]
     if not living:
-        return 0
+        return 0, []
     read = _history(root)
     if read is None:
-        return 0                         # no history to ask: unverifiable is not violated
+        return 0, []                     # no history to ask: unverifiable is not violated
     history, prefix = read
 
     dirty = set()
@@ -1052,27 +1053,82 @@ def check_review_gap(arts: list[Artifact], root: Path, report: Report) -> int:
                 why = (" That commit moved `last_review` and changed something else as well, "
                        "so it counts: recording a reading is not a modification, and this was "
                        "both.")
-        changed = parse_moment(when.split("+")[0].split("Z")[0].replace("T", " ")[:16])
+        # Named apart from the `changed` parameter, which is the change set. They collided:
+        # the local overwrote the argument on the first document, and every later test of
+        # membership ran against a datetime.
+        moved = parse_moment(when.split("+")[0].split("Z")[0].replace("T", " ")[:16])
         attested = parse_moment(a.meta.get("last_review"))
-        if changed is None or attested is None or changed <= attested:
+        if moved is None or attested is None or moved <= attested:
             continue
-        found.append(((changed - attested), a, sha, changed, why))
+        found.append(((moved - attested), a, sha, moved, why))
 
     # BY GAP AND NOT BY PATH. The lesson is one version old: a document came out first in a
     # generated view because its directory sorted before the others, and being first was read
     # as being foremost. An ordering that carries no meaning will be read as though it did.
-    for gap, a, sha, changed, why in sorted(found, key=lambda x: x[0], reverse=True):
-        days, rest = gap.days, gap.seconds // 60
-        size = (f"{days} day(s)" if days else f"{rest // 60}h {rest % 60}m" if rest >= 60
-                else f"{rest} minute(s)")
+    #
+    # A DOCUMENT THE CHANGE SET TOUCHES IS `PR005`'S AND NOT THIS ONE'S. Both would be true
+    # and they are addressed to different readers: this one to whoever is auditing a
+    # repository, that one to whoever is proposing the change, in one finding rather than
+    # thirty. Reporting both would put the same document twice on the pull request that has
+    # the best reason to exist.
+    found.sort(key=lambda x: x[0], reverse=True)
+    for gap, a, sha, when_changed, why in found:
+        if changed is not None and a.rel.replace("\\", "/") in changed:
+            continue
+        size = _gap_size(gap)
         report.add("LC006", a.rel,
                    f"last changed {size} after the instant it attests: `last_review` says "
                    f"{a.meta.get('last_review')} and commit {sha[:12]} touched it on "
-                   f"{changed:%Y-%m-%d %H:%M}. Whatever changed in between is text nobody has "
+                   f"{when_changed:%Y-%m-%d %H:%M}. Whatever changed in between is text nobody has "
                    f"said is still true. `LC002` is quiet because the date is recent and "
                    f"`LC005` because the instant is unique; this is the same claim examined "
                    f"from the side a date cannot show.{why}")
-    return len(dirty & {a.rel.replace("\\", "/") for a in living})
+    return len(dirty & {a.rel.replace("\\", "/") for a in living}), found
+
+
+def _gap_size(gap) -> str:
+    days, rest = gap.days, gap.seconds // 60
+    return (f"{days} day(s)" if days else f"{rest // 60}h {rest % 60}m" if rest >= 60
+            else f"{rest} minute(s)")
+
+
+def check_pr_review(gaps: list, changed: set[str] | None, report: Report) -> None:
+    """A change set that edits a living document and does not say anybody reread it.
+
+    `LC006` MEASURES THE STATE A REPOSITORY IS ALREADY IN. This stops it being reached. The
+    finding arrives at the moment the edit is proposed, addressed to whoever made it, when the
+    cheap repair -- rereading a document you have just finished editing -- is still cheap. At
+    an audit weeks later it is not, and the person reading the report is usually not the person
+    who wrote the text.
+
+    ONE FINDING FOR THE CHANGE SET AND NOT ONE PER DOCUMENT. A migration touches thirty, and
+    thirty findings on the pull request that has the best reason to exist is a wall in the
+    worst possible place.
+
+    AND IT ASKS RATHER THAN ASSERTS, which `PR004` already does for its own repair. Correcting
+    a typo in a sentence nobody has to reread is the obvious counter-case and no check can tell
+    it from a change of meaning. What it can say is that the edit happened and the attestation
+    did not move, which is a question somebody can answer in a sentence.
+
+    Its yield is unknown, exactly as `LC006`'s is: it runs only where a project has wired the
+    pull request context in, and nothing here can say how often a change set edits a living
+    document without rereading it until it runs somewhere nobody here wrote.
+    """
+    if changed is None or not gaps:
+        return
+    mine = [(gap, a) for gap, a, _, _, _ in gaps
+            if a.rel.replace("\\", "/") in changed]
+    if not mine:
+        return
+    listed = "; ".join(f"`{a.rel}` ({_gap_size(gap)})" for gap, a in mine)
+    report.add("PR005", "the change set",
+               f"{len(mine)} living document(s) in this change set were last changed after the "
+               f"instant they attest, and this change set does not move it: {listed}. That may "
+               "be right: a typo in a sentence nobody has to reread is a change, and no check "
+               "can tell it from a change of meaning. What it cannot be is unnoticed. If what "
+               "the document says has moved, the reading is cheapest now, while whoever wrote "
+               "the text is still the person answering. If it has not, say so in the pull "
+               "request and nothing else is owed.")
 
 
 def check_references(arts: list[Artifact], registry: dict, report: Report) -> None:
@@ -1931,6 +1987,64 @@ def check_placement(arts: list[Artifact], registry: dict, report: Report) -> int
                    "something derived from the artifact, the front matter is what makes it "
                    "claim otherwise.")
     return exempt
+
+
+def check_product_of_the_directory(arts: list[Artifact], registry: dict,
+                                   report: Report) -> None:
+    """An artifact filed under one product's directory while declaring another.
+
+    `REG008` IS THIS RULE, WRITTEN FOR AN ENTRY INSTEAD OF FOR A DOCUMENT. A register scoped
+    to a product is about that product, and an entry declaring another one is reported: the
+    directory says one thing and the field says another. Nothing said the same about the
+    document the register is written in, so `products/beta/RMP.md` declaring `products:
+    [alpha]` passed everything. `LOC001` passes it too, because both are legal placements for
+    a roadmap and the question here is not where the file sits but which of its two statements
+    about itself is wrong.
+
+    IT IS A CODE OF ITS OWN AND NOT `REG008` WIDENED, WHICH IS A DECISION AND NOT TIDINESS. An
+    annotation in `.framework/expected-findings.yaml` joins on `(code, path)` and covers every
+    finding sharing that pair, including ones that arrive later. Growing an existing code with
+    a class nobody had in mind when they annotated it would make those new findings born
+    explained by a reason written about something else, silently. Two codes that resemble each
+    other cost a sentence saying how they differ; one code costs a silence.
+
+    WHAT IT COVERS, AND IT IS WIDER THAN IT LOOKS. Seventeen of the thirty types carry `<p>` in
+    their placement, so for seventeen the directory names the product. That includes the ones
+    a register-shaped rule would never reach: a change contract, a data contract, a release
+    note, an impact classification.
+    """
+    types = registry["types"]
+    for a in arts:
+        spec = types.get(a.type or "")
+        if not spec or spec.get("path_not_enforced"):
+            continue
+        named = as_list(a.meta.get("products"))
+        if not named:
+            continue
+        rel = a.rel.replace("\\", "/")
+        # The product comes from the placement the type declares and not from a guess about
+        # the path: the pattern says which segment is `<p>`, so a repository keeping its
+        # products somewhere the registry does not describe gets `LOC001` and not this.
+        here = None
+        for one in as_list(spec.get("path")):
+            parts = one.strip().split("/")
+            if "<p>" not in parts:
+                continue
+            if placement_pattern(one).match(rel):
+                here = rel.split("/")[parts.index("<p>")]
+                break
+        if here is None:
+            continue
+        stray = [p for p in named if p not in (here, ALL_PRODUCTS)]
+        if stray:
+            report.add("LOC002", a.rel,
+                       f"this sits in the directory of {here!r} and declares "
+                       f"{', '.join(map(repr, stray))}. The directory is how a per-product "
+                       "artifact says whose it is, and the field says otherwise: one of the "
+                       "two is wrong and no check can say which. If the file is misfiled it "
+                       f"belongs under `products/{stray[0]}/`; if the field is wrong it is "
+                       "being counted against a product it is not about, and the derived view "
+                       "of that product lists it.")
 
 
 def check_unanswerable(arts: list[Artifact], registry: dict, report: Report) -> int:
@@ -3403,7 +3517,9 @@ def main() -> int:
     check_manifest_derived_fields(arts, report)
     unanswerable = check_unanswerable(arts, registry, report)
     unenforced = check_placement(arts, registry, report)
-    uncommitted = check_review_gap(arts, root, report)
+    check_product_of_the_directory(arts, registry, report)
+    uncommitted, gaps = check_review_gap(arts, root, report, changed_files)
+    check_pr_review(gaps, changed_files, report)
     check_register_halves(arts, registry, report)
     check_body_repeats_a_field(arts, registry, report)
     check_key_typos(arts, registry, report)

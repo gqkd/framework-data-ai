@@ -70,8 +70,24 @@
 # WHY ALMOST EVERYTHING STARTS AT `warn`. Twelve checks turned on before the artifacts
 # exist are a factory built before the product: they slow you down without having
 # prevented anything yet, and the predictable reaction is to turn them all off at once.
-# Two are `error` on day one, and they are the two `SKILLS.md §9` names: front matter that
-# parses, and front matter that means something.
+# Two are `error` on day one: `FM001`, front matter that parses, and `FM002`, front matter
+# that means something. Everything a repository holds is read through those two, so a
+# document failing either is not being checked at all rather than being checked and found
+# wanting.
+#
+# THAT SENTENCE USED TO CITE `SKILLS.md §9`, WHICH DOES NOT EXIST. That file has seven
+# sections and does not mention front matter anywhere. The reference had been here long
+# enough that it was quoted back as an authority, in an issue arguing that those two checks
+# are declared absolute somewhere and that the code does not know it. Nothing declares them
+# absolute. They are `error` by default, which is a statement about a level and not about
+# whether a project may change it.
+#
+# AND A PROJECT MAY CHANGE ANY OF THEM, INCLUDING THESE. There is no such thing here as a
+# check that does not switch off, and every severity in this file is a decision the project
+# gets to take. `AN001` is the one worth naming while that is true, because lowering it is
+# not a severity decision: it is the decision to keep annotations that no longer match
+# anything, which is `.framework/expected-findings.yaml` becoming the list of permanent
+# exemptions it exists not to be.
 
 # ON `REG`, WHICH USED TO BE `OD`. The checks about the open register were `OD001` to
 # `OD009`, and the entries inside that register are `OD-001`, `OD-004`, `OD-011`. One dash
@@ -949,6 +965,55 @@ checks:
       that legitimately keeps artifacts elsewhere annotates the findings with the reason and
       what would end it, which is a door that did not exist when this check was first proposed
       and is what makes it affordable now.
+
+  LOC002:
+    level: warn
+    title: an artifact is filed under one product and declares another
+    prevents: >
+      A document counted against a product it is not about. `REG008` is this rule written for a
+      register entry: a register scoped to a product is about that product, and an entry
+      declaring another one is reported, because the directory says one thing and the field
+      says another. Nothing said the same about the document itself, so a roadmap filed under
+      one product while declaring another passed everything. `LOC001` passes it too: both are
+      legal placements for a roadmap, and the question is not where the file sits but which of
+      its two statements about itself is wrong.
+
+      It is a code of its own rather than `REG008` widened, and that is a decision. An
+      annotation in `.framework/expected-findings.yaml` joins on `(code, path)` and covers
+      every finding sharing that pair, including ones that arrive later, so growing an existing
+      code with a class nobody had in mind when they annotated it would make those new findings
+      born explained by a reason written about something else. Two codes that resemble each
+      other cost a sentence saying how they differ; one code costs a silence.
+
+      Seventeen of the thirty types carry `<p>` in their placement, so for seventeen the
+      directory names the product, including the ones a register-shaped rule would never reach:
+      a change contract, a data contract, a release note, an impact classification. Which of
+      the two statements is wrong is not decidable from here, and the finding says so.
+
+  PR005:
+    level: warn
+    title: a change set edits a living document and does not move its `last_review`
+    prevents: >
+      The state `LC006` measures, from being reached. That check reports a living document
+      changed after the instant it attests, at an audit, addressed to whoever is auditing, weeks
+      after the edit. This one reports it at the moment the edit is proposed, addressed to
+      whoever made it, when the cheap repair -- rereading a document you have just finished
+      editing -- is still cheap.
+
+      ONE FINDING FOR THE CHANGE SET AND NOT ONE PER DOCUMENT. A migration touches thirty, and
+      thirty findings on the pull request that has the best reason to exist is a wall in the
+      worst possible place. `LC006` stays quiet about the documents this names, so the same
+      document is not reported twice on the same run.
+
+      AND IT ASKS RATHER THAN ASSERTS, which is `PR004`'s position for its own repair.
+      Correcting a typo in a sentence nobody has to reread is a change, and no check can tell it
+      from a change of meaning. What it can say is that the edit happened and the attestation
+      did not move, which is a question somebody can answer in a sentence.
+
+      Its yield is unknown, exactly as `LC006`'s is. It runs only where a project has wired the
+      pull request context in, which is the same limit `PR001` to `PR004` carry and the reason
+      they can be strict, and nothing here can say how often a change set edits a living
+      document without rereading it until it runs somewhere nobody here wrote.
 
   # ── Fields a map entry declares it cannot answer ───────────────────────────
   #
