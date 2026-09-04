@@ -1532,22 +1532,61 @@ def check_register_halves(arts: list[Artifact], registry: dict, report: Report) 
                        "document sees it.")
 
 
+LABEL_AT_HEAD = re.compile(r"\s*(?:[-*]\s+)?\*{0,2}([A-Za-z_][A-Za-z_ ]{2,24}?)\*{0,2}\s*:")
+TABLE_RULE = re.compile(r"^\s*\|[\s:|-]+\|\s*$")
+ID_IN_CELL = re.compile(r"\b([A-Z]{2,4}-\d{3,})\b")
+
+# What a line says once the list marker and any label have been taken off it, which is the
+# prose equivalent of a table cell. Comparing that whole against the whole value is the only
+# safe way to look for a value outside a table: searching for the value *inside* the line
+# reported `default_in_force: Italian only` against a body line reading
+# `- **Question:** Italian only, or Italian and English?`, where the question is about that
+# choice and repeats nothing. Found in this repository's own fixtures, which is what they are
+# for.
+STRIP_MARKER = re.compile(r"^[-*]\s+")
+STRIP_LABEL = re.compile(r"^\*{0,2}[A-Za-z_][A-Za-z_ ]{0,30}?\*{0,2}\s*:\s*")
+
+
+def _payload(line: str) -> str:
+    s = STRIP_MARKER.sub("", line.strip())
+    return _as_value(STRIP_LABEL.sub("", s))
+
+
+def _as_label(s: str) -> str:
+    return str(s).strip().lower().replace(" ", "_")
+
+
+def _as_value(s) -> str:
+    return " ".join(str(s).strip().lower().split())
+
+
 def check_body_repeats_a_field(arts: list[Artifact], registry: dict,
                                report: Report) -> None:
-    """A label the map owns, standing at the head of a line in the body.
+    """A field the map owns, written in the body again, found two ways because it takes two.
 
-    THE VOCABULARY IS DERIVED AND NOT LISTED. It is `maps.<field>.fields` in the registry --
-    required, optional and lists -- for the register being read, so the next field that moves
-    into a map is covered on the day it moves rather than on the day somebody remembers to
-    edit this function. A list written here would go stale in the direction that reads as
-    coverage.
+    THE LABEL FINDS THE SHAPE AND THE VALUE FINDS THE FACT, AND EACH IS BLIND WHERE THE OTHER
+    SEES. Both holes were measured on this repository's own fixtures rather than argued about:
 
-    AND IT MATCHES THE LABEL, NOT THE MEANING. `- **Trigger:** before the first backfill` is
-    caught; "va deciso prima del primo backfill", which says the same thing in a sentence, is
-    not, and no widening of this makes it so. A register writing its labels in another
-    language is not caught either. What it is for is the habit: the people who wrote these
-    documents wrote the label for months, and after a migration the first thing that comes
-    back is the shape of the hand, not the idea.
+      by label only    a risk table with columns `Likelihood` and `Impact` writing `medium`
+                       and `high`, where the map holds `M` and `H`. The same fact in two
+                       spellings, which is the duplication that costs most because the two
+                       halves cannot be seen to agree. The value search finds nothing.
+      by value only    a commitments table whose column is `To whom` and whose cells are the
+                       `to:` of the map, verbatim. The label is a paraphrase of the field
+                       name, in English, so a vocabulary of field names misses it without
+                       anybody changing language. The label search finds nothing.
+
+    WHICH ANSWERS THE QUESTION THIS CHECK KEPT BEING ASKED: it needs a vocabulary only because
+    it looks for a label. Looking for the value needs none, and of the twenty-one fields the
+    three registers' maps own, eight are enums whose values are short common words -- so the
+    value can be compared as a whole cell against a whole value, and must not be searched for
+    inside prose. That is the boundary, and it is why the label half stays.
+
+    THE MESSAGE HAS TO SAY WHICH ONE SPOKE, and that is a rule rather than a nicety. The
+    repairs are different: a label with the map's value under it is a column to delete; a
+    label with something else under it is two claims and somebody has to decide which is
+    true before deleting either; a value with no label is the same duplication wearing a name
+    the check cannot recognise, so the finding has to say where it is.
     """
     types = registry["types"]
     for a in arts:
@@ -1556,26 +1595,89 @@ def check_body_repeats_a_field(arts: list[Artifact], registry: dict,
         if not decl:
             continue
         rule = (maps.get(decl["map"]) or {}).get("fields") or {}
-        owned = {f.lower() for key in ("required", "optional", "lists")
-                 for f in (rule.get(key) or ())}
+        owned = {f for key in ("required", "optional", "lists") for f in (rule.get(key) or ())}
         if not owned:
             continue
+        enums = set(rule.get("enums") or {})
+        rows = as_map(a.meta.get(decl["map"]))
         body = re.sub(r"<!-- generated:.*?-->.*?<!-- /generated -->", "", a.body, flags=re.S)
-        seen: dict[str, int] = {}
-        for n, line in enumerate(body.splitlines(), 1):
-            m = re.match(r"\s*(?:[-*]\s+)?\*{0,2}([A-Za-z_][A-Za-z_ ]{2,24}?)\*{0,2}\s*:", line)
-            if not m:
+        lines = body.splitlines()
+        found: dict[str, dict[str, list[int]]] = {}
+
+        def note(field: str, how: str, line_no: int) -> None:
+            seen = found.setdefault(field, {"label": [], "value": []})
+            if line_no not in seen[how]:
+                seen[how].append(line_no)
+
+        for n, line in enumerate(lines, 1):
+            # THE LABEL, at the head of a line: `- **Trigger:** ...`, the shape the templates
+            # carried before 3.0.0 and the one a hand goes back to first.
+            m = LABEL_AT_HEAD.match(line)
+            if m and _as_label(m.group(1)) in owned:
+                note(_as_label(m.group(1)), "label", n)
+            if not line.strip().startswith("|"):
                 continue
-            label = m.group(1).strip().lower().replace(" ", "_")
-            if label in owned and label not in seen:
-                seen[label] = n
-        for label, n in sorted(seen.items(), key=lambda kv: kv[1]):
+            cells = [c.strip() for c in line.strip().strip("|").split("|")]
+            # THE LABEL AGAIN, in the only other place a register writes one: the header of a
+            # column. A table is where a register that argues in rows keeps its duplication,
+            # and there is no colon and no bullet anywhere in it.
+            if n < len(lines) and TABLE_RULE.match(lines[n]):
+                for c in cells:
+                    if _as_label(c) in owned:
+                        note(_as_label(c), "label", n)
+            # THE VALUE: this row's own cells against what the map holds for this row. Keyed
+            # on the id in the first cell, so nothing is searched for and nothing is guessed:
+            # either the cell is the value or it is not.
+            ids = ID_IN_CELL.findall(cells[0]) if cells else []
+            if ids and ids[0] in rows:
+                row = as_map(rows[ids[0]])
+                for field in owned:
+                    v = row.get(field)
+                    if isinstance(v, str) and _as_value(v) and any(
+                            _as_value(c) == _as_value(v) for c in cells[1:]):
+                        note(field, "value", n)
+
+        # THE VALUE IN A REGISTER THAT ARGUES IN HEADINGS, where there are no cells to compare
+        # and the region under the entry's heading is the delimited place instead. The line is
+        # reduced to what it says -- list marker off, label off -- and compared whole, exactly
+        # as a cell is. Enum fields are excluded on top of that: `open` and `high` are whole
+        # answers to other questions, and a check reporting those would be off in a week.
+        if decl.get("from") != "table":
+            heads = [(n, m.group(1)) for n, line in enumerate(lines, 1)
+                     for m in [re.match(r"^#{2,4}\s+.*?\b([A-Z]{2,4}-\d{3,})\b", line)] if m]
+            for i, (n, eid) in enumerate(heads):
+                if eid not in rows:
+                    continue
+                stop = heads[i + 1][0] - 1 if i + 1 < len(heads) else len(lines)
+                row = as_map(rows[eid])
+                for field in owned:
+                    v = row.get(field)
+                    if field in enums or not isinstance(v, str) or not _as_value(v):
+                        continue
+                    for k in range(n, stop):
+                        if _payload(lines[k]) == _as_value(v):
+                            note(field, "value", k + 1)
+
+        for field in sorted(found):
+            by = found[field]
+            where = sorted(set(by["label"]) | set(by["value"]))
+            shown = ", ".join(str(x) for x in where[:10])
+            more = f" and {len(where) - 10} more" if len(where) > 10 else ""
+            if by["label"] and by["value"]:
+                what = ("The body names it and carries the value the map holds. Two homes for "
+                        "one fact and every check here reads the other one: delete it from the "
+                        "body, the map already has it.")
+            elif by["label"]:
+                what = ("The body names it and what it writes underneath is not what the map "
+                        "holds. That is two claims rather than one repeated, and which of them "
+                        "is true is not decidable from here: decide before deleting either.")
+            else:
+                what = ("The body carries the value the map holds without naming the field, so "
+                        "nothing looking for a label would find it. Same duplication, and the "
+                        "line numbers are where it is.")
             report.add("REG016", a.rel,
-                       f"line {n} writes `{label}` as a label in the body, and `{label}` is a "
-                       f"field of `{decl['map']}:` since 3.0.0. Two homes for one fact, and "
-                       "every check here reads the other one. Move the value into the entry "
-                       "and delete the line -- or, if the two say different things, decide "
-                       "which is true before deleting either.")
+                       f"`{field}` is a field of `{decl['map']}:` since 3.0.0, and the body "
+                       f"writes it again on {len(where)} line(s): {shown}{more}. {what}")
 
 
 # The notation a `path` pattern is written in, and the whole of it. Four tokens and nothing
@@ -3227,6 +3329,12 @@ def main() -> int:
     else:
         print(f"Artifacts scanned: {len(arts)}")
         print(f"Fields declared unanswerable: {unanswerable}")
+        # PRINTED ONLY WHEN IT IS NOT ZERO, AND THE ASYMMETRY WITH THE LINE ABOVE IS THE
+        # POINT RATHER THAN AN OVERSIGHT. The two counts above are states a repository can
+        # put itself in, so a zero tells a reader the mechanism is there to be used. This one
+        # is the framework making a statement about its own registry, and a project can do
+        # nothing with it except learn that the check has a hole. A zero there is a line of
+        # noise about somebody else's file, printed on every run of every repository.
         if unenforced:
             print(f"Artifact types whose placement is not enforced: {unenforced}")
         if index_written:

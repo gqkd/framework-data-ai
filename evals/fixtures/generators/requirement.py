@@ -405,7 +405,7 @@ FILES["products/riconciliazione/RSK.md"] = fm(
 <!-- section: state -->
 # §state
 
-| ID | Risk | Category | Likelihood | Impact | State | Mitigation | Owner | Reviewed |
+| ID | Rischio | Categoria | Probabilita' | Impatto | Stato | Mitigazione | Titolare | Riletto |
 |---|---|---|---|---|---|---|---|---|
 | RSK-001 | The bank changes the file layout without notice | data | M | H | open | schema check on load, load fails loudly | g.quaglia | 2026-06-01 |
 | RSK-002 | The nightly cron fails silently and nobody notices | technical | H | M | open | none yet, depends on `OD-001` | g.quaglia | 2026-06-01 |
@@ -420,6 +420,9 @@ FILES["products/riconciliazione/RSK.md"] = fm(
 # §acceptances
 
 ### RSK-002 accepted on 2026-05-20
+
+La probabilita' che accada e' alta, perche' il cron gira senza sorveglianza da mesi.
+
 
 Accepted by g.quaglia because the closing window is wide enough to catch a failure by
 hand. Lapses when the product has more than one customer.

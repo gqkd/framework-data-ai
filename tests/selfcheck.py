@@ -4171,6 +4171,123 @@ def _misplaced_artifact_is_reported():
     return problems
 
 
+def _reg016(root: Path) -> list[dict]:
+    r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(root), "--json",
+                        "--stale-days", "36500"], capture_output=True, text=True)
+    if r.returncode not in (0, 1) or not r.stdout.strip():
+        return []
+    return [f for f in json.loads(r.stdout)["findings"] if f["code"] == "REG016"]
+
+
+def _kind(message: str) -> str:
+    if "names it and carries" in message:
+        return "both"
+    return "label" if "not what the map holds" in message else "value"
+
+
+@check("the body repeating a field is found by the label and by the value, and both are needed")
+def _reg016_looks_twice():
+    # NEITHER MECHANISM IS REDUNDANT, AND THAT IS ASSERTED ON THE CORPUS RATHER THAN ARGUED.
+    # The label finds a column headed with a field name whose cells say the same thing in
+    # other words -- `medium` and `high` where the map holds `M` and `H` -- and the value
+    # finds a column headed `To whom` whose cells are the `to:` of the map verbatim, which no
+    # vocabulary of field names can recognise because the label is a paraphrase. Drop either
+    # half and one of those two goes silent, in English, with nobody the wiser.
+    roots = sorted(p.parent for p in (ROOT / "evals" / "fixtures").rglob("AGENTS.md"))
+    kinds = collections.Counter()
+    for root in roots:
+        for f in _reg016(root):
+            kinds[_kind(f["message"])] += 1
+    problems = []
+    for kind, what in (("label", "a column named for a field whose cells are not the map's value"),
+                       ("value", "a cell that is the map's value under a header that is not the "
+                                 "field name"),
+                       ("both", "a column named for a field and carrying its value")):
+        if not kinds[kind]:
+            problems.append(f"no finding of the `{kind}` kind anywhere in the fixtures, so "
+                            f"nothing measures {what}. Either the corpus stopped containing it "
+                            "or half the check stopped working, and the two are "
+                            "indistinguishable from here")
+    if sum(kinds.values()) < 10:
+        problems.append(f"only {sum(kinds.values())} findings across the corpus: the fixtures "
+                        "are not built")
+    return problems
+
+
+@check("a register written in another language is found by the value, and its prose is not")
+def _reg016_does_not_need_english():
+    # THE FIXTURE EXISTS BECAUSE WITHOUT IT THIS DEFECT COULD NOT BE MEASURED AT ALL. Every
+    # fixture wrote English labels, so a check that only understood English reported clean on
+    # the whole corpus and the bench reproduced the flaw of the thing it was testing.
+    #
+    # What is asserted is both halves of the answer: the value carries the whole finding when
+    # the labels are in another language, and the residue stays a residue. A sentence restating
+    # a likelihood in Italian words is found by neither mechanism, which is written in the
+    # catalog as a limit and has to stay true or the limit is a guess.
+    root = ROOT / "evals" / "fixtures" / "build" / "requirement" / "seed"
+    if not root.is_dir():
+        return ["the requirement fixture is not built"]
+    found = _reg016(root)
+    problems = []
+    if not found:
+        return ["the Italian register reports nothing: the value half is not running"]
+    if any(_kind(f["message"]) != "value" for f in found):
+        problems.append("a finding in the Italian register came through the label. Its column "
+                        "headers are Italian, so the label can only be matching something that "
+                        "is not a header, and the fixture has stopped measuring what it is for")
+    rsk = (root / "products" / "riconciliazione" / "RSK.md").read_text(encoding="utf-8")
+    if "La probabilita' che accada" not in rsk:
+        problems.append("the fixture no longer carries the sentence that restates a field in "
+                        "prose, so the residue this check documents is no longer measured")
+    else:
+        line = next(n for n, l in enumerate(rsk.splitlines(), 1)
+                    if "La probabilita' che accada" in l)
+        if any(str(line) in f["message"] for f in found):
+            problems.append(f"line {line} is reported. It restates a likelihood in words and "
+                            "repeats no value: reporting it would make this check about "
+                            "meaning, which it cannot be")
+    return problems
+
+
+@check("the duplication the framework deliberately kept is not reported, and prose is not searched")
+def _reg016_leaves_what_was_left():
+    # TWO EXEMPTIONS, AND BOTH WERE PAID FOR. §1 of an open register groups entries under
+    # `## Cost to reverse HIGH`, which repeats a map field on purpose: 3.0.0 left that one
+    # because the heading is the reading order of the document, and a check reporting it would
+    # be reporting the arrangement the framework asks for. And a value must be compared whole:
+    # searching for it inside a line reported `default_in_force: Italian only` against a body
+    # line asking whether the interface should be `Italian only, or Italian and English?`,
+    # where the question is about that choice and repeats nothing.
+    fm = lambda **kw: "---\n" + "\n".join(f"{k}: {v}" for k, v in kw.items()) + "\n---\n\n"
+    body = ("# Open\n\n"
+            "## Cost to reverse LOW: changing it later costs an afternoon\n\n"
+            "### OD-001 - which language the interface is in\n\n"
+            "- **Question:** Italian only, or Italian and English?\n")
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / "framework.yaml").write_text(f"framework_version: {REGISTRY['version']}\n")
+        (root / "OPEN.md").write_text(
+            fm(schema="framework/open-register/v1", artifact_type="open-register",
+               lifecycle="living", status="active", owners="[owner]", created="2026-01-01",
+               last_review="2026-01-01 09:00",
+               entries="\n  OD-001:\n    status: open\n    cost_to_reverse: low\n"
+                       "    products: [all]\n    default_in_force: Italian only\n") + body,
+            encoding="utf-8")
+        found = _reg016(root)
+    problems = []
+    for f in found:
+        if "`cost_to_reverse`" in f["message"]:
+            problems.append("the `## Cost to reverse` heading of §1 was reported. That "
+                            "duplication was left standing on purpose and the templates say "
+                            "which of the two a check reads: reporting it asks a repository to "
+                            "undo the arrangement the framework prescribes")
+        if "`default_in_force`" in f["message"]:
+            problems.append("a body line was reported for containing the value inside a longer "
+                            "sentence. A value is compared whole, as a cell is, or this check "
+                            "reports every question that mentions its own subject")
+    return problems
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 print()

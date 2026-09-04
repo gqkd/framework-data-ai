@@ -531,28 +531,39 @@ checks:
     title: a field that lives in the map is written in the body again
     prevents: >
       The duplication coming back one entry at a time. 3.0.0 moved the fields of the three
-      registers into the map and took them out of the body, and the habit that wrote them
-      there does not end with a version bump: the people writing these documents wrote
-      `- **Trigger:** ...` under a heading for months, and the first one to do it again after
-      the migration re-creates the state where a fact has two homes and only one of them is
-      read.
+      registers into the map and took them out of the body, and the habit that wrote them there
+      does not end with a version bump.
 
-      WHAT IT CATCHES IS NARROWER THAN WHAT IT IS ABOUT, AND THE DIFFERENCE MATTERS. It looks
-      for the *label*: a bolded or bulleted `trigger`, `depends_on`, `category`, `state` --
-      whatever the registry declares as a field of that register's map -- standing at the head
-      of a line in the body. It does not read what follows it, and it cannot: the same fact
-      written as a sentence, "va deciso prima del primo backfill", is invisible to it and
-      always will be. It also sees only the field names the registry uses, so a register
-      keeping its labels in another language writes `Dipende da` and passes.
+      IT LOOKS TWICE, BECAUSE IT TAKES TWO AND BOTH HOLES WERE MEASURED RATHER THAN ARGUED
+      ABOUT. The label finds the shape: a bolded or bulleted `trigger`, or a table column headed
+      `Category`, standing where the map's field name would. The value finds the fact: a table
+      cell that is, whole, the value the map holds for that row, or a body line that reduces to
+      it once the list marker and the label are off. Each is blind where the other sees, and in
+      this repository's own fixtures both blindnesses are present: a risk table with columns
+      `Likelihood` and `Impact` writing `medium` and `high` where the map holds `M` and `H`
+      (label yes, value no), and a commitments table whose column reads `To whom` and whose
+      cells are the `to:` of the map verbatim (value yes, label no). The second is the
+      interesting one: the label is a paraphrase in English, so a vocabulary of field names
+      misses it without anybody changing language.
 
-      So this is a check against a habit, not a guarantee about a state. A repository with no
-      `REG016` findings is one where nobody re-created the duplication *in the shape the
-      framework's own templates used to have*. It is not one where the body carries no field
-      the map should own. Read it that way, or it will be read as the second thing by somebody
-      who was not here: the field list comes from `maps.<field>.fields` in the registry rather
-      than from a list written here, so a field that moves next lands in this check without
-      anybody remembering to add it -- which makes the coverage grow quietly and the false
-      confidence with it.
+      THE MESSAGE MUST SAY WHICH OF THE TWO SPOKE. This is a constraint on the check and not a
+      matter of presentation, because the three cases have three different repairs. Label and
+      value together is a column to delete, and the map already holds it. Label alone means the
+      body names the field and writes something else underneath, which is two claims rather than
+      one repeated, and which is true is not decidable by any check. Value alone means the
+      duplication is there under a name the check cannot recognise, so the finding has to say
+      which lines it is on or the reader cannot find it. One finding per field per file, with
+      the count and the line numbers, because the annotation file joins on `(code, path)` and a
+      finding per occurrence would multiply a project's annotations by the number of lines.
+
+      WHAT IT STILL CANNOT DO, AND THE FIXTURE THAT MEASURES IT. The same fact written as a
+      sentence in another language stays invisible: `requirement/seed` writes its risk register
+      in Italian, and its four findings arrive entirely through the value, with the label
+      contributing nothing, while a line of Italian prose restating a likelihood in words is
+      found by neither. That fixture exists because until it did, this defect could not be
+      measured at all: every fixture wrote English labels, so a check that only understood
+      English reported clean on the whole corpus. The bench reproduced the flaw of the thing it
+      was testing.
 
   # ── STACK ──────────────────────────────────────────────────────────────────
   STK001:
