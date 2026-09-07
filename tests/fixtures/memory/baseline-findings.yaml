@@ -1,0 +1,20 @@
+# Observed with the unmodified validator at db75f310, 2026-09-07.
+# Tuple = check, relative path, severity. Messages are not a stable contract.
+audit:
+  document-only:
+    - [ICG001, products/alpha/LOG.md, info]
+  multi-repo: []
+  missing-code: []
+  qualified-impact: []
+  local-impact-control:
+    - [CHG002, products/alpha/changes/CHG-001-boundary.md, warn]
+  triage-collision: []
+  triage-unrouted:
+    - [ICG001, products/alpha/LOG.md, info]
+    - [ICG001, products/beta/LOG.md, info]
+  triage-complete: []
+pr:
+  qualified-impact: []
+  local-impact-control:
+    - [CHG002, products/alpha/changes/CHG-001-boundary.md, warn]
+    - [PR004, products/alpha/changes/CHG-001-boundary.md, warn]

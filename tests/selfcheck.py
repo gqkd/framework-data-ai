@@ -4553,6 +4553,20 @@ def _change_set_review():
 
 # ─────────────────────────────────────────────────────────────────────────────
 
+@check("Product Memory acceptance inputs are valid and known resolver defects remain explicit")
+def _memory_phase_zero():
+    r = subprocess.run([sys.executable, "-B", "-m", "unittest", "discover",
+                        "-s", "tests/memory", "-v"], cwd=ROOT,
+                       capture_output=True, text=True)
+    if r.returncode:
+        return [r.stdout + r.stderr]
+    # Do not conceal the xfails behind selfcheck's overall green result.
+    for line in r.stderr.splitlines():
+        if "expected failure" in line or line.startswith(("Ran ", "OK")):
+            print(f"       {line}")
+    return []
+
+
 print()
 if failures:
     print(f"{len(failures)} problem(s).")

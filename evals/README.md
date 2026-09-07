@@ -5,6 +5,10 @@ the part that decides whether any of this is usable: whether the right skill ans
 somebody types a sentence, and whether it then does the right thing. That is what lives
 here, and it needs a model to run, which is why it is not in CI.
 
+Product Memory's pre-implementation questions are in `behaviour/memory/cases.yaml`.
+Their input validity is checked in CI by `tests/memory/`; their answers have not been
+evaluated with a model and are not included in the measured results below.
+
 ## Triggering
 
 `trigger/cases.yaml` holds 118 prompts, each labelled with the one skill that should
