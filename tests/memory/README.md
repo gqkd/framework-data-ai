@@ -1,7 +1,8 @@
-# Product Memory: phase-zero acceptance baseline
+# Product Memory: acceptance tests and scoped core
 
-This directory tests the current validator and freezes acceptance questions before any
-memory engine is implemented. It does not provide a resolver, graph, or code provider.
+This directory preserves the phase-zero acceptance baseline and tests the phase-one
+parser/resolver. It does not provide a graph, context pack or code provider. Historical
+results are in `BASELINE.md`; the current implementation handoff is in `PHASE-1.md`.
 
 Run the deterministic suite from the framework checkout:
 
@@ -20,9 +21,11 @@ All products, repositories, documents and code in these fixtures are synthetic.
   isolated temporary copies instead. Never hand-edit `evals/fixtures/build/`.
 - `tests/fixtures/memory/acceptance.yaml` freezes coverage, the bounded provider-language
   contract and the two known defect families. No provider is installed or tested yet.
-- `tests/fixtures/memory/baseline-findings.yaml` records the current validator output by
+- `tests/fixtures/memory/baseline-findings.yaml` records the frozen phase-zero output by
   check, path and severity, including informational findings. Empty output is not proof
   that the reasoning task is satisfied.
+- `tests/fixtures/memory/phase1-findings.yaml` records the additive finding delta after
+  fixing the resolver. The historical baseline and desired answers are not rewritten.
 - `evals/behaviour/memory/cases.yaml` owns the fourteen comprehension questions, their
   required sources, expected answers and forbidden conclusions. `memory` names an eval
   scenario group, not an eighth skill. Model evaluation has **not** been run.
@@ -33,17 +36,22 @@ change them only with a contract-version bump and an explicit rationale. The cod
 histories have fixed authors, timestamps and contents. Tests compare files and commit IDs,
 not `.git` internals, whose locks, reflogs and index timestamps are not portable outputs.
 
-## The known failures are not suppressed defects
+## The historical failures are now ordinary regression tests
 
-| Defect family | Desired result missing today | Positive controls |
+| Defect family | Result restored by phase 1 | Positive controls |
 |---|---|---|
 | Qualified candidate join | `CHG002` and `PR004` for `alpha:SIG-001` classified under the local `SIG-001` key | A global `INC-001` with the same architecture impact triggers both checks |
 | Product scope in triage | `ICG001` for beta when only alpha's homonymous signal was classified | No classifications reports both logs; separate classifications report neither |
 
-Three tests carry `unittest.expectedFailure`. Fixture prerequisites, full CLI execution,
-schema validity and unrelated findings are checked **outside** those tests. Unexpected
-success fails the suite: phase 1 must remove each marker with its corresponding fix, not
-leave a stale exemption. No check is disabled or downgraded in the validator configuration.
+Phase zero carried three `unittest.expectedFailure` markers. The fixes first produced
+three unexpected successes; phase one removed the markers without weakening the expected
+answers. Fixture prerequisites, full CLI execution, schema validity and unrelated findings
+are still independently checked. No check is disabled or downgraded.
+
+`test_references.py` adds scope and ambiguity controls, exact section-location checks,
+compatibility aliases, and a real Git-export fixture. An exported validator must load its
+own package from an unrelated working directory, even beside an incompatible package on
+PYTHONPATH. Live and exported validators can coexist in one Python process.
 
 ## Behavioural evaluation and safety
 
@@ -61,10 +69,11 @@ claim of SQL lineage or customer-data analysis. A future provider must expose un
 unsupported and unavailable evidence explicitly. No graph or retrieval output is faked
 into a successful baseline.
 
-The full increment's twenty-four deterministic obligations are frozen under
+The full increment's twenty-four deterministic obligations were frozen under
 `deferred_checks` in the acceptance contract with their implementation phases. Their
-inputs and required outcomes are specified, not executed: phase zero cannot prove the
-behavior of a snapshot builder, resolver or graph that does not exist yet. The migration
-smoke test checks only an already-current fixture and no writes, not future compatibility.
+inputs and required outcomes were specifications, not successful engine tests. Executable
+coverage is added with each phase; see `PHASE-1.md` for what is covered now. No snapshot
+builder or graph exists yet. The migration smoke checks only an already-current fixture
+and no writes; export tests cover the entry points, not every future migration.
 
 See `BASELINE.md` for the measured checkout, environment and phase-zero results.

@@ -1,0 +1,10 @@
+# Additive delta against the frozen phase-zero baseline; no severity changes.
+audit:
+  qualified-impact:
+    - [CHG002, products/alpha/changes/CHG-001-boundary.md, warn]
+  triage-collision:
+    - [ICG001, products/beta/LOG.md, info]
+pr:
+  qualified-impact:
+    - [CHG002, products/alpha/changes/CHG-001-boundary.md, warn]
+    - [PR004, products/alpha/changes/CHG-001-boundary.md, warn]

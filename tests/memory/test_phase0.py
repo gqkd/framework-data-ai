@@ -1,8 +1,7 @@
-"""Acceptance inputs and known defects, exercised through the real validator CLI.
+"""Frozen acceptance inputs and repaired defects, through the real validator CLI.
 
-Prerequisites run in setUpClass, outside expectedFailure. A broken generator, invalid
-schema, unreadable input or crashing CLI must fail the suite, not count as a known bug.
-The three xfails describe two resolver defects; an unexpected success also fails CI.
+The phase-one fixes removed three expectedFailure markers without changing the desired
+answers. Historical findings stay frozen; phase1-findings.yaml records the additive delta.
 """
 from __future__ import annotations
 
@@ -76,8 +75,8 @@ class PhaseZero(unittest.TestCase):
         cls.pr_reports = {name: validate(cls.root / name, pr=True)
                           for name in ("qualified-impact", "local-impact-control")}
         # These are real documents discovered from disk, not mocked Artifact instances.
-        # Permit only the intended contract/PR error, including after the resolver fix;
-        # the expectedFailure assertions then detect that fix as unexpected success.
+        # Permit only the intended contract/PR error here; the exact severity and finding
+        # delta are asserted below, independently of the regression assertions.
         for name, report in [*cls.reports.items(), *cls.pr_reports.items()]:
             allowed = {"CHG002", "PR004"} if name in (
                 "qualified-impact", "local-impact-control") else set()
@@ -85,7 +84,7 @@ class PhaseZero(unittest.TestCase):
                       if f["level"] == "error" and f["code"] not in allowed]
             if errors:
                 raise AssertionError(f"Invalid fixture {name}: {json.dumps(errors, indent=2)}")
-        # Validate the actual shape that the known regression depends on, also outside xfail.
+        # Validate the actual shape the historical regressions depend on.
         root = cls.root / "qualified-impact"
         chg = metadata(root / fixture.CHG)
         icg = metadata(root / fixture.ICG)
@@ -106,12 +105,7 @@ class PhaseZero(unittest.TestCase):
         # Freeze warnings and informational findings too: a broken reference must not
         # masquerade as a successful reproduction simply because it is non-blocking.
         baseline = yaml.safe_load((SPEC.parent / "baseline-findings.yaml").read_text())
-        corrections = {
-            ("audit", "qualified-impact"): {("CHG002", fixture.CHG, "warn")},
-            ("pr", "qualified-impact"): {("CHG002", fixture.CHG, "warn"),
-                                         ("PR004", fixture.CHG, "warn")},
-            ("audit", "triage-collision"): {("ICG001", "products/beta/LOG.md", "info")},
-        }
+        corrections = yaml.safe_load((SPEC.parent / "phase1-findings.yaml").read_text())
         for mode, reports in (("audit", cls.reports), ("pr", cls.pr_reports)):
             if set(baseline[mode]) != set(reports):
                 raise AssertionError(f"Incomplete {mode} baseline")
@@ -119,9 +113,8 @@ class PhaseZero(unittest.TestCase):
                 observed = [(f["code"], f["path"].replace("\\", "/"), f["level"])
                             for f in report["findings"]]
                 expected = [tuple(item) for item in baseline[mode][name]]
-                remaining = [item for item in observed
-                             if item not in corrections.get((mode, name), set())]
-                if sorted(remaining) != sorted(expected):
+                expected += [tuple(item) for item in corrections.get(mode, {}).get(name, [])]
+                if sorted(observed) != sorted(expected):
                     raise AssertionError(f"Unplanned finding drift in {mode}/{name}: {observed}")
 
     def test_all_scenarios_are_generated_and_readable(self):
@@ -211,15 +204,12 @@ class PhaseZero(unittest.TestCase):
                          {"products/alpha/LOG.md", "products/beta/LOG.md"})
         self.assertEqual(findings(self.reports["triage-complete"], "ICG001"), set())
 
-    @unittest.expectedFailure
     def test_qualified_change_preserves_architecture_obligation(self):
         self.assertEqual(findings(self.reports["qualified-impact"], "CHG002"), {fixture.CHG})
 
-    @unittest.expectedFailure
     def test_qualified_pr_preserves_arc_obligation(self):
         self.assertEqual(findings(self.pr_reports["qualified-impact"], "PR004"), {fixture.CHG})
 
-    @unittest.expectedFailure
     def test_same_number_does_not_triage_another_product(self):
         self.assertEqual(findings(self.reports["triage-collision"], "ICG001"),
                          {"products/beta/LOG.md"})
@@ -253,11 +243,13 @@ class PhaseZero(unittest.TestCase):
                     self.assertFalse((root / absent).exists(), absent)
         self.assertEqual(coverage, set(self.contract["coverage_required"]))
 
-    def test_expected_failures_match_the_explicit_defect_inventory(self):
+    def test_fixed_regressions_remain_tests_without_expected_failure(self):
         names = {name for name in dir(type(self))
                  if getattr(getattr(type(self), name), "__unittest_expecting_failure__", False)}
         declared = {name for bug in self.contract["known_regressions"].values() for name in bug["tests"]}
-        self.assertEqual(names, declared)
+        self.assertEqual(names, set())
+        self.assertEqual(len(declared), 3)
+        self.assertTrue(all(callable(getattr(type(self), name)) for name in declared))
         self.assertEqual(len(self.contract["known_regressions"]), 2)
 
     def test_future_acceptance_obligations_are_explicitly_deferred(self):

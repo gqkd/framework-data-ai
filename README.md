@@ -20,9 +20,11 @@ decisions, products, initiatives and corpus, live in that project's repository, 
 | `templates/` | One template per artifact, each with its anti-patterns at the bottom |
 | `schemas/` | The artifact catalog and what each type is allowed to be. `artifact-types.yaml` is the source; `generate.py` projects it into the JSON Schemas, into `FRAMEWORK.md §7` and into `templates/README.md` |
 | `skills/` | The skills themselves. `audit/` also carries the gate: `scripts/validate.py`, `scripts/migrate.py` and `checks.yaml` |
+| `src/framework_data_ai/` | Shared artifact reading and scoped reference resolution. Loaded locally by the validator; no package installation required |
 | `ci/` | Two files a project copies into `.github/`: the pull request template and the workflow that checks a change set against the `CHG` authorizing it |
 | `references/` | Shared by the skills: the common preamble and the routing table |
 | `tests/selfcheck.py` | The framework checked against itself. Runs in CI |
+| `tests/memory/` | Product Memory acceptance baseline, scoped-core tests and phase implementation reports. No graph or provider is shipped yet |
 
 ## Reading order
 

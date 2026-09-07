@@ -38,11 +38,14 @@ Requires pyyaml and jsonschema.
 from __future__ import annotations
 
 import argparse
+import hashlib
+import importlib
+import importlib.util
 import json
 import re
 import subprocess
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from collections import Counter
 from datetime import date, datetime
 from pathlib import Path, PurePosixPath
@@ -65,7 +68,40 @@ SCHEMA_DIR = FRAMEWORK / "schemas" / "framework"
 REGISTRY = FRAMEWORK / "schemas" / "artifact-types.yaml"
 CHECKS = FRAMEWORK / "skills" / "audit" / "checks.yaml"
 
-SECTION_MARK = re.compile(r"<!--\s*section:\s*([a-z0-9-]+)\s*-->")
+# Bootstrap the package from *this* checkout, not an editable installation or PYTHONPATH.
+# An export and a live validator can be imported in one process by tooling/tests. Give
+# each root its own package namespace so sys.modules cannot silently mix their code.
+_CORE_NAME = "_framework_data_ai_" + hashlib.sha256(str(FRAMEWORK).encode()).hexdigest()[:16]
+if _CORE_NAME not in sys.modules:
+    _core_spec = importlib.util.spec_from_file_location(
+        _CORE_NAME, FRAMEWORK / "src/framework_data_ai/__init__.py",
+        submodule_search_locations=[str(FRAMEWORK / "src/framework_data_ai")])
+    _core = importlib.util.module_from_spec(_core_spec)
+    sys.modules[_CORE_NAME] = _core
+    _core_spec.loader.exec_module(_core)
+_artifacts = importlib.import_module(f"{_CORE_NAME}.artifacts")
+_references = importlib.import_module(f"{_CORE_NAME}.references")
+
+# Public compatibility aliases: old callers keep importing validate.py directly.
+Artifact = _artifacts.Artifact
+SECTION_MARK = _artifacts.SECTION_MARK
+as_map = _artifacts.as_map
+as_list = _artifacts.as_list
+jsonify = _artifacts.jsonify
+is_bare_yaml = _artifacts.is_bare_yaml
+parse_front_matter = _artifacts.parse_front_matter
+skipped_dir = _artifacts.skipped_dir
+discover = _artifacts.discover
+locate_sections = _artifacts.locate_sections
+body_first_line = _artifacts.body_first_line
+canonical_repo = _references.canonical_repo
+product_dirs = _references.product_dirs
+ReferenceIndex = _references.ReferenceIndex
+
+
+def reference_index(arts: list[Artifact]) -> ReferenceIndex:
+    """Compatibility path for callers invoking one check rather than the full CLI."""
+    return ReferenceIndex(arts, yaml.safe_load(REGISTRY.read_text(encoding="utf-8")))
 
 # A date inside a trigger, in any of the shapes one gets written in: `2026-09-30`, the
 # same thing quoted or with the full stop a prose bullet leaves behind, `30/09/2026`,
@@ -153,31 +189,6 @@ class Finding:
         return out
 
 
-@dataclass
-class Artifact:
-    path: Path
-    rel: str
-    meta: dict
-    body: str
-    ids: set[str] = field(default_factory=set)
-
-    @property
-    def id(self) -> str | None:
-        return self.meta.get("id")
-
-    @property
-    def type(self) -> str | None:
-        """The declared `artifact_type`, or None when it is not a plain name.
-
-        Normalised here rather than at each use. `artifact_type: [a, b]` is one stray
-        bracket away in a hand written front matter, and almost every use of it downstream
-        is a dict or set lookup, which raises on an unhashable value: the validator died on
-        the malformed document instead of reporting it, and said nothing about the two
-        hundred it had not reached yet. The raw value stays in `meta` for whoever has to
-        print it back.
-        """
-        t = self.meta.get("artifact_type")
-        return t if isinstance(t, str) else None
 
 
 class Report:
@@ -206,75 +217,6 @@ class Report:
 # ─────────────────────────────────────────────────────────────────────────────
 # Reading
 
-def as_map(v) -> dict:
-    """A front matter map, or an empty one when what is there is not a map.
-
-    `terms: [Freshness, Tenant]` is one bracket away from `terms:` with two rows under it,
-    and it killed the validator: `.items()` on a list raises, the process died on the
-    malformed document, and nothing was said about the two hundred artifacts it had not
-    reached. The schema already reports the shape -- that is what `FM002` is -- so the job
-    here is only to let the run finish and report it.
-
-    `entries:` has been guarded since the same thing happened to it. Three maps added in one
-    week were not, because each was written by copying the line above it, which is how a
-    lesson stays learned in one place.
-    """
-    return v if isinstance(v, dict) else {}
-
-
-def as_list(v) -> list:
-    if v is None:
-        return []
-    return v if isinstance(v, list) else [v]
-
-
-def jsonify(o):
-    """YAML gives back date and datetime objects; JSON Schema validates JSON.
-
-    Without this every artifact fails on `created`, which is a correct field, and the
-    validator spends its credibility on its own bug.
-    """
-    if isinstance(o, (date, datetime)):
-        return o.isoformat()
-    if isinstance(o, dict):
-        return {k: jsonify(v) for k, v in o.items()}
-    if isinstance(o, list):
-        return [jsonify(v) for v in o]
-    return o
-
-
-def is_bare_yaml(text: str) -> bool:
-    """A `.yaml` artifact: the whole file is metadata.
-
-    Leading comments and blank lines do not count. A manifest that opens by explaining
-    what it is stays a manifest, and without this it would be reported as having no front
-    matter at all.
-    """
-    for line in text.splitlines():
-        if not line.strip() or line.lstrip().startswith("#"):
-            continue
-        return line.startswith("schema:")
-    return False
-
-
-def parse_front_matter(text: str) -> tuple[dict | None, str, str | None]:
-    """Returns (meta, body, error)."""
-    if text.startswith("---\n"):
-        end = text.find("\n---", 4)
-        if end == -1:
-            return None, text, "front matter opened and never closed"
-        raw, body = text[4:end], text[end + 4:]
-    elif is_bare_yaml(text):
-        raw, body = text, ""
-    else:
-        return None, text, "no front matter"
-    try:
-        meta = yaml.safe_load(raw)
-    except yaml.YAMLError as e:
-        return None, body, f"invalid YAML: {str(e).splitlines()[0]}"
-    if not isinstance(meta, dict):
-        return None, body, "front matter is not a mapping"
-    return meta, body, None
 
 
 LEVELS = {"error", "warn", "info", "off"}
@@ -529,102 +471,8 @@ def load_config(project: dict) -> tuple[dict, int]:
     return checks, stale_days
 
 
-def canonical_repo(url: str) -> str:
-    """One repository, one string, whichever way somebody wrote the remote.
-
-    The three forms below are the same repository and compare unequal as text:
-
-        git@github.com:org/repo.git
-        ssh://git@github.com/org/repo.git
-        https://github.com/org/repo.git
-
-    This matters because the key of a `code:` entry is a local nickname and not an identity.
-    Two products calling their own repository `backend` are not sharing one; the same
-    repository entered as `identity` under one product and `auth` under another is. Keyed on
-    the nickname, a check meant to catch a repository described twice reports the first case
-    and passes the second -- and the second is how the duplication actually arises, because
-    two teams naming the same thing each use their own word for it.
-
-    An address this cannot parse comes back stripped and lowercased rather than empty. Two
-    identical unparseable strings are still one repository, and losing that would trade a
-    wrong answer for no answer.
-    """
-    s = str(url).strip().rstrip("/")
-    s = re.sub(r"^[a-z+]+://", "", s, flags=re.I)      # scheme, if any
-    s = re.sub(r"^[^/@]+@", "", s)                     # user, git@ and the rest
-    # scp-style `host:path`, but not `host:port/path`: a port is part of the address and a
-    # self-hosted GitLab on 8443 would otherwise have it turned into a directory.
-    if re.match(r"^[^/]+:(?!\d+(?:/|$))[^/]", s):
-        s = s.replace(":", "/", 1)
-    s = re.sub(r"\.git$", "", s, flags=re.I)
-    host, _, path = s.partition("/")
-    return f"{host.lower()}/{path}" if path else s.lower()
 
 
-def skipped_dir(parts: tuple[str, ...], skip_dirs: set[str]) -> bool:
-    """Whether a document sitting in these directories is excluded from the scan.
-
-    An entry with no slash matches a directory of that name at any depth, which is what
-    `corpus` and `node_modules` want: they mean the same thing wherever they turn up.
-
-    An entry with a slash is a path from the root, and exists because a bare name is
-    sometimes too blunt to be safe. `_meta/extract` is the extractor's output and holds no
-    source document; `extract` on its own would silently exclude the extraction step of
-    every ETL project that keeps one in a directory of that name. The registry already
-    states the principle it took a mistake to learn -- an exclusion that protects the
-    framework's convenience is paid for by everyone using it -- and until now it could only
-    be honoured by choosing awkward names.
-    """
-    if any(part in skip_dirs for part in parts):
-        return True
-    rel = "/".join(parts)
-    return any("/" in s and (rel == s or rel.startswith(s + "/")) for s in skip_dirs)
-
-
-def discover(root: Path, scan: dict, registry: dict, report: Report) -> list[Artifact]:
-    skip_dirs = scan["skip_dirs"]
-    skip_files = scan["skip_files"]
-    skip_hidden = scan["skip_hidden"]
-    id_re = re.compile(r"\b((?:%s)-\d{3,})\b" % "|".join(registry["id_prefixes"]))
-
-    artifacts = []
-    for p in sorted(root.rglob("*")):
-        if p.is_dir() or p.suffix not in {".md", ".yaml", ".yml"}:
-            continue
-        parts = p.relative_to(root).parts
-        if skip_hidden and any(part.startswith(".") for part in parts):
-            continue
-        if skipped_dir(parts[:-1], skip_dirs):
-            continue
-        if p.name in skip_files:
-            continue
-        rel = str(p.relative_to(root))
-        meta, body, err = parse_front_matter(
-            p.read_text(encoding="utf-8", errors="replace"))
-        if err:
-            report.add("FM001", rel, err)
-            continue
-        art = Artifact(p, rel, meta, body)
-        # Every identifier in the body, not only the ones in a declaring position. That is
-        # looser than it looks like it should be, and the looseness is deliberate.
-        #
-        # A register does distinguish declaring an entry from citing one, but it does so in
-        # prose, not in layout. `OPEN.md §4` closes an entry with
-        # `- **2026-05-12 · OD-000** -> DEC-001`, and states a dependency with
-        # `- **Depends on:** OD-011.` Both are list items carrying an identifier after some
-        # text, and the only thing separating them is that one prefix is a date and the
-        # other is a field label. Keying a check on that is a heuristic that will misfire,
-        # and a check that misfires on correct documents gets switched off within a week,
-        # which costs more than the hole it closed.
-        #
-        # The hole is therefore known and bounded: inside a register, an identifier of a
-        # prefix that register declares is treated as existing even when it is only being
-        # cited. `inline_id_declarations` keeps that from spreading to every other prefix,
-        # which is where it did real damage. Closing the rest wants the registers to mark
-        # their entries, not the validator to guess at them.
-        art.ids = set(id_re.findall(body))
-        artifacts.append(art)
-    return artifacts
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1131,19 +979,11 @@ def check_pr_review(gaps: list, changed: set[str] | None, report: Report) -> Non
                "request and nothing else is owed.")
 
 
-def check_references(arts: list[Artifact], registry: dict, report: Report) -> None:
-    id_re = re.compile(r"\b((?:%s)-\d{3,})\b" % "|".join(registry["id_prefixes"]))
-    inline_decl = registry["inline_id_declarations"]
-    qualified_prefixes = set(registry.get("qualified_reference_prefixes") or ())
-    # `atlas:SIG-041`. The qualifier is a product directory name, which is what the schema's
-    # reference pattern accepts and what `product_dirs` keys on.
-    if qualified_prefixes:
-        qual_re = re.compile(r"^([a-z0-9][a-z0-9-]*):((?:%s)-\d{3,})$"
-                             % "|".join(sorted(qualified_prefixes)))
-    else:
-        qual_re = re.compile(r"(?!)")        # matches nothing, and has to be a pattern
-    dirs = product_dirs(arts)
-    products = {prod for prod, _ in dirs.values()}
+def check_references(arts: list[Artifact], registry: dict, report: Report, *, references=None) -> None:
+    references = references or ReferenceIndex(arts, registry)
+    id_re = references.id_re
+    qual_re = references.qualified_re
+    products = references.products
 
     by_id: dict[str, Artifact] = {}
     for a in arts:
@@ -1155,29 +995,10 @@ def check_references(arts: list[Artifact], registry: dict, report: Report) -> No
         else:
             by_id[a.id] = a
 
-    # Identifiers defined inside a register rather than by a file of their own. Only the
-    # prefixes that register actually declares: a register cites far more identifiers than
-    # it owns, and accepting all of them let a document vouch for a reference simply by
-    # mentioning it. That failed in the direction nobody looks, silently clearing a
-    # finding, and it fired exactly when someone followed the REF001 guidance to write in
-    # prose that the target was missing.
-    inline: set[str] = set()
-    # The same declarations, kept per product as well. A register under `products/<p>/`
-    # declares for `p` and for nobody else, which is what makes `atlas:SIG-041` answerable:
-    # until 3.0.0 every declaration went into one set and a reference resolved against all
-    # of them at once, so two products numbering their signals from 001 made every `DEC`
-    # citing one of them ambiguous, and the ambiguity resolved itself -- whichever register
-    # was read last won.
-    inline_per_product: dict[str, set[str]] = {}
-    for a in arts:
-        prefixes = inline_decl.get(a.type or "")
-        if prefixes:
-            declared = {i for i in a.ids if i.split("-", 1)[0] in prefixes}
-            inline |= declared
-            owner = dirs.get(a.path.parent, (None, None))[0]
-            if owner:
-                inline_per_product.setdefault(owner, set()).update(declared)
-    known = set(by_id) | inline
+    # Declaration policy is shared with the resolver, including the bounded legacy rule:
+    # a register can vouch only for the inline prefixes its artifact type declares.
+    inline_per_product = references.inline_per_product
+    known = references.known
     sup_edges: dict[str, list[str]] = {}
 
     def resolve(ref: object, a: Artifact, field: str) -> None:
@@ -1286,24 +1107,6 @@ def check_release(arts: list[Artifact], report: Report) -> None:
 UNION_MARK = "<!-- generated: open-union -->"
 
 
-def product_dirs(arts: list[Artifact]) -> dict[Path, tuple[str, str]]:
-    """Where each product's documents live, read off its manifest: dir -> (product, rel).
-
-    The directory and not the `products:` field, because that is how a register declares
-    its scope now. In `products/<p>/OPEN.md` the field is redundant and nobody writes it:
-    the entry is about that product by virtue of where it was filed, the same way an entry
-    in `platform/OPEN.md` is about the substrate. Reading scope off the field instead put
-    every unlabelled entry of every register into every product's derived view, which is
-    the one direction this must not fail in: `AGENTS.md` sends an agent to that view first.
-    """
-    out: dict[Path, tuple[str, str]] = {}
-    for m in arts:
-        if m.type != "product-manifest":
-            continue
-        p = next(iter(as_list(m.meta.get("products"))), None)
-        if p:
-            out[m.path.parent] = (p, str(PurePosixPath(m.rel).parent))
-    return out
 
 
 # What `product.index.yaml` now answers, and what a manifest used to answer by hand while
@@ -2485,7 +2288,7 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
                        "because the cost of waiting exceeds the cost of being wrong.")
 
 
-def check_change_contracts(arts: list[Artifact], report: Report) -> None:
+def check_change_contracts(arts: list[Artifact], report: Report, *, references=None) -> None:
     """What an `ICG` said a change touches, against what the change actually cites.
 
     These two were catalogued and switched off from the day they were written, because the
@@ -2509,21 +2312,22 @@ def check_change_contracts(arts: list[Artifact], report: Report) -> None:
     not a missing `EVR` or a missing `DEC`: it is the join itself being absent, which is
     how both of the others come back clean without having looked at anything.
     """
-    by_id = {a.id: a for a in arts if a.id}
-    icgs = {a.id: a for a in arts if a.type == "impact-classification"}
+    references = references or reference_index(arts)
     AUTHORIZED = ("approved", "implemented", "verified", "rolled-back")
 
     for a in arts:
         if a.type != "change-contract":
             continue
-        icg = icgs.get(a.meta.get("icg"))
+        resolved = references.artifact(a.meta.get("icg"), kind="impact-classification")
+        icg = resolved.target.artifact if resolved.target else None
         if icg is None:
             # From `approved` onwards only. Writing the proposal before the triage that
             # classifies it is the order the framework prescribes, so a `draft` with no
             # classification is a change waiting for one, not a change that dodged it.
             if a.meta.get("status") in AUTHORIZED:
                 named = a.meta.get("icg")
-                why = (f"names {named!r}, which is not an impact classification in this "
+                why = (f"names {named!r}, which resolves ambiguously" if resolved.status == "ambiguous"
+                       else f"names {named!r}, which is not an impact classification in this "
                        "repository" if named else "names no impact classification")
                 report.add("CHG003", a.rel,
                            f"authorized at {a.meta.get('status')!r} and {why}. Nothing "
@@ -2531,22 +2335,19 @@ def check_change_contracts(arts: list[Artifact], report: Report) -> None:
                            "without looking: the report is green because the question was "
                            "never asked. Classify it in an `ICG`, `routing: none` included.")
             continue
-        impacts_map = icg.meta.get("impacts")
-        if not isinstance(impacts_map, dict):
-            continue
-
-        # Every candidate this change derives from, and everything they touch between them.
-        touches: set[str] = set()
-        for ref in as_list(a.meta.get("derives_from")):
-            for i in as_list(impacts_map.get(ref)):
-                if isinstance(i, str):
-                    touches.add(i)
+        joined = references.impacts_for(a, icg)
+        if joined.problems and a.meta.get("status") in AUTHORIZED:
+            report.add("CHG003", a.rel,
+                       f"{icg.id} cannot be joined to this change's candidates: " +
+                       "; ".join(joined.problems) + ". A matching number in another "
+                       "scope does not establish a classification for this candidate.")
+        touches = joined.impacts
 
         status = a.meta.get("status")
         if "ai" in touches and status == "verified":
             evr = a.meta.get("verified_by")
-            target = by_id.get(evr) if isinstance(evr, str) else None
-            if target is None or target.type != "evaluation-report":
+            target = references.artifact(evr, kind="evaluation-report").target
+            if target is None:
                 named = f"{evr!r}, which is not an evaluation report in this repository" \
                     if evr else "nothing in `verified_by`"
                 report.add("CHG001", a.rel,
@@ -2556,8 +2357,7 @@ def check_change_contracts(arts: list[Artifact], report: Report) -> None:
                            "report means nobody measured what it did.")
         if "architecture" in touches and status in ("approved", "implemented", "verified"):
             decs = [r for r in as_list(a.meta.get("derives_from"))
-                    if isinstance(r, str) and (by_id.get(r) is not None
-                                               and by_id[r].type == "decision-record")]
+                    if references.artifact(r, kind="decision-record").target is not None]
             if not decs:
                 report.add("CHG002", a.rel,
                            f"{icg.id} says this touches the architecture, and the change is "
@@ -2612,7 +2412,7 @@ AUTHORIZED_FOR_A_PR = ("approved", "implemented", "verified")
 
 
 def check_pull_request(arts: list[Artifact], pr_text: str | None,
-                       changed: set[str] | None, report: Report) -> None:
+                       changed: set[str] | None, report: Report, *, references=None) -> None:
     """The change set against the contract that authorizes it.
 
     Everything else in this file reads the documents. This reads the documents against
@@ -2650,15 +2450,16 @@ def check_pull_request(arts: list[Artifact], pr_text: str | None,
                        "and let the reason be read.")
         return
 
-    by_id = {a.id: a for a in arts if a.id}
+    references = references or reference_index(arts)
     by_rel = {a.rel: a for a in arts}
-    icgs = {a.id: a for a in arts if a.type == "impact-classification"}
     touched = {by_rel[p].type for p in (changed or set()) if p in by_rel}
 
     for cid in ids:
-        a = by_id.get(cid)
+        resolved = references.artifact(cid)
+        a = resolved.target.artifact if resolved.target else None
         if a is None or a.type != "change-contract":
             what = (f"is a {a.type!r} and not a change contract" if a is not None
+                    else "is ambiguous in this repository" if resolved.status == "ambiguous"
                     else "is not in this repository")
             report.add("PR002", "pull request",
                        f"cites {cid}, which {what}. Either the identifier is a typo, or "
@@ -2680,15 +2481,11 @@ def check_pull_request(arts: list[Artifact], pr_text: str | None,
         if changed is None:
             continue
 
-        icg = icgs.get(a.meta.get("icg"))
-        impacts_map = icg.meta.get("impacts") if icg is not None else None
-        if not isinstance(impacts_map, dict):
+        classified = references.artifact(a.meta.get("icg"), kind="impact-classification")
+        if classified.target is None:
             continue
-        impacts: set[str] = set()
-        for ref in as_list(a.meta.get("derives_from")):
-            for i in as_list(impacts_map.get(ref)):
-                if isinstance(i, str):
-                    impacts.add(i)
+        icg = classified.target.artifact
+        impacts = references.impacts_for(a, icg).impacts
 
         for impact in sorted(impacts):
             if impact not in IMPACT_OBLIGES:
@@ -2910,7 +2707,7 @@ def say_if_the_checkout_moved(root: Path, project: dict) -> None:
           "the rules this project declares.", file=sys.stderr)
 
 
-def check_triage(arts: list[Artifact], report: Report) -> None:
+def check_triage(arts: list[Artifact], report: Report, *, references=None) -> None:
     """Which signals has nobody looked at.
 
     `LOG` is append-only, so a row cannot be marked handled and triage state was simply
@@ -2927,15 +2724,20 @@ def check_triage(arts: list[Artifact], report: Report) -> None:
     if not logs:
         return
 
-    triaged: set[str] = set()
+    references = references or reference_index(arts)
+    triaged = set()
     for a in arts:
         if a.type == "impact-classification":
             routing = a.meta.get("routing")
             if isinstance(routing, dict):
-                triaged |= {k for k in routing if isinstance(k, str)}
+                for key in routing:
+                    candidate = references.normalize_candidate(key, a)
+                    if candidate.identity is not None:
+                        triaged.add(candidate.identity)
 
     for log in logs:
-        untriaged = sorted(i for i in log.ids if i.startswith("SIG-") and i not in triaged)
+        untriaged = sorted(i for i in log.ids if i.startswith("SIG-")
+                           and references.normalize_candidate(i, log).identity not in triaged)
         if not untriaged:
             continue
         shown = ", ".join(untriaged[:8]) + (" ..." if len(untriaged) > 8 else "")
@@ -3502,15 +3304,16 @@ def main() -> int:
     now = datetime.now()
 
     arts = discover(root, scan, registry, report)
+    references = ReferenceIndex(arts, registry)
     for a in arts:
         check_front_matter(a, registry, report)
         check_placeholders(a, registry, report)
         check_sections(a, registry, report)
         check_lifecycle(a, stale_days, now, report)
-    check_references(arts, registry, report)
+    check_references(arts, registry, report, references=references)
     check_release(arts, report)
-    check_change_contracts(arts, report)
-    check_pull_request(arts, pr_text, changed_files, report)
+    check_change_contracts(arts, report, references=references)
+    check_pull_request(arts, pr_text, changed_files, report, references=references)
     check_framework_version(root, project, registry, report)
     check_framework_pin(project, report)
     check_open_register(arts, report)
@@ -3527,7 +3330,7 @@ def main() -> int:
     check_glossary_terms(arts, report)
     check_decisions_leave_open(arts, report)
     check_commitments_and_risks(arts, report)
-    check_triage(arts, report)
+    check_triage(arts, report, references=references)
     check_stack(arts, report)
     check_cross_product(arts, report)
     # Last, and it has to be: an annotation is a statement about the set of findings, so it

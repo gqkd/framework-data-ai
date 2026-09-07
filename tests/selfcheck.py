@@ -208,7 +208,9 @@ def _markers():
 
 @check("every check the validator emits is in the catalog, and the reverse")
 def _catalog_matches_code():
-    emitted = set(re.findall(r'report\.add\(\s*"([A-Z]{2,3}\d{3})"', VALIDATE.read_text()))
+    sources = [VALIDATE, *sorted((ROOT / "src/framework_data_ai").glob("*.py"))]
+    emitted = set(re.findall(r'report\.add\(\s*"([A-Z]{2,3}\d{3})"',
+                             "\n".join(path.read_text() for path in sources)))
     catalogued = set(CHECKS["checks"])
     off = {c for c, s in CHECKS["checks"].items()
            if s.get("level") in ("off", False)}
@@ -4553,14 +4555,15 @@ def _change_set_review():
 
 # ─────────────────────────────────────────────────────────────────────────────
 
-@check("Product Memory acceptance inputs are valid and known resolver defects remain explicit")
+@check("Product Memory acceptance inputs and the scoped resolver satisfy their contracts")
 def _memory_phase_zero():
     r = subprocess.run([sys.executable, "-B", "-m", "unittest", "discover",
                         "-s", "tests/memory", "-v"], cwd=ROOT,
                        capture_output=True, text=True)
     if r.returncode:
         return [r.stdout + r.stderr]
-    # Do not conceal the xfails behind selfcheck's overall green result.
+    # Print the unit-suite summary, including any future expected failures rather than
+    # concealing them behind selfcheck's overall result.
     for line in r.stderr.splitlines():
         if "expected failure" in line or line.startswith(("Ran ", "OK")):
             print(f"       {line}")
