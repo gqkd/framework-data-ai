@@ -295,7 +295,7 @@ class ExportCompatibility(unittest.TestCase):
             shutil.copytree(ROOT / relative, repository / relative,
                             ignore=shutil.ignore_patterns("__pycache__"))
         for relative in ("skills/audit/scripts/validate.py", "skills/audit/scripts/migrate.py",
-                         "skills/audit/checks.yaml"):
+                         "skills/audit/checks.yaml", "memory.py"):
             target = repository / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / relative, target)
@@ -346,6 +346,17 @@ class ExportCompatibility(unittest.TestCase):
                              capture_output=True, text=True, timeout=60)
         self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
         self.assertTrue(json.loads(run.stdout)["up_to_date"])
+
+    def test_exported_memory_cli_is_self_contained_and_read_only(self):
+        run = subprocess.run([sys.executable, "-B", str(self.export / "memory.py"), "query",
+                              "--root", str(self.root / "inputs/document-only"), "--product", "alpha"],
+                             cwd=self.foreign, env=dict(os.environ, PYTHONPATH=str(self.foreign)),
+                             capture_output=True, text=True, timeout=30)
+        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+        pack = json.loads(run.stdout)
+        self.assertTrue(pack["documents"])
+        self.assertEqual(pack["code_observation"], "not_requested")
+        self.assertFalse((self.root / "inputs/document-only/_meta/memory").exists())
 
 
 if __name__ == "__main__":

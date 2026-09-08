@@ -13,6 +13,9 @@ derives_from: [product-a:SIG-NNN, INC-NNN, DEC-NNN]    # the signal is qualified
                                # product -- `REF008` reports a qualifier this document
                                # does not carry in `products:`
 verified_by: null               # the EVR, once there is one. Empty until `status: verified`
+# Optional in a NEW CHG; these locate the scope, not the authority to change it.
+# targets: [component:product:product-a:api]
+# preserves: [DEC-NNN]
 classification: internal
 ---
 
@@ -56,6 +59,11 @@ it is not verifiable, it is not a criterion: it is a hope.
 ---
 
 ## Optional fields: fill in only the relevant ones
+
+`targets` points to affected components/repositories/artifacts; `preserves` points to
+objects or constraints that must survive. Both are optional and complement, never replace,
+the three mandatory sections. Absence means undeclared, not an empty impact assessment.
+Do not add these fields retroactively to an immutable CHG or duplicate `ICG.impacts` here.
 
 | Field | When it is needed |
 |---|---|

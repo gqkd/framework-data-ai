@@ -62,6 +62,16 @@ code:
     url: git@github.com:org/product-a-backend.git
     contains: the API and the domain logic. Owns the database migrations
     path: ../product-a-backend
+    # Optional zones: classifications, NOT automatic scan exclusions.
+    # zones:
+    #   - {path: tests, kind: test}
+    #   - {path: src/generated, kind: generated}
+    # Kinds: test/generated/vendor/normal/other. Unclassified code stays normal.
+
+# Component IDs and root mappings belong in ARC (or a new SD before code exists),
+# not in this inventory. Shared repositories/components belong in PLATFORM.
+# Memory config and private checkout bindings are separate: see the framework's
+# references/product-memory.md. Never copy repository inventories into that config.
 
 artifacts:                     # by hand, and read as by hand. See the note at the bottom
   living:

@@ -14,6 +14,8 @@ derives_from: [HYP-NNN, EVD-NNN, product-a:SIG-NNN]   # a reference to a signal 
                                # product and this file is at the root, so `SIG-NNN` alone
                                # does not say whose. Bare is `FM002` from 3.0.0
 supersedes: null
+# Optional, for NEW decisions only. Subjects must resolve; no historical backfill.
+# applies_to: [component:product:product-a:api, component:platform:identity]
 classification: internal
 leaves_open: []                # the register entries this decision did NOT settle. `[]`
                                # when it settled everything it touched; `[unregistered]`,
@@ -71,6 +73,11 @@ choice you had already made would win. It is the most common and most recognizab
 anti-pattern.
 
 ## Consequences
+
+Memory readers must read Decision, Consequences and Review condition in full; read
+Alternatives considered when an alternative is proposed again. `applies_to` helps locate
+constraints; its absence on an older decision does not make the decision irrelevant.
+A `supersedes` link alone never proves every earlier constraint has ceased to apply.
 
 What becomes easier. What becomes harder. **What becomes impossible.** Include the
 uncomfortable consequences: they are the ones the document will be reread for.

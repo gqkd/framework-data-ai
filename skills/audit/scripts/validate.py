@@ -422,29 +422,7 @@ def apply_annotations(report: Report, rows: list[dict], require_all: bool,
                        "that reports something true inside a list nobody reads any more.")
 
 
-def load_scan(registry: dict, project: dict) -> dict:
-    """The framework's own exclusions, extended by the project's.
-
-    Without this a project cannot be checked at all once it also holds code. `discover`
-    reads every `.md` and `.yaml` under the root, and a dbt model, a Kubernetes manifest
-    and a CONTRIBUTING.md are each an `FM001`, which is one of the two checks that block.
-    The only way out was `FM001: warn`, which switches off the check the validator exists
-    to run.
-
-    It extends and does not replace, which is the decision worth stating. The defaults are
-    not preferences: `corpus` is source material the framework defines as not-an-artifact,
-    `schemas` and `skills` are the framework's own definition. A project that means "also
-    skip dbt/" must not be able to mean "and start reporting the corpus" by writing one
-    line. The keys are the same ones the registry declares, so there is one vocabulary to
-    learn and not two.
-    """
-    base = registry["scan"]
-    scan = project.get("scan") or {}
-    return {
-        "skip_hidden": bool(scan.get("skip_hidden", base.get("skip_hidden"))),
-        "skip_dirs": set(base["skip_dirs"]) | set(as_list(scan.get("skip_dirs"))),
-        "skip_files": set(base["skip_files"]) | set(as_list(scan.get("skip_files"))),
-    }
+load_scan = _artifacts.load_scan
 
 
 def load_config(project: dict) -> tuple[dict, int]:

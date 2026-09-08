@@ -47,6 +47,22 @@
           "uniqueItems": true
         }
       ]
+    },
+    "targets": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "preserves": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
     }
   },
   "required": [

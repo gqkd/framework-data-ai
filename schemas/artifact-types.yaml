@@ -1353,7 +1353,8 @@ scan:
   # to inform.
   skip_dirs: [templates, skills, schemas, references, corpus,
               "_meta/extract", "_meta/business", ingest-out,
-              build, node_modules, __pycache__, ".framework"]
+              build, node_modules, __pycache__, ".framework",
+              ".framework-memory", "_meta/memory"]
 
   # Documents that speak *about* the framework rather than being produced *by* it.
   # `framework.yaml` is the project's own validator configuration: without this line the
@@ -1717,6 +1718,7 @@ types:
     lifecycle: living
     status: [active, draft]
     id_fields: [derives_from]
+    memory_fields: {components: platform-components}
     # The shared substrate. Unlike ARC it is born on day one, before the code exists, so
     # it cannot require `verified_code`.
     #
@@ -1738,6 +1740,7 @@ types:
           required: [url, contains]
           optional: [path, release_relevant]
           lists: [used_by]
+          typed: {zones: code-zones}
 
   product-manifest:
     id: product.yaml
@@ -1776,6 +1779,7 @@ types:
           required: [url, contains]
           optional: [path, release_relevant]
           lists: [used_by]
+          typed: {zones: code-zones}
 
   product-brief:
     id: PBR
@@ -1865,6 +1869,7 @@ types:
     lifecycle: immutable
     status: [active, superseded]
     id_fields: [supersedes]
+    memory_fields: {components: design-components}
 
   evaluation-plan:
     id: EVP
@@ -1922,6 +1927,7 @@ types:
     path: [decisions/DEC-NNN-slug.md]
     lifecycle: immutable
     status: [proposed, accepted, superseded]
+    memory_fields: {applies_to: references}
     id_fields:
     - supersedes
     # `derives_from` was read by the validator -- `REG002`, and the traceability view -- and
@@ -1945,6 +1951,7 @@ types:
     lifecycle: living
     status: [active, draft]
     id_fields: [derives_from]
+    memory_fields: {components: architecture-components}
     # Three sections, for the reason `WF` has three: a target only means something set
     # against what exists, and the value is in the delta. Separate files would leave two
     # architectures diverging with nothing to say which one the code must match.
@@ -2114,6 +2121,7 @@ types:
     lifecycle: immutable
     status: [proposed, accepted, superseded]
     id_fields: [supersedes]
+    memory_fields: {subjects: subjects}
     sections: [intake, classification, open-questions]
     # One document per cycle, one row per candidate. `routing` is where each candidate
     # goes and there is exactly one answer per candidate; `impacts` is what it touches on
@@ -2152,6 +2160,7 @@ types:
     # matter once references had a shape: the type most likely to carry a qualified
     # reference was the one type whose reference field nothing was checking.
     id_fields: [derives_from]
+    memory_fields: {targets: references, preserves: references}
     sections: [what-changes, what-must-not-change, how-we-know-it-worked]
 
   cycle-plan:

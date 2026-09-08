@@ -56,6 +56,87 @@
           "uniqueItems": true
         }
       ]
+    },
+    "components": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^component:(?:product:[a-z0-9][a-z0-9-]*|platform):[a-z][a-z0-9._-]*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "minProperties": 1,
+        "additionalProperties": false,
+        "properties": {
+          "current": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "section": {
+                "type": "string",
+                "minLength": 1
+              },
+              "code_roots": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "repository",
+                    "path"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "repository": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "path": {
+                      "type": "string",
+                      "minLength": 1,
+                      "pattern": "^(?!/)(?!.*\\\\)(?!.*:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*//).+$"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "target": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "section": {
+                "type": "string",
+                "minLength": 1
+              },
+              "code_roots": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "repository",
+                    "path"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "repository": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "path": {
+                      "type": "string",
+                      "minLength": 1,
+                      "pattern": "^(?!/)(?!.*\\\\)(?!.*:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*//).+$"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "required": [

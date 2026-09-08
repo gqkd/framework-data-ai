@@ -140,22 +140,31 @@ def skipped_dir(parts: tuple[str, ...], skip_dirs: set[str]) -> bool:
     return any("/" in s and (rel == s or rel.startswith(s + "/")) for s in skip_dirs)
 
 
+def load_scan(registry: dict, project: dict) -> dict:
+    """Framework exclusions are a floor: project configuration can only extend them."""
+    base = registry["scan"]
+    scan = project.get("scan") or {}
+    return {
+        "skip_hidden": bool(scan.get("skip_hidden", base.get("skip_hidden"))),
+        "skip_dirs": set(base["skip_dirs"]) | set(as_list(scan.get("skip_dirs"))),
+        "skip_files": set(base["skip_files"]) | set(as_list(scan.get("skip_files"))),
+    }
+
+
+def document_selected(relative: Path, scan: dict) -> bool:
+    parts = relative.parts
+    return (relative.suffix in {".md", ".yaml", ".yml"}
+            and not (scan["skip_hidden"] and any(p.startswith(".") for p in parts))
+            and not skipped_dir(parts[:-1], scan["skip_dirs"])
+            and relative.name not in scan["skip_files"])
+
+
 def discover(root: Path, scan: dict, registry: dict, report: FindingSink) -> list[Artifact]:
-    skip_dirs = scan["skip_dirs"]
-    skip_files = scan["skip_files"]
-    skip_hidden = scan["skip_hidden"]
     id_re = re.compile(r"\b((?:%s)-\d{3,})\b" % "|".join(registry["id_prefixes"]))
 
     artifacts = []
     for p in sorted(root.rglob("*")):
-        if p.is_dir() or p.suffix not in {".md", ".yaml", ".yml"}:
-            continue
-        parts = p.relative_to(root).parts
-        if skip_hidden and any(part.startswith(".") for part in parts):
-            continue
-        if skipped_dir(parts[:-1], skip_dirs):
-            continue
-        if p.name in skip_files:
+        if p.is_dir() or not document_selected(p.relative_to(root), scan):
             continue
         rel = str(p.relative_to(root))
         meta, body, err = parse_front_matter(

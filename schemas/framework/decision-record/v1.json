@@ -72,6 +72,14 @@
           "uniqueItems": true
         }
       ]
+    },
+    "applies_to": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
     }
   },
   "required": [

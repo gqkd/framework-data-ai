@@ -9,6 +9,10 @@ owners: [NAME]
 created: YYYY-MM-DD HH:MM
 derives_from: [HYP-NNN, DFB-NNN, PBR]
 classification: internal
+# Optional in a NEW design. No code root or premature ARC is required.
+# components:
+#   component:product:product-a:processor:
+#     design: {section: Components and data flow}
 ---
 
 # SD-NNN · Solution design and MVA
@@ -32,6 +36,11 @@ and the one agents read most.
 ## Components and data flow
 
 End-to-end diagram. For each component: its responsibility in one line.
+
+Optional `components` metadata uses only the `design` view. It stores stable IDs and
+source/root references, never a second narrative. Expected roots are not observed code;
+omit them until known. A design spanning products uses fully qualified repository IDs
+if it names roots. Historical immutable SDs remain untouched.
 
 ## Technology choices
 

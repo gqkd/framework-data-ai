@@ -1,8 +1,9 @@
 # Product Memory: acceptance tests and scoped core
 
-This directory preserves the phase-zero acceptance baseline and tests the phase-one
-parser/resolver. It does not provide a graph, context pack or code provider. Historical
-results are in `BASELINE.md`; the current implementation handoff is in `PHASE-1.md`.
+This directory preserves the phase-zero baseline and tests the scoped core and phase-two
+documentary memory. Historical reports are in `BASELINE.md` and `PHASE-1.md`; the current
+handoff is `PHASE-2.md`. A code provider and operational context/impact packs remain later
+phases. The phase-two query output is a documentary pack, not a task authorization.
 
 Run the deterministic suite from the framework checkout:
 
@@ -26,6 +27,8 @@ All products, repositories, documents and code in these fixtures are synthetic.
   that the reasoning task is satisfied.
 - `tests/fixtures/memory/phase1-findings.yaml` records the additive finding delta after
   fixing the resolver. The historical baseline and desired answers are not rewritten.
+- `tests/fixtures/memory/phase2-metadata.yaml` enriches only disposable fixture copies;
+  the original generator and comprehension questions are unchanged.
 - `evals/behaviour/memory/cases.yaml` owns the fourteen comprehension questions, their
   required sources, expected answers and forbidden conclusions. `memory` names an eval
   scenario group, not an eighth skill. Model evaluation has **not** been run.
@@ -53,6 +56,11 @@ compatibility aliases, and a real Git-export fixture. An exported validator must
 own package from an unrelated working directory, even beside an incompatible package on
 PYTHONPATH. Live and exported validators can coexist in one Python process.
 
+`test_documentary.py` executes the graph, schema, CLI, search and snapshot gates. It
+checks provenance, inverse methods, legacy decision retrieval, source filters, portable
+canonical bytes, partial results, source mutation, atomic publication and safe fallback.
+The export fixture also starts the memory CLI without relying on the live checkout.
+
 ## Behavioural evaluation and safety
 
 The case file is compatible with the existing `evals/behaviour/run.py` scenario loader.
@@ -72,8 +80,8 @@ into a successful baseline.
 The full increment's twenty-four deterministic obligations were frozen under
 `deferred_checks` in the acceptance contract with their implementation phases. Their
 inputs and required outcomes were specifications, not successful engine tests. Executable
-coverage is added with each phase; see `PHASE-1.md` for what is covered now. No snapshot
-builder or graph exists yet. The migration smoke checks only an already-current fixture
+coverage is added with each phase; see `PHASE-2.md` for what is covered now. The migration
+smoke checks only an already-current fixture
 and no writes; export tests cover the entry points, not every future migration.
 
 See `BASELINE.md` for the measured checkout, environment and phase-zero results.

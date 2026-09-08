@@ -17,6 +17,12 @@ code:
     url: git@github.com:org/platform-access.git
     contains: sign-in, tenancy and the permission model. Every product goes through it
     path: ../platform-access
+# Optional; define shared components here once, not in every product ARC.
+# components:
+#   component:platform:identity:
+#     current:
+#       section: Components
+#       code_roots: [{repository: platform.access, path: src}]
 ---
 
 # Shared substrate architecture
@@ -99,6 +105,12 @@ What is platform and what is not. There is a single boundary line:
 ## Components
 
 One per row: what it does, what it guarantees to whoever uses it, where the code lives.
+
+Optional `components` records use `component:platform:<slug>` IDs with distinct `current`,
+`target` or `design` views. Metadata only maps identity to sections and repository/root
+pairs; guarantees stay here. Root mappings are declarations, not observations. Shared
+repository zones use the same optional `zones` format as `product.yaml`; unclassified
+code remains normal code. This does not create a product called platform.
 
 | Component | Guarantee offered | Path | Status |
 |---|---|---|---|

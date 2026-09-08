@@ -10,6 +10,15 @@ created: YYYY-MM-DD HH:MM
 last_review: YYYY-MM-DD HH:MM
 verified_code:                  # one commit per repository named in product.yaml#code
   product.backend: COMMIT_HASH
+# Optional mapping; responsibilities remain in the authoritative sections below.
+# components:
+#   component:product:product-a:api:
+#     current:
+#       section: current
+#       code_roots: [{repository: product.backend, path: src}]
+#     target:
+#       section: target
+#       code_roots: [{repository: product.backend, path: services/api}]
 classification: internal
 ---
 
@@ -30,6 +39,13 @@ born; before F5 the design lives in the `SD` and nowhere else.
 **`verified_code` attests §current only.** It records the commits this document was last
 checked against. §target has no commit by definition: it describes something nobody has
 built yet, and a hash on it would be a claim about a system that does not exist.
+
+Optional `components` gives each component a stable, qualified ID and separate `current`
+and `target` records. A view can omit `code_roots` when mapping is not known; an empty
+list is a declared absence, not proof about the product. Root pairs can span repositories
+and overlap. Repository aliases resolve through this product's manifest or `PLATFORM`;
+neither a declared current root nor `realized_in` certifies that code was observed.
+See `references/product-memory.md` in the framework checkout for the exact format.
 
 **The MVA is not a section here.** It is what §current *is* at the end of the MVP: the
 architecture minimally sufficient to support it, decided at G4 and recorded as designed in

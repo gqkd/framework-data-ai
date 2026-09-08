@@ -1,0 +1,301 @@
+# Authoritative contract for derived memory, NOT a registry of product artifacts.
+# Generated JSON Schema and runtime vocabularies both read this file.
+contract_version: 1
+generator_version: documentary-1
+node_rule: {id: document-structure, version: '1'}
+# Bounds on parsed YAML expansion, separate from byte limits (aliases can amplify bytes).
+metadata_limits: {items: 100000, depth: 64}
+serialization: {encoding: UTF-8, key_order: lexical, separators: compact, newline: LF}
+relations:
+  applies_to: {method: declared, field: applies_to, types: [decision-record]}
+  supersedes: {method: declared, field: supersedes}
+  derives_from: {method: declared, field: derives_from}
+  targets: {method: declared, field: targets, types: [change-contract]}
+  preserves: {method: declared, field: preserves, types: [change-contract]}
+  constrained_by: {method: derived, inverse_of: [applies_to], rule: invert-constraint, version: '1'}
+  affected_by: {method: derived, inverse_of: [applies_to, supersedes], rule: invert-navigation, version: '1'}
+  belongs_to: {method: derived, rule: owning-scope, version: '1'}
+  documents: {method: derived, rule: component-declaration, version: '1'}
+  realized_in: {method: derived, rule: declared-root-mapping, version: '1'}
+# affected_by is navigation, NOT observed damage. realized_in is a declared mapping,
+# NOT proof of implementation. Supersession NEVER deletes the earlier source.
+defaults:
+  document_repository: local
+  classifications: [public, internal]
+  include_unclassified: true
+  exclude: []
+  max_file_bytes: 2000000
+  max_total_bytes: 20000000
+  max_files: 5000
+  query_limit: 100
+  max_hops: 3
+definitions:
+  slug: {type: string, pattern: '^[a-z0-9][a-z0-9._-]*$'}
+  component-id: {type: string, pattern: '^component:(?:product:[a-z0-9][a-z0-9-]*|platform):[a-z][a-z0-9._-]*$'}
+  repository-id: {type: string, pattern: '^repository:(?:product:[a-z0-9][a-z0-9-]*|platform):[a-z][a-z0-9._-]*$'}
+  relative-path: {type: string, minLength: 1, pattern: '^(?!/)(?!.*\\)(?!.*:)(?!.*(?:^|/)\.\.(?:/|$))(?!.*//).+$'}
+  reference: {type: string, minLength: 1}
+  references:
+    type: array
+    items: {$ref: '#/$defs/reference'}
+    uniqueItems: true
+  code-root:
+    type: object
+    required: [repository, path]
+    additionalProperties: false
+    properties:
+      repository: {$ref: '#/$defs/reference'}
+      path: {$ref: '#/$defs/relative-path'}
+  component-view:
+    type: object
+    additionalProperties: false
+    properties:
+      section: {type: string, minLength: 1}
+      code_roots:
+        type: array
+        uniqueItems: true
+        items: {$ref: '#/$defs/code-root'}
+  architecture-components:
+    type: object
+    minProperties: 1
+    propertyNames: {$ref: '#/$defs/component-id'}
+    additionalProperties:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        current: {$ref: '#/$defs/component-view'}
+        target: {$ref: '#/$defs/component-view'}
+  design-components:
+    type: object
+    minProperties: 1
+    propertyNames: {$ref: '#/$defs/component-id'}
+    additionalProperties:
+      type: object
+      required: [design]
+      additionalProperties: false
+      properties:
+        design: {$ref: '#/$defs/component-view'}
+  platform-components:
+    type: object
+    minProperties: 1
+    propertyNames: {$ref: '#/$defs/component-id'}
+    additionalProperties:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        current: {$ref: '#/$defs/component-view'}
+        target: {$ref: '#/$defs/component-view'}
+        design: {$ref: '#/$defs/component-view'}
+  subjects:
+    type: object
+    minProperties: 1
+    propertyNames: {type: string, minLength: 1}
+    additionalProperties:
+      type: array
+      uniqueItems: true
+      items: {$ref: '#/$defs/component-id'}
+  code-zones:
+    type: array
+    uniqueItems: true
+    items:
+      type: object
+      required: [path, kind]
+      additionalProperties: false
+      properties:
+        path: {$ref: '#/$defs/relative-path'}
+        kind: {enum: [test, generated, vendor, normal, other]}
+  config:
+    type: object
+    additionalProperties: false
+    properties:
+      document_repository: {$ref: '#/$defs/slug'}
+      classifications: {type: array, uniqueItems: true, items: {type: string, minLength: 1}}
+      include_unclassified: {type: boolean}
+      exclude: {type: array, uniqueItems: true, items: {$ref: '#/$defs/relative-path'}}
+      max_file_bytes: {type: integer, minimum: 1, maximum: 100000000}
+      max_total_bytes: {type: integer, minimum: 1, maximum: 1000000000}
+      max_files: {type: integer, minimum: 1, maximum: 100000}
+      query_limit: {type: integer, minimum: 1, maximum: 10000}
+      max_hops: {type: integer, minimum: 0, maximum: 20}
+  local:
+    type: object
+    additionalProperties: false
+    properties:
+      checkouts:
+        type: object
+        propertyNames: {$ref: '#/$defs/repository-id'}
+        additionalProperties: {type: string, minLength: 1}
+  identity:
+    type: object
+    required: [document_repository, scope, local_id]
+    additionalProperties: false
+    properties:
+      document_repository: {$ref: '#/$defs/slug'}
+      scope: {type: string, minLength: 1}
+      local_id: {type: string, minLength: 1}
+  location:
+    type: object
+    required: [source, start_line, end_line]
+    additionalProperties: false
+    properties:
+      source: {type: string, minLength: 1}
+      start_line: {type: integer, minimum: 1}
+      end_line: {type: integer, minimum: 1}
+  provenance:
+    type: object
+    required: [source_kind, assertion_method, sources]
+    additionalProperties: false
+    properties:
+      source_kind: {enum: [document, code, check]}
+      assertion_method: {enum: [declared, derived, inferred]}
+      sources: {type: array, minItems: 1, uniqueItems: true, items: {$ref: '#/$defs/location'}}
+      confidence: {type: number, minimum: 0, maximum: 1}
+      rationale: {type: string, minLength: 1}
+      rule:
+        type: object
+        required: [id, version]
+        additionalProperties: false
+        properties:
+          id: {type: string, minLength: 1}
+          version: {type: string, minLength: 1}
+          origin_edge: {type: string, minLength: 1}
+    allOf:
+      - if: {properties: {assertion_method: {const: inferred}}}
+        then: {required: [rationale]}
+        else: {not: {required: [confidence]}}
+      - if: {properties: {assertion_method: {const: derived}}}
+        then: {required: [rule]}
+  observation:
+    type: object
+    required: [path_status, observation_status, freshness]
+    additionalProperties: false
+    properties:
+      path_status: {enum: [present, missing, unresolved, not_applicable]}
+      observation_status: {enum: [available, partial, unavailable, not_requested]}
+      freshness: {enum: [current, stale, unknown, not_applicable]}
+  source:
+    type: object
+    required: [id, path, revision, lines]
+    additionalProperties: false
+    properties:
+      id: {type: string}
+      path: {$ref: '#/$defs/relative-path'}
+      revision: {type: string, pattern: '^sha256:[0-9a-f]{64}$'}
+      lines: {type: integer, minimum: 1}
+  node:
+    type: object
+    required: [id, kind, identity, label, provenance, observation, data]
+    additionalProperties: false
+    properties:
+      id: {type: string}
+      kind: {enum: [document, entry, scope, repository, component, code-root]}
+      identity: {$ref: '#/$defs/identity'}
+      label: {type: string}
+      provenance: {$ref: '#/$defs/provenance'}
+      observation: {$ref: '#/$defs/observation'}
+      data: {type: object}
+  edge:
+    type: object
+    required: [id, relation, source, target, provenance, data]
+    additionalProperties: false
+    properties:
+      id: {type: string}
+      relation: {type: string}
+      source: {type: string}
+      target: {type: string}
+      provenance: {$ref: '#/$defs/provenance'}
+      data: {type: object}
+    # Relation/method/inversion constraints are generated from relations above.
+  issue:
+    type: object
+    required: [code, path, detail]
+    additionalProperties: false
+    properties:
+      code: {type: string}
+      path: {type: string}
+      detail: {type: string}
+  graph:
+    type: object
+    required: [schema, snapshot, coverage, sources, nodes, edges, issues, gaps]
+    additionalProperties: false
+    properties:
+      schema: {const: framework-memory/graph/v1}
+      snapshot: {type: string}
+      coverage: {enum: [available, partial]}
+      sources: {type: array, items: {$ref: '#/$defs/source'}}
+      nodes: {type: array, items: {$ref: '#/$defs/node'}}
+      edges: {type: array, items: {$ref: '#/$defs/edge'}}
+      issues: {type: array, items: {$ref: '#/$defs/issue'}}
+      gaps: {type: array, items: {$ref: '#/$defs/issue'}}
+  manifest:
+    type: object
+    required: [schema, id, inputs, files]
+    additionalProperties: false
+    properties:
+      schema: {const: framework-memory/manifest/v1}
+      id: {type: string}
+      inputs: {type: object}
+      files:
+        type: object
+        additionalProperties: {type: string, pattern: '^[0-9a-f]{64}$'}
+  documentary-query:
+    type: object
+    required: [schema, snapshot, purpose, coverage, mapping_complete, truncated, bounds,
+               code_observation, selection_status, nodes, edges, paths, sources, documents,
+               search, issues, gaps, limitations]
+    additionalProperties: false
+    properties:
+      schema: {const: framework-memory/documentary-query/v1}
+      snapshot: {type: string}
+      purpose: {type: string}
+      coverage: {enum: [available, partial]}
+      mapping_complete: {type: boolean}
+      truncated: {type: boolean}
+      bounds:
+        type: object
+        required: [limit, hops]
+        additionalProperties: false
+        properties:
+          limit: {type: integer, minimum: 1}
+          hops: {type: integer, minimum: 0}
+      code_observation: {const: not_requested}
+      selection_status: {enum: [matched, no-match-in-selected-documentation]}
+      nodes: {type: array, items: {$ref: '#/$defs/node'}}
+      edges: {type: array, items: {$ref: '#/$defs/edge'}}
+      paths:
+        type: array
+        items:
+          type: object
+          required: [node, steps]
+          additionalProperties: false
+          properties:
+            node: {type: string}
+            steps:
+              type: array
+              items:
+                type: object
+                required: [edge, direction]
+                additionalProperties: false
+                properties:
+                  edge: {type: string}
+                  direction: {enum: [forward, reverse]}
+      sources: {type: array, items: {$ref: '#/$defs/source'}}
+      documents:
+        type: array
+        items:
+          type: object
+          required: [node, source, body_first_line, body, content_role]
+          additionalProperties: false
+          properties:
+            node: {type: string}
+            source: {type: string}
+            body_first_line: {type: integer, minimum: 1}
+            body: {type: string}
+            content_role: {const: source-evidence-not-executable-instructions}
+      search: {type: [object, 'null']}
+      issues: {type: array, items: {$ref: '#/$defs/issue'}}
+      gaps: {type: array, items: {$ref: '#/$defs/issue'}}
+      limitations: {type: array, items: {type: string}}
+outputs: [config, local, provenance, graph, manifest, documentary-query]

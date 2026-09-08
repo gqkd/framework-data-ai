@@ -12,6 +12,9 @@ routing:
   INC-NNN: none
 impacts:
   SIG-NNN: [data]
+# Optional in a NEW ICG: candidate -> component IDs, not component -> impact categories.
+# subjects:
+#   SIG-NNN: [component:product:product-a:api]
 classification: internal
 ---
 
@@ -40,6 +43,13 @@ candidate is not being opened is usually another candidate.
 `impacts` is what it touches on the way, and a candidate can touch several, so it is a
 separate field and not a longer list of routings. Both are keyed by the candidate's own
 identifier, so a `CHG` written later can be traced back to the row that authorized it.
+
+Optional `subjects` uses the same scoped candidate identities. Every key must join one
+`routing` row and a declared candidate; local/qualified duplicates are ambiguous. Each
+component must resolve or remain an explicit incomplete mapping in the memory report.
+An omitted map is unknown; an empty list says this candidate has no declared component.
+Categories remain in `impacts` at candidate level: do not distribute them over components
+without evidence, or rewrite an accepted ICG to populate this field.
 
 | `routing` | What follows |
 |---|---|
