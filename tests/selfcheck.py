@@ -4555,7 +4555,7 @@ def _change_set_review():
 
 # ─────────────────────────────────────────────────────────────────────────────
 
-@check("Product Memory acceptance inputs, resolver and documentary graph satisfy their contracts")
+@check("Product Memory acceptance, resolver, documentary graph and code-provider contracts")
 def _memory_phase_zero():
     r = subprocess.run([sys.executable, "-B", "-m", "unittest", "discover",
                         "-s", "tests/memory", "-v"], cwd=ROOT,

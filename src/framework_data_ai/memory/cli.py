@@ -19,10 +19,18 @@ from .search import fts5_available
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
-    for name in ("doctor", "build", "query"):
+    for name in ("doctor", "build", "query", "code"):
         command = commands.add_parser(name)
         command.add_argument("--root", type=Path, required=True)
         command.add_argument("--json", action="store_true", help="JSON is also the default output")
+        if name in ("doctor", "code"):
+            command.add_argument("--enola", type=Path, help="explicit already-installed pinned executable; never downloaded")
+        if name == "code":
+            command.add_argument("--repository", action="append", help="qualified declared repository ID; default: all")
+            command.add_argument("--source", choices=("worktree", "git"), default="worktree")
+            command.add_argument("--revision", help="full commit ID; required for --source git and exactly one repository")
+            command.add_argument("--include-untracked", action="store_true", help="explicitly include nonignored untracked Python")
+            command.add_argument("--dry-run", action="store_true", help="do not publish; isolated temporary execution still occurs")
         if name == "build":
             command.add_argument("--dry-run", action="store_true", help="validate/export without writing")
             command.add_argument("--export", action="store_true", help="emit the complete canonical graph")
@@ -40,9 +48,10 @@ def main(argv=None) -> int:
         if args.command == "doctor":
             workspace = Workspace.open(args.root)
             local = workspace.local_bindings()
+            from .providers.enola import EnolaProvider
             result = dict(command="doctor", status="available", document_repository=workspace.config["document_repository"],
                           selected_paths=len(workspace.paths()), local_binding_count=len(local),
-                          code_provider="not_requested; integration belongs to phase 3",
+                          code_provider=EnolaProvider(args.enola).status(),
                           search=dict(literal=True, sqlite_fts5=fts5_available()),
                           ignored_paths=[".framework-memory/local.yaml", "_meta/memory/"],
                           limitations=["doctor does not validate artifacts or observe code",
@@ -50,7 +59,15 @@ def main(argv=None) -> int:
         else:
             snapshot = capture(args.root)
             graph = build(snapshot)
-            if args.command == "build":
+            if args.command == "code":
+                from .code_graph import build_code
+                from .providers.enola import EnolaProvider
+                code = build_code(snapshot, graph, EnolaProvider(args.enola), repositories=args.repository,
+                                  mode=args.source, revision=args.revision, include_untracked=args.include_untracked)
+                if not args.dry_run:
+                    code.publish()
+                result = code.graph
+            elif args.command == "build":
                 if not args.dry_run:
                     publish(snapshot, graph)
                 result = graph if args.export else dict(
@@ -65,7 +82,7 @@ def main(argv=None) -> int:
                                engine=args.search_engine)
                 snapshot.assert_unchanged()
         sys.stdout.write(canonical(result).decode("utf-8"))
-        return 1 if result.get("coverage") == "partial" else 0
+        return {"partial": 1, "unavailable": 2}.get(result.get("coverage"), 0)
     except MemoryInputError as error:
         sys.stdout.write(canonical(dict(status="unavailable", error=str(error))).decode("utf-8"))
         return 2

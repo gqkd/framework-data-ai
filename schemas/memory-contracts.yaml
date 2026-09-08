@@ -298,4 +298,131 @@ definitions:
       issues: {type: array, items: {$ref: '#/$defs/issue'}}
       gaps: {type: array, items: {$ref: '#/$defs/issue'}}
       limitations: {type: array, items: {type: string}}
-outputs: [config, local, provenance, graph, manifest, documentary-query]
+  code-provenance:
+    type: object
+    required: [source_kind, assertion_method, records, locations, rule]
+    additionalProperties: false
+    properties:
+      source_kind: {const: code}
+      assertion_method: {const: derived}
+      records: {type: array, uniqueItems: true, items: {type: string}}
+      locations: {type: array, uniqueItems: true, items: {$ref: '#/$defs/location'}}
+      rule:
+        type: object
+        required: [id, version]
+        additionalProperties: false
+        properties:
+          id: {enum: [captured-file, provider-direct-fact, file-contains-entity]}
+          version: {const: '1'}
+  code-node:
+    type: object
+    required: [id, kind, repository, name, file, provenance, observation, zones]
+    additionalProperties: false
+    properties:
+      id: {type: string}
+      kind: {enum: [file, module, symbol, dependency, test_ref, file_ref]}
+      repository: {$ref: '#/$defs/repository-id'}
+      name: {type: string}
+      file: {type: string}
+      provenance: {$ref: '#/$defs/code-provenance'}
+      observation: {$ref: '#/$defs/observation'}
+      zones: {type: array, uniqueItems: true, items: {enum: [test, generated, vendor, normal, other]}}
+  code-edge:
+    type: object
+    required: [id, relation, source, target, target_name, resolution, provenance]
+    additionalProperties: false
+    properties:
+      id: {type: string}
+      relation: {enum: [contains, calls, imports, declares, implements, instantiates, names]}
+      source: {type: string}
+      target: {type: [string, 'null']}
+      target_name: {type: string}
+      target_provider_id: {type: string}
+      resolution: {enum: [resolved, unresolved]}
+      provenance: {$ref: '#/$defs/code-provenance'}
+  code-coverage:
+    type: object
+    required: [path, status]
+    additionalProperties: false
+    properties:
+      path: {$ref: '#/$defs/relative-path'}
+      status: {enum: [available, partial, unavailable, unsupported, excluded]}
+      reason: {type: string}
+  code-graph:
+    type: object
+    required: [schema, snapshot, document_snapshot, coverage, provider, repositories, sources,
+               nodes, edges, records, bridges, limitations]
+    additionalProperties: false
+    properties:
+      schema: {const: framework-memory/code-graph/v1}
+      snapshot: {type: string, pattern: '^[0-9a-f]{64}$'}
+      document_snapshot: {type: string, pattern: '^[0-9a-f]{64}$'}
+      coverage: {enum: [available, partial, unavailable]}
+      provider:
+        type: object
+        required: [name, version, languages, direct_edges, profile, status]
+        additionalProperties: false
+        properties:
+          name: {type: string}
+          version: {type: string}
+          languages: {type: array, items: {type: string}}
+          direct_edges: {type: array, items: {type: string}}
+          profile: {type: string}
+          status: {type: object}
+      repositories:
+        type: array
+        items:
+          type: object
+          required: [repository, observation, coverage, problems, evidence, insights]
+          additionalProperties: false
+          properties:
+            repository: {$ref: '#/$defs/repository-id'}
+            observation: {$ref: '#/$defs/observation'}
+            coverage: {type: array, items: {$ref: '#/$defs/code-coverage'}}
+            problems: {type: array, items: {type: object}}
+            evidence: {type: object}
+            insights: {type: array, items: {type: object}}
+      sources:
+        type: array
+        items:
+          type: object
+          required: [id, repository, path, revision, lines]
+          additionalProperties: false
+          properties:
+            id: {type: string}
+            repository: {$ref: '#/$defs/repository-id'}
+            path: {$ref: '#/$defs/relative-path'}
+            revision: {type: string, pattern: '^sha256:[0-9a-f]{64}$'}
+            lines: {type: integer, minimum: 1}
+      nodes: {type: array, items: {$ref: '#/$defs/code-node'}}
+      edges: {type: array, items: {$ref: '#/$defs/code-edge'}}
+      records:
+        type: array
+        items:
+          type: object
+          required: [id, repository, occurrence, role, record]
+          additionalProperties: false
+          properties:
+            id: {type: string}
+            repository: {$ref: '#/$defs/repository-id'}
+            occurrence: {type: integer, minimum: 0}
+            role: {const: provider-evidence-not-authority}
+            record: {type: object}
+      bridges:
+        type: array
+        items:
+          type: object
+          required: [component, root, repository, path, view, files, meaning, observation, declaration]
+          additionalProperties: false
+          properties:
+            component: {type: string}
+            root: {type: string}
+            repository: {$ref: '#/$defs/repository-id'}
+            path: {$ref: '#/$defs/relative-path'}
+            view: {enum: [current, target, design]}
+            files: {type: array, uniqueItems: true, items: {type: string}}
+            meaning: {const: declared-location-match-not-proof-of-implementation}
+            observation: {$ref: '#/$defs/observation'}
+            declaration: {$ref: '#/$defs/provenance'}
+      limitations: {type: array, items: {type: string}}
+outputs: [config, local, provenance, graph, manifest, documentary-query, code-graph]

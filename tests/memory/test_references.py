@@ -295,7 +295,7 @@ class ExportCompatibility(unittest.TestCase):
             shutil.copytree(ROOT / relative, repository / relative,
                             ignore=shutil.ignore_patterns("__pycache__"))
         for relative in ("skills/audit/scripts/validate.py", "skills/audit/scripts/migrate.py",
-                         "skills/audit/checks.yaml", "memory.py"):
+                          "skills/audit/checks.yaml", "memory.py", "providers.lock.json"):
             target = repository / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / relative, target)

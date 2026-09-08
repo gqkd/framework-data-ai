@@ -60,7 +60,8 @@ def git_head(root: Path) -> str | None:
 
 
 def generator_inputs() -> dict:
-    paths = [FRAMEWORK / "memory.py", FRAMEWORK / "schemas/artifact-types.yaml", CONTRACT_PATH]
+    paths = [FRAMEWORK / "memory.py", FRAMEWORK / "schemas/artifact-types.yaml", CONTRACT_PATH,
+             FRAMEWORK / "providers.lock.json"]
     paths += sorted((FRAMEWORK / "src/framework_data_ai").rglob("*.py"))
     return {path.relative_to(FRAMEWORK).as_posix(): digest(path.read_bytes())
             for path in sorted(paths)}
@@ -171,10 +172,24 @@ def publish(snapshot: Snapshot, graph: dict) -> dict:
     validate_graph(graph)
     if graph["snapshot"] != snapshot.id or snapshot.id != digest(canonical(snapshot.inputs)):
         raise MemoryInputError("graph and snapshot identities disagree")
-    snapshot.assert_unchanged()
-    base_rel = Path("_meta/memory/snapshots")
-    no_symlink_ancestors(snapshot.workspace.root, base_rel)
-    base = snapshot.workspace.root / base_rel
+    graph_bytes = canonical(graph)
+    manifest = dict(schema="framework-memory/manifest/v1", id=snapshot.id, inputs=snapshot.inputs,
+                    files={"graph.json": digest(graph_bytes)})
+    validate("manifest", manifest)
+    publish_payload(snapshot.workspace.root, "snapshots", snapshot.id,
+                    {"graph.json": graph_bytes, "manifest.json": canonical(manifest)}, snapshot.assert_unchanged)
+    return manifest
+
+
+def publish_payload(root: Path, namespace: str, identifier: str, payload: dict, assert_unchanged) -> None:
+    """Shared atomic writer; namespace and flat filenames cannot escape the runtime directory."""
+    if (namespace not in ("snapshots", "code-snapshots") or not re.fullmatch(r"[0-9a-f]{64}", identifier)
+            or any(not re.fullmatch(r"[a-z-]+\.json", name) for name in payload)):
+        raise MemoryInputError("unsafe snapshot identity or filename")
+    assert_unchanged()
+    base_rel = Path("_meta/memory") / namespace
+    no_symlink_ancestors(root, base_rel)
+    base = root / base_rel
     base.mkdir(parents=True, exist_ok=True)
     lock = base / ".build.lock"
     try:
@@ -184,12 +199,7 @@ def publish(snapshot: Snapshot, graph: dict) -> dict:
     os.close(descriptor)
     staging = None
     try:
-        graph_bytes = canonical(graph)
-        manifest = dict(schema="framework-memory/manifest/v1", id=snapshot.id, inputs=snapshot.inputs,
-                        files={"graph.json": digest(graph_bytes)})
-        validate("manifest", manifest)
-        payload = {"graph.json": graph_bytes, "manifest.json": canonical(manifest)}
-        target = base / snapshot.id
+        target = base / identifier
         if target.is_symlink():
             raise MemoryInputError("snapshot destination is a symbolic link")
         if target.exists():
@@ -197,17 +207,17 @@ def publish(snapshot: Snapshot, graph: dict) -> dict:
                     any((target / name).is_symlink() or (target / name).read_bytes() != data
                         for name, data in payload.items())):
                 raise MemoryInputError("existing snapshot differs; refusing to overwrite it")
-            return manifest
+            assert_unchanged()
+            return
         staging = Path(tempfile.mkdtemp(prefix=".pending-", dir=base))
         for name, data in payload.items():
             with (staging / name).open("xb") as stream:
                 stream.write(data)
                 stream.flush()
                 os.fsync(stream.fileno())
-        snapshot.assert_unchanged()
+        assert_unchanged()
         staging.rename(target)
         staging = None
-        return manifest
     finally:
         if staging is not None:
             shutil.rmtree(staging)  # Only this invocation's newly created, unpublished directory.

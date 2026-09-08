@@ -1,0 +1,19 @@
+{
+  "schema": "framework-memory/providers-lock/v1",
+  "enola": {
+    "version": "0.4.15",
+    "commit": "d8864dfb238718eded7635912bc4a4fd3ef9959f",
+    "repository": "https://github.com/enola-labs/enola",
+    "license": "Apache-2.0",
+    "format_version": 1,
+    "extractor_version": "v264",
+    "profile": "python-3.12-syntax-guard-v1",
+    "platforms": {
+      "Linux-x86_64": {
+        "url": "https://github.com/enola-labs/enola/releases/download/v0.4.15/enola-0.4.15-linux-amd64.tar.gz",
+        "archive_sha256": "bf21cf08cc054ed3a3d12b1cc706b06d3098953444077d267b8da681ee9a8d9d",
+        "binary_sha256": "9c34909455ce83ff5498ca9d96c694c6e4f1bcac8b2710618b4a68d8b46dc6a0"
+      }
+    }
+  }
+}

@@ -1,16 +1,18 @@
-# Documentary memory — phase 2
+# Product memory — documentary core and separate code observer
 
 This is an opt-in development aid, not an authorization, autonomous agent, semantic RAG
 service or second source of truth. Markdown/YAML remain authoritative. The CLI projects
 declared relationships and provides source-backed text queries. It does not change a
-product's documents, approve a CHG, run code, install hooks or contact a database.
+product's documents, approve a CHG, execute project code, install hooks or contact a database.
 
 ```text
 project Markdown/YAML --> shared parser/resolver --> documentary graph
                                |                         |
                      content-hashed snapshot       query + source bodies
 
-declared code roots --[not observed in phase 2]--> future separate code graph
+explicit code bindings --> captured Git/worktree bytes --> isolated optional provider
+                                                             |
+declared code roots ------[current/target/design bridge]--> separate code graph
 ```
 
 ## Commands and scope
@@ -28,7 +30,7 @@ python3 /path/to/framework/memory.py query --root /path/to/documents --node DEC-
 
 All outputs are JSON (`--json` is accepted explicitly too). Exit codes: **0** usable
 documentary result, **1** partial result (inspect issues/truncation), **2** unavailable or
-invalid request. Code inspection is always `not_requested` in this phase. An available
+invalid request. Code inspection is `not_requested` in documentary commands. An available
 documentary graph does **not** mean complete product knowledge or zero code impact.
 
 `doctor`, `query` and `build --dry-run` are read-only. `build` only publishes under
@@ -67,8 +69,9 @@ max_hops: 3
 accept one documentation root containing multiple products; federation of separate
 documentation repositories is not implemented. Repository paths must never be identities.
 
-Optional private bindings have this shape. Phase 2 validates/counts them in `doctor` but
-does not open them or include them in snapshots, queries or search:
+Optional private bindings have this shape. `doctor` validates/counts them without opening
+the repositories. Only the explicit `code` command observes code; paths never become
+canonical identities or appear in exported configuration:
 
 ```yaml
 # .framework-memory/local.yaml — NOT versioned
@@ -153,11 +156,12 @@ Canonical JSON is UTF-8, sorted keys, compact separators and a final LF. No wall
 machine checkout path, local binding or repository URL is inserted. File mtimes are not
 identities. Input inventory/content/configuration are reread before a coherent result and
 again before publication; concurrent changes fail explicitly. No dirty boolean substitutes
-for bytes. Detailed code/index/staged-state receipts belong to phase 3.
+for bytes. Code/index/staged-state observations use a separate receipt described below.
 
-All root-code nodes currently have `path_status: unresolved`,
+All root-code nodes in the **documentary graph** retain `path_status: unresolved`,
 `observation_status: not_requested`, `freshness: unknown`: local existence has not been
-checked. A document's `current` freshness means these source bytes are the selected
+checked by the documentary builder. Observed states live in the code graph's bridge,
+not in rewritten documentary declarations. A document's `current` freshness means these source bytes are the selected
 snapshot, not that its claims about the product are up to date. `verified_code` remains
 an attestation in the source, not a new observation by this CLI.
 
@@ -185,6 +189,137 @@ excluded by default to avoid expanding a local question into every document in a
 request a relation explicitly to include it. Limits/truncation are visible, and missing
 matches mean only no match in selected documentation, never no consequences.
 
-Code providers, operational context/impact reports, stricter PR authority, release
+Operational context/impact reports, stricter PR authority, release
 evidence, semantic retrieval and the optional viewer remain later phases. No new skill,
 release version, migration or provider installation is implied by enabling this CLI.
+
+## Optional code observer — phase 3
+
+`code` is an explicit, separate operation. It does not turn on when running `query` or
+`build`. It requires private `local.yaml` bindings to repositories already declared in
+the selected documentation. A manifest's path hint is not automatically opened, a
+checkout basename is not an identity, and a binding cannot create an undeclared repository.
+
+```bash
+# Read-only preflight: checks the operator-supplied binary hash, not a full sandbox run.
+python3 /path/to/framework/memory.py doctor --root /path/to/documents --enola /path/to/enola
+
+# Observe selected worktree bytes in temporary isolation, without publishing a snapshot.
+python3 /path/to/framework/memory.py code --root /path/to/documents \
+  --repository repository:product:product-a:backend --enola /path/to/enola --dry-run
+
+# Publish observations for all declared repositories with explicit local bindings.
+python3 /path/to/framework/memory.py code --root /path/to/documents --enola /path/to/enola
+
+# Observe exactly the full commit object ID explicitly chosen by the operator.
+python3 /path/to/framework/memory.py code --root /path/to/documents \
+  --repository repository:product:product-a:backend --source git \
+  --revision "$CHOSEN_COMMIT_ID" --enola /path/to/enola
+```
+
+The last command needs a full 40- or 64-hex commit object ID, not `HEAD`, a tag or a
+branch. It supports a bare repository or a checkout with missing files without checking
+anything out. Worktree observation never silently switches to Git objects. Repeated
+`--repository` selects multiple repositories; omission selects all declared repositories.
+A commit selection is limited to one repository so the same hash is not blindly applied
+to different histories.
+
+By default, the worktree selection covers tracked files and records nonignored untracked
+paths as excluded. `--include-untracked` explicitly includes untracked Python source.
+Git-ignored untracked files are not inventoried. All tracked inventory entries are recorded,
+but only `.py` bytes go to this provider profile: other languages and JSON Schema are
+`unsupported`, not irrelevant and not evidence of no impact. JSON Schema remains a
+documented contract input, not an invented code/lineage extractor.
+
+Captured byte hashes, selected commit, staged index entries, inventory and untracked
+policy identify the observation. Staged and unstaged changes are distinct; observing a
+commit is not observing the current working tree. File symlinks, submodules, missing files,
+merge conflicts and bounded-read failures are not silently traversed or repaired.
+The limits are 5,000 inventory entries, 2 MB per Python source and 20 MB of Python bytes.
+Narrow the repository selection or review a limits change; the tool never truncates a
+successful code snapshot. Code roots map components, not the privacy boundary of a scan:
+the selected repository's supported source is inspected, including code outside a root.
+
+### Supported provider unit and isolation
+
+`providers.lock.json` is authoritative for release, commit, format/extractor version,
+platform and archive/executable checksums. Obtain the locked release separately, verify
+the archive checksum, retain its notices, then supply the extracted executable via
+`--enola`. No command downloads, installs, upgrades or searches PATH for Enola. An absent,
+changed or unrecognized executable returns `unavailable`. Dependencies are optional:
+the documentary core remains usable without Enola, bubblewrap or prlimit.
+
+The initial supported unit is **the pinned Linux x86_64 executable plus this adapter's
+Python 3.12 grammar guard**, on Linux/WSL with CPython >=3.12. Other platforms/languages
+are not certified by this phase. The CPython runtime version is an input because parser
+behavior can differ between versions. The real conformance run recorded in `PHASE-3.md`
+used the stated host runtime; CI configuration alone is not a recorded Python 3.12 run.
+
+This qualification matters: the unmodified candidate recovered an invalid Python file
+and claimed `parse_errors: 0`. The adapter uses `ast.parse`, without imports or execution,
+to reject malformed/unsupported Python syntax before extraction. Invalid files remain in
+coverage with `python-syntax-guard`; their symbols are not projected. If valid files remain,
+the result is partial. If none remain, it is unavailable. This is a syntax diagnostic,
+not another extractor or a claim to validate runtime semantics.
+
+Only captured Python files are copied into a disposable repository. Repository-local
+provider configuration, agent rules, Git hooks, Git metadata and credentials are not
+copied. A trusted configuration disables additional providers, explainers, renderers,
+incremental caches, update checks and prompts. Bubblewrap uses new namespaces including
+network isolation, an empty private HOME, read-only sources and a separate writable output
+mount. Only the verified binary copy is executed. There are process/output bounds and
+prlimit file-size/CPU/file-descriptor limits; no unsafe nonisolated fallback. This is a
+local isolation boundary, not a claim of protection against every kernel/parser exploit.
+
+### Separate graph, explicit evidence
+
+`code` emits the complete JSON graph; default publication is exclusively under
+`_meta/memory/code-snapshots/<id>/`, containing `code-graph.json` and `manifest.json`.
+`--dry-run` still runs temporary isolation but does not publish. Same-filesystem atomic
+publication, conflict handling and immutable existing-output checks match documentary
+snapshots. The output does not bundle code bodies or private bindings, but names, literal
+annotations and source paths can still be sensitive: do not treat it as anonymized.
+
+The schema is generated from `memory-contracts.yaml`. It keeps:
+
+- Qualified repository identities, captured file revisions and measured source ranges.
+- Nodes for files, modules, definitions, dependencies and reference records.
+- Direct `calls`, `imports`, `declares`, `implements`, `instantiates`, `names` edges, plus
+  rule-derived file `contains` edges. No transitive impact edges or `impact()` provider API.
+- `target_id` resolution only; a missing ID remains unresolved even if one nominal match
+  exists. A missing target ID in the selected fact set remains visible. Cross-repository
+  symbol linking is not implemented; a declared repository/root mapping is not a symbol binding.
+- Original provider records, including duplicates carrying distinct positions/properties.
+  Exact duplicate records retain occurrence counters; node identities merge only the same
+  repository/provider/kind/name/file. Each edge points back to its own record evidence.
+- Structural facts separated from raw provider annotations and disabled-explainer insights.
+  Nonstructural records/relations remain evidence and are reported as not projected.
+- A bridge to documentary root/component IDs, retaining overlapping roots and separate
+  `current`/`target`/`design`. A path match is never proof that target architecture exists.
+- Explicit `path_status`, `observation_status`, `freshness`, per-file coverage and problems.
+  Zone classifications can overlap and never cause automatic exclusion.
+
+Receipt format, writer/extractor versions, record IDs, snapshot identity, artifact hashes,
+record counts, census consistency and source boundaries are validated before graph creation.
+Missing/corrupt receipt, unsupported format or inconsistent outputs are rejected as
+`unavailable`, not downgraded to a convincing empty graph. Wall clock, duration and private
+receipt paths are excluded from canonical output. Hashes attest byte identity, not truth.
+
+### Verification and dependency changes
+
+```bash
+python3 -B -m unittest discover -s tests/memory -v
+python3 -B tests/memory/enola_conformance.py --enola /path/to/enola
+python3 schemas/generate_memory.py --check
+python3 third_party/inventory.py --check
+python3 tests/selfcheck.py
+```
+
+The offline suite requires no provider installation or network. Real conformance is an
+explicit additional gate, not an implicit CI download and not a skipped test presented
+as passed. It uses only synthetic inputs. Updating the lock requires repeating both suites,
+reviewing the output-contract/profile delta and regenerating the integration inventory.
+`third_party/manifest.yaml` records reviewed sources and license scope. No source or binary
+was copied from Cognee/Enola into this framework. Its generated inventory is not a complete
+transitive dependency/license SBOM. No additional graph database, model or framework
+runtime dependency was introduced.

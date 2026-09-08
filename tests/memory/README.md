@@ -1,9 +1,9 @@
 # Product Memory: acceptance tests and scoped core
 
-This directory preserves the phase-zero baseline and tests the scoped core and phase-two
-documentary memory. Historical reports are in `BASELINE.md` and `PHASE-1.md`; the current
-handoff is `PHASE-2.md`. A code provider and operational context/impact packs remain later
-phases. The phase-two query output is a documentary pack, not a task authorization.
+This directory preserves the phase-zero baseline and tests the scoped core, documentary
+memory and phase-three code observer. Historical reports are in `BASELINE.md`, `PHASE-1.md`
+and `PHASE-2.md`; the current handoff is `PHASE-3.md`. Operational context/impact packs
+remain phase 4. The query output is a documentary pack, not a task authorization.
 
 Run the deterministic suite from the framework checkout:
 
@@ -21,7 +21,7 @@ All products, repositories, documents and code in these fixtures are synthetic.
   builder exposes them with `python evals/fixtures/make.py memory`; the tests generate
   isolated temporary copies instead. Never hand-edit `evals/fixtures/build/`.
 - `tests/fixtures/memory/acceptance.yaml` freezes coverage, the bounded provider-language
-  contract and the two known defect families. No provider is installed or tested yet.
+  contract and the two known defect families. Its original criteria remain unchanged.
 - `tests/fixtures/memory/baseline-findings.yaml` records the frozen phase-zero output by
   check, path and severity, including informational findings. Empty output is not proof
   that the reasoning task is satisfied.
@@ -71,16 +71,27 @@ critical failure even if the answer sounds correct. The runner does not automati
 grade `must_include`, `must_not` or source-reading depth. No model run or score is claimed
 by the deterministic tests, which only validate the inputs and their references.
 
-Provider conformance is deliberately deferred. Python imports, definitions, calls and
-source locations are the first required coverage. JSON Schema is a contract input, not a
-claim of SQL lineage or customer-data analysis. A future provider must expose unresolved,
-unsupported and unavailable evidence explicitly. No graph or retrieval output is faked
-into a successful baseline.
+`test_code_provider.py` runs the offline phase-three gates with a controllable fake and
+strict synthetic receipt tests. Python imports, definitions, calls and source locations
+are the first required coverage. JSON Schema is a contract input, not SQL lineage or
+customer-data analysis. Unresolved, unsupported and unavailable remain distinct evidence.
+No graph or retrieval output is faked into a successful baseline.
+
+Real provider conformance is a separate explicit command, not an automatic download or a
+skipped test counted as passed:
+
+```bash
+python3 -B tests/memory/enola_conformance.py --enola /path/to/pinned/enola
+```
+
+It uses only synthetic input, Linux/WSL isolation and the executable hash in
+`providers.lock.json`. See `PHASE-3.md` for the upstream parser failure and the mandatory
+adapter syntax guard. No source from the actual products is tested or modified.
 
 The full increment's twenty-four deterministic obligations were frozen under
 `deferred_checks` in the acceptance contract with their implementation phases. Their
 inputs and required outcomes were specifications, not successful engine tests. Executable
-coverage is added with each phase; see `PHASE-2.md` for what is covered now. The migration
+coverage is added with each phase; see `PHASE-3.md` for what is covered now. The migration
 smoke checks only an already-current fixture
 and no writes; export tests cover the entry points, not every future migration.
 

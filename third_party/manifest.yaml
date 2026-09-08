@@ -1,0 +1,43 @@
+schema: framework-memory/third-party/v1
+# No third-party source, binary, grammar or model is redistributed by this increment.
+incorporated_code: []
+external_dependencies:
+  - name: enola
+    lock: providers.lock.json#/enola
+    integration: src/framework_data_ai/memory/providers/enola.py
+    distribution: operator-supplied-executable
+    reviewed_upstream_files:
+      - LICENSE
+      - NOTICE
+      - go.mod
+      - internal/extractors/swiftextractor/grammar/LICENSE
+      - internal/extractors/dartextractor/grammar/LICENSE
+    license_scope: >-
+      Apache-2.0 at the pinned source root; MIT notices for vendored Swift and Dart
+      grammars were read. Go dependency declarations were inspected, not every
+      transitive license audited. This is not a complete binary SBOM or legal clearance.
+    redistribution: >-
+      If distributing a provider binary later, preserve its LICENSE and NOTICE and
+      verify all bundled dependency obligations before changing distribution scope.
+host_requirements:
+  - Linux x86_64 (including WSL), CPython >=3.12
+  - Git for explicit source capture
+  - bubblewrap and util-linux prlimit supplied by the operator's OS
+reviewed_not_copied:
+  - repository: https://github.com/topoteretes/cognee
+    commit: e93a4f0c76e6af27142c25189f14c200e1749d51
+    paths: [cognee/tasks/code_graph/enola.py]
+    destination: null
+    decision: >-
+      Protocol reference only. Reader independently implemented: no auto-install,
+      FastAPI/Cognee imports, missing-receipt fallback, skipped corrupt records,
+      guessed nominal targets or facts/insights merge.
+  - repository: https://github.com/tirth8205/code-review-graph
+    commit: 2c6dae32643572ee528eb9b77dbcc17f58f3a8c9
+    paths: [code_review_graph/parser.py, pyproject.toml]
+    destination: null
+    decision: >-
+      Fallback source inspected, not installed or certified. Python parse_bytes walks
+      the recovered Tree-sitter tree without a root has_error gate; switching does
+      not establish syntax-error visibility. Retain the smaller pinned Enola adapter
+      with an explicit CPython syntax guard. Never run code-review-graph install.
