@@ -250,7 +250,8 @@ def build_code(snapshot, documentary, provider, *, repositories=None, mode="work
                               "target/design root matches do not attest implementation",
                               "provider annotations and insights are evidence, not decisions"])
     graph["limitations"].append("Git-ignored untracked files are not inventoried; absent edges never prove irrelevance")
-    inputs = dict(document_snapshot=snapshot.id, provider=graph["provider"], repositories=input_repos,
+    inputs = dict(document_snapshot=snapshot.id, document_repository=document_id,
+                  provider=graph["provider"], repositories=input_repos,
                   normalized_observation=digest(canonical(graph)))
     graph["snapshot"] = digest(canonical(inputs))
     result = CodeBuild(snapshot, captures, bindings, provider, provider_state, graph, inputs)

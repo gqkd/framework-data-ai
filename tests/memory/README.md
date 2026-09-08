@@ -1,9 +1,10 @@
 # Product Memory: acceptance tests and scoped core
 
 This directory preserves the phase-zero baseline and tests the scoped core, documentary
-memory and phase-three code observer. Historical reports are in `BASELINE.md`, `PHASE-1.md`
-and `PHASE-2.md`; the current handoff is `PHASE-3.md`. Operational context/impact packs
-remain phase 4. The query output is a documentary pack, not a task authorization.
+memory, the phase-three code observer and the phase-four operational engine. Historical
+reports are in `BASELINE.md`, `PHASE-1.md`, `PHASE-2.md` and `PHASE-3.md`.
+The current partial-phase handoff is `PHASE-4.md`: engine implemented, skill/governance
+integration pending explicit approval. No query or context pack is a task authorization.
 
 Run the deterministic suite from the framework checkout:
 
@@ -91,8 +92,15 @@ adapter syntax guard. No source from the actual products is tested or modified.
 The full increment's twenty-four deterministic obligations were frozen under
 `deferred_checks` in the acceptance contract with their implementation phases. Their
 inputs and required outcomes were specifications, not successful engine tests. Executable
-coverage is added with each phase; see `PHASE-3.md` for what is covered now. The migration
+coverage is added with each phase; see `PHASE-4.md` for current engine coverage. The migration
 smoke checks only an already-current fixture
 and no writes; export tests cover the entry points, not every future migration.
 
 See `BASELINE.md` for the measured checkout, environment and phase-zero results.
+
+`test_operational.py` exercises required source budgets, historical/reconsidered decisions,
+adopted rule pins, caller-reported readings, scoped hypotheses, integrity-checked code
+bundles, before/after comparison, overlapping mappings and bounded cyclic traversal.
+The Git export fixture also exercises `context` from an unrelated working directory.
+These tests prove deterministic mechanics, not an agent's comprehension or source-reading
+honesty. No skill-forward model evaluation is claimed.

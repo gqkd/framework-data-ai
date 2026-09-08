@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "framework-memory/reading-claims/v1",
+  "$ref": "#/$defs/reading-claims",
+  "$defs": {
+    "reading-claims": {
+      "type": "object",
+      "required": [
+        "context",
+        "readings"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "context": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "readings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "requirement",
+              "revision",
+              "start_line",
+              "end_line"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "requirement": {
+                "type": "string"
+              },
+              "revision": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "start_line": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "end_line": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -19,10 +19,32 @@ from .search import fts5_available
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
-    for name in ("doctor", "build", "query", "code"):
+    readings = commands.add_parser("readings", help="validate caller-reported readings; never attest understanding")
+    readings.add_argument("--pack", type=Path, required=True)
+    readings.add_argument("--claims", type=Path, required=True)
+    for name in ("doctor", "build", "query", "code", "context", "impact"):
         command = commands.add_parser(name)
         command.add_argument("--root", type=Path, required=True)
         command.add_argument("--json", action="store_true", help="JSON is also the default output")
+        if name in ("context", "impact"):
+            command.add_argument("--change", help="one CHG ID or source path; not an approval")
+            command.add_argument("--hops", type=int, default=2)
+        if name == "context":
+            command.add_argument("--goal", required=True)
+            command.add_argument("--mode", choices=("analysis", "proposal", "implement"), default="analysis")
+            command.add_argument("--product", action="append")
+            command.add_argument("--node")
+            command.add_argument("--reconsider", action="store_true", help="require full Alternatives sections")
+            command.add_argument("--text-budget", type=int, default=100000, help="characters delivered; required_sources never ranked out")
+            command.add_argument("--skill", choices=("start", "requirement", "resolve", "cycle", "audit", "release", "business"))
+            command.add_argument("--framework-root", type=Path, help="explicit local source of adopted rule bytes; never fetched")
+            command.add_argument("--code-snapshot", type=Path, help="published code snapshot directory; no provider execution")
+            command.add_argument("--hypotheses", type=Path, help="explicit inferred assertions, never constraints")
+        if name == "impact":
+            command.add_argument("--before", type=Path, help="published baseline code snapshot directory")
+            command.add_argument("--after", type=Path, help="published proposed code snapshot directory")
+            command.add_argument("--limit", type=int, default=100)
+            command.add_argument("--direction", choices=("dependents", "dependencies", "both"), default="dependents")
         if name in ("doctor", "code"):
             command.add_argument("--enola", type=Path, help="explicit already-installed pinned executable; never downloaded")
         if name == "code":
@@ -45,7 +67,11 @@ def main(argv=None) -> int:
             command.add_argument("--search-engine", choices=("literal", "fts5"), default="literal")
     args = parser.parse_args(argv)
     try:
-        if args.command == "doctor":
+        if args.command == "readings":
+            from .context import reading_report
+            from .operational_io import read_json
+            result = reading_report(read_json(args.pack), read_json(args.claims))
+        elif args.command == "doctor":
             workspace = Workspace.open(args.root)
             local = workspace.local_bindings()
             from .providers.enola import EnolaProvider
@@ -59,7 +85,24 @@ def main(argv=None) -> int:
         else:
             snapshot = capture(args.root)
             graph = build(snapshot)
-            if args.command == "code":
+            if args.command == "context":
+                from .context import compose
+                from .models import FRAMEWORK
+                from .operational_io import load_code, read_json
+                result = compose(snapshot, graph, goal=args.goal, mode=args.mode, products=args.product,
+                                 change=args.change, selector=args.node, reconsider=args.reconsider,
+                                 budget=args.text_budget, hops=args.hops, skill=args.skill,
+                                 framework_root=args.framework_root or FRAMEWORK,
+                                 code=load_code(args.code_snapshot) if args.code_snapshot else None,
+                                 hypotheses=read_json(args.hypotheses) if args.hypotheses else None)
+            elif args.command == "impact":
+                from .impact import compare
+                from .operational_io import load_code
+                result = compare(snapshot, graph, change=args.change, hops=args.hops, limit=args.limit,
+                                 direction=args.direction,
+                                 before=load_code(args.before) if args.before else None,
+                                 after=load_code(args.after) if args.after else None)
+            elif args.command == "code":
                 from .code_graph import build_code
                 from .providers.enola import EnolaProvider
                 code = build_code(snapshot, graph, EnolaProvider(args.enola), repositories=args.repository,
@@ -82,6 +125,8 @@ def main(argv=None) -> int:
                                engine=args.search_engine)
                 snapshot.assert_unchanged()
         sys.stdout.write(canonical(result).decode("utf-8"))
+        if result.get("status") == "incomplete":
+            return 1
         return {"partial": 1, "unavailable": 2}.get(result.get("coverage"), 0)
     except MemoryInputError as error:
         sys.stdout.write(canonical(dict(status="unavailable", error=str(error))).decode("utf-8"))

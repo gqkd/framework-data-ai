@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "framework-memory/reading-report/v1",
+  "$ref": "#/$defs/reading-report",
+  "$defs": {
+    "reading-report": {
+      "type": "object",
+      "required": [
+        "schema",
+        "id",
+        "context",
+        "declared_read",
+        "outstanding",
+        "gaps",
+        "status",
+        "understanding",
+        "last_review",
+        "limitations"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {
+          "const": "framework-memory/reading-report/v1"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "context": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "declared_read": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "outstanding": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "gaps": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "status": {
+          "enum": [
+            "declared-complete",
+            "incomplete"
+          ]
+        },
+        "understanding": {
+          "const": "not-evaluated"
+        },
+        "last_review": {
+          "const": "not-modified"
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

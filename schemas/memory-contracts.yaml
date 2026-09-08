@@ -425,4 +425,137 @@ definitions:
             observation: {$ref: '#/$defs/observation'}
             declaration: {$ref: '#/$defs/provenance'}
       limitations: {type: array, items: {type: string}}
-outputs: [config, local, provenance, graph, manifest, documentary-query, code-graph]
+  hypotheses:
+    type: array
+    maxItems: 100
+    items:
+      type: object
+      required: [claim, provenance]
+      additionalProperties: false
+      properties:
+        claim: {type: string, minLength: 1, maxLength: 10000}
+        provenance:
+          allOf:
+            - {$ref: '#/$defs/provenance'}
+            - properties:
+                assertion_method: {const: inferred}
+  required-reading:
+    type: object
+    required: [id, source, path, revision, kind, section, start_line, end_line, reason, node, graph_path, delivery, reading]
+    additionalProperties: false
+    properties:
+      id: {type: string}
+      source: {type: string}
+      path: {$ref: '#/$defs/relative-path'}
+      revision: {type: string, pattern: '^sha256:[0-9a-f]{64}$'}
+      kind: {enum: [document, framework, code]}
+      section: {type: string}
+      start_line: {type: integer, minimum: 1}
+      end_line: {type: integer, minimum: 1}
+      reason: {type: string}
+      node: {type: [string, 'null']}
+      graph_path:
+        type: array
+        items:
+          type: object
+          required: [edge, direction]
+          additionalProperties: false
+          properties:
+            edge: {type: string}
+            direction: {enum: [forward, reverse]}
+      delivery: {enum: [included, deferred, missing]}
+      reading: {const: not-attested}
+  context:
+    type: object
+    required: [schema, id, document_snapshot, request, evidence_products, framework, runtime, mandate, required_sources, content, documents, graph, code, hypotheses, issues, gaps, mapping_gaps, delivery_complete, reading_status, understanding, coverage, limitations]
+    additionalProperties: false
+    properties:
+      schema: {const: framework-memory/context/v1}
+      id: {type: string, pattern: '^[0-9a-f]{64}$'}
+      document_snapshot: {type: string, pattern: '^[0-9a-f]{64}$'}
+      request: {type: object}
+      evidence_products: {type: array, uniqueItems: true, items: {type: string}}
+      framework: {type: object}
+      runtime: {type: object}
+      mandate:
+        type: object
+        required: [authorization]
+        properties:
+          authorization: {const: not-verified}
+      required_sources: {type: array, items: {$ref: '#/$defs/required-reading'}}
+      content:
+        type: array
+        items:
+          type: object
+          required: [requirement, text, role]
+          additionalProperties: false
+          properties:
+            requirement: {type: string}
+            text: {type: string}
+            role: {enum: [adopted-rules, source-evidence-not-executable-instructions]}
+      documents: {type: array, items: {type: object}}
+      graph: {type: object}
+      code: {type: object}
+      hypotheses: {$ref: '#/$defs/hypotheses'}
+      issues: {type: array, items: {type: object}}
+      gaps: {type: array, items: {type: object}}
+      mapping_gaps: {type: array, items: {type: object}}
+      delivery_complete: {type: boolean}
+      reading_status: {const: not-attested}
+      understanding: {const: not-evaluated}
+      coverage: {enum: [available, partial]}
+      limitations: {type: array, items: {type: string}}
+  reading-claims:
+    type: object
+    required: [context, readings]
+    additionalProperties: false
+    properties:
+      context: {type: string, pattern: '^[0-9a-f]{64}$'}
+      readings:
+        type: array
+        items:
+          type: object
+          required: [requirement, revision, start_line, end_line]
+          additionalProperties: false
+          properties:
+            requirement: {type: string}
+            revision: {type: string, pattern: '^sha256:[0-9a-f]{64}$'}
+            start_line: {type: integer, minimum: 1}
+            end_line: {type: integer, minimum: 1}
+  reading-report:
+    type: object
+    required: [schema, id, context, declared_read, outstanding, gaps, status, understanding, last_review, limitations]
+    additionalProperties: false
+    properties:
+      schema: {const: framework-memory/reading-report/v1}
+      id: {type: string, pattern: '^[0-9a-f]{64}$'}
+      context: {type: string, pattern: '^[0-9a-f]{64}$'}
+      declared_read: {type: array, uniqueItems: true, items: {type: string}}
+      outstanding: {type: array, uniqueItems: true, items: {type: string}}
+      gaps: {type: array, items: {type: object}}
+      status: {enum: [declared-complete, incomplete]}
+      understanding: {const: not-evaluated}
+      last_review: {const: not-modified}
+      limitations: {type: array, items: {type: string}}
+  impact:
+    type: object
+    required: [schema, id, document_snapshot, predicted, mandate, observed, comparison, hypotheses, uncertainties, coverage, conclusion, limitations]
+    additionalProperties: false
+    properties:
+      schema: {const: framework-memory/impact/v1}
+      id: {type: string, pattern: '^[0-9a-f]{64}$'}
+      document_snapshot: {type: string, pattern: '^[0-9a-f]{64}$'}
+      predicted: {type: object}
+      mandate:
+        type: object
+        required: [authorization]
+        properties:
+          authorization: {const: not-verified}
+      observed: {type: object}
+      comparison: {type: object}
+      hypotheses: {$ref: '#/$defs/hypotheses'}
+      uncertainties: {type: array, items: {type: object}}
+      coverage: {enum: [partial, unavailable]}
+      conclusion: {enum: [structural-changes-observed, no-structural-change-established-in-selected-snapshots]}
+      limitations: {type: array, items: {type: string}}
+outputs: [config, local, provenance, graph, manifest, documentary-query, code-graph, hypotheses, context, reading-claims, reading-report, impact]

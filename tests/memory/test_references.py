@@ -291,11 +291,12 @@ class ExportCompatibility(unittest.TestCase):
         repository.mkdir()
         # A real Git export of the new source, including uncommitted development files.
         # This fixture does not depend on the calling repository's current Git index.
-        for relative in ("schemas", "src/framework_data_ai"):
+        for relative in ("schemas", "src/framework_data_ai", "references"):
             shutil.copytree(ROOT / relative, repository / relative,
                             ignore=shutil.ignore_patterns("__pycache__"))
         for relative in ("skills/audit/scripts/validate.py", "skills/audit/scripts/migrate.py",
-                          "skills/audit/checks.yaml", "memory.py", "providers.lock.json"):
+                          "skills/audit/checks.yaml", "memory.py", "providers.lock.json", "FRAMEWORK.md",
+                          *(f"skills/{name}/SKILL.md" for name in ("start", "requirement", "resolve", "cycle", "audit", "release", "business"))):
             target = repository / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / relative, target)
@@ -356,6 +357,19 @@ class ExportCompatibility(unittest.TestCase):
         pack = json.loads(run.stdout)
         self.assertTrue(pack["documents"])
         self.assertEqual(pack["code_observation"], "not_requested")
+        self.assertFalse((self.root / "inputs/document-only/_meta/memory").exists())
+
+    def test_exported_operational_context_reads_its_own_rules_without_live_checkout(self):
+        run = subprocess.run([sys.executable, "-B", str(self.export / "memory.py"), "context",
+                              "--root", str(self.root / "inputs/document-only"), "--goal", "Explain design",
+                              "--skill", "cycle"], cwd=self.foreign,
+                             env=dict(os.environ, PYTHONPATH=str(self.foreign)),
+                             capture_output=True, text=True, timeout=30)
+        self.assertIn(run.returncode, (0, 1), run.stdout + run.stderr)
+        pack = json.loads(run.stdout)
+        self.assertEqual(pack["framework"]["resolution"], "version-only-unverified")
+        self.assertTrue(any(r["path"] == "skills/cycle/SKILL.md" for r in pack["required_sources"]))
+        self.assertEqual(pack["understanding"], "not-evaluated")
         self.assertFalse((self.root / "inputs/document-only/_meta/memory").exists())
 
 

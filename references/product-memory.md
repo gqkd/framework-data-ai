@@ -1,4 +1,4 @@
-# Product memory — documentary core and separate code observer
+# Product memory — documents, separate code graph and operational reports
 
 This is an opt-in development aid, not an authorization, autonomous agent, semantic RAG
 service or second source of truth. Markdown/YAML remain authoritative. The CLI projects
@@ -43,8 +43,9 @@ filesystem guarantees and crash durability of directory entries depend on the ho
 Queries currently rebuild an in-memory projection of the **current** selected sources;
 they do not trust an old on-disk snapshot or cache. Full source bodies (without front
 matter) accompany selected documents, with content revisions and exact line offsets.
-This is a documentary pack, **not** phase 4's operational context pack: mandatory reading,
-budget accounting, framework-rule composition and contribution authority are not claimed.
+This is a documentary pack, not an operational context pack. The separate `context`
+command below supplies required readings, budget accounting and adopted-rule composition;
+neither command establishes contribution authority.
 YAML manifests have no body; their normalized inventory is in the graph.
 
 ## Configuration and private bindings
@@ -189,9 +190,142 @@ excluded by default to avoid expanding a local question into every document in a
 request a relation explicitly to include it. Limits/truncation are visible, and missing
 matches mean only no match in selected documentation, never no consequences.
 
-Operational context/impact reports, stricter PR authority, release
-evidence, semantic retrieval and the optional viewer remain later phases. No new skill,
+Operational context/impact CLI reports are described below; integration into the seven
+skills' instructions is still pending. Stricter PR authority, release evidence, semantic
+retrieval and the optional viewer remain later work. No new skill,
 release version, migration or provider installation is implied by enabling this CLI.
+
+## Operational CLI — phase 4 engine
+
+The engine is implemented independently of the editor. **The phase is not fully complete:**
+the planned preamble/routing/template/seven-skill integration has not been applied.
+Existing agent instructions and approval rules are unchanged.
+
+```bash
+python3 /path/to/framework/memory.py context --root /path/to/documents \
+  --goal "Assess consequences for the selected product" --product product-a --skill cycle
+python3 /path/to/framework/memory.py context --root /path/to/documents \
+  --goal "Reconsider the rejected alternative" --reconsider --text-budget 60000
+python3 /path/to/framework/memory.py context --root /path/to/documents \
+  --goal "Inspect the selected mandate" --change CHG-001 --mode implement \
+  --code-snapshot /path/to/documents/_meta/memory/code-snapshots/AFTER_ID
+python3 /path/to/framework/memory.py impact --root /path/to/documents \
+  --before /path/to/documents/_meta/memory/code-snapshots/BEFORE_ID \
+  --after /path/to/documents/_meta/memory/code-snapshots/AFTER_ID \
+  --change CHG-001 --direction dependents --hops 3 --limit 100
+python3 /path/to/framework/memory.py readings \
+  --pack /path/to/context.json --claims /path/to/reading-claims.json
+```
+
+All three commands emit JSON to stdout only; they do not publish reports, mutate product
+documents, install/execute a provider or run project tests. If saving output, choose an
+authorized non-source location such as the reserved runtime directory. Exit 1 means a
+partial context/impact or incomplete reading report; exit 2 means unavailable/invalid
+input. Impact without two explicit snapshots is unavailable, not an empty success.
+
+### Context inputs and completeness
+
+`--mode` records analysis/proposal/implement intent; it does not grant permission.
+`--change` selects a unique CHG ID or exact source path. The engine joins its qualified
+candidates with the ICG, reports missing mandatory mandate sections and an architecture
+classification lacking a cited accepted DEC. This is a bounded prerequisite diagnostic,
+not exhaustive authorization or cascade validation. `mandate.authorization` is always
+`not-verified`: an approved status in a branch is not trusted-base evidence.
+
+Repeated `--product` scopes primary evidence; omission includes all selected products.
+Shared declared consumers can widen the evidence set without altering the selected mandate.
+Scope selection is not an ACL: classification/configuration exclusions still run first.
+The current policy conservatively includes scoped documents rather than guessing semantic
+relevance. This prioritizes constraints over compactness and can leave many readings due.
+
+`required_sources` preserves exact source IDs/hashes/ranges, reasons and optional graph
+paths even at `--text-budget 0`. The budget counts delivered text characters, not tokens
+or total JSON size. `--node` adds bounded documentary exploration, never ranks mandatory
+sources out. Empty graph paths have a conservative scope-inclusion reason; they are not
+invented relationships. `--hops` cannot exceed the configured bound.
+
+Applicable candidates include historical/superseded DECs with no `applies_to`.
+Decision/Consequences and any Review condition are delivered as full localized sections;
+`--reconsider` also requires Alternatives. Missing/ambiguous sections stay explicit,
+without a historical backfill. The parser recognizes template headings, explicit matching
+markers and the documented Italian aliases in `context.py`; other headings require manual
+localization. Status and source section inventory remain visible. The agent still decides
+actual applicability after reading; the engine does not prove semantic understanding.
+
+Unlike `query`, `context` can include entire selected documentary files, including their
+front matter. Treat a pack as sensitive as those source files; local configuration is
+excluded, but secrets mistakenly placed in allowed source content are not redacted by a
+secret scanner. Do not share packs across different access scopes.
+
+### Adopted rules and source identity
+
+`framework_sources.py` reads the project's `framework_version`/`framework_commit`.
+A full pin resolves source blobs in the supplied local framework checkout, without fetching,
+checking out or executing historical code. `--framework-root` explicitly chooses that
+local source repository. A pin/version mismatch never falls back to today's rules.
+A version without a commit is `version-only-unverified`; working-tree instruction hashes
+remain explicit. Missing adoption information or rule files keeps the pack incomplete.
+
+The framework's FRAMEWORK/preamble/routing table and optionally the selected skill are
+separate sources from product documents. Adopted version/commit and actual source hashes
+identify these rules; `runtime` separately identifies the generator. Re-reading guards
+against concurrent changes. Deterministic report IDs contain no clock or checkout path.
+
+`--code-snapshot` requires a published manifest/graph bundle, validates its hashes and
+requires the same documentary snapshot. It never claims live freshness: outer status is
+`not-rechecked`, while observation fields describe the captured snapshot. Unsupported,
+partial, missing and unselected repositories remain gaps. The graph does not contain code
+bodies, so code reading requirements remain deferred at their repository/path/hash.
+
+### Reading declarations and hypotheses
+
+A claims file has this shape, using values from the actual pack after source reading:
+
+```json
+{
+  "context": "CONTEXT_ID",
+  "readings": [
+    {
+      "requirement": "reading:REQUIREMENT_ID",
+      "revision": "sha256:SOURCE_HASH",
+      "start_line": 10,
+      "end_line": 28
+    }
+  ]
+}
+```
+
+IDs/hashes above are placeholders. The reader checks the context identity, full requested
+range, revision, unknown/duplicate claims and missing sections. It can accept a caller's
+declaration of an externally read deferred source; it cannot independently verify that
+reading. Reports say `declared-complete` or `incomplete`, never understood/verified.
+Neither delivery nor claims modify `last_review` or replace a person's attestation.
+
+`--hypotheses` accepts the generated `hypotheses.v1.json` format: a claim with inferred
+provenance, rationale and in-scope source ranges. Optional confidence is valid only on
+inferred assertions. These remain separate hypotheses, never authoritative graph edges.
+
+### Structural comparison
+
+`impact` compares captured byte hashes and Git inventories on both sides, and traverses
+resolved direct provider edges at file granularity. Default direction is reverse/dependents;
+dependencies/both are explicit alternatives. Cycles are visited once; node/hop limits
+are reported. Cross-repository nominal names never acquire invented bindings.
+
+The after bundle must match current documentation. A baseline may use earlier documentation
+only in the same logical document repository. Phase-four code receipts add that namespace
+to their input identity; regenerate earlier receipts that lack it. Generator/source changes
+already require regenerated snapshots. No adoption, historical artifact or release version
+is changed automatically.
+
+Predicted candidates/categories/subjects and targets/preserves remain separate from observed
+file/root/dependency matches. Repository targets map through declared roots. Categories stay
+candidate-level, not automatically component-level. Overlapping roots and current/target/design
+remain distinct. Comparison reports unexpected components and missing matches for review,
+not functional regressions or successful preservation. Unsupported bytes, unavailable
+repositories, unresolved edges and incomplete mappings remain uncertainties.
+Consequently structural impact reports are partial even for a usable comparison: no
+runtime/semantic completeness, test success, current deployment or absence-of-impact claim.
 
 ## Optional code observer — phase 3
 
