@@ -264,7 +264,10 @@ def _skill_references():
     # be naming one that something it ships accepts. What the union gives up is telling a
     # `migrate.py` flag written against `validate.py` from a correct one, which is a typo
     # this cannot see and a reader can.
-    known_flags = {f for script in sorted((ROOT / "skills").rglob("scripts/*.py"))
+    # The operational CLI ships at the root, with its argparse definitions in the core.
+    scripts = [*sorted((ROOT / "skills").rglob("scripts/*.py")),
+               ROOT / "src/framework_data_ai/memory/cli.py"]
+    known_flags = {f for script in scripts
                    for f in re.findall(r'"(--[a-z-]+)"', script.read_text())}
     problems = []
 

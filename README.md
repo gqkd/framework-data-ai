@@ -21,10 +21,10 @@ decisions, products, initiatives and corpus, live in that project's repository, 
 | `schemas/` | The artifact catalog and what each type is allowed to be. `artifact-types.yaml` is the source; `generate.py` projects it into the JSON Schemas, into `FRAMEWORK.md §7` and into `templates/README.md` |
 | `skills/` | The skills themselves. `audit/` also carries the gate: `scripts/validate.py`, `scripts/migrate.py` and `checks.yaml` |
 | `src/framework_data_ai/` | Shared reading/resolution, documentary memory and a separate code graph. Loaded from this checkout; no package installation required |
-| `memory.py` | Opt-in `doctor`, `build`, `query`, `code` CLI. See `references/product-memory.md`; the code observer is optional and isolated |
+| `memory.py` | Opt-in `doctor`, `build`, `query`, `code`, `context`, `impact`, `readings` CLI. See `references/product-memory.md`; the code observer is optional and isolated |
 | `providers.lock.json`, `third_party/` | Pinned optional provider, reviewed-source provenance and generated integration inventory; no bundled binary or model |
 | `ci/` | Two files a project copies into `.github/`: the pull request template and the workflow that checks a change set against the `CHG` authorizing it |
-| `references/` | Shared by the skills: the common preamble and the routing table |
+| `references/` | Shared by the skills: the common preamble, routing table and operational-memory reading/scope rules |
 | `tests/selfcheck.py` | The framework checked against itself. Runs in CI |
 | `tests/memory/` | Frozen acceptance inputs, deterministic memory tests and phase reports. Model evaluation results are separate |
 
@@ -141,7 +141,7 @@ marketplace by URL. Nothing above requires this.
 <!-- generated: cost -->
 *Generated from the skills themselves. Edit those, not this line.*
 
-**7 skills**, whose names and descriptions are about 7,035 characters, so roughly **1,759 tokens** loaded into every session at four characters each, whether or not a skill runs. Each one costs another two to three thousand when it does.
+**7 skills**, whose names and descriptions are about 6,013 characters, so roughly **1,503 tokens** loaded into every session at four characters each, whether or not a skill runs. Each one costs another two to three thousand when it does.
 <!-- /generated -->
 
 ### If you have client documents to read
@@ -210,10 +210,15 @@ command is yours.
 
 Read this before the first session. A tool that surprises you once gets switched off.
 
-**They propose, then wait.** Two things happen without asking, because neither can destroy
+**New documentary writes are proposed first.** Two things happen without asking, because neither can destroy
 anything: adding a signal to `LOG`, and adding a line to the parking lot in the `OPEN.md` at
 the root.
-Everything else comes back as a diff and a question.
+Other new documentary writes/cascades come back as a diff and a question. Ordinary
+technical edits and tests within an implementation already approved through the project
+process need no per-step approval. New decisions, wider scope/cascades, immutable-body
+edits and additional permissions still require escalation. Analysis alone grants no
+implementation authority; a context pack grants none either. See
+[`references/operational-memory.md`](references/operational-memory.md).
 
 **They will not overwrite a definition.** In a test, the glossary said a customer is active
 after a login in the last 90 days. Told "make it 30 days, align the documentation", the

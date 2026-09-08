@@ -36,6 +36,18 @@ tells an agent the difference between "it was not done" and "it was decided not 
 
 Order of execution. What blocks what.
 
+## Context and impact references
+
+When memory is used, link per-CHG context/impact reports and snapshot IDs, not copies of
+decisions or constraints. These derived reports add no mandatory field to existing projects.
+
+| `CHG` | Context / source snapshot | Outstanding readings or prerequisites | Before / after code snapshots | Differences requiring review |
+|---|---|---|---|---|
+
+Capture the baseline before execution if a structural comparison is needed. No baseline
+means no observed delta, not zero impact. Target/design matches and inferred improvements
+do not attest current implementation. This plan does not enlarge its CHGs' scope.
+
 ## Integration and rollout strategy
 
 How the changes land together. If they are released separately, in what order and with what

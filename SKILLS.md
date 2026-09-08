@@ -122,14 +122,19 @@ their being switched back on.
 **`references/preamble.md`** — read `AGENTS.md`, the open registers that bind the work
 (`products/<p>/OPEN.md`, `platform/OPEN.md`, and the root one) and the `product.yaml`
 first; the
-class rules; never invent a field that attests something; never write `last_review` without
-having read the document.
+class rules; never invent a field that attests something; propose `last_review` to a person,
+never write it automatically because a run read the document.
+
+**`references/operational-memory.md`** — adopted framework rules, mandatory source readings,
+separate code observations and bounded impact comparison, consumed at the seven skills'
+context points. Mechanics live in `memory.py` and shared Python modules, not an eighth
+skill. A pack neither authorizes work nor attests understanding.
 
 **`references/routing-table.md`** — the classification, the cascade and the conflict rules.
 Read by `start`, `requirement` and `resolve`. It is the single source of that logic: if
 copies diverged, the corpus and the conversational notes would end up in different places.
 
-**Propose, then write.** Every skill that writes shows a compact table first, never the
+**Propose, then write.** A new documentary write/cascade shows a compact table first, never the
 document:
 
 | File | What changes |
@@ -176,6 +181,12 @@ already written in `AGENTS.md`: touching an AI component requires a new `EVR`.
 ---
 
 ## 5 · From documents to agents
+
+The operational implementation is `memory.py context`, with `impact` for explicit
+before/after code snapshots and `readings` for caller-declared reading reports.
+The seven skills consume these at their existing decision points; the shared operational
+reference owns the procedure. Ordinary steps within an approved execution mandate do not
+require repeated approval, but the mandate, prerequisites and escalation boundaries remain.
 
 This is what the framework is for, beyond documenting: `cycle` ends by producing a brief per
 approved `CHG` that a coding agent can execute without inventing anything. Everything in the

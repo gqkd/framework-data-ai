@@ -1,9 +1,9 @@
-# Product Memory phase 4: operational engine, integration pending
+# Product Memory phase 4: operational context and seven-skill integration
 
-Implementation record, 2026-09-08. Starts from phase-three commit `241850c` on
-`codex/product-memory-phase-0`. **This is a partial phase, not a completed phase-four
-handoff.** The engine and its gates are implemented; changes to common instructions,
-templates and the seven skills were not applied.
+Implementation record, 2026-09-08–09. Starts from phase-three commit `241850c` on
+`codex/product-memory-phase-0`. The engine checkpoint is `36f8240`; this follow-up
+integrates it into common instructions, templates and the seven existing skills.
+The specific bounded-execution rule was applied only after explicit user approval.
 
 Only the framework was changed. No product/client documents, historical artifacts,
 production data, release version, remote configuration, hooks or provider installation
@@ -49,6 +49,38 @@ unselected repositories, unsupported bytes, unresolved edges and mapping/travers
 cannot become no-impact conclusions. Categories remain attached to candidates. Repository
 targets are projected through their declared roots before component comparison.
 
+## Seven-skill integration
+
+The shared procedure lives in `references/operational-memory.md`. Following the
+`skill-creator` guidance, the seven entry points retain their responsibilities and link
+to that procedure instead of acquiring seven copies or an eighth skill:
+
+| Skill | Consumption point |
+|---|---|
+| `start` | Existing-product assessment and ingestion proposal after the control plane exists; document-only fallback |
+| `requirement` | Conflict checks against existing constraints, historical decisions and consumers |
+| `resolve` | Evidence and complete alternatives when reconsidering a choice |
+| `cycle` | Candidate classification, approved-CHG brief, explicit before/after impact and outstanding prerequisites |
+| `audit` | Requested semantic/impact review; heading triage is not complete decision reading |
+| `release` | Source discovery without replacing frozen evaluation, repository checks or deployment authority |
+| `business` | Cross-document assessment without promoting hypotheses to commitments |
+
+Preamble, routing, SKILLS, README and AGENTS/IMP templates distinguish analysis, proposal
+and implementation. Ordinary technical edits/tests inside a scope already approved by
+the project's process no longer require per-step approval. New documentary
+classifications/cascades, new decisions, scope expansion, immutable-body edits, required
+open choices and external permissions retain their escalation rules.
+
+Human `last_review` remains a proposal, not an automatic reading-report/scaffolding
+update. The previous conflicting summaries in SKILLS/start/AGENTS were aligned to the
+existing common rule. Reports link sources instead of copying authoritative facts, and
+IMP gains optional report/snapshot references, not new mandatory metadata.
+
+Every selected skill and the shared guide remain required readings even with zero text
+budget. Changed adopted guide bytes invalidate the context identity independently of
+the product snapshot. If adopted rules reference a missing guide, its absence becomes
+an explicit gap. Historical pins that do not reference it do not acquire today's guide.
+
 ## Files
 
 | File/group | Responsibility |
@@ -60,9 +92,14 @@ targets are projected through their declared roots before component comparison.
 | `memory/cli.py` | Read-only `context`, `impact`, `readings` commands |
 | `memory/code_graph.py` | Add logical documentary repository to code receipt inputs |
 | `schemas/memory-contracts.yaml` and five generated schemas | Context/impact/hypothesis/reading contracts |
-| `tests/memory/test_operational.py` | 32 operational engine tests on disposable synthetic workspaces |
+| `tests/memory/test_operational.py` | 35 operational/integration tests on disposable synthetic workspaces |
 | `tests/memory/test_references.py` | Operational CLI from an independent Git export |
-| `references/product-memory.md`, test README, this report | Usage, limits and partial-phase state |
+| `references/operational-memory.md` | Shared procedure, required reading, evidence and execution boundaries |
+| `references/preamble.md`, `references/routing-table.md`, `SKILLS.md` | Analysis/proposal/bounded implementation and human-attestation alignment |
+| Seven `skills/*/SKILL.md` | Concise context consumption at existing decision points |
+| `templates/AGENTS.md`, `templates/IMP.md` | Execution-scope guidance and optional context/impact references |
+| `tests/selfcheck.py` | Include the shipped operational CLI in the existing skill-flag reference check |
+| `README.md`, `references/product-memory.md`, test README, this report | Usage, limits, generated catalog synchronization and phase handoff |
 
 Python modules above live under `src/framework_data_ai/`. No external library/source
 was added: existing PyYAML/jsonschema and standard-library mechanics are reused. The
@@ -74,7 +111,9 @@ Host: Linux/WSL, Python **3.14.4**. Results measured on this implementation:
 
 | Gate | Result |
 |---|---|
-| `python3 -B tests/selfcheck.py` | Passed, including **156 offline memory tests** |
+| `python3 -u -B tests/selfcheck.py` | Passed, including **159 offline memory tests**, after generated README synchronization |
+| `python3 -B -m unittest discover -s tests/memory -p test_operational.py -v` | **35 passed** |
+| `skill-creator/scripts/quick_validate.py`, each skill directory | **7 passed** |
 | `python3 -B tests/memory/enola_conformance.py --enola <already-present-pinned-binary>` | **9 passed**, isolated synthetic sources |
 | `python3 -B schemas/generate_memory.py --check` | 12 schemas, 0 out of date |
 | `python3 -B third_party/inventory.py --check` | Current; no added dependency |
@@ -87,6 +126,12 @@ reading-claim tampering, bundle corruption, missing code, namespace mismatch, pa
 repository selection, file removal, overlapping views, direct-call propagation, cyclic
 truncation, CLI read-only behavior and portable outputs. An earlier fixture typo and the
 missing unconditional hop-bound check were corrected before the passing run.
+
+During integration, skill validation found two pre-existing descriptions above 1,024
+characters. The audit/requirement descriptions were shortened while preserving their
+scope. The first full run then passed all 159 offline tests but failed the generated
+README cost-region check; the existing schema/catalog generator regenerated that region.
+No acceptance criterion, warning/error severity or gate was weakened.
 
 Frozen fixture meaning, acceptance criteria and comprehension questions were not weakened.
 No model-based comprehension/skill evaluation was run. No native Windows code-provider
@@ -112,27 +157,18 @@ certification or actual Python 3.12 execution is claimed by a CI declaration.
   preservation, no consumers or no runtime/semantic consequences.
 - No new dependency, graph database, embedding/model, semantic RAG, viewer or eighth skill.
 
-## Pending approval and remaining phase-four work
+## Handoff and subsequent work
 
-The execution approval system rejected the proposed instruction patch, including after
-the approved plan's exact phase-four scope was supplied as evidence. It requires explicit
-user confirmation for the specific rule permitting ordinary technical steps inside an
-already approved mandate without approval per edit/test.
+The prior partial report and rejected instruction attempt are preserved in `36f8240`.
+The user then explicitly approved the bounded-execution change; this follow-up applies
+it, without bypassing the earlier refusal or extending it into new scope.
 
-The patch was **not applied**. In particular, `references/preamble.md`,
-`references/routing-table.md`, `SKILLS.md`, the seven `skills/*/SKILL.md` files and
-`templates/AGENTS.md`/`templates/IMP.md` remain unchanged. No workaround was used.
-The previously noted disagreement about automatic `last_review` updates in some
-instructions/templates is therefore also still pending.
+This phase supplies a usable editor-independent engine and seven-skill consumption
+procedure; the final framework gate passed. Phase-four implementation is complete.
+It is not a release, a migrated product installation, a measured comprehension
+result or certification of the external-contributor path.
 
-After explicit confirmation:
-
-1. Add the shared operational-memory reference and concise consumption points in the
-   seven existing skills, preserving their routing and responsibilities.
-2. Implement the approved distinction between analysis, proposal and bounded execution;
-   preserve escalation for new scope/cascades, open choices, immutable-body edits and
-   external permissions.
-3. Align review-date instructions to the existing human-attestation rule and add the
-   context/impact references to AGENTS/IMP templates without new mandatory fields.
-4. Validate the changed skills, rerun all framework gates and review the instruction diff.
-   Only then mark phase four complete and proceed to phase five.
+Phase five remains separate: trusted documentary base, independent mandate/PR authority,
+relevant multi-repository evidence and secure contribution checks. Phase six owns the
+release-set/deployment distinction and closure of implemented versus verified. Existing
+release/PR behavior is not silently advertised as enforcing those future gates.

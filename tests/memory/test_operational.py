@@ -62,6 +62,14 @@ class OperationalMemory(unittest.TestCase):
         (root / "framework.yaml").write_text(yaml.safe_dump(config))
         return exported, commit
 
+    def exported_rules(self):
+        exported = self.case / "rules"
+        for relative in (*rules.BASE, "schemas/artifact-types.yaml", "references/operational-memory.md"):
+            target = exported / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(ROOT / relative, target)
+        return exported
+
     def test_document_only_context_does_not_require_code_or_invent_architecture(self):
         root = self.project("document-only")
         pack = self.pack(root)
@@ -141,6 +149,46 @@ class OperationalMemory(unittest.TestCase):
         with patch.object(rules, "local_bytes", return_value=b"changed"):
             with self.assertRaises(snapshots.ConcurrentChange):
                 captured.assert_unchanged()
+
+    def test_all_seven_skills_require_their_adopted_rules_and_shared_guide(self):
+        root = self.project("document-only")
+        for skill in rules.SKILLS:
+            with self.subTest(skill=skill):
+                pack = self.pack(root, skill=skill, budget=0)
+                sources = {row["path"]: row for row in pack["required_sources"] if row["kind"] == "framework"}
+                for relative in (f"skills/{skill}/SKILL.md", "references/operational-memory.md"):
+                    source = sources[relative]
+                    self.assertEqual(source["revision"], "sha256:" + models.digest((ROOT / relative).read_bytes()))
+                    self.assertEqual(source["delivery"], "deferred")
+                    self.assertEqual(source["reading"], "not-attested")
+                self.assertEqual(pack["mandate"]["authorization"], "not-verified")
+                self.assertEqual(pack["understanding"], "not-evaluated")
+
+    def test_shared_rule_byte_change_invalidates_context_not_document_snapshot(self):
+        root = self.project("document-only")
+        exported = self.exported_rules()
+        first = self.pack(root, framework_root=exported)
+        captured = rules.capture_framework(root, root=exported)
+        path = exported / "references/operational-memory.md"
+        path.write_text(path.read_text() + "\nSynthetic local revision.\n")
+        second = self.pack(root, framework_root=exported)
+        self.assertEqual(first["document_snapshot"], second["document_snapshot"])
+        self.assertNotEqual(first["id"], second["id"])
+        revisions = [{row["revision"] for row in pack["required_sources"]
+                      if row["path"] == "references/operational-memory.md"} for pack in (first, second)]
+        self.assertNotEqual(*revisions)
+        with self.assertRaises(snapshots.ConcurrentChange):
+            captured.assert_unchanged()
+
+    def test_missing_referenced_shared_guide_is_an_explicit_gap(self):
+        root = self.project("document-only")
+        exported = self.exported_rules()
+        (exported / "references/operational-memory.md").unlink()
+        pack = self.pack(root, framework_root=exported)
+        self.assertIn(dict(path="references/operational-memory.md",
+                           reason="referenced-adopted-source-unavailable"), pack["gaps"])
+        self.assertNotIn("references/operational-memory.md", {row["path"] for row in pack["required_sources"]})
+        self.assertEqual(pack["framework"]["resolution"], "version-only-unverified")
 
     def test_confidential_source_and_private_binding_never_enter_context(self):
         root = self.project()

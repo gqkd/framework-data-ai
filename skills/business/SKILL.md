@@ -49,6 +49,12 @@ faced.**
 
 ## 1 · Establish the evidence base
 
+For a cross-document or suite assessment, read `references/operational-memory.md` and use
+analysis context with this skill. Documentary-only operation is sufficient; no provider is
+required for a SAL. The pack locates sources, not new facts: preserve per-product state,
+current/target distinctions and missing evidence, then follow the source table below.
+Do not turn an inferred opportunity into a business commitment or use a pack as an authority.
+
 Run:
 
 ```bash

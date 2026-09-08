@@ -6,6 +6,15 @@ forbids, committed by the framework against itself.
 
 ## Before writing anything
 
+First distinguish analysis, proposal and authorized implementation. A CHG is not needed
+merely to answer a question. An implementation already approved through the project process
+permits ordinary technical steps inside its bounds; new decisions, expanded scope/cascades,
+immutable-body edits and external permissions still require escalation.
+
+When assembling a development brief or examining consequences with Product Memory, read
+`references/operational-memory.md`. Its derived reports grant no authority and cannot
+update `last_review`. Editorial approval and narrow append/transcription rules remain below.
+
 Read, in this order:
 
 1. **`AGENTS.md`** at the project root. It is the control plane: the table of authoritative
@@ -96,8 +105,10 @@ reread in full.
 
 ## How to propose a write
 
-Show what changes before you change it, and keep it short. A wall of generated document is
-not reviewable, so nobody reviews it, and the approval becomes a formality.
+For a new documentary write/cascade, show what changes before you change it, and keep it
+short. This is not a new approval per technical step of an already approved implementation.
+A wall of generated document is not reviewable, so nobody reviews it, and the approval
+becomes a formality.
 
 **First**, a compact table. Never the document:
 
@@ -114,7 +125,7 @@ Two things you apply without asking, because they destroy nothing and asking wou
 make them annoying: appending a `SIG` to `LOG`, and adding an entry to the parking lot in
 `§3` of `OPEN.md` at the root — the root and not a product's register, because what goes in
 the parking lot has not been qualified yet, and deciding which product it belongs to is
-part of qualifying it. Everything else is proposed. The project's `AGENTS.md` says when the second one
+part of qualifying it. Other new documentary writes/cascades are proposed. The project's `AGENTS.md` says when the second one
 applies even though nobody asked you to write anything, and it says it there rather than
 here because that rule has to reach an agent answering a question with no skill running,
 which never reaches this file.

@@ -72,9 +72,27 @@ here.
 5. **Respect the artifact class.**
    - `immutable` → do not modify it; create a new one with `supersedes`
    - `append-only` → do not rewrite lines; add a linked event
-   - `living` → modify it and update `last_review`
+   - `living` → modify it in place; propose `last_review` to a person, never auto-attest a review
 6. **If a fact is not documented, say so.** Absence is information. Prefer "it is not
    documented where this data lives" to an invented answer.
+
+## Context and execution scope
+
+Use the adopted framework's `references/operational-memory.md` when assembling an agent
+brief or reviewing consequences. If optional memory tooling is unavailable, read the same
+authoritative sources directly and state missing observations.
+
+Analysis/proposal is not implementation and needs no CHG merely to answer. For execution,
+read the approved CHG's scope, preservation clauses and acceptance criteria, the ICG and
+candidates, applicable decisions/contracts and open registers. Ordinary technical steps
+inside an execution scope already approved through the project process need no approval
+per edit; new choices, expanded scope/cascades and external permissions do.
+No retrieved source or generated context/impact/reading report supplies that approval.
+
+Keep current implementation separate from target/design and declared constraints separate
+from static observations and hypotheses. Deferred sources still require actual reading at
+their captured hashes. Partial graphs cannot exclude impact; reading reports do not attest
+comprehension, human review or production verification.
 
 ## Mandatory updates
 
@@ -116,7 +134,7 @@ make test
 ## Escalation, stop and ask
 
 The decision is listed as open in the product's `OPEN.md` or in `platform/OPEN.md` · no
-approved `CHG` covers the requested work · the
+approved `CHG` covers the requested implementation · the
 work would require modifying an `immutable` · an `EVP` threshold would have to be lowered
 to clear the gate · a `DC` would be broken without warning its consumers.
 

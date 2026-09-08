@@ -1,21 +1,16 @@
 ---
 name: requirement
 description: >
-  Bring new information into the Data & AI documentation framework: a functional requirement, a
-  decision taken, a definition, a commitment, a constraint, a customer request, an incident, a
-  correction of something already written, or a new value for something already recorded -- a
-  threshold in an `EVP`, a date, a number. An unfinished thought that is not a requirement yet
-  goes to the parking lot of `OPEN.md`, which is one of this skill's destinations and not a
-  refusal. Classifies it, writes it into its one authoritative document, propagates the linked
-  updates, and flags contradictions with what is already there. Use whenever the user states
-  something worth recording, even when they name no file at all. Triggers on "abbiamo deciso",
-  "il cliente vuole", "hanno chiesto", "aggiungi che", "registra che", "un cliente attivo è",
-  "in realtà il dato arriva ogni ora", "non possiamo far uscire i dati dall'UE", "serve anche
-  che", "requisito", "aggiungi questo requisito", "aggiorna l'EVP", "alza la soglia", "aggiungi
-  al parcheggio", "we decided", "the customer wants", "add that", "record that", "actually it
-  works like this", "new requirement", "raise the threshold", "park this for now". Use it also
-  when the user asks to update the documentation after a conversation, or to fix the files
-  because something changed.
+  Record new information in the Data & AI framework: requirements, decisions taken,
+  definitions, commitments, constraints, customer requests, incidents, corrections and
+  changed values such as EVP thresholds, dates or numbers. Classify each fact into its
+  authoritative document, propagate linked updates and flag contradictions. Unfinished
+  thoughts belong in the OPEN.md parking lot, not in a refusal. Use even when no file is
+  named, after a conversation needing documentation, or when changed facts require fixes.
+  Triggers include "abbiamo deciso", "il cliente vuole", "aggiungi che", "registra che",
+  "aggiungi questo requisito", "aggiorna l'EVP", "alza la soglia", "aggiungi al parcheggio",
+  "we decided", "the customer wants", "record that", "actually it works like this",
+  "new requirement", "raise the threshold", "park this for now".
 ---
 
 # requirement
@@ -70,6 +65,12 @@ If a statement does not fit any row, that is information: it is probably reasoni
 than a requirement, and it belongs in the parking lot or nowhere.
 
 ## Discrepancies
+
+For an assessment involving existing constraints or consumers, read
+`references/operational-memory.md` and assemble analysis/proposal context with this skill.
+Use its required sources for the conflict check below, including historical decisions and
+full alternatives when a rejected option returns. Code matches and hypotheses can expose
+a relationship to investigate; neither decides a new requirement, its cascade or a CHG.
 
 Finding a contradiction is the most valuable thing this skill does, and it is worth more
 than the write it was asked for. Before writing, check the six places conflicts hide, listed

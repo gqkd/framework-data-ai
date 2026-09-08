@@ -190,16 +190,19 @@ excluded by default to avoid expanding a local question into every document in a
 request a relation explicitly to include it. Limits/truncation are visible, and missing
 matches mean only no match in selected documentation, never no consequences.
 
-Operational context/impact CLI reports are described below; integration into the seven
-skills' instructions is still pending. Stricter PR authority, release evidence, semantic
-retrieval and the optional viewer remain later work. No new skill,
+Operational context/impact CLI reports are described below. The seven existing skills
+consume them through [operational-memory.md](operational-memory.md), the shared reading
+and execution-scope reference. Stricter PR authority, release evidence, semantic
+retrieval and the optional viewer remain outside this phase. No new skill,
 release version, migration or provider installation is implied by enabling this CLI.
 
 ## Operational CLI — phase 4 engine
 
-The engine is implemented independently of the editor. **The phase is not fully complete:**
-the planned preamble/routing/template/seven-skill integration has not been applied.
-Existing agent instructions and approval rules are unchanged.
+The engine is implemented independently of the editor. Common preamble, routing, the seven
+skills and AGENTS/IMP templates now distinguish analysis, proposal and implementation
+within an already approved mandate. Ordinary technical steps within that scope do not
+require per-edit approval; new decisions, wider scope/cascades, immutable-body edits and
+external permissions still require escalation. Reports themselves confer no authority.
 
 ```bash
 python3 /path/to/framework/memory.py context --root /path/to/documents \

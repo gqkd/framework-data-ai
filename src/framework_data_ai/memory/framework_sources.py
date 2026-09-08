@@ -90,6 +90,10 @@ def capture_framework(project, *, root=FRAMEWORK, skill=None):
                                               text=text, role="adopted-framework-rules-not-authority-verification"))
             except (OSError, UnicodeError, MemoryInputError):
                 result["gaps"].append(dict(path=relative, reason="adopted-source-unavailable"))
+        if optional is None and any("references/operational-memory.md" in source["text"]
+                                    for source in result["sources"]):
+            result["gaps"].append(dict(path="references/operational-memory.md",
+                                       reason="referenced-adopted-source-unavailable"))
         if not commit:
             result["gaps"].append(dict(path="framework.yaml", reason="version-only-does-not-pin-rule-bytes"))
     except (OSError, UnicodeError, yaml.YAMLError, MemoryInputError):

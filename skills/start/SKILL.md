@@ -152,8 +152,10 @@ question about what we are building.
 ```
 
 Copy from `templates/` at the plugin root, fill the **front matter** and leave the body to
-the interview and the corpus. `created` and `last_review` take the real instant, to the
-minute. `owners` takes **the answer to the question the preamble told you to ask** and
+the interview and the corpus. `created` takes the real instant, to the minute.
+`last_review` follows the preamble's human-attestation rule, not the scaffolding clock:
+propose it; if a required human review remains outstanding, say the artifact is not ready
+for handoff rather than auto-filling the field. `owners` takes **the answer to the question the preamble told you to ask** and
 nothing else: this is the first skill to run in a repository, so it is the one that sets
 the name every later document copies, and a name inferred here propagates silently. A
 placeholder that survives into a real repository reads as a real value to anything that
@@ -223,6 +225,13 @@ parsed nor worked. The same goes for `product.yaml`. Leaving `framework_version`
 line is the correct output of this step.
 
 ## Step 4 · Ingest the corpus
+
+Once the project has a control plane and product manifests, use
+`references/operational-memory.md` to assemble context for an existing-product assessment
+or an ingestion proposal, selecting this skill and analysis/proposal mode. Before that,
+continue the entry assessment: memory is not a prerequisite for scaffolding. A design-only
+product needs no invented code or ARC. Imported claims still go through ING below; a
+context pack does not ratify the corpus or authorize an implementation.
 
 Only if there is one. See `references/ingest-bulk.md` for the procedure and
 `scripts/extract.py` for the extractor.

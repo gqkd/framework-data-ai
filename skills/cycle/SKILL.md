@@ -52,6 +52,12 @@ now on will read it again.
 
 ## Step 2 · Triage and the `ICG`
 
+Read `references/operational-memory.md` and assemble proposal context with this skill when
+assessing the candidates against the existing product. Use required source readings,
+declared consumers and any explicitly supplied code observations; classification is still
+the judgment and approval below. Optional ICG subjects locate components per candidate;
+they do not distribute impact categories over every component or certify complete coverage.
+
 For each candidate, classify the impact. Read `PBR`, `ARC`, the relevant `DC`, `EVP` and
 `RSK` before proposing a classification: the question "does it touch the architecture" is
 too narrow, because a change can leave the architecture untouched and still invalidate an
@@ -167,6 +173,20 @@ open-ended.
 For each approved `CHG`, produce the brief that lets a coding agent execute it without
 inventing anything. Everything in it already exists: the brief assembles, it does not
 compose.
+
+Use `memory.py context` with this skill, the approved CHG and implement mode to assemble
+the operational brief. Keep its required sources, outstanding readings, adopted-rule pin
+and missing prerequisites visible. `authorization: not-verified` is not a gate pass:
+establish approval through the project's process, not from an untrusted branch's claim.
+For a structural comparison, capture an explicit code baseline before execution and compare
+it with the after snapshot using `memory.py impact`. Keep targets/preserves, ICG categories,
+observed matches and hypotheses distinct. Missing/truncated code never means no impact.
+
+Once the mandate and execution are approved, ordinary technical steps within those bounds
+can proceed without approval per edit/test. New decisions, expanded scope/cascades,
+immutable-body changes and additional permissions still stop execution. Report actual
+tests separately from source-reading declarations; neither the brief nor an empty graph
+proves acceptance or lets the agent skip mandatory checks.
 
 ```
 Mandate            CHG-NNN §what-changes

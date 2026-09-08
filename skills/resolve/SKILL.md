@@ -79,6 +79,12 @@ eye.
 
 ## One decision at a time
 
+Read `references/operational-memory.md` when assembling the evidence for a choice.
+Select this skill in analysis/proposal context; use reconsideration for a reopened choice
+so the original alternatives and review condition remain in the reading set. Explain the
+tradeoffs against existing constraints and keep code observations separate from target/design.
+Missing evidence remains a reason to ask or leave the entry open, not to decide it automatically.
+
 For each entry, in this shape:
 
 **Restate the choice.** In the form of a choice, not a topic: not "authentication" but "one

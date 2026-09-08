@@ -21,6 +21,12 @@ The one thing that is not mechanical is the gate, and the gate is the point.
 
 ## Step 1 · The release gate
 
+Read `references/operational-memory.md` when assembling the release assessment. Analysis
+context with this skill helps locate the CHGs, frozen EVP, EVRs and release sources; its
+required readings and missing evidence remain visible. A code snapshot or reading report
+does not establish the evaluated/deployed set, pass this gate or authorize a deploy. Keep
+the explicit hash, metric and repository checks below; memory cannot replace them.
+
 `RG` is not a lifecycle gate crossed once. It is a pipeline control that fires at every
 release candidate, the first one included.
 

@@ -3,8 +3,8 @@
 This directory preserves the phase-zero baseline and tests the scoped core, documentary
 memory, the phase-three code observer and the phase-four operational engine. Historical
 reports are in `BASELINE.md`, `PHASE-1.md`, `PHASE-2.md` and `PHASE-3.md`.
-The current partial-phase handoff is `PHASE-4.md`: engine implemented, skill/governance
-integration pending explicit approval. No query or context pack is a task authorization.
+The current phase handoff is `PHASE-4.md`: operational engine and seven-skill integration.
+No query or context pack is a task authorization.
 
 Run the deterministic suite from the framework checkout:
 
@@ -101,6 +101,8 @@ See `BASELINE.md` for the measured checkout, environment and phase-zero results.
 `test_operational.py` exercises required source budgets, historical/reconsidered decisions,
 adopted rule pins, caller-reported readings, scoped hypotheses, integrity-checked code
 bundles, before/after comparison, overlapping mappings and bounded cyclic traversal.
+Each of the seven skills retains the shared adopted rules under a zero delivery budget;
+changed rule bytes invalidate context identity, and a referenced missing guide stays a gap.
 The Git export fixture also exercises `context` from an unrelated working directory.
 These tests prove deterministic mechanics, not an agent's comprehension or source-reading
 honesty. No skill-forward model evaluation is claimed.
