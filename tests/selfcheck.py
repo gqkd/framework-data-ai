@@ -3186,12 +3186,22 @@ def _migration_is_executable():
                 old_commit, old_version = sha, v
                 break
         if old_version:
+            # --adopt must bind committed bytes, not this possibly dirty working tree.
+            # Exercise it against an isolated clean checkout of the committed runtime;
+            # test_adoption.py separately covers the complete proposed source export.
+            trusted_target = proj / "trusted-framework"
+            clone = subprocess.run(["git", "clone", "--local", "--no-hardlinks", str(ROOT),
+                                    str(trusted_target)], capture_output=True, text=True)
+            if clone.returncode:
+                return problems + ["could not create the isolated migration target: " + clone.stderr]
+            proj = proj / "project"
+            proj.mkdir()
             cfg = proj / "framework.yaml"
             cfg.write_text(f'framework_version: "{old_version}"\n'
                            f'framework_commit: "{old_commit}"\n')
             subprocess.run([sys.executable,
                             str(ROOT / "skills" / "audit" / "scripts" / "migrate.py"),
-                            "--root", str(proj), "--adopt"],
+                            "--root", str(proj), "--framework", str(trusted_target), "--adopt"],
                            capture_output=True, text=True)
             after = cfg.read_text()
             if REGISTRY["version"] not in after:

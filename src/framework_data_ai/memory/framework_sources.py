@@ -81,15 +81,16 @@ def capture_framework(project, *, root=FRAMEWORK, skill=None):
         except (OSError, MemoryInputError):
             optional = None
         pending = [*paths, *(["references/operational-memory.md"] if optional is not None else [])]
-        guide = {"audit": "references/contributions.md", "release": "references/release-evidence.md"}.get(skill)
+        guides = {"audit": ("references/contributions.md", "references/adoption.md"),
+                  "release": ("references/release-evidence.md",)}.get(skill, ())
         for relative in pending:
             try:
                 data = optional if relative == "references/operational-memory.md" else read(relative)
                 text = data.decode("utf-8").replace("\r\n", "\n")
                 # Follow this selected skill's bounded guide only if its adopted bytes
                 # name it. Missing guides become gaps; old pins never acquire new rules.
-                if relative == f"skills/{skill}/SKILL.md" and guide and guide in text and guide not in pending:
-                    pending.append(guide)
+                if relative == f"skills/{skill}/SKILL.md":
+                    pending.extend(guide for guide in guides if guide in text and guide not in pending)
                 revision = "sha256:" + digest(data)
                 result["sources"].append(dict(id="framework-source:" + digest(canonical([relative, revision, commit])),
                                               path=relative, revision=revision, lines=max(1, len(text.splitlines())),

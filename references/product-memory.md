@@ -17,6 +17,10 @@ declared code roots ------[current/target/design bridge]--> separate code graph
 
 ## Commands and scope
 
+For upgrade versus activation, a forward-only enrichment backlog and tool rollback,
+read [adoption.md](adoption.md). `memory.py gaps --root /path/to/documents` produces that
+backlog in read-only JSON; missing metadata does not block framework adoption.
+
 Run these from any directory, using a complete framework checkout or Git export:
 
 ```bash

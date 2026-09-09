@@ -253,9 +253,10 @@ filling a document: the skill elicits what you know instead of inventing what it
   `skills/audit/scripts/migrate.py` says which finding is which, by running both validators
   over the same repository. A repository that wants the declaration to **bind** writes
   `framework_commit` beside it, and `FW003` reports a report produced by any other commit;
-  versions are tagged from `v2.8.0`. What is still missing is the install — no packaging, no
-  release to fetch — so the pin says which commit the sister checkout has to be at, and
-  somebody still has to put it there.
+  historical versions have Git tags. Complete source exports and dependency constraints
+  are now tested distribution inputs; automatic installation/fleet pin updates are not.
+  `references/adoption.md` separates upgrade, explicit memory use and forward-only
+  enrichment. The audit skill owns this procedure, not an eighth skill.
 - **A baseline for the behaviour evals.** They show what a skill did; they do not show what
   would have happened without it. The comparison worth running is not one turn against one
   turn — the claim these skills make is that tomorrow's session does not start over, and a

@@ -2,8 +2,8 @@
 
 This directory preserves the phase-zero baseline and tests the scoped core, documentary
 memory, the separate code observer, operational engine, contribution and release gates.
-Historical reports are in `BASELINE.md` and `PHASE-1.md` through `PHASE-5.md`.
-The current phase handoff is `PHASE-6.md`: exact release sets and independently witnessed delivery.
+Historical reports are in `BASELINE.md` and `PHASE-1.md` through `PHASE-6.md`.
+The current phase handoff is `PHASE-7.md`: compatible adoption and complete source packaging.
 No query or context pack is a task authorization.
 
 Run the deterministic suite from the framework checkout:
@@ -93,9 +93,11 @@ The full increment's twenty-four deterministic obligations were frozen under
 `deferred_checks` in the acceptance contract with their implementation phases. Their
 inputs and required outcomes were specifications, not successful engine tests. Executable
 coverage is added with each phase; see `PHASE-4.md` for the operational engine and
-`PHASE-5.md` for contribution checks. The migration
-smoke checks only an already-current fixture
-and no writes; export tests cover the entry points, not every future migration.
+`PHASE-5.md` for contribution checks, `PHASE-6.md` for release evidence and `PHASE-7.md`
+for migration/distribution. `test_adoption.py` compares complete baseline and new Git
+exports without history or foreign imports, tests isolated approved adoption, optional
+forward-only gaps, documentary operation and rollback without changing historical sources.
+This is not a claim that every historical version or consumer customization is compatible.
 
 See `BASELINE.md` for the measured checkout, environment and phase-zero results.
 

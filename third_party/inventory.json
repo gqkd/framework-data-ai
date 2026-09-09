@@ -1,6 +1,24 @@
 {
+  "external_dependencies": [
+    {
+      "distribution": "operator-supplied-executable",
+      "integration": "src/framework_data_ai/memory/providers/enola.py",
+      "license_scope": "Apache-2.0 at the pinned source root; MIT notices for vendored Swift and Dart grammars were read. Go dependency declarations were inspected, not every transitive license audited. This is not a complete binary SBOM or legal clearance.",
+      "lock": "providers.lock.json#/enola",
+      "name": "enola",
+      "redistribution": "If distributing a provider binary later, preserve its LICENSE and NOTICE and verify all bundled dependency obligations before changing distribution scope.",
+      "reviewed_upstream_files": [
+        "LICENSE",
+        "NOTICE",
+        "go.mod",
+        "internal/extractors/swiftextractor/grammar/LICENSE",
+        "internal/extractors/dartextractor/grammar/LICENSE"
+      ]
+    }
+  ],
   "host_requirements": [
-    "Linux x86_64 (including WSL), CPython >=3.12",
+    "Documentary core targets CPython 3.12 and 3.14; Git for historical rule resolution",
+    "Optional Enola provider requires Linux x86_64 (including WSL), CPython >=3.12",
     "Git for explicit source capture",
     "bubblewrap and util-linux prlimit supplied by the operator's OS"
   ],
@@ -23,6 +41,83 @@
       "version": "0.4.15"
     }
   },
+  "python_runtime": {
+    "dependencies": [
+      {
+        "direct": true,
+        "license": "MIT",
+        "name": "PyYAML",
+        "source": "https://pypi.org/project/PyYAML/6.0.3/",
+        "version": "6.0.3"
+      },
+      {
+        "direct": true,
+        "license": "MIT",
+        "name": "jsonschema",
+        "source": "https://pypi.org/project/jsonschema/4.19.2/",
+        "version": "4.19.2"
+      },
+      {
+        "direct": false,
+        "license": "MIT",
+        "name": "attrs",
+        "source": "https://pypi.org/project/attrs/25.4.0/",
+        "version": "25.4.0"
+      },
+      {
+        "direct": false,
+        "license": "MIT",
+        "name": "jsonschema-specifications",
+        "source": "https://pypi.org/project/jsonschema-specifications/2023.12.1/",
+        "version": "2023.12.1"
+      },
+      {
+        "direct": false,
+        "license": "MIT",
+        "name": "referencing",
+        "source": "https://pypi.org/project/referencing/0.36.2/",
+        "version": "0.36.2"
+      },
+      {
+        "direct": false,
+        "license": "MIT",
+        "name": "rpds-py",
+        "source": "https://pypi.org/project/rpds-py/0.27.1/",
+        "version": "0.27.1"
+      },
+      {
+        "direct": false,
+        "license": "PSF-2.0",
+        "marker": "python_version < \"3.13\"",
+        "name": "typing-extensions",
+        "source": "https://pypi.org/project/typing-extensions/4.15.0/",
+        "version": "4.15.0"
+      }
+    ],
+    "review": "Publisher release metadata and installed dependency declarations checked 2026-09-09. These are version constraints, not wheel hashes, a vulnerability scan or a binary SBOM. No Python distribution is vendored; preserve its own notices if bundling it later.",
+    "scope": "CPython 3.12 and 3.14; no optional jsonschema format extras"
+  },
+  "reviewed_not_copied": [
+    {
+      "commit": "e93a4f0c76e6af27142c25189f14c200e1749d51",
+      "decision": "Protocol reference only. Reader independently implemented: no auto-install, FastAPI/Cognee imports, missing-receipt fallback, skipped corrupt records, guessed nominal targets or facts/insights merge.",
+      "destination": null,
+      "paths": [
+        "cognee/tasks/code_graph/enola.py"
+      ],
+      "repository": "https://github.com/topoteretes/cognee"
+    },
+    {
+      "commit": "2c6dae32643572ee528eb9b77dbcc17f58f3a8c9",
+      "decision": "Fallback source inspected, not installed or certified. Python parse_bytes walks the recovered Tree-sitter tree without a root has_error gate; switching does not establish syntax-error visibility. Retain the smaller pinned Enola adapter with an explicit CPython syntax guard. Never run code-review-graph install.",
+      "destination": null,
+      "paths": [
+        "code_review_graph/parser.py",
+        "pyproject.toml"
+      ],
+      "repository": "https://github.com/tirth8205/code-review-graph"
+    }
+  ],
   "schema": "framework-memory/integration-inventory/v1",
   "scope": "direct-integration-not-transitive-SBOM"
 }

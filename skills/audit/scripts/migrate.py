@@ -28,9 +28,9 @@ whoever bumps the version has to write.
 """
 
 import argparse
+from contextlib import contextmanager
 import json
 import re
-import shutil
 import subprocess
 import sys
 import tarfile
@@ -238,7 +238,7 @@ def key(f: dict, seen: Counter) -> tuple:
 
 def findings(validator: Path, root: Path) -> dict:
     """One validator's report on the project, keyed by `key`."""
-    r = subprocess.run([sys.executable, str(validator), "--root", str(root), "--json"],
+    r = subprocess.run([sys.executable, "-I", "-B", str(validator), "--root", str(root), "--json"],
                        capture_output=True, text=True)
     if r.returncode not in (0, 1) or not r.stdout.strip():
         tail = (r.stderr or r.stdout).strip().splitlines()
@@ -246,6 +246,62 @@ def findings(validator: Path, root: Path) -> dict:
     out = json.loads(r.stdout)
     seen: Counter = Counter()
     return {key(f, seen): f for f in out["findings"]}
+
+
+@contextmanager
+def previous_framework(args, declared, root, framework):
+    """Own complete tree in its own process; never import the new core into the old one.
+
+    A package path is explicitly operator-trusted executable tooling, not project input.
+    A package's version is checked, but is not proof that its bytes came from a Git pin.
+    """
+    if args.from_framework:
+        tree = args.from_framework.resolve()
+        for relative in (REGISTRY_REL, VALIDATE_REL, "skills/audit/checks.yaml"):
+            if not (tree / relative).is_file():
+                raise RuntimeError(f"previous framework lacks {relative}; supply a complete export")
+        if registry_version((tree / REGISTRY_REL).read_text(encoding="utf-8")) != declared:
+            raise RuntimeError("previous framework export does not declare the requested version")
+        yield tree, {"kind": "explicit-export", "version": declared,
+                     "commit_verified": False}
+        return
+    config = yaml.safe_load((root / "framework.yaml").read_text(encoding="utf-8")) if (root / "framework.yaml").exists() else {}
+    pin = args.from_commit or (config.get("framework_commit") if isinstance(config, dict)
+                              and not args.from_version else None)
+    if pin is not None:
+        if not isinstance(pin, str) or not COMMIT.fullmatch(pin):
+            raise RuntimeError("previous framework commit is not a valid Git commit ID")
+        resolved = git(["rev-parse", "--verify", f"{pin}^{{commit}}"], framework)
+        if resolved.returncode:
+            raise RuntimeError("previous framework commit unavailable; supply its trusted complete export with --from-framework")
+        sha = resolved.stdout.strip()
+        old_registry = git(["show", f"{sha}:{REGISTRY_REL}"], framework)
+        if old_registry.returncode or registry_version(old_registry.stdout) != declared:
+            raise RuntimeError("previous framework commit and declared version disagree")
+        origin = "explicit-commit" if args.from_commit else "project-pin"
+    else:
+        sha, why = commit_declaring(declared, framework)
+        if sha is None:
+            raise RuntimeError(why)
+        origin = "version-history"
+    with tempfile.TemporaryDirectory(prefix="framework-migrate-") as tmp:
+        yield export(sha, framework, Path(tmp)), {"kind": origin, "version": declared,
+                                                "commit": sha, "commit_verified": True}
+
+
+def adoption_problem(root, framework, current):
+    """Never write a Git pin for a dirty/different tree or preserve a stale package pin."""
+    cfg = yaml.safe_load((root / "framework.yaml").read_text(encoding="utf-8")) if (root / "framework.yaml").exists() else {}
+    top = git(["rev-parse", "--show-toplevel"], framework)
+    if top.returncode or Path(top.stdout.strip()).resolve() != framework:
+        if isinstance(cfg, dict) and "framework_commit" in cfg:
+            return "pinned adoption requires a clean target Git checkout; an export cannot update framework_commit"
+        return None
+    state = git(["status", "--porcelain", "--untracked-files=all"], framework)
+    registry = git(["show", f"HEAD:{REGISTRY_REL}"], framework)
+    if state.returncode or state.stdout.strip() or registry.returncode or registry_version(registry.stdout) != current:
+        return "adoption requires a clean committed target framework, not uncommitted implementation bytes"
+    return None
 
 
 def adopt(cfg: Path, version: str, commit: str | None) -> None:
@@ -284,6 +340,8 @@ def verdict(report: dict) -> int:
     An adopted migration is nothing left to do even though it reported findings a moment
     ago: they were the reason to run it.
     """
+    if report["problems"]:
+        return 1
     if report.get("adopted") or report["up_to_date"]:
         return 0
     return 1 if report["new"] or report["version_line"] or report["problems"] else 0
@@ -297,6 +355,10 @@ def main() -> int:
                     help="the framework checkout to migrate towards")
     ap.add_argument("--from", dest="from_version",
                     help="override the version in the project's framework.yaml")
+    previous = ap.add_mutually_exclusive_group()
+    previous.add_argument("--from-framework", type=Path,
+                          help="trusted complete previous export/checkout; version checked, commit provenance not authenticated")
+    previous.add_argument("--from-commit", help="exact previous framework Git commit; overrides the project pin")
     ap.add_argument("--adopt", action="store_true",
                     help="write the new framework_version into the project")
     ap.add_argument("--json", action="store_true")
@@ -318,6 +380,14 @@ def main() -> int:
     current = registry_version(registry)
     declared, cfg, unreadable = declared_version(root)
     declared = args.from_version or declared
+    compare_explicitly = bool(args.from_framework or args.from_commit)
+    if not unreadable and not args.from_version and cfg.exists():
+        settings = yaml.safe_load(cfg.read_text(encoding="utf-8"))
+        pin = settings.get("framework_commit") if isinstance(settings, dict) else None
+        if pin is not None:
+            head = git(["rev-parse", "HEAD"], framework)
+            compare_explicitly |= (not isinstance(pin, str) or not COMMIT.fullmatch(pin)
+                                   or head.returncode != 0 or not head.stdout.strip().lower().startswith(pin.lower()))
 
     report = {"project": str(root), "declared": declared, "current": current,
               "up_to_date": False, "notes": [], "already_there": [], "new": [], "gone": [],
@@ -335,7 +405,7 @@ def main() -> int:
             f"the project declares {declared!r}, which is not three numbers separated by "
             "dots. `2` and `1.1` are a whole number and a decimal to YAML, and neither "
             "compares with a version. Quote it, or complete it.")
-    elif semver(declared) == semver(current):
+    elif semver(declared) == semver(current) and not compare_explicitly:
         # Not a problem, and the distinction is the exit code. A repository already on the
         # current version is the state every repository is supposed to end up in, and a tool
         # that returns 1 for it cannot be put in a pipeline: the run that says "nothing to
@@ -348,58 +418,57 @@ def main() -> int:
             "of the framework it is being pointed at, which usually means `--framework` "
             "points at a stale checkout.")
 
-    if declared and semver(declared) and semver(declared) < (semver(current) or (0, 0, 0)):
+    if declared and semver(declared) and (semver(declared) < (semver(current) or (0, 0, 0))
+            or (semver(declared) == semver(current) and compare_explicitly)):
         lo, hi = semver(declared), semver(current)
         for frm, to, prose in migration_notes(registry):
             if semver(to) and lo < semver(to) <= hi:
                 report["notes"].append({"from": frm, "to": to, "note": prose})
 
-        sha, why = commit_declaring(declared, framework)
-        if sha is None:
-            report["problems"].append(why)
-        else:
-            with tempfile.TemporaryDirectory() as tmp:
-                try:
-                    old_tree = export(sha, framework, Path(tmp))
-                    old = findings(old_tree / VALIDATE_REL, root)
-                    new = findings(framework / VALIDATE_REL, root)
-                except (RuntimeError, OSError) as e:
-                    report["problems"].append(f"could not run the {declared} validator: {e}")
-                else:
-                    report["commit"] = sha[:12]
-                    for k in sorted(set(old) | set(new)):
-                        f = new.get(k) or old[k]
-                        # `FW001` and `FW002` are about the number this tool exists to move.
-                        # They are new by construction on every migration, and what clears
-                        # them is `--adopt` rather than an edit to any document -- so filing
-                        # them under "this is the migration work" told the reader to go and
-                        # fix something, while `--adopt` was ignoring them. One of the two
-                        # was lying, and it was the report.
-                        # A FINDING THE PROJECT HAS EXAMINED AND LEFT STANDING IS NOT
-                        # MIGRATION WORK, AND FILING IT AS SUCH IS WHAT DEADLOCKED THIS
-                        # TOOL. `--adopt` refuses while NEW is non-empty, which is right:
-                        # the number it writes is the claim that the migration is done. But
-                        # what landed under NEW was every finding the new validator reports
-                        # and the old one did not, including the ones that are defects of
-                        # the validator itself -- and no amount of work on the documents
-                        # removes those. A project that had finished the migration and
-                        # written down why two findings stay could not say so, because
-                        # there was nowhere for that to be written and nothing here to read
-                        # it. There is now, and the guard keeps its meaning: it blocks on
-                        # work outstanding, and an examined finding is not outstanding.
-                        where = ("version_line" if f["code"] in ADOPT_CLEARS
-                                 else "accepted" if k in new and new[k].get("accepted")
-                                 else "already_there" if k in old and k in new
-                                 else "new" if k in new else "gone")
-                        entry = {"code": f["code"], "path": f["path"], "level": f["level"],
-                                 "message": f["message"]}
-                        if where == "accepted":
-                            entry["accepted"] = new[k]["accepted"]
-                        report[where].append(entry)
-                finally:
-                    shutil.rmtree(Path(tmp) / "old", ignore_errors=True)
+        try:
+            with previous_framework(args, declared, root, framework) as (old_tree, origin):
+                report["previous_source"] = origin
+                old = findings(old_tree / VALIDATE_REL, root)
+                new = findings(framework / VALIDATE_REL, root)
+                if origin.get("commit"):
+                    report["commit"] = origin["commit"][:12]
+                for k in sorted(set(old) | set(new)):
+                    f = new.get(k) or old[k]
+                    # `FW001` and `FW002` are about the number this tool exists to move.
+                    # They are new by construction on every migration, and what clears
+                    # them is `--adopt` rather than an edit to any document -- so filing
+                    # them under "this is the migration work" told the reader to go and
+                    # fix something, while `--adopt` was ignoring them. One of the two
+                    # was lying, and it was the report.
+                    # A FINDING THE PROJECT HAS EXAMINED AND LEFT STANDING IS NOT
+                    # MIGRATION WORK, AND FILING IT AS SUCH IS WHAT DEADLOCKED THIS
+                    # TOOL. `--adopt` refuses while NEW is non-empty, which is right:
+                    # the number it writes is the claim that the migration is done. But
+                    # what landed under NEW was every finding the new validator reports
+                    # and the old one did not, including the ones that are defects of
+                    # the validator itself -- and no amount of work on the documents
+                    # removes those. A project that had finished the migration and
+                    # written down why two findings stay could not say so, because
+                    # there was nowhere for that to be written and nothing here to read
+                    # it. There is now, and the guard keeps its meaning: it blocks on
+                    # work outstanding, and an examined finding is not outstanding.
+                    where = ("version_line" if f["code"] in ADOPT_CLEARS
+                             else "accepted" if k in new and new[k].get("accepted")
+                             else "already_there" if k in old and k in new
+                             else "new" if k in new else "gone")
+                    entry = {"code": f["code"], "path": f["path"], "level": f["level"],
+                             "message": f["message"]}
+                    if where == "accepted":
+                        entry["accepted"] = new[k]["accepted"]
+                    report[where].append(entry)
+        except (RuntimeError, OSError, ValueError, KeyError, yaml.YAMLError) as e:
+            report["problems"].append(f"could not compare the {declared} and {current} validators: {e}")
 
     if args.adopt:
+        if not report["problems"]:
+            problem = adoption_problem(root, framework, current)
+            if problem:
+                report["problems"].append(problem)
         if report["new"] or report["problems"]:
             report["problems"].append(
                 "not adopted. `--adopt` writes the new number, which is the claim that the "
@@ -412,7 +481,9 @@ def main() -> int:
                 "is not.")
         else:
             head = git(["rev-parse", "HEAD"], framework)
-            commit = head.stdout.strip() if head.returncode == 0 else None
+            top = git(["rev-parse", "--show-toplevel"], framework)
+            commit = (head.stdout.strip() if head.returncode == 0 and top.returncode == 0
+                      and Path(top.stdout.strip()).resolve() == framework else None)
             adopt(cfg, current, commit)
             report["adopted"] = current
 

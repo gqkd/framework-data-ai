@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "framework-memory/adoption-report/v1",
+  "$ref": "#/$defs/adoption-report",
+  "$defs": {
+    "adoption-report": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "snapshot",
+        "coverage",
+        "written",
+        "activation",
+        "code_observation",
+        "gaps",
+        "issues",
+        "filtered_sources",
+        "limitations"
+      ],
+      "properties": {
+        "schema": {
+          "const": "framework-memory/adoption-report/v1"
+        },
+        "snapshot": {
+          "$ref": "#/$defs/sha256"
+        },
+        "coverage": {
+          "enum": [
+            "available",
+            "partial",
+            "unavailable"
+          ]
+        },
+        "written": {
+          "const": false
+        },
+        "activation": {
+          "const": "explicit-commands-only"
+        },
+        "code_observation": {
+          "const": "not_requested"
+        },
+        "gaps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "path",
+              "detail",
+              "lifecycle",
+              "handling"
+            ],
+            "properties": {
+              "code": {
+                "$ref": "#/$defs/nonempty"
+              },
+              "path": {
+                "$ref": "#/$defs/relative-path"
+              },
+              "detail": {
+                "$ref": "#/$defs/nonempty"
+              },
+              "lifecycle": {
+                "enum": [
+                  "living",
+                  "immutable",
+                  "append-only",
+                  "unknown"
+                ]
+              },
+              "handling": {
+                "enum": [
+                  "propose-reviewed-edit",
+                  "new-successor-only",
+                  "new-linked-event-only",
+                  "inspect-source-first"
+                ]
+              },
+              "source": {
+                "$ref": "#/$defs/source"
+              }
+            }
+          }
+        },
+        "issues": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "filtered_sources": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "nonempty": {
+      "type": "string",
+      "minLength": 1
+    },
+    "relative-path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*\\\\)(?!.*:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*//).+$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "id",
+        "path",
+        "revision",
+        "lines"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "path": {
+          "$ref": "#/$defs/relative-path"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "lines": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  }
+}

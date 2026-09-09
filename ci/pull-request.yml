@@ -54,7 +54,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - run: pip install pyyaml jsonschema
+      - run: python -m pip install -r .framework/requirements.txt -c .framework/constraints.txt
 
       - name: which files this change set touches
         env:

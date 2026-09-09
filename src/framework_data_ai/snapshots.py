@@ -6,6 +6,7 @@ Source revisions hash the actual bytes, not Git's dirty boolean or a timestamp.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from importlib import metadata
 import json
 import os
 from pathlib import Path
@@ -13,6 +14,7 @@ import re
 import shutil
 import stat
 import subprocess
+import sys
 import tempfile
 
 from .artifacts import Artifact, jsonify, parse_front_matter
@@ -59,12 +61,29 @@ def git_head(root: Path) -> str | None:
         return None
 
 
+def optional_dependency_version(name: str) -> str:
+    # Older supported referencing releases need no typing-extensions on Python 3.12.
+    # Absence is still part of identity, not an invented mandatory runtime dependency.
+    try:
+        return metadata.version(name)
+    except metadata.PackageNotFoundError:
+        return "not-installed"
+
+
 def generator_inputs() -> dict:
     paths = [FRAMEWORK / "memory.py", FRAMEWORK / "schemas/artifact-types.yaml", CONTRACT_PATH,
              FRAMEWORK / "providers.lock.json"]
     paths += sorted((FRAMEWORK / "src/framework_data_ai").rglob("*.py"))
-    return {path.relative_to(FRAMEWORK).as_posix(): digest(path.read_bytes())
-            for path in sorted(paths)}
+    if (FRAMEWORK / "constraints.txt").is_file():
+        paths.append(FRAMEWORK / "constraints.txt")
+    inputs = {path.relative_to(FRAMEWORK).as_posix(): digest(path.read_bytes())
+              for path in sorted(paths)}
+    inputs["runtime:python"] = digest(canonical([sys.implementation.name, *sys.version_info[:3]]))
+    for name in ("PyYAML", "jsonschema", "attrs", "jsonschema-specifications", "referencing", "rpds-py"):
+        inputs["runtime:" + name] = digest(metadata.version(name).encode("utf-8"))
+    if sys.version_info < (3, 13):
+        inputs["runtime:typing-extensions"] = digest(optional_dependency_version("typing-extensions").encode("utf-8"))
+    return inputs
 
 
 def read_inputs(workspace: Workspace) -> tuple[dict[str, bytes], dict]:

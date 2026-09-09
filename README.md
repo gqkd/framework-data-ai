@@ -21,7 +21,7 @@ decisions, products, initiatives and corpus, live in that project's repository, 
 | `schemas/` | The artifact catalog and what each type is allowed to be. `artifact-types.yaml` is the source; `generate.py` projects it into the JSON Schemas, into `FRAMEWORK.md §7` and into `templates/README.md` |
 | `skills/` | The skills themselves. `audit/` also carries the gate: `scripts/validate.py`, `scripts/migrate.py` and `checks.yaml` |
 | `src/framework_data_ai/` | Shared reading/resolution, documentary memory and a separate code graph. Loaded from this checkout; no package installation required |
-| `memory.py` | Opt-in `doctor`, `build`, `query`, `code`, `context`, `impact`, `readings` CLI. See `references/product-memory.md`; the code observer is optional and isolated |
+| `memory.py` | Opt-in `doctor`, `gaps`, `build`, `query`, `code`, `context`, `impact`, `readings` CLI. See `references/product-memory.md`; the code observer is optional and isolated |
 | `providers.lock.json`, `third_party/` | Pinned optional provider, reviewed-source provenance and generated integration inventory; no bundled binary or model |
 | `ci/` | Legacy PR template/workflow, optional trusted-base documentary controller, contribution-policy and CODEOWNERS adoption examples; see `references/contributions.md` |
 | `references/` | Shared by the skills: the common preamble, routing table and operational-memory reading/scope rules |
@@ -239,7 +239,7 @@ confirm one, it says so. It will not fill in something plausible.
 ## The gate
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements.txt -c constraints.txt
 python3 skills/audit/scripts/validate.py --root ../my-project
 python3 skills/audit/scripts/validate.py --root ../my-project --emit-index
 ```
@@ -359,7 +359,9 @@ multi-repository code/build/configuration sets with EVR and authenticated execut
 receipts. Candidate preparation, default-branch integration and observed deployment
 remain separate; generating RLM/REL never automatically marks a CHG verified.
 
-How the project gets hold of the framework in CI is the part that is not solved. See below.
+For complete packages, migration and independent activation, see
+[`references/adoption.md`](references/adoption.md). Workflow files remain reviewed examples,
+not automatic installation or repository protection.
 
 ### Where the rules live, and why none of them are in the validator
 
@@ -387,9 +389,9 @@ without `status` and `owners` for as long as it did. The self check runs in CI h
 ## What still does not exist
 
 
-- **Distribution.** A project refers to the framework by path. There is no packaging and no
-  release to install. With one project this is invisible. With the second it is the first
-  thing that breaks.
+- **Automatic distribution and fleet adoption.** Complete checkouts/Git exports are now
+  tested packages, with generated dependency constraints and inventory. They do not install
+  themselves or update project pins; there is no new PyPI release or automatic deployment.
 
   Pinning is no longer part of that gap. A project can write `framework_commit` beside its
   `framework_version`, and `FW003` compares it with the commit doing the checking; versions
@@ -404,7 +406,8 @@ without `status` and `owners` for as long as it did. The self check runs in CI h
   wrong twice is how people stop reading the validator.
 
   `skills/audit/scripts/migrate.py` answers it finding by finding. It rebuilds the validator
-  the project pinned out of this repository's git history, runs it and the current one over
+  the project pinned out of this repository's git history (or accepts a trusted complete
+  previous export through `--from-framework`), runs it and the current one over
   the same project, and reports what is new, what was already there, what is gone, and what
   the project has examined and left standing. No tag and no release are needed for that: the
   history is the archive. The note explaining each

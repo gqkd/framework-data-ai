@@ -22,7 +22,7 @@ def main(argv=None) -> int:
     readings = commands.add_parser("readings", help="validate caller-reported readings; never attest understanding")
     readings.add_argument("--pack", type=Path, required=True)
     readings.add_argument("--claims", type=Path, required=True)
-    for name in ("doctor", "build", "query", "code", "context", "impact"):
+    for name in ("doctor", "gaps", "build", "query", "code", "context", "impact"):
         command = commands.add_parser(name)
         command.add_argument("--root", type=Path, required=True)
         command.add_argument("--json", action="store_true", help="JSON is also the default output")
@@ -85,7 +85,10 @@ def main(argv=None) -> int:
         else:
             snapshot = capture(args.root)
             graph = build(snapshot)
-            if args.command == "context":
+            if args.command == "gaps":
+                from .adoption import assess
+                result = assess(snapshot, graph)
+            elif args.command == "context":
                 from .context import compose
                 from .models import FRAMEWORK
                 from .operational_io import load_code, read_json

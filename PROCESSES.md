@@ -749,7 +749,7 @@ validator's report, or a planned update.
 flowchart TB
   dec["framework_version,<br/>as the project declares it"] --> mig["migrate.py"]
   mig --> notes["The migration notes<br/>for every version crossed"]
-  mig --> old["The validator of that version,<br/>rebuilt from git history"]
+  mig --> old["The pinned validator tree,<br/>Git history or trusted complete export"]
   mig --> new["The current validator"]
   old --> split{"The two reports,<br/>compared"}
   new --> split
@@ -759,7 +759,9 @@ flowchart TB
   work --> art["The artifacts migrated"]
   art --> idx["--emit-index"]
   idx --> val["validator"]
-  val --> adopt["migrate.py --adopt"]
+  val --> approval["Explicit adoption approval"]
+  approval --> adopt["migrate.py --adopt<br/>version and existing pin only"]
+  adopt -. "independent opt-in" .-> memory["Memory commands and gaps report"]
 ```
 
 Everything above the migration itself is one command:
@@ -768,8 +770,8 @@ Everything above the migration itself is one command:
 python3 skills/audit/scripts/migrate.py --root <project>
 ```
 
-It reads the project's `framework_version`, rebuilds from the framework's own git history
-the version in which that number was current, runs **that** validator and the current one
+It reads the project's `framework_version` and available `framework_commit`, reconstructs
+that complete framework from Git (or uses a trusted `--from-framework` export), runs **that** validator and the current one
 over the same project, and splits the findings four ways. It is the distinction `FW001`
 exists to make possible, made finding by finding instead of as a general warning: getting it
 wrong twice is how a team stops reading the validator.
@@ -791,6 +793,11 @@ annotation matching no finding is an error, so the file cannot quietly become a 
 exemptions.
 
 ### What stays by hand
+
+`references/adoption.md` separates this upgrade from memory activation and mapping
+enrichment. `memory.py gaps` reports optional questions, not mandatory migration repairs.
+Provider setup, strict CI trust inputs, remote protections and viewer/retrieval extensions
+are independent choices; this process does not activate them.
 
 Migrating the artifacts. A `MAJOR` is, by the framework's own definition, a document that
 used to validate and no longer does: a renamed field, a narrowed enum, a type removed. The

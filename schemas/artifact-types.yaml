@@ -1096,7 +1096,35 @@
 # all and is the same family: a positional cross-reference inside a document, "the register that
 # does not follow rule 2", which broke in 3.6.2 when an item was inserted above it and was caught
 # by reading a diff rather than by any check.
-version: "3.6.3"
+# 3.6.3 -> 3.7.0. Product Memory: optional operational support, not a second authority.
+# MINOR: no new required field or gate for existing projects. Typed opt-in mappings,
+# deterministic documentary and separate code graphs, required-source context, bounded
+# structural impact, and independent contribution/release evidence profiles are additive.
+# Scoped intake/impact joins repair existing warnings; the phase-zero baseline and the
+# explicit phase-one finding delta remain frozen in tests/fixtures/memory/.
+#
+# ADOPTION HAS THREE SEPARATE STEPS. Compare full previous/new framework trees with
+# migrate.py (project pin preferred, or trusted --from-framework export); adopt only with
+# approval; invoke memory and enrich future mappings only when separately requested.
+# FW001/FW002/FW003 report version/pin work, AN001 reports obsolete annotations, FM002
+# checks optional field shape. Graph issues report unresolved/ambiguous mappings; no
+# validator establishes that a mapping is true. Immutable history is not rewritten to
+# acquire applies_to/subjects. references/adoption.md owns the procedure and its limits.
+#
+# tests/memory/test_adoption.py asserts package comparison, baseline-pin preservation,
+# no writes without --adopt, clean-target/pin guards, opt-in memory, lifecycle-aware gap
+# reports and tool rollback preserving historical documents. No mandatory repair is
+# prescribed solely by this MINOR. Custom scans/severity policies still need comparison.
+# Strict contribution and release profiles are opt-in; their errors are not promoted
+# legacy checks. Missing trustworthy execution evidence cannot be repaired by prose.
+#
+# Complete source exports include src/, schemas, references, skills and provider lock.
+# third_party/inventory.py generates inventory and constraints; --check detects drift.
+# The optional provider is not bundled. Runtime/dependency versions enter snapshot input
+# hashes, so a changed toolchain does not masquerade as unchanged derived evidence.
+# This version bump does not install a plugin, adopt products, tag/publish a release or
+# activate remote CI. Viewer, semantic retrieval, graph DB and client data remain out.
+version: "3.7.0"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of

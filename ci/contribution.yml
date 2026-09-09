@@ -36,7 +36,7 @@ jobs:
       - name: isolated trusted verifier dependencies
         run: |
           python3 -m venv .verifier
-          .verifier/bin/python -I -m pip install -r .framework/requirements.txt
+          .verifier/bin/python -I -m pip install -r .framework/requirements.txt -c .framework/constraints.txt
       - name: verify the API base and read proposed Git objects without checkout
         env:
           GITHUB_TOKEN: ${{ github.token }}

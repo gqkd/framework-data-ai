@@ -4,5 +4,6 @@
 # of being reimplemented in Python. One enforcement path rather than two: a schema an
 # editor reads and a schema CI enforces cannot disagree if they are the same file.
 
+# Supported ranges for embedders; use -c constraints.txt for the tested distribution baseline.
 pyyaml>=6.0
 jsonschema>=4.18

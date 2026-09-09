@@ -8,3 +8,11 @@ do not need, delete the sections you would never fill in. The one thing the lice
 in return, if you redistribute a modified version, is that you say you modified it
 (§4.b), because anyone reading a set of rules needs to know whether they are reading
 these or a variant of them.
+
+Product Memory integration: this source distribution does not bundle third-party Python
+packages, provider binaries, grammars or models. third_party/manifest.yaml records runtime
+dependencies, their publisher license metadata and reviewed-but-not-copied sources;
+third_party/inventory.json and constraints.txt are generated from that inventory.
+The optional Enola executable is supplied separately by the operator. Redistributing it
+or bundling Python packages is a separate distribution scope: preserve their respective
+licenses/notices and review all bundled obligations. This notice is not a binary SBOM.

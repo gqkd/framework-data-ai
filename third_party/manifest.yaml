@@ -1,6 +1,22 @@
 schema: framework-memory/third-party/v1
 # No third-party source, binary, grammar or model is redistributed by this increment.
 incorporated_code: []
+# Reproducible validation baseline, not a claim that these are the latest releases.
+# Versions match the exercised environment; extras and extraction/model tools are outside it.
+python_runtime:
+  scope: CPython 3.12 and 3.14; no optional jsonschema format extras
+  dependencies:
+    - {name: PyYAML, version: 6.0.3, direct: true, license: MIT, source: 'https://pypi.org/project/PyYAML/6.0.3/'}
+    - {name: jsonschema, version: 4.19.2, direct: true, license: MIT, source: 'https://pypi.org/project/jsonschema/4.19.2/'}
+    - {name: attrs, version: 25.4.0, direct: false, license: MIT, source: 'https://pypi.org/project/attrs/25.4.0/'}
+    - {name: jsonschema-specifications, version: 2023.12.1, direct: false, license: MIT, source: 'https://pypi.org/project/jsonschema-specifications/2023.12.1/'}
+    - {name: referencing, version: 0.36.2, direct: false, license: MIT, source: 'https://pypi.org/project/referencing/0.36.2/'}
+    - {name: rpds-py, version: 0.27.1, direct: false, license: MIT, source: 'https://pypi.org/project/rpds-py/0.27.1/'}
+    - {name: typing-extensions, version: 4.15.0, direct: false, license: PSF-2.0, marker: 'python_version < "3.13"', source: 'https://pypi.org/project/typing-extensions/4.15.0/'}
+  review: >-
+    Publisher release metadata and installed dependency declarations checked 2026-09-09.
+    These are version constraints, not wheel hashes, a vulnerability scan or a binary SBOM.
+    No Python distribution is vendored; preserve its own notices if bundling it later.
 external_dependencies:
   - name: enola
     lock: providers.lock.json#/enola
@@ -20,7 +36,8 @@ external_dependencies:
       If distributing a provider binary later, preserve its LICENSE and NOTICE and
       verify all bundled dependency obligations before changing distribution scope.
 host_requirements:
-  - Linux x86_64 (including WSL), CPython >=3.12
+  - Documentary core targets CPython 3.12 and 3.14; Git for historical rule resolution
+  - Optional Enola provider requires Linux x86_64 (including WSL), CPython >=3.12
   - Git for explicit source capture
   - bubblewrap and util-linux prlimit supplied by the operator's OS
 reviewed_not_copied:

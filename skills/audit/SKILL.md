@@ -408,6 +408,10 @@ question.
 
 ## Adopting a new version of the framework
 
+Read `references/adoption.md` for upgrade, explicit memory use and optional mapping
+enrichment. Keep them separate. A migration request alone does not authorize `--adopt`,
+plugin installation, code-provider execution or historical metadata enrichment.
+
 `FW001` says the rules moved. It cannot say which of the findings in front of you moved with
 them, and those need opposite responses: one is a migration, the other is a repair.
 
@@ -415,8 +419,9 @@ them, and those need opposite responses: one is a migration, the other is a repa
 python3 "${CLAUDE_PLUGIN_ROOT:?}/skills/audit/scripts/migrate.py" --root <project>
 ```
 
-It reads the project's `framework_version`, rebuilds the validator from that version out of
-the framework's own git history, runs both over the same repository, and splits the
+It reads the project's `framework_version` and available `framework_commit`, reconstructs
+the previous complete framework (or uses explicit `--from-framework`), runs each validator
+in its own process over the same repository, and splits the
 findings:
 
 - **new** — reported only by the new validator. This is the migration work.
