@@ -477,8 +477,9 @@ flowchart TB
 
 ### What CI checks
 
-The link between the pull request and the `CHG` is deterministic, so it is a check and not a
-judgement. The validator runs it when it is given the pull request context:
+The link between the pull request and the cited `CHG` is deterministic. The default
+**legacy** profile checks that declaration in the selected checkout, not independently
+approved authority. It runs when given the pull request context:
 
 ```bash
 git diff --name-only "origin/$BASE...$HEAD" > changed.txt
@@ -504,6 +505,16 @@ workflow file the first time it blocks a typo.
 project. The template asks for the `CHG` in the body; the workflow runs the full validator
 plus the pull request mode.
 
+For independent authority, explicitly adopt the `strict-contribution` profile described
+in [`references/contributions.md`](references/contributions.md). It reads a CI-selected
+approved documentary base, protects the mandate, checks specifically bound artifact/path
+obligations and authenticates receipt consistency for the exact multi-repository code set.
+The CI controller must establish the approval and receipt witnesses; the verifier does
+not infer them from PR text. Strict `no-chg` requires independent review of the exact
+request and retains mandatory tests. The optional manual documentary controller is not
+an automatic multi-repository required check; integration and remote protections remain
+explicit adoption work. Keep the ordinary documentary audit alongside the strict gate.
+
 ### What `audit` checks, and what it does not
 
 `audit` runs `validate.py` over the artifacts: front matter, mandatory sections, the
@@ -511,9 +522,10 @@ reference chain, and — with the pull request context — the four checks above
 request that means the documents it touches have to be valid and the link to the `CHG` has
 to exist.
 
-What `audit` cannot do on its own is read the code. If the `CHG` says *what must not change*
-and the pull request changes it, no check notices. That is the human review, and it is the
-reason field 2 of a `CHG` exists.
+An operational impact report can expose structural changes in explicitly observed code,
+and the strict gate can detect scope/evidence violations. Neither proves that the code
+preserves *what must not change*. That still needs source/test evidence and human semantic
+review; it is the reason field 2 of a `CHG` exists. A passed gate does not merge or deploy.
 
 ### States
 

@@ -3235,7 +3235,17 @@ def main() -> int:
     ap.add_argument("--changed-files", type=Path,
                     help="a file of paths the change set touches, one per line, relative "
                          "to --root. `-` reads standard input")
+    ap.add_argument("--profile", choices=("legacy", "strict-contribution"), default="legacy",
+                    help="explicit opt-in; strict reads caller-trusted Git objects, not project worktrees")
+    ap.add_argument("--trust-input", type=Path,
+                    help="CI-authenticated contribution input, never a PR-supplied approval")
     args = ap.parse_args()
+
+    if args.profile == "strict-contribution":
+        authority = importlib.import_module(f"{_CORE_NAME}.authority")
+        return authority.main(args, sys.modules[__name__])
+    if args.trust_input:
+        ap.error("--trust-input requires --profile strict-contribution")
 
     root = args.root.resolve()
     # The skill has said for as long as it has existed that "running it against the wrong
@@ -3264,6 +3274,8 @@ def main() -> int:
         return sys.stdin.read() if str(arg) == "-" else arg.read_text(encoding="utf-8")
 
     pr_text = args.pr_text if args.pr_text is not None else read(args.pr_text_file)
+    if pr_text is not None:
+        print("PR profile: legacy; authority not verified against a trusted base.", file=sys.stderr)
     lines = read(args.changed_files)
     # Relative to `--root`, and normalised the two ways a diff writes them: `./` from find,
     # backslashes from a Windows checkout. A path that does not match an artifact is code,
@@ -3378,6 +3390,8 @@ def main() -> int:
     if args.json:
         print(json.dumps({
             "artifacts": len(arts),
+            "contribution_profile": "legacy",
+            "authority": "not-verified" if pr_text is not None else "not-requested",
             "errors": len(errors), "warnings": len(warns), "info": len(infos),
             # New keys, never a move: `warnings` still counts every warning, annotated or
             # not, and every finding is still in `findings` at the level it was reported at.

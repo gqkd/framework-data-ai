@@ -1,0 +1,9 @@
+# Optional asset. Replace the team before adopting; this file configures nothing here.
+# Protect CODEOWNERS itself and require code-owner approval through repository rules.
+/.github/ @YOUR-ORG/framework-maintainers
+/.framework/contribution-policy.json @YOUR-ORG/framework-maintainers
+/framework.yaml @YOUR-ORG/framework-maintainers
+/AGENTS.md @YOUR-ORG/framework-maintainers
+/products/*/changes/ @YOUR-ORG/framework-maintainers
+/products/*/cycles/ @YOUR-ORG/framework-maintainers
+/decisions/ @YOUR-ORG/framework-maintainers

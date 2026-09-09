@@ -23,7 +23,7 @@ decisions, products, initiatives and corpus, live in that project's repository, 
 | `src/framework_data_ai/` | Shared reading/resolution, documentary memory and a separate code graph. Loaded from this checkout; no package installation required |
 | `memory.py` | Opt-in `doctor`, `build`, `query`, `code`, `context`, `impact`, `readings` CLI. See `references/product-memory.md`; the code observer is optional and isolated |
 | `providers.lock.json`, `third_party/` | Pinned optional provider, reviewed-source provenance and generated integration inventory; no bundled binary or model |
-| `ci/` | Two files a project copies into `.github/`: the pull request template and the workflow that checks a change set against the `CHG` authorizing it |
+| `ci/` | Legacy PR template/workflow, optional trusted-base documentary controller, contribution-policy and CODEOWNERS adoption examples; see `references/contributions.md` |
 | `references/` | Shared by the skills: the common preamble, routing table and operational-memory reading/scope rules |
 | `tests/selfcheck.py` | The framework checked against itself. Runs in CI |
 | `tests/memory/` | Frozen acceptance inputs, deterministic memory tests and phase reports. Model evaluation results are separate |
@@ -247,7 +247,7 @@ python3 skills/audit/scripts/validate.py --root ../my-project --emit-index
 <!-- generated: counts -->
 *Generated from `schemas/artifact-types.yaml` and `skills/audit/checks.yaml`. Edit those, not this line.*
 
-**30 artifact types. 72 checks** (10 error, 60 warn, 2 info), each catalogued with the failure it prevents written next to it.
+**30 artifact types. 81 checks** (19 error, 60 warn, 2 info), each catalogued with the failure it prevents written next to it.
 <!-- /generated -->
 
 The count above is generated, and it is generated because the one that used to be here was
@@ -261,7 +261,7 @@ wanting. Others are `error` as well, and none of them can fire until a project h
 by writing a file or wiring the pull request context through. The split by severity is in
 the generated line above, and is not repeated here for the reason that line exists.
 
-A project raises or lowers any of them in its own `framework.yaml`:
+A project raises or lowers the legacy checks in its own `framework.yaml`:
 
 ```yaml
 checks:
@@ -335,9 +335,23 @@ In a project's CI, one line:
 - run: python3 ../framework-data-ai/skills/audit/scripts/validate.py --root .
 ```
 
-On a pull request it takes two more arguments — what the change set says it is doing and
-which files it touches — and checks it against the `CHG` that authorizes it. `ci/` holds the
-template and the workflow; `PR001` to `PR004` are the checks.
+On a pull request the default **legacy** profile takes two more arguments — what the
+change set says it is doing and which files it touches — and checks the cited `CHG` in
+that checkout. `ci/pull-request.yml` and `PR001` to `PR004` retain this compatibility
+behavior. They do not authenticate approval from an independent documentary base.
+
+For that boundary, opt into `--profile strict-contribution` with a CI-authenticated
+`--trust-input` and untrusted `--pr-text-file`. The separate gate reads pinned Git objects,
+protects the approved mandate, checks specifically bound artifact updates and requires
+execution receipts for the exact multi-repository code set. It cannot be disabled by
+proposed severity overrides; existing projects acquire no new mandatory fields or gates.
+Receipts need authenticated producer/run witnesses: a hash is not execution proof.
+
+[`references/contributions.md`](references/contributions.md) defines this trusted-caller
+contract and adoption procedure. The optional manual GitHub example observes documentary
+PRs without executing proposed code; a multi-repository collector and remote protection
+configuration remain project integration work. Neither profile proves semantic preservation,
+agent comprehension or production deployment.
 
 How the project gets hold of the framework in CI is the part that is not solved. See below.
 

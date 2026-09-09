@@ -366,7 +366,12 @@ which repository and stops.
 An operational context reports the declared mandate, not trusted approval. For an external
 contribution, an approved CHG introduced only in that contribution cannot independently
 authorize it. These legacy PR checks do not establish a trusted documentary base; state that
-limit and use the project's review process. Structural impact is not a semantic-preservation
+limit and use the project's review process. For the opt-in `strict-contribution` profile,
+read `references/contributions.md`: it verifies an independent CI-selected documentary
+base, exact path/artifact obligations and authenticated receipt witnesses. Use
+`--profile strict-contribution` with `--trust-input` supplied by that trusted controller,
+never reconstructed from the PR's own claims. Missing access or receipts blocks this
+profile; do not substitute a legacy pass. Structural impact is not a semantic-preservation
 proof and a reading report is not execution evidence.
 
 A pull request is the one moment where the documents and the work are in the same place, and

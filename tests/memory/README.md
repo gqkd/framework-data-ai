@@ -1,9 +1,9 @@
 # Product Memory: acceptance tests and scoped core
 
 This directory preserves the phase-zero baseline and tests the scoped core, documentary
-memory, the phase-three code observer and the phase-four operational engine. Historical
-reports are in `BASELINE.md`, `PHASE-1.md`, `PHASE-2.md` and `PHASE-3.md`.
-The current phase handoff is `PHASE-4.md`: operational engine and seven-skill integration.
+memory, the separate code observer, operational engine and trusted-base contribution gate.
+Historical reports are in `BASELINE.md`, `PHASE-1.md`, `PHASE-2.md`, `PHASE-3.md` and `PHASE-4.md`.
+The current phase handoff is `PHASE-5.md`: approved mandates and exact execution evidence.
 No query or context pack is a task authorization.
 
 Run the deterministic suite from the framework checkout:
@@ -92,7 +92,8 @@ adapter syntax guard. No source from the actual products is tested or modified.
 The full increment's twenty-four deterministic obligations were frozen under
 `deferred_checks` in the acceptance contract with their implementation phases. Their
 inputs and required outcomes were specifications, not successful engine tests. Executable
-coverage is added with each phase; see `PHASE-4.md` for current engine coverage. The migration
+coverage is added with each phase; see `PHASE-4.md` for the operational engine and
+`PHASE-5.md` for contribution checks. The migration
 smoke checks only an already-current fixture
 and no writes; export tests cover the entry points, not every future migration.
 
@@ -106,3 +107,10 @@ changed rule bytes invalidate context identity, and a referenced missing guide s
 The Git export fixture also exercises `context` from an unrelated working directory.
 These tests prove deterministic mechanics, not an agent's comprehension or source-reading
 honesty. No skill-forward model evaluation is claimed.
+
+`test_authority.py` creates committed synthetic framework/document/code histories and
+independently witnessed synthetic receipts. It exercises PR-only approval, normative
+tampering, current revocation, affected-contract binding, exact multi-repository sets,
+stale/failed/forged execution evidence, independent no-chg review, source filters and a
+portable strict CLI. The optional GitHub controller is checked with synthetic API inputs,
+mocked fetch transport and pinned/manual workflow configuration; no remote CI is claimed.

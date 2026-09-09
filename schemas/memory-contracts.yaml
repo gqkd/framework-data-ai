@@ -558,4 +558,149 @@ definitions:
       coverage: {enum: [partial, unavailable]}
       conclusion: {enum: [structural-changes-observed, no-structural-change-established-in-selected-snapshots]}
       limitations: {type: array, items: {type: string}}
-outputs: [config, local, provenance, graph, manifest, documentary-query, code-graph, hypotheses, context, reading-claims, reading-report, impact]
+  full-commit: {type: string, pattern: '^[0-9a-f]{40}([0-9a-f]{24})?$'}
+  sha256: {type: string, pattern: '^[0-9a-f]{64}$'}
+  nonempty: {type: string, minLength: 1}
+  code-set:
+    type: object
+    propertyNames: {$ref: '#/$defs/repository-id'}
+    additionalProperties:
+      type: object
+      additionalProperties: false
+      required: [repository, commit]
+      properties:
+        repository: {$ref: '#/$defs/nonempty'}
+        commit: {$ref: '#/$defs/full-commit'}
+  document-revision:
+    type: object
+    additionalProperties: false
+    required: [repository, commit]
+    properties:
+      repository: {$ref: '#/$defs/nonempty'}
+      commit: {$ref: '#/$defs/full-commit'}
+  contribution-input:
+    type: object
+    additionalProperties: false
+    required: [schema, framework_commit, author, documents, repositories, receipts, selected_tests]
+    properties:
+      schema: {const: framework-memory/contribution-input/v1}
+      framework_commit: {$ref: '#/$defs/full-commit'}
+      author: {$ref: '#/$defs/nonempty'}
+      documents:
+        type: object
+        additionalProperties: false
+        required: [repository, root, commit, approved_tip, proposed]
+        properties:
+          repository: {$ref: '#/$defs/nonempty'}
+          root: {$ref: '#/$defs/nonempty'}
+          commit: {$ref: '#/$defs/full-commit'}
+          approved_tip: {$ref: '#/$defs/full-commit'}
+          proposed: {$ref: '#/$defs/full-commit'}
+      repositories:
+        type: object
+        propertyNames: {$ref: '#/$defs/repository-id'}
+        additionalProperties:
+          type: object
+          additionalProperties: false
+          required: [root, repository, base, head]
+          properties:
+            root: {$ref: '#/$defs/nonempty'}
+            repository: {$ref: '#/$defs/nonempty'}
+            base: {$ref: '#/$defs/full-commit'}
+            head: {$ref: '#/$defs/full-commit'}
+      receipts:
+        type: array
+        maxItems: 200
+        items:
+          type: object
+          additionalProperties: false
+          required: [path, digest, producer, run]
+          properties:
+            path: {$ref: '#/$defs/nonempty'}
+            digest: {$ref: '#/$defs/sha256'}
+            producer: {$ref: '#/$defs/nonempty'}
+            run: {$ref: '#/$defs/nonempty'}
+      selected_tests: {type: array, uniqueItems: true, items: {$ref: '#/$defs/nonempty'}}
+      exception_review:
+        type: object
+        additionalProperties: false
+        required: [reviewer, request_hash]
+        properties:
+          reviewer: {$ref: '#/$defs/nonempty'}
+          request_hash: {$ref: '#/$defs/sha256'}
+  contribution-policy:
+    type: object
+    additionalProperties: false
+    required: [schema, document_repository, classifications, exclude, repositories, mandates, tests, exception_reviewers, exception_tests]
+    properties:
+      schema: {const: framework-memory/contribution-policy/v1}
+      document_repository: {$ref: '#/$defs/nonempty'}
+      classifications: {type: array, minItems: 1, uniqueItems: true, items: {enum: [public, internal, confidential]}}
+      exclude: {type: array, uniqueItems: true, items: {$ref: '#/$defs/relative-path'}}
+      repositories:
+        type: object
+        propertyNames: {$ref: '#/$defs/repository-id'}
+        additionalProperties: {$ref: '#/$defs/nonempty'}
+      mandates:
+        type: object
+        propertyNames: {$ref: '#/$defs/relative-path'}
+        additionalProperties:
+          type: object
+          additionalProperties: false
+          required: [repositories, paths, obligations, tests]
+          properties:
+            repositories: {type: array, uniqueItems: true, items: {$ref: '#/$defs/repository-id'}}
+            paths:
+              type: object
+              additionalProperties: {type: array, uniqueItems: true, items: {$ref: '#/$defs/relative-path'}}
+            obligations:
+              type: array
+              uniqueItems: true
+              items:
+                type: object
+                additionalProperties: false
+                required: [impact, path]
+                properties:
+                  impact: {enum: [architecture, data, risk-compliance]}
+                  path: {$ref: '#/$defs/relative-path'}
+            tests: {type: array, uniqueItems: true, items: {$ref: '#/$defs/nonempty'}}
+      tests:
+        type: object
+        additionalProperties:
+          type: object
+          additionalProperties: false
+          required: [command, producer]
+          properties:
+            command: {type: array, minItems: 1, items: {$ref: '#/$defs/nonempty'}}
+            producer: {$ref: '#/$defs/nonempty'}
+      exception_reviewers: {type: array, uniqueItems: true, items: {$ref: '#/$defs/nonempty'}}
+      exception_tests: {type: array, uniqueItems: true, items: {$ref: '#/$defs/nonempty'}}
+  execution-receipt:
+    type: object
+    additionalProperties: false
+    required: [schema, producer, run, test, command, document, policy_hash, code_set, result, exit_code]
+    properties:
+      schema: {const: framework-memory/execution-receipt/v1}
+      producer: {$ref: '#/$defs/nonempty'}
+      run: {$ref: '#/$defs/nonempty'}
+      test: {$ref: '#/$defs/nonempty'}
+      command: {type: array, minItems: 1, items: {$ref: '#/$defs/nonempty'}}
+      document: {$ref: '#/$defs/document-revision'}
+      policy_hash: {$ref: '#/$defs/sha256'}
+      code_set: {$ref: '#/$defs/code-set'}
+      result: {enum: [passed, failed, unavailable]}
+      exit_code: {type: integer}
+  contribution-report:
+    type: object
+    required: [schema, profile, gate, authorization, review_required, deployment, checks, findings, limitations]
+    properties:
+      schema: {const: framework-memory/contribution-report/v1}
+      profile: {const: strict-contribution}
+      gate: {enum: [passed, failed]}
+      authorization: {enum: [not-verified, verified-against-caller-trusted-base]}
+      review_required: {const: true}
+      deployment: {const: not-assessed}
+      checks: {const: bounded-structural-and-receipt-checks}
+      findings: {type: array, items: {type: object}}
+      limitations: {type: array, items: {type: string}}
+outputs: [config, local, provenance, graph, manifest, documentary-query, code-graph, hypotheses, context, reading-claims, reading-report, impact, contribution-input, contribution-policy, execution-receipt, contribution-report]
