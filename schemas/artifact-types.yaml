@@ -2011,6 +2011,8 @@ types:
     # only looked like one question while the documents and the code shared a repository:
     # `git show` needs the first and the attestation is the second.
     required: [evp_version, evp_hash, frozen_at, verified_code]
+    # Optional exact candidate identity. Historical EVRs are never backfilled.
+    memory_fields: {release_set_hash: sha256}
     # ON `verified_code`. One field per repository, keyed the way `code:` is keyed and
     # qualified by where that key lives, because a product and the platform may each have a
     # `backend` and an attestation must not be ambiguous about which one it measured.
@@ -2048,6 +2050,9 @@ types:
     status: [active]
     generated: true
     products: exactly-one
+    # Additive replacement for the old single code/build pair; normalize old manifests
+    # only when repository ownership is unambiguous. Never rewrite historical RLMs.
+    memory_fields: {release_set: release-set}
 
   signal-log:
     id: LOG

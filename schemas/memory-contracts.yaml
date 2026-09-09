@@ -703,4 +703,125 @@ definitions:
       checks: {const: bounded-structural-and-receipt-checks}
       findings: {type: array, items: {type: object}}
       limitations: {type: array, items: {type: string}}
-outputs: [config, local, provenance, graph, manifest, documentary-query, code-graph, hypotheses, context, reading-claims, reading-report, impact, contribution-input, contribution-policy, execution-receipt, contribution-report]
+  release-set:
+    type: object
+    additionalProperties: false
+    required: [version, repositories, dependencies]
+    properties:
+      version: {const: 1}
+      repositories:
+        type: object
+        minProperties: 1
+        maxProperties: 100
+        propertyNames: {$ref: '#/$defs/repository-id'}
+        additionalProperties:
+          type: object
+          additionalProperties: false
+          required: [commit, build_digest]
+          properties:
+            commit: {$ref: '#/$defs/full-commit'}
+            build_digest: {type: string, pattern: '^sha256:[0-9a-f]{64}$'}
+      dependencies:
+        type: array
+        maxItems: 32
+        uniqueItems: true
+        items:
+          type: object
+          additionalProperties: false
+          required: [manifest, release_set_hash, compatibility]
+          properties:
+            manifest: {$ref: '#/$defs/relative-path'}
+            release_set_hash: {$ref: '#/$defs/sha256'}
+            compatibility:
+              type: object
+              additionalProperties: false
+              required: [path, sha256, section]
+              properties:
+                path: {$ref: '#/$defs/relative-path'}
+                sha256: {$ref: '#/$defs/sha256'}
+                section: {$ref: '#/$defs/nonempty'}
+  release-stage: {enum: [pre-release, integration, deployment]}
+  release-input:
+    type: object
+    additionalProperties: false
+    required: [schema, framework_commit, documents, manifest, stage, classifications, exclude, repositories, receipts]
+    properties:
+      schema: {const: framework-memory/release-input/v1}
+      framework_commit: {$ref: '#/$defs/full-commit'}
+      documents:
+        type: object
+        additionalProperties: false
+        required: [repository, root, commit, approved_tip]
+        properties:
+          repository: {$ref: '#/$defs/nonempty'}
+          root: {$ref: '#/$defs/nonempty'}
+          commit: {$ref: '#/$defs/full-commit'}
+          approved_tip: {$ref: '#/$defs/full-commit'}
+      manifest: {$ref: '#/$defs/relative-path'}
+      stage: {enum: [prepared, implemented, verified]}
+      classifications: {type: array, minItems: 1, uniqueItems: true, items: {enum: [public, internal, confidential]}}
+      exclude: {type: array, uniqueItems: true, items: {$ref: '#/$defs/relative-path'}}
+      repositories:
+        type: object
+        propertyNames: {$ref: '#/$defs/repository-id'}
+        additionalProperties:
+          type: object
+          additionalProperties: false
+          required: [repository, root, default_branch, approved_tip]
+          properties:
+            repository: {$ref: '#/$defs/nonempty'}
+            root: {$ref: '#/$defs/nonempty'}
+            default_branch: {$ref: '#/$defs/nonempty'}
+            approved_tip: {$ref: '#/$defs/full-commit'}
+      receipts:
+        type: array
+        maxItems: 50
+        items:
+          type: object
+          additionalProperties: false
+          required: [path, digest, producer, run, stage]
+          properties:
+            path: {$ref: '#/$defs/nonempty'}
+            digest: {$ref: '#/$defs/sha256'}
+            producer: {$ref: '#/$defs/nonempty'}
+            run: {$ref: '#/$defs/nonempty'}
+            stage: {$ref: '#/$defs/release-stage'}
+  release-receipt:
+    type: object
+    additionalProperties: false
+    required: [schema, stage, producer, run, document, manifest, report, release_set_hash, result, exit_code]
+    properties:
+      schema: {const: framework-memory/release-receipt/v1}
+      stage: {$ref: '#/$defs/release-stage'}
+      producer: {$ref: '#/$defs/nonempty'}
+      run: {$ref: '#/$defs/nonempty'}
+      document: {$ref: '#/$defs/document-revision'}
+      manifest: {$ref: '#/$defs/relative-path'}
+      report: {$ref: '#/$defs/relative-path'}
+      release_set_hash: {$ref: '#/$defs/sha256'}
+      result: {enum: [passed, failed, unavailable]}
+      exit_code: {type: integer}
+      environment: {$ref: '#/$defs/nonempty'}
+      observed_set_hash: {$ref: '#/$defs/sha256'}
+      observed_at: {$ref: '#/$defs/nonempty'}
+    allOf:
+      - if:
+          properties: {stage: {const: deployment}}
+        then:
+          required: [environment, observed_set_hash, observed_at]
+  release-report:
+    type: object
+    required: [schema, profile, gate, requested, supported_state, status_changed, deployment_executed, atomic, review_required, findings, limitations]
+    properties:
+      schema: {const: framework-memory/release-report/v1}
+      profile: {const: strict-release}
+      gate: {enum: [passed, failed]}
+      requested: {enum: [prepared, implemented, verified]}
+      supported_state: {enum: [not-established, prepared, implemented, verified]}
+      status_changed: {const: false}
+      deployment_executed: {const: false}
+      atomic: {const: false}
+      review_required: {const: true}
+      findings: {type: array, items: {type: object}}
+      limitations: {type: array, items: {type: string}}
+outputs: [config, local, provenance, graph, manifest, documentary-query, code-graph, hypotheses, context, reading-claims, reading-report, impact, contribution-input, contribution-policy, execution-receipt, contribution-report, release-set, release-input, release-receipt, release-report]

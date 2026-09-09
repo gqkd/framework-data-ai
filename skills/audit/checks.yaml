@@ -1194,6 +1194,36 @@ checks:
       because the other repair is legitimate and common: the classification was wrong, and
       the `ICG` is what has to move.
 
+  # RLS001/2 inspect only the optional new release_set. RLS003..7 are strict-release only.
+  RLS001:
+    level: warn
+    title: release set has an invalid or incomplete repository and build binding
+    prevents: Broadcasting one commit across a distributed set or silently omitting required code.
+  RLS002:
+    level: warn
+    title: candidate and evaluation attest different versions or change sets
+    prevents: Green evidence for old code, another build, configuration or plan closing the new candidate.
+  RLS003:
+    level: error
+    title: required trusted release inputs or frozen plan are unavailable or invalid
+    prevents: Missing history, scope, runtime or frozen plan becoming a passed release gate.
+  RLS004:
+    level: error
+    title: release execution evidence is unauthenticated, missing, failed or mismatched
+    prevents: A generated manifest or self-declared verdict standing in for independently witnessed execution.
+  RLS005:
+    level: error
+    title: deployment observation does not match the whole candidate and environment
+    prevents: A partial deployment or staging smoke run claiming a verified production release.
+  RLS006:
+    level: error
+    title: claimed implementation or closure lacks current authority or default-branch integration
+    prevents: Unmerged or revoked work being called implemented or verified, or assuming every default branch is main.
+  RLS007:
+    level: error
+    title: shared release or compatibility source does not match its pinned reference
+    prevents: Dependency versions or compatibility conditions changing without re-evaluation of the candidate.
+
   # Opt-in strict-contribution only, never run in legacy and never disabled by PR config.
   AUT001:
     level: error

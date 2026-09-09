@@ -368,6 +368,12 @@ something nobody has built.
 and not enough for a rollback. The manifest is the same release in machine-readable form,
 with commit, digest, model, prompt and dataset versions, `EVR` and `CHG` included, rollback
 target.
+New RLMs may describe an exact multi-repository `release_set`; its derived identity also
+binds build, configuration, AI/data inputs and shared-release dependencies. Historical
+single-repository manifests remain readable and are never rewritten. A prepared manifest
+does not establish deployment: evaluated code on each actual default branch supports
+`implemented`; `verified` additionally needs the same running set and passed smoke evidence.
+The opt-in checks and trusted-caller boundary are in `references/release-evidence.md`.
 
 **`LOG` absorbs the feedback.** There is no separate "feedback" document: everything goes
 into `LOG` with `type: incident | drift | feedback | request | metric | compliance`. The

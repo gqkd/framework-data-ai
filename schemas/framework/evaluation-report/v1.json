@@ -36,6 +36,10 @@
         "pattern": "^([0-9a-f]{7,40}|COMMIT_HASH)$"
       }
     },
+    "release_set_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
     "evp_version": {
       "type": "string",
       "minLength": 1,

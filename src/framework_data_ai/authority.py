@@ -42,7 +42,7 @@ def artifact(tree, path):
     return Artifact(Path(path), path, meta, body)
 
 
-def artifacts(tree, project, policy, registry):
+def artifacts(tree, project, policy, registry, *, include_generated=False):
     scan = load_scan(registry, project)
     result, blocked, size = [], set(), 0
     for path in sorted(tree.entries):
@@ -56,7 +56,9 @@ def artifacts(tree, project, policy, registry):
         if size > MAX_TOTAL:
             raise MemoryInputError("selected documentary sources exceed the byte bound")
         art = artifact(tree, path)
-        if art and art.meta.get("classification") in policy["classifications"]:
+        generated = (art and include_generated and art.meta.get("classification") is None
+                     and registry["types"].get(art.type, {}).get("generated") is True)
+        if art and (art.meta.get("classification") in policy["classifications"] or generated):
             art.ids = set(re.findall(r"\b((?:%s)-\d{3,})\b" % "|".join(registry["id_prefixes"]), art.body))
             result.append(art)
         elif art:
@@ -74,6 +76,30 @@ def normative(art):
 
 def permits(path, prefixes):
     return any(path == prefix or path.startswith(prefix + "/") for prefix in prefixes)
+
+
+def runtime(project, requested_pin, framework_root=FRAMEWORK):
+    """One clean-runtime check shared by contribution and release verification."""
+    root = Path(framework_root)
+    registry = mapping((root / "schemas/artifact-types.yaml").read_bytes())
+    pin = project.get("framework_commit")
+    commit(root, pin)
+    if project.get("framework_version") != registry["version"] or requested_pin != pin:
+        raise MemoryInputError("runtime and adopted framework pin/version disagree")
+    rules = GitSnapshot.open(root, pin)
+    if git(root, "rev-parse", "HEAD").decode().strip() != pin:
+        raise MemoryInputError("runtime checkout does not match the adopted pin")
+    paths = {"skills/audit/scripts/validate.py", "skills/audit/checks.yaml",
+             "schemas/artifact-types.yaml", "schemas/memory-contracts.yaml"}
+    paths.update(p.relative_to(root).as_posix() for p in (root / "src/framework_data_ai").rglob("*.py"))
+    paths.update(p.relative_to(root).as_posix() for p in (root / "schemas").rglob("*.json"))
+    # Check the union too: removing an optional runtime module must not hide its absence.
+    paths.update(p for p in rules.entries if (p.startswith("src/framework_data_ai/") and p.endswith(".py"))
+                 or (p.startswith("schemas/") and p.endswith(".json")))
+    for path in paths:
+        if rules.read(path) != (root / path).read_bytes():
+            raise MemoryInputError("runtime source bytes differ from the pinned commit")
+    return registry, rules
 
 
 def evaluate(control, text, api, *, framework_root=FRAMEWORK):
@@ -106,26 +132,8 @@ def evaluate(control, text, api, *, framework_root=FRAMEWORK):
         if (project != mapping(tip.read("framework.yaml"))
                 or before.read("AGENTS.md") != tip.read("AGENTS.md")):
             raise MemoryInputError("selected rules have changed on the approved branch")
-        registry = mapping((Path(framework_root) / "schemas/artifact-types.yaml").read_bytes())
-        # Selection of the runtime checkout is a CI trust boundary, not a PR field.
-        pin = project.get("framework_commit")
-        commit(Path(framework_root), pin)
-        if (project.get("framework_version") != registry["version"]
-                or control["framework_commit"] != pin):
-            raise MemoryInputError("runtime and adopted framework pin/version disagree")
-        # Reading rule bytes from the pin is mandatory, regardless of proposed changes.
-        rules = GitSnapshot.open(framework_root, pin)
-        if git(Path(framework_root), "rev-parse", "HEAD").decode().strip() != pin:
-            raise MemoryInputError("runtime checkout does not match the adopted pin")
-        runtime_paths = ["skills/audit/scripts/validate.py", "skills/audit/checks.yaml",
-                         "schemas/artifact-types.yaml", "schemas/memory-contracts.yaml"]
-        runtime_paths += [p.relative_to(framework_root).as_posix()
-                          for p in Path(framework_root).joinpath("src/framework_data_ai").rglob("*.py")]
-        runtime_paths += [p.relative_to(framework_root).as_posix()
-                          for p in Path(framework_root).joinpath("schemas").rglob("*.json")]
-        for path in runtime_paths:
-            if rules.read(path) != (Path(framework_root) / path).read_bytes():
-                raise MemoryInputError("runtime source bytes differ from the pinned commit")
+        registry, rules = runtime(project, control["framework_commit"], framework_root)
+        pin = rules.revision
         rule_hashes = {p: digest(rules.read(p)) for p in
                        ("FRAMEWORK.md", "references/preamble.md", "references/routing-table.md",
                         "references/operational-memory.md", "references/contributions.md",

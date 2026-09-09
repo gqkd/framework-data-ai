@@ -466,13 +466,14 @@ flowchart TB
   ok(["CHG approved"]) --> impl["Implementation"]
   impl --> pr["The pull request cites the CHG"]
   pr --> mand["Mandate, guardrails, done-when"]
-  mand --> tests["Tests"]
+  mand --> tests["Required test and evaluation evidence"]
   tests --> val["validator, pull request mode"]
   val --> rev["Human review:<br/>did it stay inside field 2?"]
   rev --> merge["Merge"]
   merge --> impd(["CHG implemented"])
-  impd --> evr["EVR / RLM, where there is one"]
-  evr --> ver(["CHG verified"])
+  impd --> evr["Exact release candidate / RLM"]
+  evr --> obs["Authorized deployment:<br/>same set observed, smoke passed"]
+  obs --> ver(["CHG verified"])
 ```
 
 ### What CI checks
@@ -541,7 +542,8 @@ bridge to the pull request, not the model.
 
 ### Trigger
 
-A set of `CHG` is `implemented` and a release candidate is cut.
+A candidate for approved changes is ready to be evaluated. Existing implemented changes
+retain their evidence; a changed candidate needs a new evaluation of its exact set.
 
 ### Actors
 
@@ -554,16 +556,18 @@ A set of `CHG` is `implemented` and a release candidate is cut.
 
 ```mermaid
 flowchart TB
-  rc["Release candidate commit"] --> freeze["EVP frozen"]
-  freeze --> eval["Evaluation run"]
+  rc["Release candidate repository set"] --> freeze["EVP frozen"]
+  freeze --> build["Candidate builds with immutable digests"]
+  build --> eval["Evaluation and integration runs"]
   eval --> EVR(["EVR with verified_code"])
   EVR --> cmp["Measured against the<br/>frozen thresholds"]
   cmp --> RG{"RG"}
   RG -->|"go"| REL(["REL"])
   REL --> RLM(["RLM"])
-  RLM --> build["Tag and build"]
-  build --> dep["Deploy, run by the team"]
-  dep --> ver(["CHG verified"])
+  RLM --> merged["All evaluated commits on their default branches:<br/>CHG implemented"]
+  merged --> dep["Authorized deploy, run by the team"]
+  dep --> smoke["Whole set observed in target;<br/>smoke passed"]
+  smoke --> ver(["CHG verified"])
   RG -->|"no-go"| rework["Rework"]
   rework --> rc2["A new candidate"]
   rc2 --> freeze
@@ -578,7 +582,10 @@ the `LOG` like any other signal (`P-09`).
 `release`. The skill prepares the evidence and the manifest and recomputes the `evp_hash`,
 which is what proves the plan it measured against is the one that was frozen; `RLM001` and
 `RLM002` report a manifest with no rollback target or with the procedure declared untested.
-The deploy command stays with the team.
+The deploy command stays with the team. `references/release-evidence.md` defines the
+opt-in exact-set gate, independent pre-release/integration/deployment receipts and
+default-branch verification. Receipt collection and remote execution remain project
+integration work. Preparing RLM/REL does not itself close a CHG.
 
 ## P-09 · Incident and recovery
 
@@ -1148,13 +1155,16 @@ results.
 
 ```mermaid
 flowchart LR
-  done(["CHG implemented"]) --> rc["Release candidate"]
+  done(["Approved changes ready for evaluation"]) --> rc["Exact release candidate"]
   rc --> freeze["EVP frozen"]
-  freeze --> EVR(["EVR"])
+  freeze --> builds["Builds, evaluation and integration"]
+  builds --> EVR(["EVR"])
   EVR --> RG{"RG"}
   RG -->|"go"| REL(["REL and RLM"])
-  REL --> dep["Build, tag, deploy"]
-  dep --> ver(["CHG verified"])
+  REL --> merged["Evaluated commits integrated:<br/>CHG implemented"]
+  merged --> dep["Authorized deploy"]
+  dep --> observed["Exact running set + passed smoke"]
+  observed --> ver(["CHG verified"])
   RG -->|"no-go"| rework["Rework, a new candidate"]
   rework --> rc
 ```

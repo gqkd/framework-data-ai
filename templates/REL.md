@@ -17,6 +17,9 @@ classification: internal
 
 **For a person. Ten lines.** The machine-readable version is `RLM-NNN.yaml`: they are two
 documents because they have two readers, not out of redundancy.
+Preparing this note does not mean the release is running. Keep candidate evaluation and
+actual deployment observation distinct; RLM and independently witnessed execution evidence
+carry the exact set. Do not copy hashes into this note.
 
 ## What changes
 

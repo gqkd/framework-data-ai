@@ -13,6 +13,8 @@ evp_hash: SHA_OF_THE_EVP_FILE
 frozen_at: COMMIT_HASH          # commit of THIS repository holding the frozen EVP
 verified_code:                  # commits of the code that was measured
   product.backend: COMMIT_HASH
+# For a NEW exact-set evaluation: release_set_hash: <canonical candidate SHA-256>
+# Includes build/config/AI/data/dependencies, not just verified_code. Never backfill history.
 classification: internal
 ---
 
@@ -69,6 +71,8 @@ in practice.
 `go` · `no-go` → **rework**, not rollback: it is not in production yet.
 
 Cross-reference to the `CHG` items evaluated.
+An evaluation is pre-release evidence, not a deployment observation. See the adopted
+framework's `references/release-evidence.md` for exact-set matching and separate receipts.
 
 ---
 

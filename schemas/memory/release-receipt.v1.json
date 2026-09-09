@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "framework-memory/release-receipt/v1",
+  "$ref": "#/$defs/release-receipt",
+  "$defs": {
+    "document-revision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "commit"
+      ],
+      "properties": {
+        "repository": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "commit": {
+          "$ref": "#/$defs/full-commit"
+        }
+      }
+    },
+    "full-commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$"
+    },
+    "nonempty": {
+      "type": "string",
+      "minLength": 1
+    },
+    "relative-path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*\\\\)(?!.*:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*//).+$"
+    },
+    "release-receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "stage",
+        "producer",
+        "run",
+        "document",
+        "manifest",
+        "report",
+        "release_set_hash",
+        "result",
+        "exit_code"
+      ],
+      "properties": {
+        "schema": {
+          "const": "framework-memory/release-receipt/v1"
+        },
+        "stage": {
+          "$ref": "#/$defs/release-stage"
+        },
+        "producer": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "run": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "document": {
+          "$ref": "#/$defs/document-revision"
+        },
+        "manifest": {
+          "$ref": "#/$defs/relative-path"
+        },
+        "report": {
+          "$ref": "#/$defs/relative-path"
+        },
+        "release_set_hash": {
+          "$ref": "#/$defs/sha256"
+        },
+        "result": {
+          "enum": [
+            "passed",
+            "failed",
+            "unavailable"
+          ]
+        },
+        "exit_code": {
+          "type": "integer"
+        },
+        "environment": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "observed_set_hash": {
+          "$ref": "#/$defs/sha256"
+        },
+        "observed_at": {
+          "$ref": "#/$defs/nonempty"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "stage": {
+                "const": "deployment"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "environment",
+              "observed_set_hash",
+              "observed_at"
+            ]
+          }
+        }
+      ]
+    },
+    "release-stage": {
+      "enum": [
+        "pre-release",
+        "integration",
+        "deployment"
+      ]
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

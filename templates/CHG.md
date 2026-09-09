@@ -86,6 +86,11 @@ a `DEC`, `data` a `DC` version bump and notice to its consumers, `ai` a new `EVR
 
 *Filled in at closure.* Outcome of the point 3 criteria, the `EVR` of reference, the `RLM`
 of the release that contains it.
+`implemented` needs evaluated/integration-tested code on each repository's actual default
+branch. `verified` additionally needs the same whole set observed in the intended running
+environment with the smoke test passed, plus the project's other closure obligations.
+Generating RLM/REL alone establishes neither fact. See `references/release-evidence.md` in
+the adopted framework. Closure metadata is not permission to rewrite the mandate body.
 
 ---
 

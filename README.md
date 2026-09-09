@@ -247,7 +247,7 @@ python3 skills/audit/scripts/validate.py --root ../my-project --emit-index
 <!-- generated: counts -->
 *Generated from `schemas/artifact-types.yaml` and `skills/audit/checks.yaml`. Edit those, not this line.*
 
-**30 artifact types. 81 checks** (19 error, 60 warn, 2 info), each catalogued with the failure it prevents written next to it.
+**30 artifact types. 88 checks** (24 error, 62 warn, 2 info), each catalogued with the failure it prevents written next to it.
 <!-- /generated -->
 
 The count above is generated, and it is generated because the one that used to be here was
@@ -352,6 +352,12 @@ contract and adoption procedure. The optional manual GitHub example observes doc
 PRs without executing proposed code; a multi-repository collector and remote protection
 configuration remain project integration work. Neither profile proves semantic preservation,
 agent comprehension or production deployment.
+
+Release assessment has a separate opt-in `--profile strict-release`, documented in
+[`references/release-evidence.md`](references/release-evidence.md). It compares exact
+multi-repository code/build/configuration sets with EVR and authenticated execution
+receipts. Candidate preparation, default-branch integration and observed deployment
+remain separate; generating RLM/REL never automatically marks a CHG verified.
 
 How the project gets hold of the framework in CI is the part that is not solved. See below.
 

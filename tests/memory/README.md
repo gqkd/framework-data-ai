@@ -1,9 +1,9 @@
 # Product Memory: acceptance tests and scoped core
 
 This directory preserves the phase-zero baseline and tests the scoped core, documentary
-memory, the separate code observer, operational engine and trusted-base contribution gate.
-Historical reports are in `BASELINE.md`, `PHASE-1.md`, `PHASE-2.md`, `PHASE-3.md` and `PHASE-4.md`.
-The current phase handoff is `PHASE-5.md`: approved mandates and exact execution evidence.
+memory, the separate code observer, operational engine, contribution and release gates.
+Historical reports are in `BASELINE.md` and `PHASE-1.md` through `PHASE-5.md`.
+The current phase handoff is `PHASE-6.md`: exact release sets and independently witnessed delivery.
 No query or context pack is a task authorization.
 
 Run the deterministic suite from the framework checkout:
@@ -114,3 +114,10 @@ tampering, current revocation, affected-contract binding, exact multi-repository
 stale/failed/forged execution evidence, independent no-chg review, source filters and a
 portable strict CLI. The optional GitHub controller is checked with synthetic API inputs,
 mocked fetch transport and pinned/manual workflow configuration; no remote CI is claimed.
+
+`test_release.py` adds synthetic multi-repository candidates, legacy single-repository
+normalization, frozen-plan and exact-build/configuration checks, separate stage receipts,
+actual default-branch ancestry (including a branch named master), shared releases and
+compatibility sources, cyclic/missing dependencies, premature CHG closure, private inputs
+and an exported read-only CLI. The receipt successes simulate trusted-controller evidence;
+they do not claim that real product builds, model evaluations or deployments executed.

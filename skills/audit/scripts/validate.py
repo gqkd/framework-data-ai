@@ -3235,7 +3235,7 @@ def main() -> int:
     ap.add_argument("--changed-files", type=Path,
                     help="a file of paths the change set touches, one per line, relative "
                          "to --root. `-` reads standard input")
-    ap.add_argument("--profile", choices=("legacy", "strict-contribution"), default="legacy",
+    ap.add_argument("--profile", choices=("legacy", "strict-contribution", "strict-release"), default="legacy",
                     help="explicit opt-in; strict reads caller-trusted Git objects, not project worktrees")
     ap.add_argument("--trust-input", type=Path,
                     help="CI-authenticated contribution input, never a PR-supplied approval")
@@ -3244,8 +3244,11 @@ def main() -> int:
     if args.profile == "strict-contribution":
         authority = importlib.import_module(f"{_CORE_NAME}.authority")
         return authority.main(args, sys.modules[__name__])
+    if args.profile == "strict-release":
+        release = importlib.import_module(f"{_CORE_NAME}.release_evidence")
+        return release.main(args, sys.modules[__name__])
     if args.trust_input:
-        ap.error("--trust-input requires --profile strict-contribution")
+        ap.error("--trust-input requires --profile strict-contribution or strict-release")
 
     root = args.root.resolve()
     # The skill has said for as long as it has existed that "running it against the wrong
@@ -3302,6 +3305,7 @@ def main() -> int:
         check_lifecycle(a, stale_days, now, report)
     check_references(arts, registry, report, references=references)
     check_release(arts, report)
+    importlib.import_module(f"{_CORE_NAME}.release_sets").check(arts, registry, report)
     check_change_contracts(arts, report, references=references)
     check_pull_request(arts, pr_text, changed_files, report, references=references)
     check_framework_version(root, project, registry, report)

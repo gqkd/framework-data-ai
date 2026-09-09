@@ -193,8 +193,9 @@ matches mean only no match in selected documentation, never no consequences.
 Operational context/impact CLI reports are described below. The seven existing skills
 consume them through [operational-memory.md](operational-memory.md), the shared reading
 and execution-scope reference. The separate opt-in PR authority/receipt gate is documented
-in [contributions.md](contributions.md). Release-set evidence, semantic
-retrieval and the optional viewer remain outside this increment. No new skill,
+in [contributions.md](contributions.md); exact release-set assessment is in
+[release-evidence.md](release-evidence.md). Semantic retrieval and the optional viewer
+remain outside this increment. No new skill,
 release version, migration or provider installation is implied by enabling this CLI.
 
 ## Operational CLI — phase 4 engine
