@@ -44,10 +44,21 @@ All 9 real pinned Enola conformance tests passed in 6.363 s. Audit skill quick v
 30 artifact schemas/4 catalogs, 21 memory schemas, inventory/constraints and git diff
 whitespace checks passed. No frozen fixture expectation or severity was relaxed.
 
-Final post-commit selfcheck results will be recorded after the committed version can be
-exercised by the migration check. It requires committed target bytes and is not bypassed
-for a working-tree version bump; its adoption fixture now uses a clean temporary clone
-outside the synthetic project, never the dirty development tree.
+Final validation on implementation commit `3910983`:
+
+- `python -u -B tests/selfcheck.py`: **passed**, including **241 offline memory tests in
+  125.983 s**, with no expected failures or skipped migration gate. The additional optional
+  dependency case is included in that count, not added again.
+- The focused 18-test adoption suite passed in 15.554 s before the commit.
+- Real pinned Enola conformance repeated on the committed implementation: **9/9 passed**,
+  8.138 s, synthetic inputs only.
+- The committed-version migration check passed. It requires committed target bytes and
+  is not bypassed for a working-tree bump; its adoption fixture uses a clean temporary
+  clone outside the synthetic project, never the dirty development tree.
+- Checkout clean after the selfcheck; only this verification record is updated afterward.
+
+The implementation commit changes 30 framework files. This report records measured
+results separately from implementation and does not promote a product CHG or release.
 
 ## What this does not claim
 
