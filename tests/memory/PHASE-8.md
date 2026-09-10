@@ -89,6 +89,24 @@ vulnerability audit or legal clearance. No graph database, embeddings, federatio
 semantic RAG, automatic inferred links or customer-data lineage was added.
 
 No product adoption, plugin reinstall, tag, push/publish, remote-protection change,
-remote CI execution or deployment was performed. Final selfcheck must run on the committed
-implementation because the framework's version-migration check requires committed bytes;
-its measured outcome will be recorded below after execution.
+remote CI execution or deployment was performed. The final selfcheck ran on committed
+implementation bytes because the framework's version-migration check requires them.
+
+## Final committed-source verification
+
+On implementation commit `f3b11b0f5542d79fb0b63e13c6eebd321f32e11d`:
+
+- `python -u -B tests/selfcheck.py`: **passed**, including **259 offline memory tests
+  in 108.949 s**. No expected failures, skipped migration gate or relaxed acceptance baseline.
+- `node --test tests/viewer/model.test.cjs`: **8/8 passed**, including the real renderer.
+- Real pinned Enola conformance repeated: **9/9 passed in 7.482 s**.
+- **30 artifact schemas / 4 catalogs**, **23 memory schemas**, inventory/constraints and
+  staged whitespace checks passed. Provider lock, requirements and Python constraints
+  are unchanged from phase 7.
+- All three final browser cases passed after adding a check on actual canvas dimensions;
+  the corrected mobile screenshot was inspected. Direct offline-file execution passed too.
+- The checkout was clean after the complete gate. Only this execution record is changed
+  afterward; no runtime, asset, schema or test input is altered by this report commit.
+
+The temporary localhost server is stopped at handoff. The copied synthetic `offline.html`
+and the original HTML/manifest pairs remain available without that server.
