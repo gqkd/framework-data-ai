@@ -46,6 +46,30 @@ class EnolaConformance(unittest.TestCase):
         self.assertEqual(result.status, "unavailable")
         self.assertEqual({c["status"] for c in result.coverage}, {"unsupported", "unavailable"})
 
+    def test_package_dependency_has_directory_provenance_not_invented_source_lines(self):
+        example = b"from pkg.helper.converter import convert\ndef use(value):\n    return convert(value)\n"
+        files = {"pkg/use.py": example, "pkg/helper/converter.py": b"def convert(value): return value.strip()\n"}
+        result = self.provider.extract(files)
+        self.assertNotEqual(result.status, "unavailable", result.problems)
+        dependencies = [r for r in result.records if r["kind"] == "dependency" and r.get("file") == "pkg"]
+        self.assertTrue(dependencies, result.records)
+        self.assertTrue(all("line" not in r for r in dependencies))
+        root = self.project()
+        repo = root / "code/alpha-api"
+        for relative, data in files.items():
+            (repo / relative).parent.mkdir(parents=True, exist_ok=True)
+            (repo / relative).write_bytes(data)
+        fixture.git(repo, "add", "pkg")
+        built = self.build(root, self.provider, repositories=[API])
+        package_nodes = [n for n in built.graph["nodes"] if n["kind"] == "dependency" and n["file"] == "pkg"]
+        self.assertFalse(package_nodes)
+        rollups = [r for r in built.graph["records"] if r["record"].get("props", {}).get("derived") == "symbol-rollup"]
+        self.assertTrue(rollups)
+        rollup_ids = {r["id"] for r in rollups}
+        self.assertTrue(all(not rollup_ids.intersection(e["provenance"]["records"]) for e in built.graph["edges"]))
+        self.assertEqual(built.graph["coverage"], "partial")
+        built.publish()
+
     def test_same_bytes_twice_ignore_wallclock_and_random_staging_paths(self):
         files = {"app.py": b"def run(value): return external(value)\n"}
         first = self.provider.extract(files)

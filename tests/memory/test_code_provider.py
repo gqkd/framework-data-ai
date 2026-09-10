@@ -334,6 +334,21 @@ class CodeMemory(unittest.TestCase):
         self.assertEqual(result.graph["coverage"], "partial")
         self.assertTrue(any(p["code"] == "provider-evidence-not-projected" for p in result.graph["repositories"][0]["problems"]))
 
+    def test_aggregate_dependency_is_raw_evidence_not_a_direct_edge(self):
+        root = self.project()
+        direct = record()
+        aggregate = dict(kind="dependency", name="package rollup", file=".", repo="repository",
+                         props=dict(derived="symbol-rollup", coupling_kind="symbol-rollup", symbol_edges=1),
+                         relations=[dict(kind="imports", target=direct["name"], target_id=direct["id"])])
+        aggregate["id"] = enola.fact_id(aggregate)
+        result = self.build(root, base.FakeProvider(lambda _: base.Observation(
+            "available", [direct, aggregate])), repositories=[API])
+        self.assertEqual(len(result.graph["records"]), 2)
+        self.assertFalse(any(n["name"] == aggregate["name"] for n in result.graph["nodes"]))
+        self.assertFalse(any(e["relation"] == "imports" for e in result.graph["edges"]))
+        self.assertEqual(result.graph["coverage"], "partial")
+        result.publish()
+
     def test_code_publication_honors_lock_and_rejects_output_symlink(self):
         root = self.project()
         result = self.build(root, repositories=[API])
@@ -385,6 +400,22 @@ class StrictEnolaReader(unittest.TestCase):
     def test_valid_stream_and_duplicate_evidence(self):
         self.write_output(self.records * 2)
         self.assertEqual(len(self.read()["records"]), 2)
+
+    def test_directory_dependency_is_bounded_and_has_no_source_position(self):
+        self.files = {"pkg/use.py": b"import json\n"}
+        dependency = dict(kind="dependency", name="module-edge: pkg -> other", file="pkg", repo="repository",
+                          relations=[], props=dict(derived="symbol-rollup", coupling_kind="symbol-rollup", symbol_edges=1))
+        dependency["id"] = enola.fact_id(dependency)
+        self.write_output([dependency])
+        self.assertEqual(self.read()["records"], [dependency])
+        for changes in (dict(file="outside"), dict(kind="symbol"), dict(line=1), dict(column=1),
+                        dict(end_line=1), dict(end_column=1), dict(file="../pkg"), dict(props={}),
+                        dict(props=dict(derived="symbol-rollup", coupling_kind="symbol-rollup", symbol_edges=True))):
+            invalid = dict(dependency, **changes)
+            invalid["id"] = enola.fact_id(invalid)
+            self.write_output([invalid])
+            with self.subTest(changes=changes), self.assertRaises((ValueError, sources.MemoryInputError)):
+                self.read()
 
     def test_receipt_missing_unknown_format_versions_counts_and_hashes_rejected(self):
         for values in (dict(format_version=99), dict(format_version=True), dict(enola_version="dev"),

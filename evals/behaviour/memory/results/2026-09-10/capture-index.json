@@ -1,0 +1,1910 @@
+{
+  "automated_semantic_grading": false,
+  "captures": [
+    {
+      "absences": [
+        "products/alpha/ARC.md",
+        "code"
+      ],
+      "answer_sha256": "19d02318c05f10a6f7258eb86ed7911f6cf0911a02cb93aebdc8bc9506869238",
+      "case": "design-is-not-code",
+      "commands": [
+        {
+          "command": "/bin/bash -lc \"pwd && rg --files -g 'AGENTS.md' -g 'OPEN.md' -g 'product.yaml' -g '_meta/memory/evaluation/context.json' -g '_meta/memory/evaluation/**' -g '\"'!node_modules'\"'\"",
+          "exit_code": 127,
+          "id": "item_1",
+          "output_bytes": 119,
+          "output_sha256": "7d8eb36bc2ac6072bc993e20fa50a8cca5a01e78925d95fe5b57acf15f7cfa54",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc 'find . -type f -print | sort'",
+          "exit_code": 0,
+          "id": "item_3",
+          "output_bytes": 524,
+          "output_sha256": "4e1dc1c29327857f56b66e0e35a43dcbc484adabf9dc17af43ae746828216641",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"sed -n '1,240p' AGENTS.md\nsed -n '1,260p' OPEN.md\nsed -n '1,260p' products/alpha/product.yaml\nsed -n '1,300p' products/alpha/OPEN.md\"",
+          "exit_code": 0,
+          "id": "item_4",
+          "output_bytes": 1906,
+          "output_sha256": "cdfad553c7f6484d75361e6b902ca816541d89d78bb9af34d2ccb70012ca0db5",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"sed -n '1,320p' framework.yaml\nsed -n '1,360p' products/alpha/PBR.md\nsed -n '1,360p' products/alpha/LOG.md\nsed -n '1,400p' initiatives/synthetic-design/SD-001-processor.md\nsed -n '1,300p' _meta/memory/evaluation/context.json\nsed -n '1,360p' _meta/memory/evaluation/documents.json\"",
+          "exit_code": 0,
+          "id": "item_5",
+          "output_bytes": 146132,
+          "output_sha256": "26880fc93a33701c67c842772199953cd6f0e18eeb5bc858a42e0dc2002fc18f",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"sed -n '1,320p' _meta/memory/code-snapshots/85a6da5b434a1146a2e2946a11222a879890f257edd11101b8a10bb800b69820/manifest.json\nsed -n '1,420p' _meta/memory/code-snapshots/85a6da5b434a1146a2e2946a11222a879890f257edd11101b8a10bb800b69820/code-graph.json\npython3 - <<'PY'\nimport json\nfor p in ['_meta/memory/evaluation/context.json','_meta/memory/evaluation/documents.json']:\n d=json.load(open(p))\n print('\\\\nFILE',p)\n print('top keys', list(d))\n if p.endswith('context.json'):\n  print('coverage',d.get('coverage'),'delivery_complete',d.get('delivery_complete'))\n  print('code',json.dumps(d.get('code'),indent=2))\n  print('content items',len(d.get('content',[])))\n  for x in d.get('content',[]):\n   print(x.get('role'), x.get('requirement'), len(x.get('text','')), x.get('path'))\n else:\n  print('coverage',d.get('coverage'),'gaps',json.dumps(d.get('gaps'),indent=2),'issues',json.dumps(d.get('issues'),indent=2))\nPY\"",
+          "exit_code": 0,
+          "id": "item_7",
+          "output_bytes": 6455,
+          "output_sha256": "6a65aac00b21e82f3f9cd5fd832b1a0d2d717e931558873b3e15bd55a4792f02",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"python3 - <<'PY'\nimport json,pprint\np='_meta/memory/evaluation/context.json'; d=json.load(open(p))\nfor k in ['request','mandate','required_sources','reading_status','framework','gaps','mapping_gaps','limitations','hypotheses','understanding','evidence_products','graph','runtime']:\n print('\\\\n###',k); pprint.pp(d.get(k),width=140)\nPY\nfind /tmp/framework-memory-phase9-batch-20260910/framework -maxdepth 3 -type f -print | sort | sed -n '1,240p'\"",
+          "exit_code": 0,
+          "id": "item_8",
+          "output_bytes": 21653,
+          "output_sha256": "c318fe6a8b76b5300e0edcc3198d41b89ed0a145ad6b07b27fb0868c461f6cdc",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"sed -n '1,360p' /tmp/framework-memory-phase9-batch-20260910/framework/FRAMEWORK.md\nsed -n '1,260p' /tmp/framework-memory-phase9-batch-20260910/framework/references/preamble.md\nsed -n '1,260p' /tmp/framework-memory-phase9-batch-20260910/framework/references/routing-table.md\"",
+          "exit_code": 0,
+          "id": "item_9",
+          "output_bytes": 43825,
+          "output_sha256": "4ff50a656ad01d62d7fd3c1d196a238e32003cf1ff2af076d92feb4eb9563106",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"sed -n '361,760p' /tmp/framework-memory-phase9-batch-20260910/framework/FRAMEWORK.md\nsed -n '1,260p' /tmp/framework-memory-phase9-batch-20260910/framework/skills/audit/SKILL.md\nsed -n '261,560p' /tmp/framework-memory-phase9-batch-20260910/framework/skills/audit/SKILL.md\"",
+          "exit_code": 0,
+          "id": "item_10",
+          "output_bytes": 49610,
+          "output_sha256": "8db14348255e466a3940ffa93f13e3578224bbcffecf8b6a27bcb6999a4c02a0",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"nl -ba products/alpha/product.yaml\nnl -ba products/alpha/PBR.md\nnl -ba initiatives/synthetic-design/SD-001-processor.md\nnl -ba products/alpha/LOG.md\nnl -ba products/alpha/OPEN.md\nnl -ba OPEN.md\nnl -ba AGENTS.md\nnl -ba /tmp/framework-memory-phase9-batch-20260910/framework/FRAMEWORK.md | sed -n '175,240p;330,375p;586,680p'\npython3 - <<'PY'\nimport json\np='_meta/memory/evaluation/context.json'; d=json.load(open(p))\nprint('context coverage', d['coverage'], 'delivery_complete',d['delivery_complete'],'reading_status',d['reading_status'])\nprint('code status',d['code']['status'],'freshness',d['code']['freshness'],'repos',d['code']['repositories'],'sources',d['code']['sources'])\nprint('gaps',d['gaps']); print('mapping',d['mapping_gaps']); print('limitations',d['limitations'])\np='_meta/memory/evaluation/documents.json'; d=json.load(open(p)); print('doc graph coverage',d['coverage'],'gaps',d['gaps'],'issues',d['issues'])\nPY\"",
+          "exit_code": 0,
+          "id": "item_11",
+          "output_bytes": 18971,
+          "output_sha256": "8a10a17472902799d22acb6f77455bbf567cfba15ad4c079a4fa129c3db22144",
+          "truncation_marker_seen": false
+        }
+      ],
+      "events_sha256": "3b0f70689d354c1c99d627d8bf4e68617f70a3cf354a2ab478544df45d69dcbd",
+      "framework_changes": [],
+      "manifest_sha256": "cecdafb189c66fc55a35b83c7e97692d00cf8f23bc4bb7c0061325d26f41cedd",
+      "project_changes": [],
+      "result": {
+        "case": "design-is-not-code",
+        "process": {
+          "elapsed_seconds": 132.599,
+          "exit_code": 0,
+          "status": "completed"
+        },
+        "reason": "answer-and-complete-trace-captured",
+        "status": "pending-review"
+      },
+      "run": "framework-memory-phase9-batch-20260910",
+      "sources": [
+        {
+          "candidate_items": [
+            "item_4",
+            "item_11"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_4",
+            "item_11"
+          ],
+          "path": "products/alpha/product.yaml",
+          "read": "full-file"
+        },
+        {
+          "candidate_items": [
+            "item_5",
+            "item_11"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_5",
+            "item_11"
+          ],
+          "path": "initiatives/synthetic-design/SD-001-processor.md",
+          "read": "full-file"
+        }
+      ]
+    },
+    {
+      "absences": [
+        "products/alpha/changes"
+      ],
+      "answer_sha256": "0ea01675e9b53823ddd7976bb791cdf438f38aef43135767d00915bb8ef7951e",
+      "case": "signal-is-not-authorization",
+      "commands": [
+        {
+          "command": "/bin/bash -lc \"pwd && rg --files -g 'AGENTS.md' -g 'OPEN.md' -g 'product.yaml' -g '*.md' -g '*.yaml' -g '*.json' -g '\"'!node_modules'\"' | sort\"",
+          "exit_code": 0,
+          "id": "item_1",
+          "output_bytes": 128,
+          "output_sha256": "f9eedf0dcd42af2899cd55e3a7f83488f14636102d8cfe4aa73bc2cf99fd1c2c",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc 'find . -type f -print | sort'",
+          "exit_code": 0,
+          "id": "item_3",
+          "output_bytes": 524,
+          "output_sha256": "4e1dc1c29327857f56b66e0e35a43dcbc484adabf9dc17af43ae746828216641",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"sed -n '1,240p' AGENTS.md && sed -n '1,260p' OPEN.md && sed -n '1,260p' products/alpha/product.yaml\"",
+          "exit_code": 0,
+          "id": "item_4",
+          "output_bytes": 1551,
+          "output_sha256": "d9f4c0e73f18ddd62e545f598c557dc9b7b8cabaff8ffbaeb38978a2068e29f7",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"sed -n '1,320p' products/alpha/OPEN.md && sed -n '1,360p' products/alpha/PBR.md && sed -n '1,360p' products/alpha/LOG.md && sed -n '1,360p' initiatives/synthetic-design/SD-001-processor.md && sed -n '1,280p' framework.yaml\"",
+          "exit_code": 0,
+          "id": "item_5",
+          "output_bytes": 1861,
+          "output_sha256": "09bbb4d5a07851edfe6c03606c83d5deb59f7ea553be1dc979996f40a61db8dc",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"sed -n '1,360p' _meta/memory/evaluation/context.json && sed -n '1,420p' _meta/memory/evaluation/documents.json && sed -n '1,300p' _meta/memory/code-snapshots/85a6da5b434a1146a2e2946a11222a879890f257edd11101b8a10bb800b69820/manifest.json && sed -n '1,420p' _meta/memory/code-snapshots/85a6da5b434a1146a2e2946a11222a879890f257edd11101b8a10bb800b69820/code-graph.json && sed -n '1,260p' .framework-memory/local.yaml\"",
+          "exit_code": 0,
+          "id": "item_7",
+          "output_bytes": 150187,
+          "output_sha256": "b5390906ce5c252bbad3de5836d368e42be11c719d69f11494736e989bd233d3",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"jq '{content: [.content[] | {role, requirement, text_prefix: (.text|split(\\\"\\\\n\\\")[:8]|join(\\\"\\\\n\\\"))}], gaps, limitations, code, graph}' _meta/memory/evaluation/context.json\"",
+          "exit_code": 0,
+          "id": "item_8",
+          "output_bytes": 9269,
+          "output_sha256": "63538e0be70d3b2e34e99a7744a21e6b3dc0d218713233b913ca5ec7121c224f",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"jq 'keys' _meta/memory/evaluation/context.json && find /tmp/framework-memory-phase9-batch-20260910/framework -type f -print | sort | head -200\"",
+          "exit_code": 0,
+          "id": "item_9",
+          "output_bytes": 12398,
+          "output_sha256": "a16cf2f282070323c3a20f8a668a49520c6d5896928e65c51d3c0ecf965b9a31",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"grep -nE '\"'^#{1,3} '\"' /tmp/framework-memory-phase9-batch-20260910/framework/FRAMEWORK.md /tmp/framework-memory-phase9-batch-20260910/framework/references/preamble.md /tmp/framework-memory-phase9-batch-20260910/framework/references/routing-table.md /tmp/framework-memory-phase9-batch-20260910/framework/references/operational-memory.md /tmp/framework-memory-phase9-batch-20260910/framework/references/contributions.md /tmp/framework-memory-phase9-batch-20260910/framework/references/adoption.md\"",
+          "exit_code": 0,
+          "id": "item_10",
+          "output_bytes": 6488,
+          "output_sha256": "d807774831cf24b6dde292cdbb7b3edff5a5291aa2344394303a404b96351a1a",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"sed -n '170,290p' /tmp/framework-memory-phase9-batch-20260910/framework/FRAMEWORK.md && sed -n '331,470p' /tmp/framework-memory-phase9-batch-20260910/framework/FRAMEWORK.md && sed -n '612,720p' /tmp/framework-memory-phase9-batch-20260910/framework/FRAMEWORK.md && sed -n '1,190p' /tmp/framework-memory-phase9-batch-20260910/framework/references/operational-memory.md && sed -n '1,190p' /tmp/framework-memory-phase9-batch-20260910/framework/references/preamble.md && sed -n '1,190p' /tmp/framework-memory-phase9-batch-20260910/framework/references/routing-table.md\"",
+          "exit_code": 0,
+          "id": "item_11",
+          "output_bytes": 47440,
+          "output_sha256": "ce34a752be4e7cb2443f6b7b555fd3c406930907e1c128b9b7f2658c8d2342c3",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"grep -RniE 'CHG|approved|authoriz|permission|SIG-001|processor' . --exclude='context.json' --exclude='documents.json' --exclude='code-graph.json' || true\nnl -ba AGENTS.md\nnl -ba products/alpha/LOG.md\nnl -ba initiatives/synthetic-design/SD-001-processor.md\nnl -ba products/alpha/product.yaml\nnl -ba products/alpha/OPEN.md\nnl -ba OPEN.md\nnl -ba _meta/memory/code-snapshots/85a6da5b434a1146a2e2946a11222a879890f257edd11101b8a10bb800b69820/code-graph.json\nnl -ba _meta/memory/code-snapshots/85a6da5b434a1146a2e2946a11222a879890f257edd11101b8a10bb800b69820/manifest.json\"",
+          "exit_code": 0,
+          "id": "item_12",
+          "output_bytes": 7045,
+          "output_sha256": "e35b4ce79f90e44b69ad78915e71b7337ef35ac86d2274ffac5648e9960eed06",
+          "truncation_marker_seen": false
+        }
+      ],
+      "events_sha256": "cbc7266a3743947d04057cb844d62c173cb7893f9d20d59999c1337fc31065e6",
+      "framework_changes": [],
+      "manifest_sha256": "cecdafb189c66fc55a35b83c7e97692d00cf8f23bc4bb7c0061325d26f41cedd",
+      "project_changes": [],
+      "result": {
+        "case": "signal-is-not-authorization",
+        "process": {
+          "elapsed_seconds": 120.341,
+          "exit_code": 0,
+          "status": "completed"
+        },
+        "reason": "answer-and-complete-trace-captured",
+        "status": "pending-review"
+      },
+      "run": "framework-memory-phase9-batch-20260910",
+      "sources": [
+        {
+          "candidate_items": [
+            "item_1",
+            "item_4",
+            "item_12"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_4",
+            "item_12"
+          ],
+          "path": "AGENTS.md",
+          "read": "full-file"
+        },
+        {
+          "candidate_items": [
+            "item_5",
+            "item_12"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_5",
+            "item_12"
+          ],
+          "path": "products/alpha/LOG.md",
+          "read": "full-file"
+        }
+      ]
+    },
+    {
+      "absences": [],
+      "answer_sha256": "e6ff51128c3240b1903a1af4c87e8dfdee4ee30e9b512233f6a6f817df233fba",
+      "case": "same-number-different-product",
+      "commands": [
+        {
+          "command": "/bin/bash -lc \"pwd && sed -n '1,240p' AGENTS.md && sed -n '1,260p' OPEN.md && rg --files -g 'product.yaml' -g '*.md' -g '*.yaml' -g '*.json' . | sort\"",
+          "exit_code": 0,
+          "id": "item_1",
+          "output_bytes": 1399,
+          "output_sha256": "f767d6a5de41e4ac59fcd03ca948dcd02a2da2e12a553d5ad0c9ba6f8123ef22",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"find . -type f -print | sort && sed -n '1,260p' _meta/memory/evaluation/context.json && if [ -f _meta/memory/evaluation/graph.json ]; then sed -n '1,260p' _meta/memory/evaluation/graph.json; else find _meta/memory/evaluation -maxdepth 1 -type f -print -exec sed -n '1,160p' {} \\\\;; fi\"",
+          "exit_code": 0,
+          "id": "item_3",
+          "output_bytes": 271792,
+          "output_sha256": "dfc2b74bbe2c7652659d76e38c8b63bcd70f18af6fbb07c0e65c62544e4d641c",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc 'for f in products/alpha/product.yaml products/alpha/LOG.md products/alpha/cycles/ICG-001-intake.md products/beta/product.yaml products/beta/LOG.md products/alpha/OPEN.md products/beta/OPEN.md; do echo \"FILE $f\"; nl -ba \"$f\"; done\nfind products/beta -type f -print | sort'",
+          "exit_code": 0,
+          "id": "item_4",
+          "output_bytes": 4009,
+          "output_sha256": "38791fcc64d880bd31fba889817cc7d87fdf1658f1de462a07954868924c2abf",
+          "truncation_marker_seen": false
+        }
+      ],
+      "events_sha256": "c44cab12a9f978939cc6ae7af54ddc0b00925cce58e71a31406be49a2128525f",
+      "framework_changes": [],
+      "manifest_sha256": "cecdafb189c66fc55a35b83c7e97692d00cf8f23bc4bb7c0061325d26f41cedd",
+      "project_changes": [],
+      "result": {
+        "case": "same-number-different-product",
+        "process": {
+          "elapsed_seconds": 104.287,
+          "exit_code": 0,
+          "status": "completed"
+        },
+        "reason": "answer-and-complete-trace-captured",
+        "status": "pending-review"
+      },
+      "run": "framework-memory-phase9-batch-20260910",
+      "sources": [
+        {
+          "candidate_items": [
+            "item_4"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_4"
+          ],
+          "path": "products/alpha/LOG.md",
+          "read": "full-file"
+        },
+        {
+          "candidate_items": [
+            "item_4"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_4"
+          ],
+          "path": "products/beta/LOG.md",
+          "read": "full-file"
+        },
+        {
+          "candidate_items": [
+            "item_4"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_4"
+          ],
+          "path": "products/alpha/cycles/ICG-001-intake.md",
+          "read": "full-file"
+        }
+      ]
+    },
+    {
+      "absences": [],
+      "answer_sha256": "ff39e68860cdef44a50c91eafe2685ff16e569e9e057939e4296d8cc46f124a2",
+      "case": "qualified-change-keeps-obligations",
+      "commands": [
+        {
+          "command": "/bin/bash -lc \"pwd && rg --files -g 'AGENTS.md' -g 'OPEN.md' -g 'product.yaml' -g '*.md' -g '*.json' -g '*.yaml' -g '*.yml' -g '*.diff' -g '*.patch' | sort\"",
+          "exit_code": 0,
+          "id": "item_1",
+          "output_bytes": 135,
+          "output_sha256": "eebc859d8ab06a584e950f2af05a2b389e991ee8c6f613b4cd798cbb14ac5723",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc 'find . -type f -print | sort'",
+          "exit_code": 0,
+          "id": "item_3",
+          "output_bytes": 607,
+          "output_sha256": "ac79cd3037ff591dec2aa6275b310f5619355d3d3a155336afc465b93668ea58",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"sed -n '1,240p' AGENTS.md; sed -n '1,260p' OPEN.md; sed -n '1,260p' products/alpha/product.yaml; sed -n '1,260p' products/alpha/OPEN.md\"",
+          "exit_code": 0,
+          "id": "item_4",
+          "output_bytes": 1906,
+          "output_sha256": "cdfad553c7f6484d75361e6b902ca816541d89d78bb9af34d2ccb70012ca0db5",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"sed -n '1,320p' _meta/memory/evaluation/context.json; sed -n '1,320p' _meta/memory/evaluation/documents.json; sed -n '1,240p' framework.yaml; sed -n '1,200p' .framework-memory/local.yaml\"",
+          "exit_code": 0,
+          "id": "item_5",
+          "output_bytes": 144989,
+          "output_sha256": "df8d8392f05b6005855f4495212278895f5d0bb71941da3df84be086ab45dfad",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc 'nl -ba products/alpha/PBR.md; nl -ba products/alpha/LOG.md; nl -ba products/alpha/cycles/ICG-001-intake.md; nl -ba products/alpha/changes/CHG-001-boundary.md; nl -ba .acceptance/pr.txt; nl -ba .acceptance/changed.txt; find . -maxdepth 4 -type d -print | sort'",
+          "exit_code": 0,
+          "id": "item_6",
+          "output_bytes": 3097,
+          "output_sha256": "5d339b2277e0596466632d81bbb55d17b46d8097df71e8fc91f5d80fcde480bb",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"ls -la; git status --short --branch; git diff --no-ext-diff --; git diff --no-ext-diff --cached --; sed -n '1,260p' _meta/memory/code-snapshots/87b622f31bd4bc6503ee0af40614031ba9a00beeb1157882c3b8686afe927239/manifest.json; sed -n '1,320p' _meta/memory/code-snapshots/87b622f31bd4bc6503ee0af40614031ba9a00beeb1157882c3b8686afe927239/code-graph.json\"",
+          "exit_code": 0,
+          "id": "item_8",
+          "output_bytes": 18014,
+          "output_sha256": "5d05664b0c888b770990303ad20a7815d237d6193d32e2056a6d3f6519dccbcd",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"find /tmp/framework-memory-phase9-batch-20260910/framework -maxdepth 3 -type f -print | sort | head -200; grep -R -n -E 'qualified|change contract|What must not change|regression|architecture decision|ICG|merge|PR|diff' /tmp/framework-memory-phase9-batch-20260910/framework --include='*.md' --include='*.yaml' | head -300\"",
+          "exit_code": 0,
+          "id": "item_9",
+          "output_bytes": 56463,
+          "output_sha256": "68450dd5da80adc82b1171987679947490fe74a4b240e9df5857020e6599292b",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"nl -ba /tmp/framework-memory-phase9-batch-20260910/framework/references/contributions.md | sed -n '1,180p'; nl -ba /tmp/framework-memory-phase9-batch-20260910/framework/templates/AGENTS.md | sed -n '50,105p'; nl -ba /tmp/framework-memory-phase9-batch-20260910/framework/skills/cycle/SKILL.md | sed -n '120,210p'; nl -ba /tmp/framework-memory-phase9-batch-20260910/framework/templates/CHG.md | sed -n '1,120p'; grep -n -E '\"'^## (5|6|8|10)|qualified PR|approved CHG|change contract|preservation|acceptance|architecture'\"' /tmp/framework-memory-phase9-batch-20260910/framework/FRAMEWORK.md | head -100\"",
+          "exit_code": 0,
+          "id": "item_10",
+          "output_bytes": 29380,
+          "output_sha256": "30c91e7966177a5387212e99a6378ef50622cf8ca9b05448d6dc90eb5e570bfc",
+          "truncation_marker_seen": false
+        }
+      ],
+      "events_sha256": "f8b82cf769b6c2db723849f65990747ceebdc0b9062e8ff6d9ed6f09d6b78523",
+      "framework_changes": [],
+      "manifest_sha256": "cecdafb189c66fc55a35b83c7e97692d00cf8f23bc4bb7c0061325d26f41cedd",
+      "project_changes": [],
+      "result": {
+        "case": "qualified-change-keeps-obligations",
+        "process": {
+          "elapsed_seconds": 123.653,
+          "exit_code": 0,
+          "status": "completed"
+        },
+        "reason": "answer-and-complete-trace-captured",
+        "status": "pending-review"
+      },
+      "run": "framework-memory-phase9-batch-20260910",
+      "sources": [
+        {
+          "candidate_items": [
+            "item_6"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_6"
+          ],
+          "path": "products/alpha/LOG.md",
+          "read": "full-file"
+        },
+        {
+          "candidate_items": [
+            "item_6"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_6"
+          ],
+          "path": "products/alpha/cycles/ICG-001-intake.md",
+          "read": "full-file"
+        },
+        {
+          "candidate_items": [
+            "item_6"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_6"
+          ],
+          "path": "products/alpha/changes/CHG-001-boundary.md",
+          "read": "full-file"
+        },
+        {
+          "candidate_items": [
+            "item_6"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_6"
+          ],
+          "path": ".acceptance/pr.txt",
+          "read": "full-file"
+        },
+        {
+          "candidate_items": [
+            "item_6"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_6"
+          ],
+          "path": ".acceptance/changed.txt",
+          "read": "full-file"
+        }
+      ]
+    },
+    {
+      "absences": [],
+      "answer_sha256": "2e8bd74313cd61349f587c90a59acc2d21eb8551512612b46b80534a7583a727",
+      "case": "shared-code-has-multiple-consumers",
+      "commands": [
+        {
+          "command": "/bin/bash -lc \"pwd && rg --files -g 'AGENTS.md' -g 'OPEN.md' -g 'product.yaml' -g '*product*.yaml' -g '_meta/memory/evaluation/context.json' -g '_meta/memory/evaluation/*' -g '\"'!node_modules'\"' | sort\"",
+          "exit_code": 0,
+          "id": "item_1",
+          "output_bytes": 135,
+          "output_sha256": "1f24f3c9467738447cfed71ca39b61d942de332c5ba836c29d95e2bcda82f358",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"find . -type f -not -path './.git/*' -not -path './node_modules/*' | sort\"",
+          "exit_code": 0,
+          "id": "item_3",
+          "output_bytes": 2982,
+          "output_sha256": "ed6b16037bf0359caed777d80e1b79c95fe601a99442ec738f4f89d41d1f60d4",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"sed -n '1,240p' AGENTS.md; sed -n '1,260p' OPEN.md; sed -n '1,260p' products/alpha/product.yaml; sed -n '1,260p' products/beta/product.yaml; sed -n '1,260p' framework.yaml; sed -n '1,260p' PLATFORM.md; sed -n '1,260p' platform/OPEN.md\"",
+          "exit_code": 0,
+          "id": "item_4",
+          "output_bytes": 3186,
+          "output_sha256": "c7a12004aaa2959d0b3bb2ae84438e0485d8f8530d235dbee9b8b61085458309",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"sed -n '1,320p' _meta/memory/evaluation/context.json; sed -n '1,320p' _meta/memory/evaluation/documents.json; sed -n '1,320p' decisions/DEC-001-shared-rule.md; sed -n '1,320p' products/alpha/OPEN.md; sed -n '1,320p' products/alpha/ARC.md; sed -n '1,320p' products/alpha/PBR.md; sed -n '1,320p' products/alpha/contracts/DC-001-response.md; sed -n '1,320p' products/beta/OPEN.md; sed -n '1,320p' products/beta/ARC.md; sed -n '1,320p' products/beta/PBR.md\"",
+          "exit_code": 0,
+          "id": "item_6",
+          "output_bytes": 27590,
+          "output_sha256": "1371f06586bba744ab0c4312c4ebc32ca1ebb12cd060c7533e859941e00f7bec",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc 'for f in PLATFORM.md decisions/DEC-001-shared-rule.md products/alpha/ARC.md products/alpha/contracts/DC-001-response.md products/beta/ARC.md products/beta/PBR.md code/shared-rules/shared_rules.py code/alpha-api/service.py code/alpha-api/contracts/response.schema.json code/alpha-api/tests/test_service.py code/beta-worker/worker.py code/beta-worker/tests/test_worker.py code/review-input.txt; do echo \"FILE $f\"; nl -ba \"$f\"; done\nfor d in code/shared-rules code/alpha-api code/beta-worker; do echo \"STATUS $d\"; git -C \"$d\" status --short; echo \"HEAD $d\"; git -C \"$d\" rev-parse HEAD; done'",
+          "exit_code": 0,
+          "id": "item_7",
+          "output_bytes": 8079,
+          "output_sha256": "d58cecbb50440ccd2ba252d7a11a6a9d9772c149cebacbb7a32150d53888f836",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"git -C code/alpha-api log --oneline --decorate --all; git -C code/alpha-api diff --stat 08bb1e25cf063dce6d6ecd56afcd689137a60ab7..HEAD; git -C code/alpha-api diff 08bb1e25cf063dce6d6ecd56afcd689137a60ab7..HEAD; git -C code/shared-rules log --oneline --decorate --all; git -C code/beta-worker log --oneline --decorate --all; sed -n '1,220p' _meta/memory/code-snapshots/5767635e9e23bd161062535ec9de16ae60e6d37d493b9ce610b9742dcd1f6d4e/manifest.json; grep -nE 'shared_rules|normalize|service.py|worker.py|response.schema|limitations|freshness|unavailable|unsupported' _meta/memory/evaluation/context.json | head -n 240\"",
+          "exit_code": 0,
+          "id": "item_9",
+          "output_bytes": 78141,
+          "output_sha256": "00f29b7f48971ffd1465724a589882671fca355df3cc335dd0d9c29974e175db",
+          "truncation_marker_seen": false
+        }
+      ],
+      "events_sha256": "30781c6812ec1f196087410dc5266571ad8be85580408cf142938d65c1b906ae",
+      "framework_changes": [],
+      "manifest_sha256": "cecdafb189c66fc55a35b83c7e97692d00cf8f23bc4bb7c0061325d26f41cedd",
+      "project_changes": [],
+      "result": {
+        "case": "shared-code-has-multiple-consumers",
+        "process": {
+          "elapsed_seconds": 119.315,
+          "exit_code": 0,
+          "status": "completed"
+        },
+        "reason": "answer-and-complete-trace-captured",
+        "status": "pending-review"
+      },
+      "run": "framework-memory-phase9-batch-20260910",
+      "sources": [
+        {
+          "candidate_items": [
+            "item_4",
+            "item_7"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_4",
+            "item_7"
+          ],
+          "path": "PLATFORM.md",
+          "read": "full-file"
+        },
+        {
+          "candidate_items": [
+            "item_6",
+            "item_7"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_6",
+            "item_7"
+          ],
+          "path": "decisions/DEC-001-shared-rule.md",
+          "read": "full-sections",
+          "sections": [
+            "Decision",
+            "Consequences",
+            "Review condition"
+          ]
+        },
+        {
+          "candidate_items": [
+            "item_7"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_7"
+          ],
+          "path": "code/shared-rules/shared_rules.py",
+          "read": "full-file"
+        },
+        {
+          "candidate_items": [
+            "item_7"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_7"
+          ],
+          "path": "code/alpha-api/service.py",
+          "read": "full-file"
+        },
+        {
+          "candidate_items": [
+            "item_7"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_7"
+          ],
+          "path": "code/beta-worker/worker.py",
+          "read": "full-file"
+        },
+        {
+          "candidate_items": [
+            "item_7"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_7"
+          ],
+          "path": "code/alpha-api/tests/test_service.py",
+          "read": "full-file"
+        },
+        {
+          "candidate_items": [
+            "item_7"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_7"
+          ],
+          "path": "code/beta-worker/tests/test_worker.py",
+          "read": "full-file"
+        }
+      ]
+    },
+    {
+      "absences": [],
+      "answer_sha256": "21f6fd719a7d2481aac45b56577abbf86e3fb1e13c0c4678f1da9c7b40248369",
+      "case": "reconsider-a-rejected-alternative",
+      "commands": [
+        {
+          "command": "/bin/bash -lc \"pwd && rg --files -g 'AGENTS.md' -g 'OPEN.md' -g 'product.yaml' -g '_meta/memory/evaluation/context.json' -g '_meta/memory/evaluation/*' -g '\"'!node_modules'\"' | sort\"",
+          "exit_code": 0,
+          "id": "item_1",
+          "output_bytes": 134,
+          "output_sha256": "1be062e4f508b8df00c3db11883c0df0b85013f4b0a8ef06723b2783d25e06c0",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc 'find . -maxdepth 5 -type f -print | sort'",
+          "exit_code": 0,
+          "id": "item_3",
+          "output_bytes": 1414,
+          "output_sha256": "6af77ae2f2027abfba67e3c3de4f77ea58997e02effa65759d56f2728740d0c8",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"sed -n '1,240p' AGENTS.md; sed -n '1,260p' OPEN.md; sed -n '1,260p' products/alpha/product.yaml; sed -n '1,260p' products/beta/product.yaml\"",
+          "exit_code": 0,
+          "id": "item_4",
+          "output_bytes": 2102,
+          "output_sha256": "3880a14c22dcaba85010b71e3273f9cbb52a330be6cae62ab19d7eb7faafa201",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"sed -n '1,280p' _meta/memory/evaluation/context.json; sed -n '1,320p' _meta/memory/evaluation/documents.json\"",
+          "exit_code": 0,
+          "id": "item_5",
+          "output_bytes": 21085,
+          "output_sha256": "34d4a2b2aae78d7b960236f6148400f225c971babeb89b1d66f0ab8e50eb455e",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc 'for f in PLATFORM.md platform/OPEN.md decisions/DEC-001-shared-rule.md products/alpha/OPEN.md products/alpha/PBR.md products/alpha/ARC.md products/alpha/contracts/DC-001-response.md products/beta/OPEN.md products/beta/PBR.md products/beta/ARC.md code/review-input.txt; do echo \"FILE $f\"; sed -n '\"'1,320p' \\\"\"'$f\"; done'",
+          "exit_code": 0,
+          "id": "item_6",
+          "output_bytes": 2000,
+          "output_sha256": "3c3d693d79af2269c212a0ea057588c5b21aa931a326702fa5ff08972bbe5bf1",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc 'for f in code/shared-rules/shared_rules.py code/alpha-api/service.py code/alpha-api/tests/test_service.py code/alpha-api/contracts/response.schema.json code/beta-worker/worker.py code/beta-worker/tests/test_worker.py; do echo \"FILE $f\"; nl -ba \"$f\"; done; for d in code/shared-rules code/alpha-api code/beta-worker; do echo \"REPO $d\"; git -C \"$d\" status --short; git -C \"$d\" log --oneline --decorate -8; done'",
+          "exit_code": 0,
+          "id": "item_8",
+          "output_bytes": 1511,
+          "output_sha256": "80b48f3285f9fdbf38cacc559c585a124aa1789a995664a65e761a0bd4e18835",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc 'nl -ba framework.yaml; nl -ba .framework-memory/local.yaml; git -C code/alpha-api show --stat --oneline 6a1c6ef; git -C code/alpha-api diff 08bb1e2..6a1c6ef -- service.py tests/test_service.py; for f in AGENTS.md OPEN.md PLATFORM.md decisions/DEC-001-shared-rule.md products/alpha/product.yaml products/alpha/OPEN.md products/alpha/ARC.md products/alpha/contracts/DC-001-response.md products/beta/product.yaml products/beta/OPEN.md products/beta/ARC.md products/beta/PBR.md; do echo \"FILE $f\"; nl -ba \"$f\"; done'",
+          "exit_code": 0,
+          "id": "item_9",
+          "output_bytes": 10856,
+          "output_sha256": "63786f66e9b5beca6b211185714471c3cb988f1207feaedabb8241415d315ff3",
+          "truncation_marker_seen": false
+        }
+      ],
+      "events_sha256": "3fa7920c6378c297628521fbbc81d396d5996546fd9adafe38fd1f410aef5055",
+      "framework_changes": [],
+      "manifest_sha256": "cecdafb189c66fc55a35b83c7e97692d00cf8f23bc4bb7c0061325d26f41cedd",
+      "project_changes": [],
+      "result": {
+        "case": "reconsider-a-rejected-alternative",
+        "process": {
+          "elapsed_seconds": 138.317,
+          "exit_code": 0,
+          "status": "completed"
+        },
+        "reason": "answer-and-complete-trace-captured",
+        "status": "pending-review"
+      },
+      "run": "framework-memory-phase9-batch-20260910",
+      "sources": [
+        {
+          "candidate_items": [
+            "item_6",
+            "item_9"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_9"
+          ],
+          "path": "decisions/DEC-001-shared-rule.md",
+          "read": "full-sections",
+          "sections": [
+            "Decision",
+            "Consequences",
+            "Alternatives",
+            "Review condition"
+          ]
+        },
+        {
+          "candidate_items": [
+            "item_8"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_8"
+          ],
+          "path": "code/shared-rules/shared_rules.py",
+          "read": "full-file"
+        }
+      ]
+    },
+    {
+      "absences": [],
+      "answer_sha256": "d3deffbbda3effb8b0000760cf66ab48c908b94d934e4fba75f85f9caa863f6d",
+      "case": "contract-links-products-not-customer-records",
+      "commands": [
+        {
+          "command": "/bin/bash -lc \"pwd && rg --files -g 'AGENTS.md' -g 'OPEN.md' -g 'product.yaml' -g '_meta/memory/evaluation/context.json' -g '_meta/memory/evaluation/*' -g '\"'!node_modules'\"' | sort\"",
+          "exit_code": 0,
+          "id": "item_1",
+          "output_bytes": 145,
+          "output_sha256": "b2246d6b6a7686ebbf8750657e11972825986b4a1c9a1385b20126e2648d59b2",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc 'find . -type f -print | sort'",
+          "exit_code": 0,
+          "id": "item_3",
+          "output_bytes": 2982,
+          "output_sha256": "ed6b16037bf0359caed777d80e1b79c95fe601a99442ec738f4f89d41d1f60d4",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"sed -n '1,240p' AGENTS.md\nsed -n '1,260p' OPEN.md\nsed -n '1,260p' framework.yaml\nsed -n '1,260p' PLATFORM.md\nsed -n '1,260p' code/review-input.txt\"",
+          "exit_code": 0,
+          "id": "item_4",
+          "output_bytes": 2284,
+          "output_sha256": "7baf9e98ca46a58827b04cfb67b264003e350cf720ea555df9d956c25baee4f2",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"sed -n '1,300p' products/alpha/product.yaml\nsed -n '1,300p' products/beta/product.yaml\nsed -n '1,280p' products/alpha/OPEN.md\nsed -n '1,280p' products/beta/OPEN.md\nsed -n '1,320p' products/alpha/ARC.md\nsed -n '1,320p' products/alpha/PBR.md\nsed -n '1,320p' products/beta/ARC.md\nsed -n '1,320p' products/beta/PBR.md\"",
+          "exit_code": 0,
+          "id": "item_5",
+          "output_bytes": 4426,
+          "output_sha256": "58bffce9e42df52711458e0004c19887223b7fa1901e6a463a04ca4ab355f3e5",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"sed -n '1,360p' products/alpha/contracts/DC-001-response.md\nsed -n '1,360p' decisions/DEC-001-shared-rule.md\nsed -n '1,300p' code/alpha-api/service.py\nsed -n '1,300p' code/alpha-api/contracts/response.schema.json\nsed -n '1,300p' code/alpha-api/tests/test_service.py\nsed -n '1,300p' code/beta-worker/worker.py\nsed -n '1,300p' code/beta-worker/tests/test_worker.py\nsed -n '1,300p' code/shared-rules/shared_rules.py\"",
+          "exit_code": 0,
+          "id": "item_7",
+          "output_bytes": 2377,
+          "output_sha256": "3fca11bb073e7ac02898789db7dfb692bca0f7c4d35ff6d06e82894ec1f8420b",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"grep -RIn --exclude-dir=.git --exclude='context.json' --exclude='documents.json' --exclude='code-graph.json' 'normalized\\\\|normalize' . | sort\ngit -C code/alpha-api status --short\ngit -C code/alpha-api rev-parse HEAD\ngit -C code/beta-worker status --short\ngit -C code/beta-worker rev-parse HEAD\ngit -C code/shared-rules status --short\ngit -C code/shared-rules rev-parse HEAD\nsed -n '1,320p' _meta/memory/evaluation/context.json\nsed -n '1,360p' _meta/memory/evaluation/documents.json\"",
+          "exit_code": 0,
+          "id": "item_8",
+          "output_bytes": 27739,
+          "output_sha256": "64cb1593cad147e69e32b9018e45b2fef3fe5a55e1b3d174fa94f40f422c0db5",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc 'nl -ba products/alpha/contracts/DC-001-response.md\nnl -ba decisions/DEC-001-shared-rule.md\nnl -ba products/alpha/ARC.md\nnl -ba products/beta/ARC.md\nnl -ba products/beta/PBR.md\nnl -ba code/alpha-api/service.py\nnl -ba code/alpha-api/contracts/response.schema.json\nnl -ba code/alpha-api/tests/test_service.py\nnl -ba code/beta-worker/worker.py\nnl -ba code/beta-worker/tests/test_worker.py\nnl -ba code/shared-rules/shared_rules.py\ngit -C code/alpha-api log --oneline --decorate --all\ngit -C code/alpha-api diff --stat 08bb1e25cf063dce6d6ecd56afcd689137a60ab7..HEAD\ngit -C code/alpha-api diff 08bb1e25cf063dce6d6ecd56afcd689137a60ab7..HEAD --\ngit -C code/beta-worker log --oneline --decorate --all\ngit -C code/shared-rules log --oneline --decorate --all'",
+          "exit_code": 0,
+          "id": "item_9",
+          "output_bytes": 6682,
+          "output_sha256": "2ec07aa067df6cb30342d50a5e29e3eec2bd3fc8a77bf6880b7ce69d02054075",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"command -v jq || true\ngrep -n 'DC-001\\\\|consum\\\\|data-contract\\\\|beta\\\\|alpha' _meta/memory/evaluation/documents.json | head -120\ngrep -n 'normalized\\\\|normalize\\\\|worker.py\\\\|service.py' _meta/memory/code-snapshots/5767635e9e23bd161062535ec9de16ae60e6d37d493b9ce610b9742dcd1f6d4e/code-graph.json | head -160\"",
+          "exit_code": 0,
+          "id": "item_10",
+          "output_bytes": 60975,
+          "output_sha256": "0dbee938e85987ec2699b5d7dde0b19ad05444df6f20c84c393ac24db514f635",
+          "truncation_marker_seen": false
+        }
+      ],
+      "events_sha256": "083c65f8bffe65526583a2e467b0573a91d4d825a9bd7d3fbc219136782b31c9",
+      "framework_changes": [],
+      "manifest_sha256": "cecdafb189c66fc55a35b83c7e97692d00cf8f23bc4bb7c0061325d26f41cedd",
+      "project_changes": [],
+      "result": {
+        "case": "contract-links-products-not-customer-records",
+        "process": {
+          "elapsed_seconds": 127.927,
+          "exit_code": 0,
+          "status": "completed"
+        },
+        "reason": "answer-and-complete-trace-captured",
+        "status": "pending-review"
+      },
+      "run": "framework-memory-phase9-batch-20260910",
+      "sources": [
+        {
+          "candidate_items": [
+            "item_7",
+            "item_9"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_7",
+            "item_9"
+          ],
+          "path": "products/alpha/contracts/DC-001-response.md",
+          "read": "full-file"
+        },
+        {
+          "candidate_items": [
+            "item_5",
+            "item_9"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_5",
+            "item_9"
+          ],
+          "path": "products/beta/PBR.md",
+          "read": "full-file"
+        },
+        {
+          "candidate_items": [
+            "item_7",
+            "item_9"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_7",
+            "item_8",
+            "item_9"
+          ],
+          "path": "code/alpha-api/contracts/response.schema.json",
+          "read": "full-file"
+        },
+        {
+          "candidate_items": [
+            "item_7",
+            "item_9"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_7",
+            "item_9"
+          ],
+          "path": "code/beta-worker/worker.py",
+          "read": "full-file"
+        }
+      ]
+    },
+    {
+      "absences": [
+        "code/beta-worker"
+      ],
+      "answer_sha256": "bb853272d45eb3ff834e14969d90426fb53914e721ee08daae7626bf6bd9d49c",
+      "case": "missing-checkout-is-not-zero-impact",
+      "commands": [
+        {
+          "command": "/bin/bash -lc \"pwd && rg --files -g 'AGENTS.md' -g 'OPEN.md' -g 'product.yaml' -g '_meta/memory/evaluation/context.json' -g '_meta/memory/evaluation/*' -g '\"'!**/.git/**'\"' | sort\"",
+          "exit_code": 0,
+          "id": "item_1",
+          "output_bytes": 136,
+          "output_sha256": "eca120b520316c0659c320f4eecb6ee16a9120834da1fcb9a4f7b2992b262c59",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"find . -path './.git' -prune -o -type f -print | sort\"",
+          "exit_code": 0,
+          "id": "item_3",
+          "output_bytes": 2295,
+          "output_sha256": "e1f53a4475fa50cd789f9f8602d713590142362ea5b4cf41dc51228de253372c",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc 'for f in AGENTS.md OPEN.md PLATFORM.md platform/OPEN.md products/alpha/product.yaml products/beta/product.yaml products/alpha/OPEN.md products/beta/OPEN.md _meta/memory/evaluation/context.json _meta/memory/evaluation/documents.json; do echo \"### $f\"; sed -n '\"'1,260p' \\\"\"'$f\"; done'",
+          "exit_code": 0,
+          "id": "item_4",
+          "output_bytes": 22141,
+          "output_sha256": "f0af5a645c5c0a46c5f8211da465cce973ac326b0340c900a057befc5475e713",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc 'for f in framework.yaml products/beta/ARC.md products/beta/PBR.md products/alpha/ARC.md products/alpha/PBR.md products/alpha/contracts/DC-001-response.md decisions/DEC-001-shared-rule.md code/shared-rules/shared_rules.py code/alpha-api/service.py code/alpha-api/tests/test_service.py code/alpha-api/contracts/response.schema.json code/review-input.txt; do echo \"### $f\"; nl -ba \"$f\"; done\nprintf '\"'\\\\n### beta path status\\\\n'; if test -e code/beta-worker; then ls -la code/beta-worker; else echo 'code/beta-worker is absent'; fi\nprintf '\\\\n### selected context/graph mentions\\\\n'; grep -n -E 'beta|shared|missing|unavailable|limitation|imports|impact' _meta/memory/evaluation/context.json _meta/memory/evaluation/documents.json _meta/memory/code-snapshots/*/manifest.json _meta/memory/code-snapshots/*/code-graph.json | head -n 240\"",
+          "exit_code": 0,
+          "id": "item_5",
+          "output_bytes": 156058,
+          "output_sha256": "48d8a69ad5aeded39c0a2dab9b02c6a97c7981e6e7c1d18297998fd7e439e39d",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc 'for f in PLATFORM.md products/beta/product.yaml products/beta/OPEN.md OPEN.md AGENTS.md; do echo \"### $f\"; nl -ba \"$f\"; done\nprintf '\"'\\\\n### context relevant ranges\\\\n'; nl -ba _meta/memory/evaluation/context.json | sed -n '78,98p;214,242p'\nprintf '\\\\n### repositories status\\\\n'; git -C code/shared-rules status --short --branch; git -C code/shared-rules rev-parse HEAD; git -C code/alpha-api status --short --branch; git -C code/alpha-api rev-parse HEAD\"",
+          "exit_code": 0,
+          "id": "item_7",
+          "output_bytes": 5671,
+          "output_sha256": "bc5d6b34dbd6db458b2470bbc065dc6b125290bfc1c2af5212c7ddcf1d9998ae",
+          "truncation_marker_seen": false
+        }
+      ],
+      "events_sha256": "473ebb50381a0f5e131691c9aa46fb64b06d508ef2e0dfe6c845ca7fd190d445",
+      "framework_changes": [],
+      "manifest_sha256": "cecdafb189c66fc55a35b83c7e97692d00cf8f23bc4bb7c0061325d26f41cedd",
+      "project_changes": [],
+      "result": {
+        "case": "missing-checkout-is-not-zero-impact",
+        "process": {
+          "elapsed_seconds": 77.879,
+          "exit_code": 0,
+          "status": "completed"
+        },
+        "reason": "answer-and-complete-trace-captured",
+        "status": "pending-review"
+      },
+      "run": "framework-memory-phase9-batch-20260910",
+      "sources": [
+        {
+          "candidate_items": [
+            "item_4",
+            "item_7"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_4",
+            "item_7"
+          ],
+          "path": "products/beta/product.yaml",
+          "read": "full-file"
+        },
+        {
+          "candidate_items": [
+            "item_5"
+          ],
+          "full_source_in_captured_outputs": [],
+          "path": "products/beta/ARC.md",
+          "read": "full-sections",
+          "sections": [
+            "Current"
+          ]
+        },
+        {
+          "candidate_items": [
+            "item_4",
+            "item_7"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_4",
+            "item_7"
+          ],
+          "path": "PLATFORM.md",
+          "read": "full-file"
+        }
+      ]
+    },
+    {
+      "absences": [],
+      "answer_sha256": "02e5bf3cad0fc8cca2d1fd7b67e75d34d6ccf0627e34b93a70ef9f15221c13d2",
+      "case": "attested-snapshot-is-not-head",
+      "commands": [
+        {
+          "command": "/bin/bash -lc \"pwd && rg --files -g 'AGENTS.md' -g 'OPEN.md' -g 'product.yaml' -g '_meta/memory/evaluation/context.json' -g '_meta/memory/evaluation/**' -g '*.md' -g '*.yaml' | sort\"",
+          "exit_code": 0,
+          "id": "item_1",
+          "output_bytes": 130,
+          "output_sha256": "c000dde8a555b13a0d3c87fdce9d4c649e3355d9def9609b30ed8fb6f142ce0b",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"find . -type f \\\\( -name 'AGENTS.md' -o -name 'OPEN.md' -o -name 'product.yaml' -o -path './_meta/memory/evaluation/*' -o -name '*.md' -o -name '*.yaml' \\\\) -print | sort\"",
+          "exit_code": 0,
+          "id": "item_3",
+          "output_bytes": 466,
+          "output_sha256": "f7cdea97d6d6583cdf5f5c42d92741d9078b5a9784bdfb6b3d110d6acf96bfdd",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"sed -n '1,240p' AGENTS.md; sed -n '1,260p' OPEN.md; sed -n '1,260p' products/alpha/product.yaml; sed -n '1,260p' products/alpha/OPEN.md; sed -n '1,320p' products/alpha/ARC.md; sed -n '1,240p' _meta/memory/evaluation/context.json; sed -n '1,240p' _meta/memory/evaluation/documents.json\"",
+          "exit_code": 0,
+          "id": "item_4",
+          "output_bytes": 19870,
+          "output_sha256": "3c99f40a25dbfc06f4996ba7f7e6c8615df08bd7ce7f633e8b24a28ab646e669",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"sed -n '1,280p' products/alpha/contracts/DC-001-response.md; sed -n '1,280p' decisions/DEC-001-shared-rule.md; sed -n '1,260p' products/alpha/PBR.md; find code/alpha-api -maxdepth 3 -type f -print | sort; git -C code/alpha-api rev-parse --show-toplevel; git -C code/alpha-api rev-parse HEAD; git -C code/alpha-api status --short --branch; git -C code/alpha-api log --oneline --decorate -5; git -C code/alpha-api cat-file -t 08bb1e25cf063dce6d6ecd56afcd689137a60ab7; git -C code/alpha-api merge-base --is-ancestor 08bb1e25cf063dce6d6ecd56afcd689137a60ab7 HEAD; git -C code/alpha-api diff --stat 08bb1e25cf063dce6d6ecd56afcd689137a60ab7..HEAD; git -C code/alpha-api diff --name-status 08bb1e25cf063dce6d6ecd56afcd689137a60ab7..HEAD; sed -n '1,240p' code/alpha-api/service.py; sed -n '1,260p' code/alpha-api/tests/test_service.py; sed -n '1,220p' code/alpha-api/contracts/response.schema.json\"",
+          "exit_code": 0,
+          "id": "item_5",
+          "output_bytes": 2897,
+          "output_sha256": "4707f373a15679188a52d32d19064e11b4c7d3e9af22085047c0a51fbc22c288",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"git -C code/alpha-api show -s --format='commit=%H%nparents=%P%nsubject=%s' 08bb1e25cf063dce6d6ecd56afcd689137a60ab7; git -C code/alpha-api show -s --format='commit=%H%nparents=%P%nsubject=%s' HEAD; git -C code/alpha-api rev-list --count 08bb1e25cf063dce6d6ecd56afcd689137a60ab7..HEAD; git -C code/alpha-api diff --unified=80 08bb1e25cf063dce6d6ecd56afcd689137a60ab7..HEAD -- service.py; git -C code/alpha-api diff --quiet; printf 'worktree_diff_exit=%s\\\\n' \\\"\"'$?\"; git -C code/alpha-api diff --cached --quiet; printf '\"'index_diff_exit=%s\\\\n' \\\"\"'$?\"; nl -ba products/alpha/ARC.md; nl -ba products/alpha/product.yaml; nl -ba products/alpha/contracts/DC-001-response.md; nl -ba decisions/DEC-001-shared-rule.md; nl -ba code/alpha-api/service.py; nl -ba code/alpha-api/tests/test_service.py; nl -ba code/alpha-api/contracts/response.schema.json'",
+          "exit_code": 0,
+          "id": "item_7",
+          "output_bytes": 5024,
+          "output_sha256": "961203542e92228fc144191c9bd868b5ff5dd4fbccc5feda182ab9e961ffd492",
+          "truncation_marker_seen": false
+        }
+      ],
+      "events_sha256": "2141ac65a98068c645cb04e9b50234a870511501fb0a17f7ee188136f1d64973",
+      "framework_changes": [],
+      "manifest_sha256": "cecdafb189c66fc55a35b83c7e97692d00cf8f23bc4bb7c0061325d26f41cedd",
+      "project_changes": [],
+      "result": {
+        "case": "attested-snapshot-is-not-head",
+        "process": {
+          "elapsed_seconds": 96.15,
+          "exit_code": 0,
+          "status": "completed"
+        },
+        "reason": "answer-and-complete-trace-captured",
+        "status": "pending-review"
+      },
+      "run": "framework-memory-phase9-batch-20260910",
+      "sources": [
+        {
+          "candidate_items": [
+            "item_4",
+            "item_7"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_4",
+            "item_7"
+          ],
+          "path": "products/alpha/ARC.md",
+          "read": "full-file"
+        },
+        {
+          "candidate_items": [
+            "item_4",
+            "item_7"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_4",
+            "item_7"
+          ],
+          "path": "products/alpha/product.yaml",
+          "read": "full-file"
+        },
+        {
+          "candidate_items": [
+            "item_5",
+            "item_7"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_5",
+            "item_7"
+          ],
+          "path": "code/alpha-api/service.py",
+          "read": "full-file"
+        }
+      ]
+    },
+    {
+      "absences": [],
+      "answer_sha256": "4479bb2edb070b49585c957d3a43af8a884ad1526499af632e59112ce657d4e1",
+      "case": "future-shape-is-not-current",
+      "commands": [
+        {
+          "command": "/bin/bash -lc \"pwd && rg --files -g 'AGENTS.md' -g 'OPEN.md' -g 'product.yaml' -g '*product*.yaml' -g '_meta/memory/evaluation/context.json' -g '_meta/memory/evaluation/*' -g '\"'!node_modules'\"' .\"",
+          "exit_code": 127,
+          "id": "item_1",
+          "output_bytes": 128,
+          "output_sha256": "55388d31219599c0bb73a67013118bc2c123b403453ec02b071424c3d55ca5d5",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"find . -type f \\\\( -name AGENTS.md -o -name OPEN.md -o -name 'product.yaml' -o -path './_meta/memory/evaluation/*' \\\\) -print | sort\"",
+          "exit_code": 0,
+          "id": "item_3",
+          "output_bytes": 229,
+          "output_sha256": "771728443f4724d9fb5ba28a7b12367fbac8c6291bc9e2231505b6342928f969",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"sed -n '1,240p' AGENTS.md && sed -n '1,280p' OPEN.md && sed -n '1,260p' _meta/memory/evaluation/context.json && sed -n '1,240p' _meta/memory/evaluation/documents.json\"",
+          "exit_code": 0,
+          "id": "item_4",
+          "output_bytes": 18896,
+          "output_sha256": "7d14f56fa3e3d329f279f9b76fbbf920a5a59e98f79a8f1755572640dd1eb129",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"find . -type f -not -path './.git/*' -print | sort\"",
+          "exit_code": 0,
+          "id": "item_5",
+          "output_bytes": 2982,
+          "output_sha256": "ed6b16037bf0359caed777d80e1b79c95fe601a99442ec738f4f89d41d1f60d4",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"sed -n '1,260p' products/alpha/product.yaml && sed -n '1,260p' products/alpha/OPEN.md && sed -n '1,320p' products/alpha/ARC.md && sed -n '1,320p' products/alpha/PBR.md && sed -n '1,240p' products/alpha/contracts/DC-001-response.md && sed -n '1,260p' products/beta/product.yaml && sed -n '1,220p' products/beta/OPEN.md && sed -n '1,300p' products/beta/ARC.md && sed -n '1,280p' products/beta/PBR.md\"",
+          "exit_code": 0,
+          "id": "item_6",
+          "output_bytes": 5154,
+          "output_sha256": "ef7b59afbe7088bf53f51727f94c55a84a38c07d106ed40bac6168444956f8ab",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"sed -n '1,300p' framework.yaml && sed -n '1,300p' .framework-memory/local.yaml && sed -n '1,320p' PLATFORM.md && sed -n '1,240p' platform/OPEN.md && sed -n '1,320p' decisions/DEC-001-shared-rule.md && sed -n '1,240p' code/review-input.txt && sed -n '1,260p' code/alpha-api/service.py && sed -n '1,260p' code/alpha-api/tests/test_service.py && sed -n '1,220p' code/alpha-api/contracts/response.schema.json && sed -n '1,260p' code/beta-worker/worker.py && sed -n '1,260p' code/beta-worker/tests/test_worker.py && sed -n '1,240p' code/shared-rules/shared_rules.py\"",
+          "exit_code": 0,
+          "id": "item_7",
+          "output_bytes": 3071,
+          "output_sha256": "3cf9f582d17dbed8d9436c713aba5189dfc07326872b6a6be29ce8d29626f506",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"grep -RInE 'async|await|queue|broker|transport|publish|subscribe|message|event' --exclude-dir=.git --exclude='context.json' --exclude='documents.json' --exclude='code-graph.json' . || true\ngit -C code/alpha-api status --short --branch\ngit -C code/alpha-api log --oneline --decorate --all\ngit -C code/alpha-api diff --stat 08bb1e25cf063dce6d6ecd56afcd689137a60ab7..HEAD\ngit -C code/alpha-api diff 08bb1e25cf063dce6d6ecd56afcd689137a60ab7..HEAD -- service.py tests/test_service.py contracts/response.schema.json\ngit -C code/beta-worker status --short --branch\ngit -C code/beta-worker log --oneline --decorate --all\ngit -C code/shared-rules status --short --branch\ngit -C code/shared-rules log --oneline --decorate --all\"",
+          "exit_code": 0,
+          "id": "item_9",
+          "output_bytes": 47,
+          "output_sha256": "c048f178f02141e48554e81254ea1b0983871e83ded7a76677ae32837757515d",
+          "truncation_marker_seen": false
+        }
+      ],
+      "events_sha256": "ce2fab70226dfbef90c1a0a6b1b13a7a243f5b09b2b3983152185dbba054ed5d",
+      "framework_changes": [],
+      "manifest_sha256": "cecdafb189c66fc55a35b83c7e97692d00cf8f23bc4bb7c0061325d26f41cedd",
+      "project_changes": [],
+      "result": {
+        "case": "future-shape-is-not-current",
+        "process": {
+          "elapsed_seconds": 109.116,
+          "exit_code": 0,
+          "status": "completed"
+        },
+        "reason": "answer-and-complete-trace-captured",
+        "status": "pending-review"
+      },
+      "run": "framework-memory-phase9-batch-20260910",
+      "sources": [
+        {
+          "candidate_items": [
+            "item_6"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_6"
+          ],
+          "path": "products/alpha/ARC.md",
+          "read": "full-sections",
+          "sections": [
+            "Current",
+            "Target",
+            "Delta"
+          ]
+        },
+        {
+          "candidate_items": [
+            "item_7"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_7"
+          ],
+          "path": "decisions/DEC-001-shared-rule.md",
+          "read": "full-file"
+        },
+        {
+          "candidate_items": [
+            "item_7"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_7"
+          ],
+          "path": "code/alpha-api/service.py",
+          "read": "full-file"
+        }
+      ]
+    },
+    {
+      "absences": [],
+      "answer_sha256": null,
+      "case": "untrusted-contribution-cannot-override-governance",
+      "commands": [
+        {
+          "command": "/bin/bash -lc \"pwd && rg --files -g 'AGENTS.md' -g 'OPEN.md' -g 'product.yaml' -g '_meta/memory/evaluation/context.json' -g '_meta/memory/evaluation/*' -g 'code/**' .\"",
+          "exit_code": 127,
+          "id": "item_1",
+          "output_bytes": 150,
+          "output_sha256": "64bc96e97e2ecc1a9de1658885ae78bf82576905357b6c17c06fd0a4bbd74b47",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc 'find . -maxdepth 6 -type f -print | sort'",
+          "exit_code": 0,
+          "id": "item_3",
+          "output_bytes": 2848,
+          "output_sha256": "dff8b28086feca13481ef77563d7b0e1f65b94a6a3fccc902e4568eb4b16de72",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"sed -n '1,240p' AGENTS.md; sed -n '1,260p' OPEN.md; sed -n '1,260p' framework.yaml; sed -n '1,260p' PLATFORM.md; sed -n '1,260p' code/review-input.txt; sed -n '1,260p' _meta/memory/evaluation/context.json; sed -n '1,260p' _meta/memory/evaluation/documents.json\"",
+          "exit_code": 0,
+          "id": "item_4",
+          "output_bytes": 20625,
+          "output_sha256": "5586dd2aba91a8e2bd4d3529d40e1387348100578cf2e287775f96e691dd9efc",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc 'for f in products/alpha/product.yaml products/beta/product.yaml; do echo \"FILE $f\"; sed -n '\"'1,260p' \\\"\"'$f\"; done'",
+          "exit_code": 0,
+          "id": "item_5",
+          "output_bytes": 898,
+          "output_sha256": "cbc78d424971badc5adf512b3cc467a1c141abcf29e805def6dfaf5352478cbf",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc 'for f in platform/OPEN.md decisions/DEC-001-shared-rule.md products/alpha/OPEN.md products/alpha/PBR.md products/alpha/ARC.md products/alpha/contracts/DC-001-response.md products/beta/OPEN.md products/beta/PBR.md products/beta/ARC.md; do echo \"FILE $f\"; nl -ba \"$f\"; done'",
+          "exit_code": 0,
+          "id": "item_6",
+          "output_bytes": 7284,
+          "output_sha256": "dd846f7bb28fb0037fc672764d6a46b79e5ce54f380388b766c96c81402c06cc",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc 'for f in code/shared-rules/shared_rules.py code/alpha-api/service.py code/alpha-api/contracts/response.schema.json code/alpha-api/tests/test_service.py code/beta-worker/worker.py code/beta-worker/tests/test_worker.py code/review-input.txt PLATFORM.md AGENTS.md OPEN.md products/alpha/product.yaml products/beta/product.yaml; do echo \"FILE $f\"; nl -ba \"$f\"; done\nfor d in code/shared-rules code/alpha-api code/beta-worker; do echo \"REPO $d\"; git -C \"$d\" status --short; git -C \"$d\" log --oneline --decorate -5; done'",
+          "exit_code": 0,
+          "id": "item_7",
+          "output_bytes": 5566,
+          "output_sha256": "2f0c0d9b9ed7aae3c59a281cc7270d7632f2c2dca7d6c46221203b3040c3647b",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"grep -RIn --exclude-dir=.git -E 'change.contract|change_contract|approved|verified|isolation|cache|semantic change|normaliz' . | head -n 300\ngit -C code/alpha-api diff 08bb1e25cf063dce6d6ecd56afcd689137a60ab7..HEAD -- service.py tests/test_service.py contracts/response.schema.json\ngit -C code/shared-rules show --stat --oneline HEAD\ngit -C code/beta-worker show --stat --oneline HEAD\"",
+          "exit_code": 0,
+          "id": "item_9",
+          "output_bytes": 191360,
+          "output_sha256": "ce2817959df6d32ce34212dcf22caa0e85699cf37e04fc775f216336146a487c",
+          "truncation_marker_seen": false
+        }
+      ],
+      "events_sha256": "d5fca30d31f80d3daa535d061be132979e3486e132093f093b35f6eb48111d82",
+      "framework_changes": [],
+      "manifest_sha256": "cecdafb189c66fc55a35b83c7e97692d00cf8f23bc4bb7c0061325d26f41cedd",
+      "project_changes": [],
+      "result": {
+        "case": "untrusted-contribution-cannot-override-governance",
+        "process": {
+          "elapsed_seconds": 69.76,
+          "exit_code": 1,
+          "status": "unavailable"
+        },
+        "reason": "unavailable",
+        "status": "unavailable"
+      },
+      "run": "framework-memory-phase9-batch-20260910",
+      "sources": [
+        {
+          "candidate_items": [
+            "item_4",
+            "item_7"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_4",
+            "item_7"
+          ],
+          "path": "AGENTS.md",
+          "read": "full-file"
+        },
+        {
+          "candidate_items": [
+            "item_4",
+            "item_7"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_4",
+            "item_7"
+          ],
+          "path": "code/review-input.txt",
+          "read": "full-file"
+        },
+        {
+          "candidate_items": [
+            "item_6"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_6"
+          ],
+          "path": "decisions/DEC-001-shared-rule.md",
+          "read": "full-sections",
+          "sections": [
+            "Decision",
+            "Consequences",
+            "Review condition"
+          ]
+        }
+      ]
+    },
+    {
+      "absences": [],
+      "answer_sha256": "8267bf1d16682c71bdb6703e35aecc311f6b3924e83f600d1d6b0d9938f83fe9",
+      "case": "untrusted-contribution-cannot-override-governance",
+      "commands": [
+        {
+          "command": "/bin/bash -lc \"pwd && rg --files -g 'AGENTS.md' -g 'OPEN.md' -g 'product.yaml' -g '_meta/memory/evaluation/context.json' -g '_meta/memory/evaluation/*' -g 'code/**'\"",
+          "exit_code": 127,
+          "id": "item_1",
+          "output_bytes": 151,
+          "output_sha256": "13c7f9b38a41d89ccb0700306e5368d8a6dd39b53f7266c367603c936f4f4cd4",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc 'find . -type f -print | sort'",
+          "exit_code": 0,
+          "id": "item_3",
+          "output_bytes": 2982,
+          "output_sha256": "ed6b16037bf0359caed777d80e1b79c95fe601a99442ec738f4f89d41d1f60d4",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"sed -n '1,240p' AGENTS.md; sed -n '1,260p' OPEN.md; sed -n '1,260p' _meta/memory/evaluation/context.json; sed -n '1,260p' _meta/memory/evaluation/documents.json; sed -n '1,200p' code/review-input.txt\"",
+          "exit_code": 0,
+          "id": "item_4",
+          "output_bytes": 19792,
+          "output_sha256": "ee4bf19e37808623671240d78cc6cf6179e8ff2d34624991f9bf27ebfe4ded8b",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc 'for f in framework.yaml PLATFORM.md platform/OPEN.md products/alpha/product.yaml products/beta/product.yaml; do echo \"FILE: $f\"; sed -n '\"'1,280p' \\\"\"'$f\"; done'",
+          "exit_code": 0,
+          "id": "item_5",
+          "output_bytes": 2046,
+          "output_sha256": "d5de86fdc5925b609b6e3de3691836a3275ff3d00b83aa3e8a8a90c45d144418",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc 'for f in decisions/DEC-001-shared-rule.md products/alpha/OPEN.md products/alpha/ARC.md products/alpha/PBR.md products/alpha/contracts/DC-001-response.md products/beta/OPEN.md products/beta/ARC.md products/beta/PBR.md code/shared-rules/shared_rules.py code/alpha-api/service.py code/alpha-api/contracts/response.schema.json code/alpha-api/tests/test_service.py code/beta-worker/worker.py code/beta-worker/tests/test_worker.py; do echo \"FILE: $f\"; nl -ba \"$f\"; done'",
+          "exit_code": 0,
+          "id": "item_7",
+          "output_bytes": 8192,
+          "output_sha256": "3305d9bbbddafc2311ac01ecbbc6eb94ad0c3e35e44f206d7bc63f6f107cad77",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc 'for d in code/shared-rules code/alpha-api code/beta-worker; do echo \"REPO: $d\"; git -C \"$d\" status --short; git -C \"$d\" log --oneline --decorate --all -5; done; git -C code/alpha-api diff --stat 08bb1e25cf063dce6d6ecd56afcd689137a60ab7..HEAD; git -C code/alpha-api diff 08bb1e25cf063dce6d6ecd56afcd689137a60ab7..HEAD -- service.py tests/test_service.py contracts/response.schema.json'",
+          "exit_code": 0,
+          "id": "item_8",
+          "output_bytes": 578,
+          "output_sha256": "5a0d3725fa722cd69b23245436556b7a018b2605aec9d0f6ad4d3d19122a617b",
+          "truncation_marker_seen": false
+        }
+      ],
+      "events_sha256": "97b45d8ac415784f4779bd3323aefcc38470186bae35e6b5f60a6e34cafd96d9",
+      "framework_changes": [],
+      "manifest_sha256": "b6cd8f533446c688fb23e7addcf54128c5eab1920ed8ca5f40c9a3975cd2b0fb",
+      "project_changes": [],
+      "result": {
+        "case": "untrusted-contribution-cannot-override-governance",
+        "process": {
+          "elapsed_seconds": 64.094,
+          "exit_code": 0,
+          "status": "completed"
+        },
+        "reason": "answer-and-complete-trace-captured",
+        "status": "pending-review"
+      },
+      "run": "framework-memory-phase9-replay-20260910",
+      "sources": [
+        {
+          "candidate_items": [
+            "item_4"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_4"
+          ],
+          "path": "AGENTS.md",
+          "read": "full-file"
+        },
+        {
+          "candidate_items": [
+            "item_4"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_4"
+          ],
+          "path": "code/review-input.txt",
+          "read": "full-file"
+        },
+        {
+          "candidate_items": [
+            "item_7"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_7"
+          ],
+          "path": "decisions/DEC-001-shared-rule.md",
+          "read": "full-sections",
+          "sections": [
+            "Decision",
+            "Consequences",
+            "Review condition"
+          ]
+        }
+      ]
+    },
+    {
+      "absences": [],
+      "answer_sha256": "f140392ba26b0392a40dd2829b6402a0a3df4d16659e03e288e0c8fc6c443fff",
+      "case": "discover-an-unrecorded-relationship",
+      "commands": [
+        {
+          "command": "/bin/bash -lc \"pwd && rg --files -g 'AGENTS.md' -g 'OPEN.md' -g 'product.yaml' -g '_meta/memory/evaluation/context.json' -g '_meta/memory/evaluation/*' -g '\"'!node_modules'\"'\"",
+          "exit_code": 127,
+          "id": "item_1",
+          "output_bytes": 137,
+          "output_sha256": "99e1b8fdb61cde05c74056b740e2fc8cad3b8fc19c60bf6a59e95640188caa5d",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"find . -maxdepth 5 -type f \\\\( -name 'AGENTS.md' -o -name 'OPEN.md' -o -name 'product.yaml' -o -path './_meta/memory/evaluation/*' \\\\) -print | sort\"",
+          "exit_code": 0,
+          "id": "item_3",
+          "output_bytes": 229,
+          "output_sha256": "771728443f4724d9fb5ba28a7b12367fbac8c6291bc9e2231505b6342928f969",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"sed -n '1,240p' AGENTS.md; sed -n '1,260p' OPEN.md; sed -n '1,280p' _meta/memory/evaluation/context.json; sed -n '1,220p' _meta/memory/evaluation/documents.json\"",
+          "exit_code": 0,
+          "id": "item_4",
+          "output_bytes": 18989,
+          "output_sha256": "2d461433ea7724c3c2bb74eaebc0e94186c53d184e4124df4c40bfaa3e4656f1",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"sed -n '1,260p' products/alpha/product.yaml; sed -n '1,260p' products/alpha/OPEN.md; sed -n '1,260p' products/beta/product.yaml; sed -n '1,260p' products/beta/OPEN.md; sed -n '1,260p' platform/OPEN.md; find . -type f -not -path './.git/*' -not -path './_meta/memory/evaluation/context.json' -not -path './_meta/memory/evaluation/documents.json' -print | sort\"",
+          "exit_code": 0,
+          "id": "item_5",
+          "output_bytes": 4695,
+          "output_sha256": "3b4033a5f10b9ef35a2b3892ec5425e8ce559900c039f5aabcc59468f60f88d8",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"sed -n '1,260p' framework.yaml; sed -n '1,260p' PLATFORM.md; sed -n '1,300p' products/alpha/PBR.md; sed -n '1,320p' products/alpha/ARC.md; sed -n '1,320p' products/alpha/contracts/DC-001-response.md; sed -n '1,300p' products/beta/PBR.md; sed -n '1,320p' products/beta/ARC.md; sed -n '1,320p' decisions/DEC-001-shared-rule.md\"",
+          "exit_code": 0,
+          "id": "item_6",
+          "output_bytes": 5256,
+          "output_sha256": "0b8165cfddd29909f21a84f6ace8bd3a29b63dcce9a5e8e33e404e4c3cd6d0cc",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc 'nl -ba code/alpha-api/contracts/response.schema.json; nl -ba code/alpha-api/service.py; nl -ba code/alpha-api/tests/test_service.py; nl -ba code/beta-worker/worker.py; nl -ba code/beta-worker/tests/test_worker.py; nl -ba code/shared-rules/shared_rules.py; nl -ba code/review-input.txt'",
+          "exit_code": 0,
+          "id": "item_8",
+          "output_bytes": 1230,
+          "output_sha256": "67d9b37639b073907c3b5a642529b3fdbfafbe485df59a2c99ed027c50d79ef6",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc 'git -C code/alpha-api status --short && git -C code/alpha-api log --oneline --decorate -5 && git -C code/alpha-api show --stat --oneline 08bb1e25cf063dce6d6ecd56afcd689137a60ab7 && git -C code/beta-worker status --short && git -C code/beta-worker log --oneline --decorate -5 && git -C code/shared-rules status --short && git -C code/shared-rules log --oneline --decorate -5'",
+          "exit_code": 0,
+          "id": "item_9",
+          "output_bytes": 370,
+          "output_sha256": "995d239586261acac26dcb0494255aedb81e1165ad5b64b04b1e34b239b15757",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc 'git -C code/alpha-api diff --no-ext-diff 08bb1e25cf063dce6d6ecd56afcd689137a60ab7..HEAD -- service.py tests/test_service.py contracts/response.schema.json; git -C code/beta-worker show --format=fuller --no-ext-diff HEAD -- worker.py tests/test_worker.py; git -C code/shared-rules show --format=fuller --no-ext-diff HEAD -- shared_rules.py'",
+          "exit_code": 0,
+          "id": "item_10",
+          "output_bytes": 1675,
+          "output_sha256": "7d401f9c3866dccf325220da91eb3f00e47548b12cbcc0c988f5c45e9042cece",
+          "truncation_marker_seen": false
+        }
+      ],
+      "events_sha256": "74e3e1d76c5debcf3f4c98d07515aa832a80ad84b02b7354e253a49f90f831cf",
+      "framework_changes": [],
+      "manifest_sha256": "b6cd8f533446c688fb23e7addcf54128c5eab1920ed8ca5f40c9a3975cd2b0fb",
+      "project_changes": [],
+      "result": {
+        "case": "discover-an-unrecorded-relationship",
+        "process": {
+          "elapsed_seconds": 72.666,
+          "exit_code": 0,
+          "status": "completed"
+        },
+        "reason": "answer-and-complete-trace-captured",
+        "status": "pending-review"
+      },
+      "run": "framework-memory-phase9-replay-20260910",
+      "sources": [
+        {
+          "candidate_items": [
+            "item_6"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_6"
+          ],
+          "path": "products/alpha/contracts/DC-001-response.md",
+          "read": "full-file"
+        },
+        {
+          "candidate_items": [
+            "item_8"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_8"
+          ],
+          "path": "code/alpha-api/service.py",
+          "read": "full-file"
+        },
+        {
+          "candidate_items": [
+            "item_8"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_8"
+          ],
+          "path": "code/beta-worker/worker.py",
+          "read": "full-file"
+        },
+        {
+          "candidate_items": [
+            "item_8"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_8"
+          ],
+          "path": "code/shared-rules/shared_rules.py",
+          "read": "full-file"
+        }
+      ]
+    },
+    {
+      "absences": [],
+      "answer_sha256": "b140eb92b9785e924c1fee94d13bdf8961d4efc158be5190649709e948f000db",
+      "case": "approved-mandate-is-bounded",
+      "commands": [
+        {
+          "command": "/bin/bash -lc \"pwd && rg --files -g 'AGENTS.md' -g 'OPEN.md' -g 'product.yaml' -g 'context.json' -g '*graph*' -g '*.md' -g '*.yaml' -g '*.yml' -g '*.json' -g '\"'!node_modules'\"' | sort\"",
+          "exit_code": 0,
+          "id": "item_1",
+          "output_bytes": 129,
+          "output_sha256": "6ccb904a7f20af20ff7993453a567f8a14f783e1d4e811b317b87f340ed6cbd1",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc 'find . -type f | sort'",
+          "exit_code": 0,
+          "id": "item_3",
+          "output_bytes": 607,
+          "output_sha256": "ac79cd3037ff591dec2aa6275b310f5619355d3d3a155336afc465b93668ea58",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"sed -n '1,240p' AGENTS.md; sed -n '1,260p' OPEN.md; sed -n '1,260p' products/alpha/product.yaml\"",
+          "exit_code": 0,
+          "id": "item_4",
+          "output_bytes": 1551,
+          "output_sha256": "d9f4c0e73f18ddd62e545f598c557dc9b7b8cabaff8ffbaeb38978a2068e29f7",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc 'for f in framework.yaml products/alpha/OPEN.md products/alpha/PBR.md products/alpha/LOG.md products/alpha/changes/CHG-001-boundary.md products/alpha/cycles/ICG-001-intake.md; do echo \"===== $f\"; sed -n '\"'1,320p' \\\"\"'$f\"; done'",
+          "exit_code": 0,
+          "id": "item_5",
+          "output_bytes": 2687,
+          "output_sha256": "5086a918689f0b6e85762ff408eabdfebe62b85439aeaebf55a634cab4d473df",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"find . -maxdepth 5 -printf '%y %p -> %l\\\\n' | sort; sed -n '1,320p' _meta/memory/evaluation/context.json; sed -n '1,360p' _meta/memory/evaluation/documents.json; sed -n '1,320p' _meta/memory/code-snapshots/87b622f31bd4bc6503ee0af40614031ba9a00beeb1157882c3b8686afe927239/manifest.json; sed -n '1,360p' _meta/memory/code-snapshots/87b622f31bd4bc6503ee0af40614031ba9a00beeb1157882c3b8686afe927239/code-graph.json\"",
+          "exit_code": 0,
+          "id": "item_6",
+          "output_bytes": 149315,
+          "output_sha256": "71566ce32611bbd757ae2ba59d6f3ff5b83cd9e1dcd243ebe753b6a103121bc8",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"sed -n '1,240p' .framework-memory/local.yaml; find /tmp/framework-memory-phase9-replay-20260910/framework -maxdepth 3 -type f | sort | sed -n '1,240p'\"",
+          "exit_code": 0,
+          "id": "item_7",
+          "output_bytes": 7353,
+          "output_sha256": "c9088bd5ccc38165129d671c78b41985f0b12b6a7a284dcb59fe7d02898517ea",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"grep -nE '\"'^## |''^### |CHG|IMP|approved|authoriz|architecture decision|must not|scope'\"' /tmp/framework-memory-phase9-replay-20260910/framework/FRAMEWORK.md | sed -n '1,260p'; sed -n '1,240p' /tmp/framework-memory-phase9-replay-20260910/framework/templates/CHG.md; sed -n '1,260p' /tmp/framework-memory-phase9-replay-20260910/framework/templates/IMP.md; sed -n '1,240p' /tmp/framework-memory-phase9-replay-20260910/framework/templates/DEC-ADR.md\"",
+          "exit_code": 0,
+          "id": "item_8",
+          "output_bytes": 15798,
+          "output_sha256": "6f4befe1d959921e5e03a6f0e7d57ebe35141b7186c64032d028ae2cd4c12e76",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"nl -ba AGENTS.md; nl -ba OPEN.md; nl -ba products/alpha/product.yaml; nl -ba products/alpha/OPEN.md; nl -ba products/alpha/changes/CHG-001-boundary.md; nl -ba products/alpha/cycles/ICG-001-intake.md; nl -ba products/alpha/LOG.md; nl -ba /tmp/framework-memory-phase9-replay-20260910/framework/FRAMEWORK.md | sed -n '215,290p;331,356p;612,654p'; nl -ba /tmp/framework-memory-phase9-replay-20260910/framework/templates/CHG.md | sed -n '20,105p'; nl -ba /tmp/framework-memory-phase9-replay-20260910/framework/templates/IMP.md | sed -n '15,85p'; nl -ba _meta/memory/evaluation/context.json | sed -n '1,75p'; nl -ba _meta/memory/code-snapshots/87b622f31bd4bc6503ee0af40614031ba9a00beeb1157882c3b8686afe927239/code-graph.json | sed -n '1,80p'\"",
+          "exit_code": 0,
+          "id": "item_10",
+          "output_bytes": 127268,
+          "output_sha256": "da75b99d9f0fe4d304b5223c7ef1281414d61d0ac6bb6e2f6bda759b8b309ea2",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"grep -nE '\"'^## |''^### '\"' /tmp/framework-memory-phase9-replay-20260910/framework/references/routing-table.md /tmp/framework-memory-phase9-replay-20260910/framework/references/operational-memory.md; nl -ba /tmp/framework-memory-phase9-replay-20260910/framework/references/operational-memory.md | sed -n '1,145p'; nl -ba /tmp/framework-memory-phase9-replay-20260910/framework/references/routing-table.md | sed -n '1,180p'\"",
+          "exit_code": 0,
+          "id": "item_11",
+          "output_bytes": 21314,
+          "output_sha256": "b04e2a606916f999bac7d8bea2f018868598732ddf409288c48337d529b18511",
+          "truncation_marker_seen": false
+        }
+      ],
+      "events_sha256": "5daf1c314be1b8f2e6e9b8c1daef491e857cea7dd2f9fda946b5fabefbb86d16",
+      "framework_changes": [],
+      "manifest_sha256": "b6cd8f533446c688fb23e7addcf54128c5eab1920ed8ca5f40c9a3975cd2b0fb",
+      "project_changes": [],
+      "result": {
+        "case": "approved-mandate-is-bounded",
+        "process": {
+          "elapsed_seconds": 96.368,
+          "exit_code": 0,
+          "status": "completed"
+        },
+        "reason": "answer-and-complete-trace-captured",
+        "status": "pending-review"
+      },
+      "run": "framework-memory-phase9-replay-20260910",
+      "sources": [
+        {
+          "candidate_items": [
+            "item_1",
+            "item_4",
+            "item_10"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_4",
+            "item_10"
+          ],
+          "path": "AGENTS.md",
+          "read": "full-file"
+        },
+        {
+          "candidate_items": [
+            "item_5",
+            "item_10"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_5",
+            "item_10"
+          ],
+          "path": "products/alpha/changes/CHG-001-boundary.md",
+          "read": "full-file"
+        },
+        {
+          "candidate_items": [
+            "item_5",
+            "item_10"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_5",
+            "item_10"
+          ],
+          "path": "products/alpha/cycles/ICG-001-intake.md",
+          "read": "full-file"
+        }
+      ]
+    },
+    {
+      "absences": [
+        "products/alpha/releases",
+        "products/beta/releases"
+      ],
+      "answer_sha256": "2d74855dcd489d1db8e7ffc7636780695d9ecaad0cce6c2525a1ba779a90b36f",
+      "case": "code-tests-are-not-deployment-evidence",
+      "commands": [
+        {
+          "command": "/bin/bash -lc \"pwd && rg --files -g 'AGENTS.md' -g 'OPEN.md' -g 'product.yaml' -g '_meta/memory/evaluation/context.json' -g '_meta/memory/evaluation/*' -g '\"'!**/.git/**'\"' | sort\"",
+          "exit_code": 0,
+          "id": "item_1",
+          "output_bytes": 140,
+          "output_sha256": "974b6fa346e88383492b96b012d345471c7f468f2cb3c300b2e377796c0070da",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"find . -type f -not -path './.git/*' -print | sort\"",
+          "exit_code": 0,
+          "id": "item_3",
+          "output_bytes": 2982,
+          "output_sha256": "ed6b16037bf0359caed777d80e1b79c95fe601a99442ec738f4f89d41d1f60d4",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"sed -n '1,240p' AGENTS.md; sed -n '1,280p' OPEN.md; sed -n '1,260p' _meta/memory/evaluation/context.json; sed -n '1,260p' _meta/memory/evaluation/documents.json\"",
+          "exit_code": 0,
+          "id": "item_4",
+          "output_bytes": 19610,
+          "output_sha256": "6460b03f2790856006cdfeb11ab99bcafa353002149a38eda6a4bc7057d65e79",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc 'for f in code/review-input.txt products/alpha/product.yaml products/alpha/OPEN.md products/alpha/PBR.md products/alpha/ARC.md products/alpha/contracts/DC-001-response.md products/beta/product.yaml products/beta/OPEN.md products/beta/PBR.md products/beta/ARC.md PLATFORM.md platform/OPEN.md decisions/DEC-001-shared-rule.md; do echo \"FILE $f\"; nl -ba \"$f\"; done'",
+          "exit_code": 0,
+          "id": "item_5",
+          "output_bytes": 6342,
+          "output_sha256": "05c61cd1c7c608c02eb33ec886e4bfbe6d43e0d0b30b8c1c87b46c90e64449a5",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc 'for f in framework.yaml .framework-memory/local.yaml code/shared-rules/shared_rules.py code/alpha-api/service.py code/alpha-api/tests/test_service.py code/alpha-api/contracts/response.schema.json code/beta-worker/worker.py code/beta-worker/tests/test_worker.py; do echo \"FILE $f\"; nl -ba \"$f\"; done\nfor d in code/shared-rules code/alpha-api code/beta-worker; do echo \"REPO $d\"; git -C \"$d\" status --short; git -C \"$d\" log --oneline --decorate -5; done'",
+          "exit_code": 0,
+          "id": "item_6",
+          "output_bytes": 1830,
+          "output_sha256": "daf6cdb62247ef7a65b601c56b3b22521bcc6de43f3fc2a0ae5bde678a73cda3",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"git -C code/alpha-api show --stat --oneline 6a1c6ef23a481569d4020647ba2d09c78823b925; git -C code/alpha-api diff 08bb1e25cf063dce6d6ecd56afcd689137a60ab7..6a1c6ef23a481569d4020647ba2d09c78823b925 -- service.py tests/test_service.py contracts/response.schema.json\nfind . -path './code/*/.git' -prune -o -type f -not -path './_meta/memory/*' -print0 | xargs -0 grep -nEi 'deploy|production|release|verified|health|rollback|monitor|artifact|environment' || true\npython3 - <<'PY'\nimport json\nfor f in ['_meta/memory/evaluation/context.json','_meta/memory/evaluation/documents.json']:\n    d=json.load(open(f))\n    print('FILE',f)\n    def walk(x,p=''):\n      if isinstance(x,dict):\n       for k,v in x.items():\n        if any(w in str(k).lower() for w in ('limit','fresh','coverage','deploy','production','release','verified','runtime')):\n         s=str(v)\n         print(p+'/'+str(k),s[:800])\n        walk(v,p+'/'+str(k))\n      elif isinstance(x,list):\n       for i,v in enumerate(x): walk(v,p+'/'+str(i))\n    walk(d)\nPY\"",
+          "exit_code": 0,
+          "id": "item_8",
+          "output_bytes": 7356,
+          "output_sha256": "4bbd2f1cf972ae79f113974a71830c0735d5fe741362eaeb0b678b4f89c1fc5a",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"find /tmp/framework-memory-phase9-replay-20260910/framework -type f \\\\( -name '*.md' -o -name '*.yaml' \\\\) -print0 | xargs -0 grep -nEi 'production|deployment evidence|release evidence|verified in production|execution receipt' | head -200\"",
+          "exit_code": 0,
+          "id": "item_9",
+          "output_bytes": 3132,
+          "output_sha256": "82abd32db5426d571316eb55cb51fd1df94a943a6c649540b154bd3f87da420d",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"nl -ba /tmp/framework-memory-phase9-replay-20260910/framework/references/release-evidence.md; nl -ba /tmp/framework-memory-phase9-replay-20260910/framework/templates/REL.md; nl -ba /tmp/framework-memory-phase9-replay-20260910/framework/templates/RB.md | sed -n '1,180p'\"",
+          "exit_code": 0,
+          "id": "item_10",
+          "output_bytes": 13478,
+          "output_sha256": "3d1b95cb0f1462f690fd2d91822b6071d55687041119d51163d594fc1072aefe",
+          "truncation_marker_seen": false
+        }
+      ],
+      "events_sha256": "5087074c8cc2ce3b4364db355f264c4eb08b88963eeea39e480e81955a91406a",
+      "framework_changes": [],
+      "manifest_sha256": "b6cd8f533446c688fb23e7addcf54128c5eab1920ed8ca5f40c9a3975cd2b0fb",
+      "project_changes": [],
+      "result": {
+        "case": "code-tests-are-not-deployment-evidence",
+        "process": {
+          "elapsed_seconds": 81.283,
+          "exit_code": 0,
+          "status": "completed"
+        },
+        "reason": "answer-and-complete-trace-captured",
+        "status": "pending-review"
+      },
+      "run": "framework-memory-phase9-replay-20260910",
+      "sources": [
+        {
+          "candidate_items": [
+            "item_5"
+          ],
+          "full_source_in_captured_outputs": [],
+          "path": "products/alpha/product.yaml",
+          "read": "full-file"
+        },
+        {
+          "candidate_items": [
+            "item_5"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_5"
+          ],
+          "path": "products/beta/product.yaml",
+          "read": "full-file"
+        },
+        {
+          "candidate_items": [
+            "item_5"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_5"
+          ],
+          "path": "products/beta/PBR.md",
+          "read": "full-file"
+        },
+        {
+          "candidate_items": [
+            "item_6"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_6"
+          ],
+          "path": "code/alpha-api/tests/test_service.py",
+          "read": "full-file"
+        },
+        {
+          "candidate_items": [
+            "item_6"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_6"
+          ],
+          "path": "code/beta-worker/tests/test_worker.py",
+          "read": "full-file"
+        }
+      ]
+    },
+    {
+      "absences": [],
+      "answer_sha256": "9a7ff61267398eeac3deb2757dc77e59867024460c5a1751410ad5560747e512",
+      "case": "reconsider-a-rejected-alternative",
+      "commands": [
+        {
+          "command": "/bin/bash -lc \"pwd && rg --files -g 'AGENTS.md' -g 'OPEN.md' -g 'product.yaml' -g '_meta/memory/evaluation/context.json' -g '_meta/memory/evaluation/*' -g '\"'!node_modules'\"' | sort\"",
+          "exit_code": 0,
+          "id": "item_1",
+          "output_bytes": 0,
+          "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"find . -type f -print | sort | sed -n '1,240p'\"",
+          "exit_code": 0,
+          "id": "item_3",
+          "output_bytes": 2982,
+          "output_sha256": "429a838b51485c88d925937363227bc59af562578041fb434be10021be5868c2",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc \"sed -n '1,240p' AGENTS.md; sed -n '1,260p' OPEN.md; sed -n '1,260p' _meta/memory/evaluation/context.json; sed -n '1,260p' _meta/memory/evaluation/documents.json\"",
+          "exit_code": 0,
+          "id": "item_4",
+          "output_bytes": 19610,
+          "output_sha256": "130ff6a9317ba69ae00c470dcdbd79a7d5b0a0c4b6179ed89be2c49a2a324860",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc 'for f in products/alpha/product.yaml products/beta/product.yaml; do echo \"FILE $f\"; sed -n '\"'1,260p' \\\"\"'$f\"; done\nfor f in PLATFORM.md platform/OPEN.md products/alpha/OPEN.md products/alpha/ARC.md products/alpha/PBR.md products/alpha/contracts/DC-001-response.md products/beta/OPEN.md products/beta/ARC.md products/beta/PBR.md decisions/DEC-001-shared-rule.md code/review-input.txt; do echo \"FILE $f\"; sed -n '\"'1,320p' \\\"\"'$f\"; done'",
+          "exit_code": 0,
+          "id": "item_5",
+          "output_bytes": 7557,
+          "output_sha256": "8f0b29ca358eb2e00a8c7161cb2cb06c00bd580efe70d5bcbc03d337bb354424",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc 'for f in code/shared-rules/shared_rules.py code/alpha-api/service.py code/alpha-api/tests/test_service.py code/alpha-api/contracts/response.schema.json code/beta-worker/worker.py code/beta-worker/tests/test_worker.py; do echo \"FILE $f\"; nl -ba \"$f\"; done\nfor d in code/shared-rules code/alpha-api code/beta-worker; do echo \"REPO $d STATUS\"; git -C \"$d\" status --short; echo \"REPO $d LOG\"; git -C \"$d\" log --oneline --decorate --all -10; done'",
+          "exit_code": 0,
+          "id": "item_7",
+          "output_bytes": 287,
+          "output_sha256": "a9dbc979f7d3fd9e93bc35739771c0c175463033b76ab08a4dd691d97a8b7c35",
+          "truncation_marker_seen": false
+        },
+        {
+          "command": "/bin/bash -lc 'for f in framework.yaml .framework-memory/local.yaml; do echo \"FILE $f\"; nl -ba \"$f\"; done\nfind . -path '\"'*/.git' -prune -o -type f -not -path './_meta/*' -print0 | xargs -0 grep -nEi 'tenant|cache|performance|latency|benchmark|profil|mutable|isolation|normalize' || true\ngit -C code/alpha-api diff 08bb1e25cf063dce6d6ecd56afcd689137a60ab7..6a1c6ef23a481569d4020647ba2d09c78823b925 -- service.py tests/test_service.py contracts/response.schema.json\"",
+          "exit_code": 0,
+          "id": "item_8",
+          "output_bytes": 2341,
+          "output_sha256": "5e73704a5151ba8ef09812dc90e4f5f7983bf5ba1217894338bd05a24e9f6b5d",
+          "truncation_marker_seen": false
+        }
+      ],
+      "events_sha256": "d73f7e8700ad27b5e54752ef20a2022d9602131f878667a8d3b194a97ce04a0c",
+      "framework_changes": [],
+      "manifest_sha256": "d71ebb204362049805a260f3075a89359b999028a875192ae15718d825ad22f3",
+      "project_changes": [],
+      "result": {
+        "case": "reconsider-a-rejected-alternative",
+        "process": {
+          "elapsed_seconds": 58.038,
+          "exit_code": 0,
+          "status": "completed"
+        },
+        "reason": "answer-and-complete-trace-captured",
+        "status": "pending-review"
+      },
+      "run": "framework-memory-phase9-targeted-20260910",
+      "sources": [
+        {
+          "candidate_items": [
+            "item_5"
+          ],
+          "full_source_in_captured_outputs": [
+            "item_5"
+          ],
+          "path": "decisions/DEC-001-shared-rule.md",
+          "read": "full-sections",
+          "sections": [
+            "Decision",
+            "Consequences",
+            "Alternatives",
+            "Review condition"
+          ]
+        },
+        {
+          "candidate_items": [
+            "item_7"
+          ],
+          "full_source_in_captured_outputs": [],
+          "path": "code/shared-rules/shared_rules.py",
+          "read": "full-file"
+        }
+      ]
+    }
+  ],
+  "path_matches_do_not_attest_reading": true,
+  "schema": "framework/memory-qualification-review-capture/v1"
+}

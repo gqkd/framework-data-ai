@@ -2,8 +2,8 @@
 
 This directory preserves the phase-zero baseline and tests the scoped core, documentary
 memory, the separate code observer, operational engine, contribution and release gates.
-Historical reports are in `BASELINE.md` and `PHASE-1.md` through `PHASE-6.md`.
-The current phase handoff is `PHASE-7.md`: compatible adoption and complete source packaging.
+Historical reports are in `BASELINE.md` and `PHASE-1.md` through `PHASE-8.md`.
+The current phase handoff is `PHASE-9.md`: operational qualification and observed defects.
 No query or context pack is a task authorization.
 
 Run the deterministic suite from the framework checkout:
@@ -32,7 +32,8 @@ All products, repositories, documents and code in these fixtures are synthetic.
   the original generator and comprehension questions are unchanged.
 - `evals/behaviour/memory/cases.yaml` owns the fourteen comprehension questions, their
   required sources, expected answers and forbidden conclusions. `memory` names an eval
-  scenario group, not an eighth skill. Model evaluation has **not** been run.
+  scenario group, not an eighth skill. See `PHASE-9.md` for actual captures and review
+  limitations; the original `results: not-run` is the frozen baseline, not a live ledger.
 
 The generated files use the registry's current version and fixed synthetic review times.
 All other fixture meaning and acceptance criteria are versioned with this baseline;
@@ -64,13 +65,14 @@ The export fixture also starts the memory CLI without relying on the live checko
 
 ## Behavioural evaluation and safety
 
-The case file is compatible with the existing `evals/behaviour/run.py` scenario loader.
-That runner requires a separately available model CLI and currently permits edits in its
-disposable copy: read-only is an acceptance criterion, **not** an enforced sandbox mode.
-For any later run, inspect both the answer and the file diff; any unauthorized write is a
-critical failure even if the answer sounds correct. The runner does not automatically
-grade `must_include`, `must_not` or source-reading depth. No model run or score is claimed
-by the deterministic tests, which only validate the inputs and their references.
+Use the dedicated opt-in `evals/behaviour/memory/qualify.py`; its README owns the protocol.
+It preflights a Linux/WSL read-only, restricted-read, command-network-denied sandbox,
+captures full answers/events and detects additions, deletions, links and mode changes.
+No model executes in the deterministic suite or CI. Capture success is **pending review**,
+not comprehension success. Missing quota, interrupted turns and unproven isolation remain
+unavailable. Every mandatory/forbidden criterion and source-reading obligation needs review.
+The old generic `evals/behaviour/run.py` still permits edits for other artifact-producing
+skill evals; it is not the qualification runner. Its behaviour has not been changed.
 
 `test_code_provider.py` runs the offline phase-three gates with a controllable fake and
 strict synthetic receipt tests. Python imports, definitions, calls and source locations

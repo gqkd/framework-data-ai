@@ -14,6 +14,11 @@ STRUCTURAL = {"module", "symbol", "dependency", "test_ref", "file_ref"}
 DIRECT = {"calls", "imports", "declares", "implements", "instantiates", "names"}
 
 
+def structural_record(record):
+    # Provider aggregate/derived rows remain in records, never in the direct graph.
+    return record.get("kind") in STRUCTURAL and "derived" not in record.get("props", {})
+
+
 def identifier(kind, *values):
     return kind + ":" + digest(canonical(values))
 
@@ -114,7 +119,7 @@ def build_code(snapshot, documentary, provider, *, repositories=None, mode="work
                     raise
                 except (MemoryInputError, OSError):
                     observation = Observation("unavailable", problems=[dict(code="source-unavailable")])
-        unprojected = sum(r.get("kind") not in STRUCTURAL for r in observation.records)
+        unprojected = sum(not structural_record(r) for r in observation.records)
         indirect = sum(e.get("kind") not in DIRECT for r in observation.records for e in r.get("relations", []))
         if unprojected or indirect:
             observation.problems.append(dict(code="provider-evidence-not-projected", records=unprojected, relations=indirect))
@@ -161,7 +166,7 @@ def build_code(snapshot, documentary, provider, *, repositories=None, mode="work
             record_id = identifier("provider-record", document_id, repo, key, occurrence)
             raw_records.append(dict(id=record_id, repository=repo, occurrence=occurrence,
                                     role="provider-evidence-not-authority", record=record))
-            if record.get("kind") not in STRUCTURAL:
+            if not structural_record(record):
                 continue  # Kept as provider evidence, not promoted to structural fact.
             provider_id = record["id"]
             identity = (record["kind"], record["name"], record.get("file", ""))

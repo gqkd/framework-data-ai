@@ -116,7 +116,17 @@ def read_output(output: Path, files: dict[str, bytes], lock: dict) -> dict:
         path = record.get("file", "")
         if path and path != ".":
             safe_path(path)
-        if record["kind"] != "module" and path and path not in files:
+        # Enola emits package-coupling rollups with a directory locator. They are
+        # retained receipt evidence, NOT direct imports or invented file locations.
+        props = record.get("props", {})
+        rollup = (record["kind"] == "dependency" and isinstance(props, dict)
+                  and props.get("derived") == "symbol-rollup"
+                  and props.get("coupling_kind") == "symbol-rollup"
+                  and type(props.get("symbol_edges")) is int and props["symbol_edges"] > 0)
+        directory = path == "." or any(p.startswith(path + "/") for p in files)
+        directory_rollup = rollup and directory and not any(
+            key in record for key in ("line", "end_line", "column", "end_column"))
+        if record["kind"] != "module" and path and path not in files and not directory_rollup:
             raise ValueError("provider source lies outside the captured input")
         if record["kind"] == "module" and path != "." and not any(p.startswith(path + "/") for p in files):
             raise ValueError("provider module lies outside the captured input")

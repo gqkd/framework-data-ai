@@ -1133,7 +1133,14 @@
 # only in HTML exports. The provider stays separate. Tests cover source filtering,
 # revision mismatch, provenance, CSP, immutable atomic output and no product writes;
 # references/memory-viewer.md records limits and why navigation is not understanding.
-version: "3.8.0"
+# 3.8.0 -> 3.8.1. PATCH: accept the pinned observer's directory-located symbol
+# rollups as receipt evidence while excluding every derived row from direct code
+# traversal. Previously such a row rejected the entire Python observation. Synthetic
+# strict-reader and real-provider conformance tests cover the defect and forged paths.
+# No artifact repair, mandatory field, provider update or automatic adoption. Existing
+# code snapshots retain their identity; an explicitly requested fresh observation uses
+# changed generator hashes. Qualification tooling is opt-in and never a model-score gate.
+version: "3.8.1"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of
