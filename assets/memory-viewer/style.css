@@ -1,0 +1,43 @@
+:root { color-scheme: light; --ink:#152a41; --muted:#43566a; --line:#cbd5df; --blue:#174ec2; --surface:#f3f6fa; font:100%/1.5 system-ui,sans-serif; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--surface); color:var(--ink); }
+header { background:#112b45; color:white; display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:1.5rem 2rem; border-bottom:4px solid #5c91ff; }
+h1 { font-size:1.75rem; margin:.15rem 0 0; font-weight:600; letter-spacing:-.025em; }
+h2 { font-size:1rem; margin:0; }
+.eyebrow { font-size:.75rem; letter-spacing:.12em; color:#c6d8f3; }
+.badge { border:1px solid #9bb5d2; border-radius:2rem; padding:.35rem .85rem; font-size:.875rem; }
+main { padding:1.25rem 2rem 2rem; max-width:1800px; margin:auto; }
+.toolbar { display:flex; flex-wrap:wrap; gap:.75rem; align-items:end; }
+label { display:flex; flex-direction:column; gap:.25rem; font-size:.875rem; font-weight:600; }
+.search { flex:1; min-width:12rem; }
+input,select,button { font:inherit; font-size:.875rem; border:1px solid #8094a9; border-radius:.3rem; min-height:2.5rem; padding:.4rem .6rem; background:white; color:var(--ink); max-width:100%; }
+button { cursor:pointer; }
+button:hover { background:#e8f0ff; border-color:var(--blue); }
+:focus-visible { outline:3px solid #1864d7; outline-offset:3px; }
+.status { font-size:.875rem; padding:.65rem .8rem; border-left:3px solid var(--blue); background:#e6eefb; overflow-wrap:anywhere; }
+.workspace { display:grid; grid-template-columns:minmax(0,1fr) minmax(19rem,28%); gap:1rem; align-items:start; }
+.graph-panel,aside { background:white; border:1px solid var(--line); border-radius:.45rem; min-width:0; overflow:hidden; }
+.panel-heading { display:flex; justify-content:space-between; align-items:center; padding:.75rem 1rem; border-bottom:1px solid var(--line); }
+#graph { position:relative; overflow:hidden; height:470px; background:radial-gradient(#dbe3ec 1px,transparent 1px); background-size:18px 18px; }
+.legend { display:flex; flex-wrap:wrap; gap:.45rem; align-items:center; font-size:.75rem; color:var(--muted); margin:0; padding:.5rem 1rem; border-top:1px solid var(--line); }
+.dot { width:.65rem; height:.65rem; display:inline-block; border-radius:50%; background:var(--blue); }
+.dot.code { background:#087e80; }.dot.inferred { background:#8f3974; }
+details { border-top:1px solid var(--line); padding:.7rem 1rem; }
+summary { cursor:pointer; font-size:.875rem; font-weight:600; }
+.item-list { display:flex; flex-direction:column; gap:.4rem; max-height:16rem; overflow:auto; padding:.75rem .2rem .2rem; }
+.item-list button { text-align:left; overflow-wrap:anywhere; flex-shrink:0; }
+.item-list button[aria-pressed="true"] { border:2px solid var(--blue); background:#edf3ff; }
+aside > p, #selection, #sources { margin:0; padding:.8rem 1rem; }
+#selection-title { font-weight:650; overflow-wrap:anywhere; }
+#selection p { margin:.25rem 0; font-size:.875rem; overflow-wrap:anywhere; }
+#sources button { display:block; width:100%; text-align:left; margin:.5rem 0; overflow-wrap:anywhere; }
+pre { font:.8125rem/1.6 ui-monospace,monospace; white-space:pre-wrap; overflow-wrap:anywhere; max-height:28rem; overflow:auto; }
+.source-copy { background:#f3f6fa; border-left:3px solid #859ab2; padding:.5rem; }
+.source-copy p { overflow-wrap:anywhere; font-size:.8125rem; }
+.path-controls { padding:.75rem 1rem; border-top:1px solid var(--line); font-size:.875rem; }
+.path-controls p { overflow-wrap:anywhere; } button:disabled { opacity:.6; cursor:default; }
+#path-result { padding-left:1.25rem; overflow-wrap:anywhere; } #path-result button { margin:.25rem 0; text-align:left; }
+.diagnostics,.license { margin-top:1rem; border:1px solid var(--line); border-radius:.3rem; background:white; }
+#warnings { padding-left:1.2rem; font-size:.875rem; }
+@media(max-width:900px) { header { padding:1rem; } main { padding:1rem; } .workspace { grid-template-columns:1fr; } #graph { height:380px; } }
+@media(max-width:480px) { header { align-items:start; flex-direction:column; } .toolbar > label { flex:1 1 100%; } .toolbar button { width:100%; } h1 { font-size:1.5rem; } }

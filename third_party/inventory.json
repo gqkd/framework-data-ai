@@ -22,7 +22,23 @@
     "Git for explicit source capture",
     "bubblewrap and util-linux prlimit supplied by the operator's OS"
   ],
-  "incorporated_code": [],
+  "incorporated_code": [
+    {
+      "acquisition": "npm pack --ignore-scripts; SHA-512 verified; only these two files extracted unmodified",
+      "commit": "716a1cb6c6015d57b674abe626deaeb5e817ee30",
+      "files": {
+        "third_party/cytoscape/LICENSE": "eb319c6e6f233607f71e8e2f450391751883cfc0eeb3ca7ef574c13d1d9c2203",
+        "third_party/cytoscape/dist/cytoscape.min.js": "5f3b5b529546d5af1fc5628590af033b74511a5b6f789f5f4682845863228b91"
+      },
+      "integration": "optional-offline-viewer-only",
+      "integrity": "sha512-yfYGhRcGAntq6YBD583j4n0Eg3jIxvWmZtz/5uz9UYkeIStSlMxuUja+ec5j3iBD8nv1rwaOAYMW09tBdkSeaQ==",
+      "license": "MIT",
+      "name": "cytoscape",
+      "repository": "https://github.com/cytoscape/cytoscape.js",
+      "tarball": "https://registry.npmjs.org/cytoscape/-/cytoscape-3.34.3.tgz",
+      "version": "3.34.3"
+    }
+  ],
   "providers": {
     "enola": {
       "commit": "d8864dfb238718eded7635912bc4a4fd3ef9959f",

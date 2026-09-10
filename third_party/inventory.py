@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Generate the small integration inventory from the lock/manifest; not a binary SBOM."""
 import argparse
+import hashlib
 import json
 from pathlib import Path
 
@@ -12,6 +13,12 @@ ROOT = Path(__file__).resolve().parent.parent
 def render():
     lock = json.loads((ROOT / "providers.lock.json").read_text(encoding="utf-8"))
     manifest = yaml.safe_load((ROOT / "third_party/manifest.yaml").read_text(encoding="utf-8"))
+    for dependency in manifest["incorporated_code"]:
+        for relative, expected in dependency["files"].items():
+            path = ROOT / relative
+            if (path.is_symlink() or not path.is_file() or not path.resolve().is_relative_to(ROOT.resolve())
+                    or hashlib.sha256(path.read_bytes()).hexdigest() != expected):
+                raise ValueError("incorporated dependency checksum mismatch: " + relative)
     result = dict(schema="framework-memory/integration-inventory/v1", scope="direct-integration-not-transitive-SBOM",
                   providers={k: v for k, v in lock.items() if k != "schema"},
                   python_runtime=manifest["python_runtime"],

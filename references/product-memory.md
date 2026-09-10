@@ -466,3 +466,10 @@ reviewing the output-contract/profile delta and regenerating the integration inv
 was copied from Cognee/Enola into this framework. Its generated inventory is not a complete
 transitive dependency/license SBOM. No additional graph database, model or framework
 runtime dependency was introduced.
+
+## Optional offline viewer
+
+`memory.py view` exports a read-only, self-contained HTML from selected documentary sources
+and, only when explicitly supplied, an existing code snapshot. It does not run the provider
+or change retrieval/gates. `references/memory-viewer.md` owns its filters, bounded navigation,
+revision compatibility, privacy, vendored MIT renderer and verification procedure.

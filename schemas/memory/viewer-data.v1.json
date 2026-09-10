@@ -1,0 +1,1217 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "framework-memory/viewer-data/v1",
+  "$ref": "#/$defs/viewer-data",
+  "$defs": {
+    "code-coverage": {
+      "type": "object",
+      "required": [
+        "path",
+        "status"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/relative-path"
+        },
+        "status": {
+          "enum": [
+            "available",
+            "partial",
+            "unavailable",
+            "unsupported",
+            "excluded"
+          ]
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "code-edge": {
+      "type": "object",
+      "required": [
+        "id",
+        "relation",
+        "source",
+        "target",
+        "target_name",
+        "resolution",
+        "provenance"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "relation": {
+          "enum": [
+            "contains",
+            "calls",
+            "imports",
+            "declares",
+            "implements",
+            "instantiates",
+            "names"
+          ]
+        },
+        "source": {
+          "type": "string"
+        },
+        "target": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "target_name": {
+          "type": "string"
+        },
+        "target_provider_id": {
+          "type": "string"
+        },
+        "resolution": {
+          "enum": [
+            "resolved",
+            "unresolved"
+          ]
+        },
+        "provenance": {
+          "$ref": "#/$defs/code-provenance"
+        }
+      }
+    },
+    "code-graph": {
+      "type": "object",
+      "required": [
+        "schema",
+        "snapshot",
+        "document_snapshot",
+        "coverage",
+        "provider",
+        "repositories",
+        "sources",
+        "nodes",
+        "edges",
+        "records",
+        "bridges",
+        "limitations"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {
+          "const": "framework-memory/code-graph/v1"
+        },
+        "snapshot": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "document_snapshot": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "coverage": {
+          "enum": [
+            "available",
+            "partial",
+            "unavailable"
+          ]
+        },
+        "provider": {
+          "type": "object",
+          "required": [
+            "name",
+            "version",
+            "languages",
+            "direct_edges",
+            "profile",
+            "status"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            },
+            "languages": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "direct_edges": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "profile": {
+              "type": "string"
+            },
+            "status": {
+              "type": "object"
+            }
+          }
+        },
+        "repositories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "repository",
+              "observation",
+              "coverage",
+              "problems",
+              "evidence",
+              "insights"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "repository": {
+                "$ref": "#/$defs/repository-id"
+              },
+              "observation": {
+                "$ref": "#/$defs/observation"
+              },
+              "coverage": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/code-coverage"
+                }
+              },
+              "problems": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "evidence": {
+                "type": "object"
+              },
+              "insights": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "repository",
+              "path",
+              "revision",
+              "lines"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "repository": {
+                "$ref": "#/$defs/repository-id"
+              },
+              "path": {
+                "$ref": "#/$defs/relative-path"
+              },
+              "revision": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "lines": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/code-node"
+          }
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/code-edge"
+          }
+        },
+        "records": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "repository",
+              "occurrence",
+              "role",
+              "record"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "repository": {
+                "$ref": "#/$defs/repository-id"
+              },
+              "occurrence": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "role": {
+                "const": "provider-evidence-not-authority"
+              },
+              "record": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "bridges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "component",
+              "root",
+              "repository",
+              "path",
+              "view",
+              "files",
+              "meaning",
+              "observation",
+              "declaration"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "component": {
+                "type": "string"
+              },
+              "root": {
+                "type": "string"
+              },
+              "repository": {
+                "$ref": "#/$defs/repository-id"
+              },
+              "path": {
+                "$ref": "#/$defs/relative-path"
+              },
+              "view": {
+                "enum": [
+                  "current",
+                  "target",
+                  "design"
+                ]
+              },
+              "files": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "type": "string"
+                }
+              },
+              "meaning": {
+                "const": "declared-location-match-not-proof-of-implementation"
+              },
+              "observation": {
+                "$ref": "#/$defs/observation"
+              },
+              "declaration": {
+                "$ref": "#/$defs/provenance"
+              }
+            }
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "code-node": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "repository",
+        "name",
+        "file",
+        "provenance",
+        "observation",
+        "zones"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "file",
+            "module",
+            "symbol",
+            "dependency",
+            "test_ref",
+            "file_ref"
+          ]
+        },
+        "repository": {
+          "$ref": "#/$defs/repository-id"
+        },
+        "name": {
+          "type": "string"
+        },
+        "file": {
+          "type": "string"
+        },
+        "provenance": {
+          "$ref": "#/$defs/code-provenance"
+        },
+        "observation": {
+          "$ref": "#/$defs/observation"
+        },
+        "zones": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "test",
+              "generated",
+              "vendor",
+              "normal",
+              "other"
+            ]
+          }
+        }
+      }
+    },
+    "code-provenance": {
+      "type": "object",
+      "required": [
+        "source_kind",
+        "assertion_method",
+        "records",
+        "locations",
+        "rule"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "source_kind": {
+          "const": "code"
+        },
+        "assertion_method": {
+          "const": "derived"
+        },
+        "records": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "locations": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/location"
+          }
+        },
+        "rule": {
+          "type": "object",
+          "required": [
+            "id",
+            "version"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "enum": [
+                "captured-file",
+                "provider-direct-fact",
+                "file-contains-entity"
+              ]
+            },
+            "version": {
+              "const": "1"
+            }
+          }
+        }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "required": [
+        "id",
+        "relation",
+        "source",
+        "target",
+        "provenance",
+        "data"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "relation": {
+          "enum": [
+            "affected_by",
+            "applies_to",
+            "belongs_to",
+            "constrained_by",
+            "derives_from",
+            "documents",
+            "preserves",
+            "realized_in",
+            "supersedes",
+            "targets"
+          ]
+        },
+        "source": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        },
+        "provenance": {
+          "$ref": "#/$defs/provenance"
+        },
+        "data": {
+          "type": "object"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "relation": {
+                "const": "applies_to"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "provenance": {
+                "properties": {
+                  "assertion_method": {
+                    "const": "declared"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "relation": {
+                "const": "supersedes"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "provenance": {
+                "properties": {
+                  "assertion_method": {
+                    "const": "declared"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "relation": {
+                "const": "derives_from"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "provenance": {
+                "properties": {
+                  "assertion_method": {
+                    "const": "declared"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "relation": {
+                "const": "targets"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "provenance": {
+                "properties": {
+                  "assertion_method": {
+                    "const": "declared"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "relation": {
+                "const": "preserves"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "provenance": {
+                "properties": {
+                  "assertion_method": {
+                    "const": "declared"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "relation": {
+                "const": "constrained_by"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "provenance": {
+                "properties": {
+                  "assertion_method": {
+                    "const": "derived"
+                  },
+                  "rule": {
+                    "properties": {
+                      "id": {
+                        "const": "invert-constraint"
+                      },
+                      "version": {
+                        "const": "1"
+                      }
+                    },
+                    "required": [
+                      "origin_edge"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "relation": {
+                "const": "affected_by"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "provenance": {
+                "properties": {
+                  "assertion_method": {
+                    "const": "derived"
+                  },
+                  "rule": {
+                    "properties": {
+                      "id": {
+                        "const": "invert-navigation"
+                      },
+                      "version": {
+                        "const": "1"
+                      }
+                    },
+                    "required": [
+                      "origin_edge"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "relation": {
+                "const": "belongs_to"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "provenance": {
+                "properties": {
+                  "assertion_method": {
+                    "const": "derived"
+                  },
+                  "rule": {
+                    "properties": {
+                      "id": {
+                        "const": "owning-scope"
+                      },
+                      "version": {
+                        "const": "1"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "relation": {
+                "const": "documents"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "provenance": {
+                "properties": {
+                  "assertion_method": {
+                    "const": "derived"
+                  },
+                  "rule": {
+                    "properties": {
+                      "id": {
+                        "const": "component-declaration"
+                      },
+                      "version": {
+                        "const": "1"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "relation": {
+                "const": "realized_in"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "provenance": {
+                "properties": {
+                  "assertion_method": {
+                    "const": "derived"
+                  },
+                  "rule": {
+                    "properties": {
+                      "id": {
+                        "const": "declared-root-mapping"
+                      },
+                      "version": {
+                        "const": "1"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "graph": {
+      "type": "object",
+      "required": [
+        "schema",
+        "snapshot",
+        "coverage",
+        "sources",
+        "nodes",
+        "edges",
+        "issues",
+        "gaps"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {
+          "const": "framework-memory/graph/v1"
+        },
+        "snapshot": {
+          "type": "string"
+        },
+        "coverage": {
+          "enum": [
+            "available",
+            "partial"
+          ]
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/source"
+          }
+        },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          }
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/edge"
+          }
+        },
+        "issues": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/issue"
+          }
+        },
+        "gaps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/issue"
+          }
+        }
+      }
+    },
+    "hypotheses": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "required": [
+          "claim",
+          "provenance"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "claim": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000
+          },
+          "provenance": {
+            "allOf": [
+              {
+                "$ref": "#/$defs/provenance"
+              },
+              {
+                "properties": {
+                  "assertion_method": {
+                    "const": "inferred"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "identity": {
+      "type": "object",
+      "required": [
+        "document_repository",
+        "scope",
+        "local_id"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "document_repository": {
+          "$ref": "#/$defs/slug"
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1
+        },
+        "local_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "issue": {
+      "type": "object",
+      "required": [
+        "code",
+        "path",
+        "detail"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "detail": {
+          "type": "string"
+        }
+      }
+    },
+    "location": {
+      "type": "object",
+      "required": [
+        "source",
+        "start_line",
+        "end_line"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "start_line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "end_line": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "node": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "identity",
+        "label",
+        "provenance",
+        "observation",
+        "data"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "document",
+            "entry",
+            "scope",
+            "repository",
+            "component",
+            "code-root"
+          ]
+        },
+        "identity": {
+          "$ref": "#/$defs/identity"
+        },
+        "label": {
+          "type": "string"
+        },
+        "provenance": {
+          "$ref": "#/$defs/provenance"
+        },
+        "observation": {
+          "$ref": "#/$defs/observation"
+        },
+        "data": {
+          "type": "object"
+        }
+      }
+    },
+    "observation": {
+      "type": "object",
+      "required": [
+        "path_status",
+        "observation_status",
+        "freshness"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "path_status": {
+          "enum": [
+            "present",
+            "missing",
+            "unresolved",
+            "not_applicable"
+          ]
+        },
+        "observation_status": {
+          "enum": [
+            "available",
+            "partial",
+            "unavailable",
+            "not_requested"
+          ]
+        },
+        "freshness": {
+          "enum": [
+            "current",
+            "stale",
+            "unknown",
+            "not_applicable"
+          ]
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": [
+        "source_kind",
+        "assertion_method",
+        "sources"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "source_kind": {
+          "enum": [
+            "document",
+            "code",
+            "check"
+          ]
+        },
+        "assertion_method": {
+          "enum": [
+            "declared",
+            "derived",
+            "inferred"
+          ]
+        },
+        "sources": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/location"
+          }
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rule": {
+          "type": "object",
+          "required": [
+            "id",
+            "version"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "version": {
+              "type": "string",
+              "minLength": 1
+            },
+            "origin_edge": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "assertion_method": {
+                "const": "inferred"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "rationale"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "confidence"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "assertion_method": {
+                "const": "derived"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "rule"
+            ]
+          }
+        }
+      ]
+    },
+    "relative-path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*\\\\)(?!.*:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*//).+$"
+    },
+    "repository-id": {
+      "type": "string",
+      "pattern": "^repository:(?:product:[a-z0-9][a-z0-9-]*|platform):[a-z][a-z0-9._-]*$"
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "id",
+        "path",
+        "revision",
+        "lines"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "path": {
+          "$ref": "#/$defs/relative-path"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "lines": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "viewer-data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "document",
+        "code",
+        "bridges",
+        "mapping_compatible",
+        "hypotheses",
+        "warnings",
+        "source_text",
+        "limits",
+        "observation"
+      ],
+      "properties": {
+        "schema": {
+          "const": "framework-memory/viewer-data/v1"
+        },
+        "document": {
+          "$ref": "#/$defs/graph"
+        },
+        "code": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/code-graph"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "bridges": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "mapping_compatible": {
+          "type": "boolean"
+        },
+        "hypotheses": {
+          "$ref": "#/$defs/hypotheses"
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "source_text": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "limits": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "nodes",
+            "edges"
+          ],
+          "properties": {
+            "nodes": {
+              "const": 250
+            },
+            "edges": {
+              "const": 1500
+            }
+          }
+        },
+        "observation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "code"
+          ],
+          "properties": {
+            "code": {
+              "enum": [
+                "captured-not-rechecked",
+                "not_requested"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

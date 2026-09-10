@@ -16,3 +16,8 @@ third_party/inventory.json and constraints.txt are generated from that inventory
 The optional Enola executable is supplied separately by the operator. Redistributing it
 or bundling Python packages is a separate distribution scope: preserve their respective
 licenses/notices and review all bundled obligations. This notice is not a binary SBOM.
+
+The optional offline graph viewer includes unmodified Cytoscape.js 3.34.3 browser code,
+Copyright (c) 2016-2026, The Cytoscape Consortium, under the MIT license. The complete
+license is in third_party/cytoscape/LICENSE and is included in exported viewer HTML.
+Source, exact revision and asset hashes are recorded in third_party/manifest.yaml.

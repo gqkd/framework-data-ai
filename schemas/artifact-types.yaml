@@ -1124,7 +1124,16 @@
 # hashes, so a changed toolchain does not masquerade as unchanged derived evidence.
 # This version bump does not install a plugin, adopt products, tag/publish a release or
 # activate remote CI. Viewer, semantic retrieval, graph DB and client data remain out.
-version: "3.7.0"
+# 3.7.0 -> 3.8.0. Optional offline Product Memory viewer, removable independently.
+# MINOR: memory.py view adds a read-only HTML projection; no existing product field,
+# lifecycle, required reading, impact or contribution/release gate changes. Old source
+# documents need no edits. FW001/FW002/FW003 still compare the selected version/pin;
+# use migrate.py for explicit adoption and do not rewrite immutable history for the UI.
+# Cytoscape.js is the only copied third-party source (MIT, locked asset hashes), used
+# only in HTML exports. The provider stays separate. Tests cover source filtering,
+# revision mismatch, provenance, CSP, immutable atomic output and no product writes;
+# references/memory-viewer.md records limits and why navigation is not understanding.
+version: "3.8.0"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of

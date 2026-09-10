@@ -22,10 +22,14 @@ def main(argv=None) -> int:
     readings = commands.add_parser("readings", help="validate caller-reported readings; never attest understanding")
     readings.add_argument("--pack", type=Path, required=True)
     readings.add_argument("--claims", type=Path, required=True)
-    for name in ("doctor", "gaps", "build", "query", "code", "context", "impact"):
+    for name in ("doctor", "gaps", "build", "query", "code", "context", "impact", "view"):
         command = commands.add_parser(name)
         command.add_argument("--root", type=Path, required=True)
         command.add_argument("--json", action="store_true", help="JSON is also the default output")
+        if name == "view":
+            command.add_argument("--code-snapshot", type=Path, help="explicit captured bundle; never execute a provider")
+            command.add_argument("--hypotheses", type=Path, help="explicit inferred annotations, never constraints")
+            command.add_argument("--dry-run", action="store_true", help="validate and render without publishing")
         if name in ("context", "impact"):
             command.add_argument("--change", help="one CHG ID or source path; not an approval")
             command.add_argument("--hops", type=int, default=2)
@@ -85,7 +89,13 @@ def main(argv=None) -> int:
         else:
             snapshot = capture(args.root)
             graph = build(snapshot)
-            if args.command == "gaps":
+            if args.command == "view":
+                from .viewer import export
+                from .operational_io import load_code, read_json
+                result = export(snapshot, graph, code=load_code(args.code_snapshot) if args.code_snapshot else None,
+                                hypotheses=read_json(args.hypotheses) if args.hypotheses else None,
+                                dry_run=args.dry_run)
+            elif args.command == "gaps":
                 from .adoption import assess
                 result = assess(snapshot, graph)
             elif args.command == "context":

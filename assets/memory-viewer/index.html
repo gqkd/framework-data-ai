@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="@@CSP@@">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Product Memory · Graph explorer</title>
+<style>@@STYLE@@</style>
+</head>
+<body>
+<header><div><span class="eyebrow">PRODUCT MEMORY / LOCAL EXPLORER</span><h1>Trace the evidence.</h1></div><span class="badge">Read-only snapshot</span></header>
+<main>
+<section class="toolbar" aria-label="Graph filters">
+<label>Graph<select id="layer"><option value="document">Documents</option><option value="code">Code</option><option value="mapping">Document ↔ code mapping</option><option value="hypothesis">Hypotheses</option></select></label>
+<label class="search">Find a node<input id="search" type="search" placeholder="Name, path or identifier" autocomplete="off"></label>
+<label>Scope / repository<select id="scope"><option value="">All scopes</option></select></label>
+<label>Kind<select id="kind"><option value="">All kinds</option></select></label>
+<label>Assertion<select id="method"><option value="">All methods</option><option>declared</option><option>derived</option><option>inferred</option></select></label>
+<label>View<select id="view"><option value="">All views</option><option>current</option><option>target</option><option>design</option></select></label>
+<button id="reset" type="button">Reset filters</button>
+</section>
+<p id="status" class="status" role="status" aria-live="polite"></p>
+<div class="workspace">
+<section class="graph-panel" aria-label="Graph and accessible list">
+<div class="panel-heading"><h2 id="graph-title">Documentary graph</h2><button id="fit" type="button">Fit graph</button></div>
+<div id="graph" role="img" aria-label="Interactive graph. Use the node and relation lists below for keyboard navigation."></div>
+<p class="legend"><span class="dot"></span> Document <span class="dot code"></span> Code <span class="dot inferred"></span> Hypothesis · Zoom to read labels; the list retains full identifiers.</p>
+<details id="node-list" open><summary>Nodes — keyboard-accessible list</summary><div id="nodes" class="item-list"></div></details>
+<details><summary>Relations</summary><label>Relation type<select id="relation"><option value="">All relations</option></select></label><div id="edges" class="item-list"></div></details>
+</section>
+<aside aria-label="Evidence inspector">
+<div class="panel-heading"><h2>Evidence inspector</h2></div>
+<p id="selection-title">Select a node or relation.</p>
+<div id="selection"></div>
+<div id="sources"></div>
+<div class="path-controls"><button id="path-start" type="button" disabled>Use as path start</button><p id="path-origin">Select two displayed nodes to trace their connection.</p><button id="path-find" type="button" disabled>Trace to selected node</button><ol id="path-result"></ol></div>
+<details><summary>Exact captured record</summary><pre id="record">No selection</pre></details>
+</aside>
+</div>
+<details class="diagnostics"><summary>Coverage, revisions and limitations</summary><ul id="warnings"></ul><pre id="diagnostics"></pre></details>
+<details class="license"><summary>Open-source notice · Cytoscape.js</summary><pre>@@LICENSE@@</pre></details>
+<details class="license"><summary>Framework license and notice</summary><pre>@@NOTICE@@</pre><pre>@@FRAMEWORKLICENSE@@</pre></details>
+</main>
+<noscript>This offline graph viewer needs JavaScript. Canonical JSON graphs remain available separately.</noscript>
+<script id="memory-data" type="application/json">@@DATA@@</script>
+@@SCRIPTS@@
+</body>
+</html>

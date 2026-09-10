@@ -124,6 +124,27 @@ class AdoptionCompatibility(unittest.TestCase):
                     self.assertEqual(report["errors"], 0, report)
                 self.assertEqual(before, content_hashes(project))
 
+    def test_phase7_to_viewer_has_no_new_findings_or_product_writes(self):
+        previous = Path(self.case.name) / "phase7-package"
+        extract(ROOT, "a33883998508a9850e4200e8887eaa24f2384cf9", previous)
+        self.declare(yaml.safe_load((previous / REGISTRY).read_text())["version"])
+        before = content_hashes(self.root)
+        _, report = self.run_cli(self.new / MIGRATE, "--root", self.root, "--framework", self.new,
+                                 "--from-framework", previous, "--json")
+        self.assertFalse(report["problems"], report)
+        self.assertFalse(report["new"], report)
+        self.assertEqual(before, content_hashes(self.root))
+
+    def test_core_package_works_when_optional_viewer_assets_are_omitted(self):
+        minimal = Path(self.case.name) / "no-viewer-assets"
+        shutil.copytree(self.new, minimal, ignore=shutil.ignore_patterns("assets", "cytoscape"))
+        run, result = self.run_cli(minimal / "memory.py", "build", "--root", self.root, "--dry-run")
+        self.assertEqual(run.returncode, 0, result)
+        self.assertFalse(result["written"])
+        run, result = self.run_cli(minimal / "memory.py", "view", "--root", self.root, "--dry-run")
+        self.assertEqual(run.returncode, 2)
+        self.assertEqual(result["status"], "unavailable")
+
     def test_exact_project_pin_is_the_baseline_not_the_last_registry_revision(self):
         self.declare(self.old_version, BASE)
         _, result = self.run_cli(self.new / MIGRATE, "--root", self.root, "--framework", ROOT,
@@ -270,7 +291,12 @@ class AdoptionCompatibility(unittest.TestCase):
                                  cwd=self.foreign, capture_output=True, text=True, timeout=60)
             self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
         inventory = json.loads((self.new / "third_party/inventory.json").read_text())
-        self.assertEqual(inventory["incorporated_code"], [])
+        self.assertEqual([r["name"] for r in inventory["incorporated_code"]], ["cytoscape"])
+        dependency = inventory["incorporated_code"][0]
+        self.assertEqual(dependency["integration"], "optional-offline-viewer-only")
+        self.assertEqual(dependency["license"], "MIT")
+        for relative in dependency["files"]:
+            self.assertTrue((self.new / relative).is_file())
         self.assertTrue(inventory["python_runtime"]["dependencies"])
 
 

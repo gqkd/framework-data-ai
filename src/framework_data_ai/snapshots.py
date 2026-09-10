@@ -202,8 +202,10 @@ def publish(snapshot: Snapshot, graph: dict) -> dict:
 
 def publish_payload(root: Path, namespace: str, identifier: str, payload: dict, assert_unchanged) -> None:
     """Shared atomic writer; namespace and flat filenames cannot escape the runtime directory."""
-    if (namespace not in ("snapshots", "code-snapshots") or not re.fullmatch(r"[0-9a-f]{64}", identifier)
-            or any(not re.fullmatch(r"[a-z-]+\.json", name) for name in payload)):
+    filenames_valid = (set(payload) == {"index.html", "manifest.json"} if namespace == "views"
+                       else all(re.fullmatch(r"[a-z-]+\.json", name) for name in payload))
+    if (namespace not in ("snapshots", "code-snapshots", "views")
+            or not re.fullmatch(r"[0-9a-f]{64}", identifier) or not filenames_valid):
         raise MemoryInputError("unsafe snapshot identity or filename")
     assert_unchanged()
     base_rel = Path("_meta/memory") / namespace

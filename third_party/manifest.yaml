@@ -1,6 +1,18 @@
 schema: framework-memory/third-party/v1
-# No third-party source, binary, grammar or model is redistributed by this increment.
-incorporated_code: []
+# Only the optional browser renderer is redistributed; no provider, grammar or model.
+incorporated_code:
+  - name: cytoscape
+    version: 3.34.3
+    license: MIT
+    repository: https://github.com/cytoscape/cytoscape.js
+    commit: 716a1cb6c6015d57b674abe626deaeb5e817ee30
+    tarball: https://registry.npmjs.org/cytoscape/-/cytoscape-3.34.3.tgz
+    integrity: sha512-yfYGhRcGAntq6YBD583j4n0Eg3jIxvWmZtz/5uz9UYkeIStSlMxuUja+ec5j3iBD8nv1rwaOAYMW09tBdkSeaQ==
+    integration: optional-offline-viewer-only
+    files:
+      third_party/cytoscape/dist/cytoscape.min.js: 5f3b5b529546d5af1fc5628590af033b74511a5b6f789f5f4682845863228b91
+      third_party/cytoscape/LICENSE: eb319c6e6f233607f71e8e2f450391751883cfc0eeb3ca7ef574c13d1d9c2203
+    acquisition: npm pack --ignore-scripts; SHA-512 verified; only these two files extracted unmodified
 # Reproducible validation baseline, not a claim that these are the latest releases.
 # Versions match the exercised environment; extras and extraction/model tools are outside it.
 python_runtime:

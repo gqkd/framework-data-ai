@@ -448,7 +448,9 @@ class StrictEnolaReader(unittest.TestCase):
         lock = json.loads((ROOT / "providers.lock.json").read_text())
         inventory = json.loads((ROOT / "third_party/inventory.json").read_text())
         self.assertEqual(inventory["providers"]["enola"], lock["enola"])
-        self.assertEqual(inventory["incorporated_code"], [])
+        # The optional browser renderer is now redistributed; Enola and grammars are not.
+        self.assertEqual([r["name"] for r in inventory["incorporated_code"]], ["cytoscape"])
+        self.assertEqual(inventory["incorporated_code"][0]["integration"], "optional-offline-viewer-only")
 
     def test_inconsistent_census_is_rejected(self):
         self.write_output()

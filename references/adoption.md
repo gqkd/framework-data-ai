@@ -117,11 +117,12 @@ versions there, regenerate inventory/constraints, and rerun the full suite after
 Version constraints do not pin wheel hashes or OS packages and are not a vulnerability
 audit. CI declares both Python versions; execution evidence is in the phase report.
 
-Enola remains operator-supplied at `providers.lock.json`'s exact platform digest. No
-third-party source/binary is copied into the framework. Publisher license metadata and
+Enola remains operator-supplied at `providers.lock.json`'s exact platform digest. The only
+redistributed third-party code is the optional MIT browser renderer described in
+`references/memory-viewer.md`. Publisher license metadata and
 reviewed-but-not-copied repository commits live in the manifest/inventory; preserve their
-own notices if distribution later includes binaries. Viewer and hybrid/semantic retrieval
-remain optional future extensions, not dependencies or release gates.
+own notices if distribution later includes binaries. The viewer is an opt-in local export,
+not a runtime dependency or product release gate. Hybrid/semantic retrieval remains deferred.
 
 Rollback the **tool** by selecting the preserved previous checkout and its environment;
 the migration command intentionally refuses to disguise a downgrade as a forward adoption.

@@ -21,7 +21,7 @@ decisions, products, initiatives and corpus, live in that project's repository, 
 | `schemas/` | The artifact catalog and what each type is allowed to be. `artifact-types.yaml` is the source; `generate.py` projects it into the JSON Schemas, into `FRAMEWORK.md §7` and into `templates/README.md` |
 | `skills/` | The skills themselves. `audit/` also carries the gate: `scripts/validate.py`, `scripts/migrate.py` and `checks.yaml` |
 | `src/framework_data_ai/` | Shared reading/resolution, documentary memory and a separate code graph. Loaded from this checkout; no package installation required |
-| `memory.py` | Opt-in `doctor`, `gaps`, `build`, `query`, `code`, `context`, `impact`, `readings` CLI. See `references/product-memory.md`; the code observer is optional and isolated |
+| `memory.py` | Opt-in `doctor`, `gaps`, `build`, `query`, `code`, `context`, `impact`, `readings`, `view` CLI. See `references/product-memory.md`; the observer and [offline viewer](references/memory-viewer.md) are independent options |
 | `providers.lock.json`, `third_party/` | Pinned optional provider, reviewed-source provenance and generated integration inventory; no bundled binary or model |
 | `ci/` | Legacy PR template/workflow, optional trusted-base documentary controller, contribution-policy and CODEOWNERS adoption examples; see `references/contributions.md` |
 | `references/` | Shared by the skills: the common preamble, routing table and operational-memory reading/scope rules |

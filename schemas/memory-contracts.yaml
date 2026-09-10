@@ -30,6 +30,39 @@ defaults:
   query_limit: 100
   max_hops: 3
 definitions:
+  viewer-data:
+    type: object
+    additionalProperties: false
+    required: [schema, document, code, bridges, mapping_compatible, hypotheses, warnings, source_text, limits, observation]
+    properties:
+      schema: {const: framework-memory/viewer-data/v1}
+      document: {$ref: '#/$defs/graph'}
+      code: {anyOf: [{$ref: '#/$defs/code-graph'}, {type: 'null'}]}
+      bridges: {type: array, items: {type: object}}
+      mapping_compatible: {type: boolean}
+      hypotheses: {$ref: '#/$defs/hypotheses'}
+      warnings: {type: array, items: {type: string}}
+      source_text: {type: object, additionalProperties: {type: string}}
+      limits:
+        type: object
+        additionalProperties: false
+        required: [nodes, edges]
+        properties: {nodes: {const: 250}, edges: {const: 1500}}
+      observation:
+        type: object
+        additionalProperties: false
+        required: [code]
+        properties: {code: {enum: [captured-not-rechecked, not_requested]}}
+  viewer-inputs:
+    type: object
+    additionalProperties: false
+    required: [schema, document_snapshot, code_snapshot, data_sha256, assets]
+    properties:
+      schema: {const: framework-memory/viewer-inputs/v1}
+      document_snapshot: {$ref: '#/$defs/sha256'}
+      code_snapshot: {anyOf: [{$ref: '#/$defs/sha256'}, {type: 'null'}]}
+      data_sha256: {$ref: '#/$defs/sha256'}
+      assets: {type: object, minProperties: 1, additionalProperties: {$ref: '#/$defs/sha256'}}
   slug: {type: string, pattern: '^[a-z0-9][a-z0-9._-]*$'}
   component-id: {type: string, pattern: '^component:(?:product:[a-z0-9][a-z0-9-]*|platform):[a-z][a-z0-9._-]*$'}
   repository-id: {type: string, pattern: '^repository:(?:product:[a-z0-9][a-z0-9-]*|platform):[a-z][a-z0-9._-]*$'}
@@ -851,4 +884,4 @@ definitions:
       issues: {type: array, items: {type: object}}
       filtered_sources: {type: integer, minimum: 0}
       limitations: {type: array, items: {type: string}}
-outputs: [config, local, provenance, graph, manifest, documentary-query, code-graph, hypotheses, context, reading-claims, reading-report, impact, contribution-input, contribution-policy, execution-receipt, contribution-report, release-set, release-input, release-receipt, release-report, adoption-report]
+outputs: [config, local, provenance, graph, manifest, documentary-query, code-graph, hypotheses, context, reading-claims, reading-report, impact, contribution-input, contribution-policy, execution-receipt, contribution-report, release-set, release-input, release-receipt, release-report, adoption-report, viewer-data, viewer-inputs]

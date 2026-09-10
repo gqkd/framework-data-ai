@@ -675,3 +675,6 @@ their independent trusted-caller boundary. Integration and deployment remain sep
 Use `references/adoption.md` to separate upgrade, explicit commands and forward-only
 mapping enrichment; `references/product-memory.md` owns the runtime contract. No graph
 database, embeddings, customer-data ingestion, background agent or viewer is required.
+For optional read-only visual inspection, `memory.py view` exports a self-contained HTML.
+`references/memory-viewer.md` owns the revision, privacy, bounds and dependency contract;
+its presentation links never become authoritative graph edges or evidence of understanding.
