@@ -1,6 +1,6 @@
 # Product Memory phase 9 — operational qualification evidence
 
-Execution record, 2026-09-10, on `codex/product-memory-phase-0`, starting at `80d9969`.
+Execution record, 2026-09-10/11, on `codex/product-memory-phase-0`, starting at `80d9969`.
 **Implementation and evidence capture are delivered; operational qualification is not closed.**
 The behavior review has an unsupported-claim finding, source-trace gaps and no independent
 human signoff. No published release, adoption, push, merge or production execution is implied.
@@ -108,3 +108,23 @@ The practical remaining work is independent review of the behavior findings, com
 source-output capture with identified model/final runtime, and a separately authorized
 adoption/mapping exercise. The frozen metadata/architecture decisions are not reopened by
 these limitations. A successful unit test or static observation is not production verification.
+
+## First committed-source gate
+
+On `99d13f5153d3313af35c5af00749eefaaaaa88db`, the full selfcheck found exactly one
+problem: `.claude-plugin/marketplace.json` still declared 3.8.0 while the registry and
+plugin manifest declared 3.8.1. The catalog is corrected to the registry's version; no
+version-consistency check is bypassed. All **273 offline memory tests passed in 112.878 s**
+within that run; the overall gate nevertheless failed. A separate pre-commit memory run
+passed the same 273 tests in 105.028 s.
+
+On the committed implementation, **10/10 real Enola conformance tests passed in 7.226 s**.
+The unchanged viewer's **8 Node tests passed**; 30 artifact schemas / 4 catalogs, 23 memory
+schemas, third-party inventory/constraints and whitespace checks passed. Provider lock,
+Python dependencies, renderer and frozen cases/fixture generator/metadata overlay are
+unchanged from `80d9969` (verified by Git diff). Local Python was CPython 3.14.4, not the
+CI-configured 3.12; no claim is made of remote CI execution.
+
+The sole private documentary annotation passed its adopted 3.6.3 validator before and
+after editing: **0 errors, 7 warnings, all 7 already annotated, 0 unannotated**. The
+annotation and partial-review timestamp were not committed with unrelated private work.
