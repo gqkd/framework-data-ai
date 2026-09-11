@@ -128,3 +128,21 @@ CI-configured 3.12; no claim is made of remote CI execution.
 The sole private documentary annotation passed its adopted 3.6.3 validator before and
 after editing: **0 errors, 7 warnings, all 7 already annotated, 0 unannotated**. The
 annotation and partial-review timestamp were not committed with unrelated private work.
+
+## Final committed-source verification — 2026-09-11
+
+On `73dcd4fb12f0e2630ffd877cee71385f0bcb8621`, the complete
+`python -u -B tests/selfcheck.py` **passed**, including **273 offline memory tests in
+106.380 s** and the version-consistency/migration gates. Its final result was
+`The framework is consistent with itself.` No gate was skipped or threshold relaxed.
+
+The only differences from the previously tested implementation `99d13f5` were the
+marketplace version and this execution record, verified by Git diff. The earlier provider,
+Node, schema and inventory checks therefore exercised the same runtime, assets and
+contracts. The checkout was clean before appending this final verification section.
+The subsequent commit changes only this report, not runtime or evaluation evidence.
+
+No push, merge, tag, publication, adoption, production operation or additional model run
+was performed to close this technical gate. The independent behavior review, identified
+model/final-runtime capture, and source-delivery gaps remain **open** as described above.
+Technical consistency is delivered; operational qualification is not asserted.
