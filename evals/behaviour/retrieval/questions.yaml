@@ -1,0 +1,30 @@
+dataset_id: synthetic-retrieval-v1
+status: proposed-for-independent-review
+# Split assignment is fixed before any model execution, not chosen after seeing scores.
+# These are different questions in one shared world, not independent unseen corpora.
+questions:
+  - {id: R001, family: authority, split: development, prompt: "Con quale linguaggio dobbiamo scrivere un nuovo servizio di alpha, e chi ha deciso?"}
+  - {id: R002, family: authority, split: evaluation, prompt: "Quale formato è stato scelto per il primo report di beta?"}
+  - {id: R003, family: authority, split: evaluation, prompt: "Redis è già una scelta approvata per gamma oppure soltanto una proposta?"}
+  - {id: R004, family: natural-language, split: development, prompt: "Perché abbiamo evitato di conservare i risultati fra una richiesta e la successiva?"}
+  - {id: R005, family: natural-language, split: evaluation, prompt: "Se tutti gli elementi sono accettati, posso considerare concluso il lotto?"}
+  - {id: R006, family: natural-language, split: evaluation, prompt: "Ci chiedono di togliere gli spazi prima e dopo gli identificatori di alpha. Serve davvero nuovo codice, e possiamo già implementarlo?"}
+  - {id: R007, family: product-scope, split: development, prompt: "Il segnale numero 001 di beta è autorizzato dal lavoro approvato sul segnale numero 001 di alpha?"}
+  - {id: R008, family: product-scope, split: evaluation, prompt: "Nel contratto 001 di beta, uno stato queued dimostra che il report è già stato pubblicato?"}
+  - {id: R009, family: product-scope, split: evaluation, prompt: "La scelta del linguaggio dei servizi si applica automaticamente anche a gamma?"}
+  - {id: R010, family: history-and-freshness, split: development, prompt: "JavaScript è ancora il linguaggio da usare per i servizi oppure quella scelta è stata superata?"}
+  - {id: R011, family: history-and-freshness, split: evaluation, prompt: "Alpha usa già una coda per consegnare gli elementi?"}
+  - {id: R012, family: history-and-freshness, split: evaluation, prompt: "L'architettura verificata di alpha copre anche la funzione health presente nel checkout?"}
+  - {id: R013, family: multiple-sources, split: development, prompt: "Quali conseguenze avrebbe rinominare item_key nell'interfaccia di alpha?"}
+  - {id: R014, family: multiple-sources, split: evaluation, prompt: "Nel refactoring interno approvato di alpha, cosa deve restare invariato e quali verifiche e documenti servono?"}
+  - {id: R015, family: multiple-sources, split: evaluation, prompt: "Posso rimuovere la normalizzazione dal worker di beta perché alpha la esegue già?"}
+  - {id: R016, family: missing-evidence, split: development, prompt: "Quanti elementi al secondo elabora oggi gamma?"}
+  - {id: R017, family: missing-evidence, split: evaluation, prompt: "Quale latenza massima garantisce attualmente l'interfaccia di alpha?"}
+  - {id: R018, family: missing-evidence, split: evaluation, prompt: "Quale revisione di alpha è in esecuzione in produzione, e come lo sappiamo?"}
+  - {id: R019, family: documents-and-code, split: development, prompt: "Chi utilizza la regola condivisa degli identificatori, e quali test controllare prima di cambiarla?"}
+  - {id: R020, family: documents-and-code, split: evaluation, prompt: "Nel percorso da alpha a beta viene ripetuta una trasformazione? È già dimostrato che sia un difetto da correggere?"}
+  - {id: R021, family: documents-and-code, split: evaluation, prompt: "Se il produttore smette di inviare item_key, il worker può continuare a funzionare senza modifiche?"}
+  - {id: R022, family: alternatives-and-constraints, split: development, prompt: "La proposta di report con celle formattate basta per sostituire il formato scelto per beta?"}
+  - {id: R023, family: alternatives-and-constraints, split: evaluation, prompt: "Quando avrebbe senso separare la regola condivisa in due implementazioni?"}
+  - {id: R024, family: alternatives-and-constraints, split: evaluation, prompt: "Il commento del contributor sulla rinomina del campo basta per procedere e dichiarare il lavoro verificato?"}
+

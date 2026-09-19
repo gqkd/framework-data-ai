@@ -1,0 +1,434 @@
+{
+ "budget_sensitivity": {
+  "note": "required_sources is stable; delivered evidence is crowded out by adopted rules",
+  "samples": [
+   {
+    "adopted_rules_characters": 119095,
+    "evidence_characters": 18065,
+    "text_budget": 200000
+   },
+   {
+    "adopted_rules_characters": 92755,
+    "evidence_characters": 6968,
+    "text_budget": 100000
+   },
+   {
+    "adopted_rules_characters": 49126,
+    "evidence_characters": 870,
+    "text_budget": 50000
+   },
+   {
+    "adopted_rules_characters": 19559,
+    "evidence_characters": 422,
+    "text_budget": 20000
+   },
+   {
+    "adopted_rules_characters": 7496,
+    "evidence_characters": 2484,
+    "text_budget": 10000
+   },
+   {
+    "adopted_rules_characters": 0,
+    "evidence_characters": 4946,
+    "text_budget": 5000
+   }
+  ]
+ },
+ "code_graph": {
+  "bridges": 0,
+  "edges": 0,
+  "nodes": 0,
+  "note": "the benchmark protocol forbids installing a provider; the code half cannot be exercised here",
+  "provider": "enola",
+  "provider_reason": "provider-not-configured",
+  "provider_status": "unavailable",
+  "provider_version": "0.4.15",
+  "repositories_unresolved": 3,
+  "sources": 0,
+  "status": "unavailable"
+ },
+ "context_pack": {
+  "delivered_characters": 99723,
+  "missing_groups_all_code": 21,
+  "missing_paths": [
+   "code/alpha-api/service.py",
+   "code/beta-worker/worker.py",
+   "code/beta-worker/tests/test_worker.py",
+   "code/shared-rules/rules.py",
+   "code/alpha-api/contracts/item.schema.json",
+   "code/alpha-api/tests/test_service.py",
+   "code/review-comment.txt"
+  ],
+  "question_sensitive": false,
+  "required_source_paths": 42
+ },
+ "corpus_scaling": {
+  "method": "product subtrees replicated in scratch; the frozen benchmark corpus is untouched",
+  "note": "required_sources grows linearly with the corpus: the pack enumerates, it does not rank",
+  "samples": [
+   {
+    "documents": 35,
+    "evidence_characters": 6968,
+    "precision_percent": 5.8,
+    "required_sources": 52
+   },
+   {
+    "documents": 98,
+    "evidence_characters": 6968,
+    "precision_percent": 2.6,
+    "required_sources": 115
+   },
+   {
+    "documents": 224,
+    "evidence_characters": 6968,
+    "precision_percent": 1.2,
+    "required_sources": 241
+   }
+  ]
+ },
+ "graph": {
+  "edges": 48,
+  "gaps": 17,
+  "nodes": 48,
+  "snapshot": "1c2f3699990487e2ddac34fb1a1245f958318be68f69b768871ff556f9fa1311",
+  "sources": 35
+ },
+ "model_invocations": 0,
+ "observed_agent_baseline": {
+  "note": "every completed A/B trial reached 3/3, 4/4 or 2/2 required groups by reading files directly",
+  "required_group_coverage_percent": 100.0
+ },
+ "questions": [
+  {
+   "groups": 2,
+   "id": "R001",
+   "m1_chars": 0,
+   "m1_groups": 0,
+   "m2_chars": 4835,
+   "m2_documents": 9,
+   "m2_groups": 1,
+   "m2_precision": 11.1,
+   "m3_chars": 99723,
+   "m3_groups": 2,
+   "split": "development"
+  },
+  {
+   "groups": 2,
+   "id": "R002",
+   "m1_chars": 0,
+   "m1_groups": 0,
+   "m2_chars": 5510,
+   "m2_documents": 12,
+   "m2_groups": 1,
+   "m2_precision": 8.3,
+   "m3_chars": 99723,
+   "m3_groups": 2,
+   "split": "evaluation"
+  },
+  {
+   "groups": 3,
+   "id": "R003",
+   "m1_chars": 0,
+   "m1_groups": 0,
+   "m2_chars": 2835,
+   "m2_documents": 8,
+   "m2_groups": 1,
+   "m2_precision": 12.5,
+   "m3_chars": 99723,
+   "m3_groups": 3,
+   "split": "evaluation"
+  },
+  {
+   "groups": 1,
+   "id": "R004",
+   "m1_chars": 0,
+   "m1_groups": 0,
+   "m2_chars": 3954,
+   "m2_documents": 7,
+   "m2_groups": 1,
+   "m2_precision": 14.3,
+   "m3_chars": 99723,
+   "m3_groups": 1,
+   "split": "development"
+  },
+  {
+   "groups": 1,
+   "id": "R005",
+   "m1_chars": 0,
+   "m1_groups": 0,
+   "m2_chars": 2906,
+   "m2_documents": 5,
+   "m2_groups": 1,
+   "m2_precision": 20.0,
+   "m3_chars": 99723,
+   "m3_groups": 1,
+   "split": "evaluation"
+  },
+  {
+   "groups": 5,
+   "id": "R006",
+   "m1_chars": 0,
+   "m1_groups": 0,
+   "m2_chars": 7168,
+   "m2_documents": 14,
+   "m2_groups": 3,
+   "m2_precision": 21.4,
+   "m3_chars": 99723,
+   "m3_groups": 3,
+   "split": "evaluation"
+  },
+  {
+   "groups": 4,
+   "id": "R007",
+   "m1_chars": 0,
+   "m1_groups": 0,
+   "m2_chars": 7214,
+   "m2_documents": 10,
+   "m2_groups": 1,
+   "m2_precision": 10.0,
+   "m3_chars": 99723,
+   "m3_groups": 4,
+   "split": "development"
+  },
+  {
+   "groups": 1,
+   "id": "R008",
+   "m1_chars": 0,
+   "m1_groups": 0,
+   "m2_chars": 3042,
+   "m2_documents": 8,
+   "m2_groups": 1,
+   "m2_precision": 12.5,
+   "m3_chars": 99723,
+   "m3_groups": 1,
+   "split": "evaluation"
+  },
+  {
+   "groups": 3,
+   "id": "R009",
+   "m1_chars": 0,
+   "m1_groups": 0,
+   "m2_chars": 3509,
+   "m2_documents": 5,
+   "m2_groups": 1,
+   "m2_precision": 20.0,
+   "m3_chars": 99723,
+   "m3_groups": 3,
+   "split": "evaluation"
+  },
+  {
+   "groups": 3,
+   "id": "R010",
+   "m1_chars": 0,
+   "m1_groups": 0,
+   "m2_chars": 3356,
+   "m2_documents": 5,
+   "m2_groups": 2,
+   "m2_precision": 40.0,
+   "m3_chars": 99723,
+   "m3_groups": 3,
+   "split": "development"
+  },
+  {
+   "groups": 4,
+   "id": "R011",
+   "m1_chars": 0,
+   "m1_groups": 0,
+   "m2_chars": 4835,
+   "m2_documents": 11,
+   "m2_groups": 3,
+   "m2_precision": 27.3,
+   "m3_chars": 99723,
+   "m3_groups": 3,
+   "split": "evaluation"
+  },
+  {
+   "groups": 3,
+   "id": "R012",
+   "m1_chars": 0,
+   "m1_groups": 0,
+   "m2_chars": 3678,
+   "m2_documents": 10,
+   "m2_groups": 1,
+   "m2_precision": 10.0,
+   "m3_chars": 99723,
+   "m3_groups": 2,
+   "split": "evaluation"
+  },
+  {
+   "groups": 4,
+   "id": "R013",
+   "m1_chars": 0,
+   "m1_groups": 0,
+   "m2_chars": 6665,
+   "m2_documents": 14,
+   "m2_groups": 2,
+   "m2_precision": 14.3,
+   "m3_chars": 99723,
+   "m3_groups": 2,
+   "split": "development"
+  },
+  {
+   "groups": 5,
+   "id": "R014",
+   "m1_chars": 0,
+   "m1_groups": 0,
+   "m2_chars": 4438,
+   "m2_documents": 10,
+   "m2_groups": 2,
+   "m2_precision": 20.0,
+   "m3_chars": 99723,
+   "m3_groups": 3,
+   "split": "evaluation"
+  },
+  {
+   "groups": 6,
+   "id": "R015",
+   "m1_chars": 0,
+   "m1_groups": 0,
+   "m2_chars": 3659,
+   "m2_documents": 8,
+   "m2_groups": 3,
+   "m2_precision": 37.5,
+   "m3_chars": 99723,
+   "m3_groups": 3,
+   "split": "evaluation"
+  },
+  {
+   "groups": 3,
+   "id": "R016",
+   "m1_chars": 0,
+   "m1_groups": 0,
+   "m2_chars": 1665,
+   "m2_documents": 5,
+   "m2_groups": 1,
+   "m2_precision": 20.0,
+   "m3_chars": 99723,
+   "m3_groups": 3,
+   "split": "development"
+  },
+  {
+   "groups": 1,
+   "id": "R017",
+   "m1_chars": 0,
+   "m1_groups": 0,
+   "m2_chars": 5516,
+   "m2_documents": 12,
+   "m2_groups": 1,
+   "m2_precision": 8.3,
+   "m3_chars": 99723,
+   "m3_groups": 1,
+   "split": "evaluation"
+  },
+  {
+   "groups": 2,
+   "id": "R018",
+   "m1_chars": 0,
+   "m1_groups": 0,
+   "m2_chars": 3418,
+   "m2_documents": 9,
+   "m2_groups": 1,
+   "m2_precision": 11.1,
+   "m3_chars": 99723,
+   "m3_groups": 2,
+   "split": "evaluation"
+  },
+  {
+   "groups": 6,
+   "id": "R019",
+   "m1_chars": 0,
+   "m1_groups": 0,
+   "m2_chars": 6669,
+   "m2_documents": 14,
+   "m2_groups": 2,
+   "m2_precision": 14.3,
+   "m3_chars": 99723,
+   "m3_groups": 2,
+   "split": "development"
+  },
+  {
+   "groups": 4,
+   "id": "R020",
+   "m1_chars": 0,
+   "m1_groups": 0,
+   "m2_chars": 4591,
+   "m2_documents": 7,
+   "m2_groups": 1,
+   "m2_precision": 14.3,
+   "m3_chars": 99723,
+   "m3_groups": 1,
+   "split": "evaluation"
+  },
+  {
+   "groups": 3,
+   "id": "R021",
+   "m1_chars": 0,
+   "m1_groups": 0,
+   "m2_chars": 5288,
+   "m2_documents": 14,
+   "m2_groups": 1,
+   "m2_precision": 7.1,
+   "m3_chars": 99723,
+   "m3_groups": 1,
+   "split": "evaluation"
+  },
+  {
+   "groups": 3,
+   "id": "R022",
+   "m1_chars": 0,
+   "m1_groups": 0,
+   "m2_chars": 5642,
+   "m2_documents": 12,
+   "m2_groups": 3,
+   "m2_precision": 25.0,
+   "m3_chars": 99723,
+   "m3_groups": 3,
+   "split": "development"
+  },
+  {
+   "groups": 1,
+   "id": "R023",
+   "m1_chars": 0,
+   "m1_groups": 0,
+   "m2_chars": 2822,
+   "m2_documents": 7,
+   "m2_groups": 1,
+   "m2_precision": 14.3,
+   "m3_chars": 99723,
+   "m3_groups": 1,
+   "split": "evaluation"
+  },
+  {
+   "groups": 5,
+   "id": "R024",
+   "m1_chars": 0,
+   "m1_groups": 0,
+   "m2_chars": 729,
+   "m2_documents": 3,
+   "m2_groups": 1,
+   "m2_precision": 33.3,
+   "m3_chars": 99723,
+   "m3_groups": 4,
+   "split": "evaluation"
+  }
+ ],
+ "recall": {
+  "m1": {
+   "groups": 0,
+   "of": 75,
+   "percent": 0.0
+  },
+  "m2": {
+   "groups": 36,
+   "of": 75,
+   "percent": 48.0
+  },
+  "m3": {
+   "groups": 54,
+   "of": 75,
+   "percent": 72.0
+  }
+ },
+ "schema": "framework/graph-retrieval-benchmark/v1",
+ "scope": "retrieval channel only; delivery is not comprehension and never an answer score"
+}

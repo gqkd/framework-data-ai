@@ -304,6 +304,30 @@ scores the laundering fixture correct for saying the word while missing that 0.8
 0.85 threshold is the entire point of it. At six cases per skill that is affordable; it is
 the first thing that has to change if the set grows.
 
+## Synthetic retrieval A/B preparation
+
+The [synthetic retrieval benchmark](behaviour/retrieval/README.md) prepares identical
+fictional project sources against two pinned framework snapshots. No real project is
+migrated and no customer corpus is read. Preparation calls no model. The explicit
+[R001 pilot](behaviour/retrieval/PILOT-R001.md) and the subsequent
+[five paired repetitions](behaviour/retrieval/REPETITIONS-R001.md) are separate
+measurements. The repetitions retain thirteen attempts: ten paired captures,
+one additional completed A and two quota failures with unknown consumption.
+Cost/time results are mixed; some source-reading outputs are absent from the
+captured stream. Answer review remains pending; no improvement is claimed.
+The separate [flexible-reader pilot](behaviour/retrieval/PILOT-R001-FLEXIBLE.md)
+has two completed captures on the same R001 question, without forced pages.
+It does not extend unique-question coverage beyond 1/24. B uses fewer tokens
+but more time in that pair; empty outputs persist, and captured source text
+does not attest what the model saw. Do not pool this condition with v1.
+Offline integrity tests run through tests/selfcheck.py.
+The historical limitations below describe the earlier model runners,
+not a claim that offline fixture tests require a model.
+The paragraph above describes the state of those early batches only. The live index is
+[behaviour/retrieval/README.md](behaviour/retrieval/README.md); as of 19/09 it records the
+executed G1 graph ablation, whose graph arm costs 17.1% more tokens and recovers no
+additional required source group.
+
 ## What is not measured yet
 
 **No baseline arm.** Nothing here answers "would plain Claude have done as well", which is

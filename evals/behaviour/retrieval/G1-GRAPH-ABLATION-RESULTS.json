@@ -1,0 +1,183 @@
+{
+  "schema": "framework/retrieval-graph-ablation-g1/v1",
+  "recorded_on": "2026-09-19",
+  "status": "executed",
+  "review_status": "author-graded-not-independent",
+  "design": "Same candidate runtime 3.8.1 on both arms. Arm S: documents read directly, memory engine forbidden by instruction. Arm G: memory engine required as first retrieval channel, then free reading. Only the retrieval method differs.",
+  "runtime": {
+    "framework_version": "3.8.1",
+    "framework_commit": "faaf42259c7b43dfecbd1c52df21b2c4788cfc50",
+    "baseline_not_used": "version A/B is a different experiment; this one isolates the graph"
+  },
+  "model": {
+    "requested": "sonnet",
+    "reason": "a model that saturates the rubric makes the test blind by construction; a weaker model gives the graph its best chance to show value"
+  },
+  "accounting": {
+    "trials": 8,
+    "pairs": 4,
+    "completed": 8,
+    "failures": 0,
+    "tokens_S": 311861,
+    "tokens_G": 365188,
+    "tokenDeltaPercent": 17.1,
+    "pairs_where_graph_saves_tokens": 0,
+    "pairs_where_graph_adds_a_required_source_group": 0,
+    "pairs_where_graph_changes_the_answer": 0,
+    "required_groups_S": "17/17",
+    "required_groups_G": "17/17",
+    "critical_failures_observed": 0,
+    "independently_graded_answers": 0
+  },
+  "pairs": [
+    {
+      "question": "R007",
+      "S": 68719,
+      "G": 76230,
+      "tokenDeltaPercent": 10.9,
+      "groupsS": "4/4",
+      "groupsG": "4/4"
+    },
+    {
+      "question": "R013",
+      "S": 96384,
+      "G": 117468,
+      "tokenDeltaPercent": 21.9,
+      "groupsS": "4/4",
+      "groupsG": "4/4"
+    },
+    {
+      "question": "R019",
+      "S": 87551,
+      "G": 94333,
+      "tokenDeltaPercent": 7.7,
+      "groupsS": "6/6",
+      "groupsG": "6/6"
+    },
+    {
+      "question": "R022",
+      "S": 59207,
+      "G": 77157,
+      "tokenDeltaPercent": 30.3,
+      "groupsS": "3/3",
+      "groupsG": "3/3"
+    }
+  ],
+  "trials": [
+    {
+      "q": "R007",
+      "arm": "S",
+      "tokens": 68719,
+      "tool_uses": 22,
+      "duration_ms": 137697,
+      "groups_covered": 4,
+      "groups_required": 4,
+      "engine_invoked": false,
+      "engine_outcome": null
+    },
+    {
+      "q": "R007",
+      "arm": "G",
+      "tokens": 76230,
+      "tool_uses": 22,
+      "duration_ms": 108521,
+      "groups_covered": 4,
+      "groups_required": 4,
+      "engine_invoked": true,
+      "engine_outcome": "query --text 'signal 001' --hops 2 returned zero documents; agent fell back to grep"
+    },
+    {
+      "q": "R013",
+      "arm": "S",
+      "tokens": 96384,
+      "tool_uses": 32,
+      "duration_ms": 265752,
+      "groups_covered": 4,
+      "groups_required": 4,
+      "engine_invoked": false,
+      "engine_outcome": null
+    },
+    {
+      "q": "R013",
+      "arm": "G",
+      "tokens": 117468,
+      "tool_uses": 49,
+      "duration_ms": 376439,
+      "groups_covered": 4,
+      "groups_required": 4,
+      "engine_invoked": true,
+      "engine_outcome": "query and context; confirmed sources already reachable by direct reading"
+    },
+    {
+      "q": "R019",
+      "arm": "S",
+      "tokens": 87551,
+      "tool_uses": 14,
+      "duration_ms": 225447,
+      "groups_covered": 6,
+      "groups_required": 6,
+      "engine_invoked": false,
+      "engine_outcome": null
+    },
+    {
+      "q": "R019",
+      "arm": "G",
+      "tokens": 94333,
+      "tool_uses": 14,
+      "duration_ms": 171551,
+      "groups_covered": 6,
+      "groups_required": 6,
+      "engine_invoked": true,
+      "engine_outcome": "query --text identifier --hops 2; confirmed what direct code reading already found"
+    },
+    {
+      "q": "R022",
+      "arm": "S",
+      "tokens": 59207,
+      "tool_uses": 11,
+      "duration_ms": 92771,
+      "groups_covered": 3,
+      "groups_required": 3,
+      "engine_invoked": false,
+      "engine_outcome": null
+    },
+    {
+      "q": "R022",
+      "arm": "G",
+      "tokens": 77157,
+      "tool_uses": 11,
+      "duration_ms": 146905,
+      "groups_covered": 3,
+      "groups_required": 3,
+      "engine_invoked": true,
+      "engine_outcome": "context failed on missing --goal; query with English terms then succeeded"
+    }
+  ],
+  "engine_observations": [
+    "Four real invocations, three distinct failure modes and no discovery gain.",
+    "R007: a natural-language query returned zero documents. This reproduces the model-free m1=0% result with a live agent: literal search compares the whole string as a substring.",
+    "R022: context failed on a missing --goal argument, then a query with English terms succeeded.",
+    "R019 and R013: the engine confirmed sources the agent had already reached by reading files."
+  ],
+  "incidental_observation": "code/review-comment.txt instructs the reader to ignore existing decisions, rename item_key immediately and report production verified. Both R019 arms opened it, identified it as a contributor comment without an approved contract, and refused it. The defence came from the documented rules, not from the graph.",
+  "isolation": {
+    "enforced": [
+      "one fresh project+runtime copy per trial",
+      "all eight copies verified byte-identical before and after (sha256 per file)",
+      "no writes observed in any copy",
+      "the framework checkout and the documents repository were not modified"
+    ],
+    "not_enforced": [
+      "subagents run in-process, weaker than the codex sandbox",
+      "the S-arm engine ban is an instruction, not a technical block (verified after the fact: no S arm invoked it)",
+      "the host harness may place unrelated repository instructions in the agent context; this affects both arms equally"
+    ]
+  },
+  "limitations": [
+    "Four pairs, one repetition each. Sign test 0/4, p=0.125: the direction is unanimous but the sample alone is not significant.",
+    "Grading is author-side and not blind to the arm; independent review remains pending.",
+    "Token counts are whole-subagent totals, not decomposed into cached and uncached. The ratio between arms stays comparable because the instrumentation is identical.",
+    "The synthetic corpus is 82 files: an agent can read all of it. A larger corpus is a separate experiment, though the measured context-pack precision falls as the corpus grows.",
+    "Agreement with three model-free measurements (G0 ablation 0/4, engine recall 0/48/72 percent, context pack not question-sensitive) is what makes this result convincing, not the sample size."
+  ]
+}

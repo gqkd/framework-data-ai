@@ -1,0 +1,10 @@
+# Exact non-blocking findings for the default pinned validators.
+# They are kept visible: identity collision and unclassified signals are intentional.
+A:
+  - [ID001, products/beta/contracts/DC-001-report.md, warn]
+  - [ICG001, products/alpha/LOG.md, info]
+B:
+  - [ID001, products/beta/contracts/DC-001-report.md, warn]
+  - [ICG001, products/alpha/LOG.md, info]
+  - [ICG001, products/beta/LOG.md, info]
+

@@ -1,0 +1,155 @@
+dataset_id: graph-calibration-v1
+products: [alpha]
+documents:
+  - path: decisions/DEC-101-evaluator.md
+    kind: decision-record
+    fields: {id: DEC-101, scope: architecture, products: [alpha], leaves_open: [], applies_to: [], derives_from: [DEC-102]}
+    body: |
+      # Reusable evaluator
+      ## Decision
+      Reuse one evaluator object for repeated calculations under DEC-102.
+      This is an architectural choice, not evidence that any service is deployed.
+      ## Consequences
+      Fewer object constructions may help, but no performance improvement has been measured.
+      ## Alternatives
+      Constructing a fresh object per call remains a valid fallback.
+      ## Review condition
+      Reconsider reuse if lifecycle isolation cannot be enforced.
+  - path: decisions/DEC-102-ephemeral.md
+    kind: decision-record
+    fields: {id: DEC-102, scope: architecture, products: [alpha], leaves_open: [], applies_to: [], derives_from: [DEC-103]}
+    body: |
+      # Invocation ownership
+      ## Decision
+      Request arguments and computed values belong to one invocation and must be discarded afterwards.
+      This boundary follows the compatibility policy in DEC-103.
+      ## Consequences
+      State carried between calls is forbidden, including a dictionary keyed by caller.
+      Exercise alternating callers with different inputs in regression tests.
+      ## Alternatives
+      Retaining values in an object was rejected because caller keys do not prove isolation.
+      ## Review condition
+      Reopen only after a new isolation design has been reviewed; this record does not approve one.
+  - path: decisions/DEC-103-compatibility.md
+    kind: decision-record
+    fields: {id: DEC-103, scope: architecture, products: [alpha], leaves_open: [], applies_to: [], derives_from: []}
+    body: |
+      # Shared semantics
+      ## Decision
+      Batch evaluation and interactive evaluation use the same arithmetic rules.
+      ## Consequences
+      A semantic change requires regression checks in both entry points.
+      ## Alternatives
+      Duplicating rules was rejected because the results could diverge silently.
+      ## Review condition
+      Reconsider sharing when the two entry points require incompatible rounding semantics.
+  - path: decisions/DEC-201-format.md
+    kind: decision-record
+    status: superseded
+    fields: {id: DEC-201, scope: architecture, products: [alpha], leaves_open: [], applies_to: [], derives_from: []}
+    body: |
+      # Initial delivery representation
+      ## Decision
+      The initial design selected XML for delivery.
+      ## Consequences
+      Existing readers would need an XML parser.
+      ## Alternatives
+      A tabular exchange was deferred.
+      ## Review condition
+      Revisit if downstream parsers cannot support this representation.
+  - path: decisions/DEC-202-wire.md
+    kind: decision-record
+    fields: {id: DEC-202, scope: architecture, products: [alpha], leaves_open: [], applies_to: [], derives_from: [], supersedes: [DEC-201]}
+    body: |
+      # Revised interchange
+      ## Decision
+      CSV replaces the earlier delivery representation for new integrations.
+      ## Consequences
+      Existing readers require a coordinated compatibility review before migration.
+      No migration or deployed implementation is attested in this record.
+      ## Alternatives
+      A binary encoding was rejected because consumers could not inspect it directly.
+      ## Review condition
+      Revisit if typed nested values become a contractual requirement.
+  - path: decisions/DEC-301-order.md
+    kind: decision-record
+    fields: {id: DEC-301, scope: architecture, products: [alpha], leaves_open: [], applies_to: [], derives_from: []}
+    body: |
+      # Stable presentation
+      ## Decision
+      Sort exported rows by ascending record identifier using a locale-independent comparison.
+      ## Consequences
+      Sorting input arrival times is not an equivalent rule.
+      ## Alternatives
+      Preserve arrival order was rejected because concurrent ingestion changes it.
+      ## Review condition
+      Revisit if the consumer contract explicitly requires event-time ordering.
+  - path: decisions/DEC-401-transport.md
+    kind: decision-record
+    fields: {id: DEC-401, scope: architecture, products: [alpha], leaves_open: [], applies_to: [], derives_from: []}
+    body: |
+      # Sender boundary
+      ## Decision
+      A transport refactor must preserve the receipt semantics in
+      products/alpha/contracts/DC-401-receipt.md.
+      ## Consequences
+      Successful submission alone must not be presented as completed processing.
+      This record does not attest performance or runtime behaviour.
+      ## Alternatives
+      Hiding intermediate states was rejected because it obscures failure recovery.
+      ## Review condition
+      Revisit when the receipt contract changes.
+  - path: products/alpha/contracts/DC-401-receipt.md
+    kind: data-contract
+    lifecycle: living
+    status: active
+    fields: {id: DC-401, products: [alpha], version: 1.0.0}
+    body: |
+      # Receipt contract
+      ## Schema
+      A receipt has a nonempty identifier and a state.
+      ## Guarantees
+      accepted means validated for processing, not delivered.
+      completed requires acknowledgement by every declared destination.
+      ## Breaking change policy
+      Changing these meanings requires a major version and consumer notice.
+  - path: decisions/DEC-901-distractor.md
+    kind: decision-record
+    fields: {id: DEC-901, scope: architecture, products: [alpha], leaves_open: [], applies_to: [], derives_from: []}
+    body: |
+      # Presentation assets
+      ## Decision
+      Static icons may be cached by their content digest.
+      ## Consequences
+      This applies to public image assets only, not caller calculations.
+      ## Alternatives
+      Rebuilding each image was rejected as unnecessary.
+      ## Review condition
+      Revisit when assets contain private material.
+  - path: decisions/DEC-902-distractor.md
+    kind: decision-record
+    status: proposed
+    fields: {id: DEC-902, scope: architecture, products: [alpha], leaves_open: [], applies_to: [], derives_from: []}
+    body: |
+      # Rich output proposal
+      ## Decision
+      Propose a workbook containing formatted cells. This record is not accepted.
+      ## Consequences
+      Reader compatibility and migration costs are not evaluated.
+      ## Alternatives
+      Keep the current representation.
+      ## Review condition
+      Approval requires an explicit decision; this proposal provides none.
+  - path: decisions/DEC-903-distractor.md
+    kind: decision-record
+    fields: {id: DEC-903, scope: architecture, products: [alpha], leaves_open: [], applies_to: [], derives_from: []}
+    body: |
+      # Diagnostic timeline
+      ## Decision
+      Diagnostic events are displayed in arrival order.
+      ## Consequences
+      This does not specify the order of exported business rows.
+      ## Alternatives
+      Sort by record identifier was rejected for operational timelines.
+      ## Review condition
+      Revisit if delayed event timestamps become available.

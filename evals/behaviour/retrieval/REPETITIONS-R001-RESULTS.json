@@ -1,0 +1,1133 @@
+{
+ "schema": "framework/retrieval-repetition-summary/v1",
+ "question": "R001",
+ "review_status": "pending-independent-review",
+ "not_a_model_delivery_attestation": true,
+ "scope": "Five paired R001 repetitions, plus every interrupted or unpaired attempt; original pilot excluded.",
+ "frameworks": {
+  "A": {
+   "version": "3.6.3",
+   "commit": "db75f310e2f42453cb0fe1b26573c3f6b5736790"
+  },
+  "B": {
+   "version": "3.8.1",
+   "commit": "faaf42259c7b43dfecbd1c52df21b2c4788cfc50"
+  }
+ },
+ "configuration": {
+  "requested_model": "gpt-5.6-sol",
+  "requested_reasoning": "high",
+  "actual_model_identity": null,
+  "cli": "codex-cli 0.150.1",
+  "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+  "timeout_seconds_per_trial": null,
+  "runner_inputs": {
+   "evals/behaviour/memory/qualify.py": "33ec5761acc153339d3ccc714363f3c6fc6fc2dfbac467e11b69b175f49f5cf9",
+   "evals/behaviour/retrieval/metrics.py": "fe51e331fe3f1d3a630c7473711dd6f18acfe0792e6c070ca27636f4160400fc",
+   "evals/behaviour/retrieval/prepare.py": "41347bdce1802eec65ed6db8a26cedb839e55ae09c46f8cc256cc84a5c897dfb",
+   "evals/behaviour/retrieval/read_source.py": "c220fa495690c2ef4475696776fbed2d9273363782d96177b8f14e679ca352e1",
+   "evals/behaviour/retrieval/run.py": "168c04978dece0293def24929eb4b5274517899742a01dddab0701ecbf9f0ded"
+  },
+  "prepared_manifest_sha256": "2c52d59b39b5267b8ec2c2b1a14d8e9e4b2b1dac8cf96318f0e18cabaeb403cc",
+  "prompt_sha256": "ec0bcc36bfaca08d110a6a83b82b6196b7497355a6f4160d2867e3ba907c4257",
+  "provider_cache": "uncontrolled"
+ },
+ "runs": [
+  {
+   "directory": "/tmp/framework-retrieval-r001-repeat-20260914-01",
+   "status": "pending-review",
+   "order": "BA",
+   "attempts": 2,
+   "sha256": "a1ada6dde58a428ec8536d5980b9b18788a867d58a6c3b6238e16130fec48d6c"
+  },
+  {
+   "directory": "/tmp/framework-retrieval-r001-repeat-20260914-02",
+   "status": "pending-review",
+   "order": "AB",
+   "attempts": 2,
+   "sha256": "aa42268e3c19cde0ad0aaadd474e5d769063863231f5143ff827ac40c9360183"
+  },
+  {
+   "directory": "/tmp/framework-retrieval-r001-repeat-20260914-03",
+   "status": "incomplete",
+   "order": "BA",
+   "attempts": 1,
+   "sha256": "8cdeda1b616ab15996143ccd2aceda0731c17fb07f8925d071d50e082e036c2d"
+  },
+  {
+   "directory": "/tmp/framework-retrieval-r001-repeat-20260914-03-retry1",
+   "status": "pending-review",
+   "order": "BA",
+   "attempts": 2,
+   "sha256": "a1ada6dde58a428ec8536d5980b9b18788a867d58a6c3b6238e16130fec48d6c"
+  },
+  {
+   "directory": "/tmp/framework-retrieval-r001-repeat-20260914-04",
+   "status": "incomplete",
+   "order": "AB",
+   "attempts": 2,
+   "sha256": "041c613585fbe0fea560b95a2c99bd002518ff6bf26861b33ba0cc79b589a0b9"
+  },
+  {
+   "directory": "/tmp/framework-retrieval-r001-repeat-20260914-04-retry1",
+   "status": "pending-review",
+   "order": "AB",
+   "attempts": 2,
+   "sha256": "aa42268e3c19cde0ad0aaadd474e5d769063863231f5143ff827ac40c9360183"
+  },
+  {
+   "directory": "/tmp/framework-retrieval-r001-repeat-20260914-05",
+   "status": "pending-review",
+   "order": "BA",
+   "attempts": 2,
+   "sha256": "a1ada6dde58a428ec8536d5980b9b18788a867d58a6c3b6238e16130fec48d6c"
+  }
+ ],
+ "trials": [
+  {
+   "pair": 1,
+   "arm": "A",
+   "block": 1,
+   "selected_pair": true,
+   "directory": "/tmp/framework-retrieval-r001-repeat-20260914-01",
+   "status": "pending-review",
+   "reason": "answer-captured-not-graded",
+   "seconds": 261.397,
+   "usage_status": "observed",
+   "input": 1880502,
+   "cached": 1826816,
+   "uncached": 53686,
+   "output": 9864,
+   "reasoning": 2971,
+   "total": 1890366,
+   "groups": 2,
+   "required": 2,
+   "required_sources": {
+    "language": true,
+    "stack": true
+   },
+   "pages": 53,
+   "framework_pages": 41,
+   "project_pages": 12,
+   "commands": 62,
+   "reader_calls": 53,
+   "skill_reads": [
+    {
+     "path": "skills/audit/SKILL.md",
+     "pages": 12
+    }
+   ],
+   "framework_lines": 650,
+   "unobserved_framework_spans": [],
+   "unobserved_framework_line_count": 0,
+   "framework_unique_lines": 650,
+   "framework_line_instances": 650,
+   "changes": [],
+   "invalid_event_lines": [],
+   "infrastructure_errors": [],
+   "result_sha256": "c2184e099f256ff713d3bb82c939e490f05ce61436dec1d8523c02eba80b1f5e",
+   "answer_sha256": "d5167e9278087cda70c9a9dc228f47ee9ac160c7e689fb31df21f9b12f934d6a",
+   "events_sha256": "04fec86b0b3f1ab0f2d27dd8ccf1b924725f57fa09e0bf726279939ec486d033",
+   "nonzero_command_count": 1,
+   "memory_command_count": 0,
+   "validator_command_count": 0,
+   "terminal_failure": null,
+   "empty_reader_events": []
+  },
+  {
+   "pair": 1,
+   "arm": "B",
+   "block": 1,
+   "selected_pair": true,
+   "directory": "/tmp/framework-retrieval-r001-repeat-20260914-01",
+   "status": "pending-review",
+   "reason": "answer-captured-not-graded",
+   "seconds": 211.736,
+   "usage_status": "observed",
+   "input": 617513,
+   "cached": 567680,
+   "uncached": 49833,
+   "output": 7746,
+   "reasoning": 3166,
+   "total": 625259,
+   "groups": 2,
+   "required": 2,
+   "required_sources": {
+    "language": true,
+    "stack": true
+   },
+   "pages": 31,
+   "framework_pages": 20,
+   "project_pages": 11,
+   "commands": 36,
+   "reader_calls": 32,
+   "skill_reads": [],
+   "framework_lines": 680,
+   "unobserved_framework_spans": [
+    {
+     "start": 401,
+     "end": 440
+    }
+   ],
+   "unobserved_framework_line_count": 40,
+   "framework_unique_lines": 640,
+   "framework_line_instances": 640,
+   "changes": [],
+   "invalid_event_lines": [],
+   "infrastructure_errors": [],
+   "result_sha256": "86cd4bf1f472a2b156fffc82b17a43ef5d3599c2b3a55cc0c2932308dd0fac52",
+   "answer_sha256": "5c0cc343d44e6b423bcac6c1bf35fb07c89a32fc5abd31991701019cb63e076a",
+   "events_sha256": "97f56ca604e24bc367d3c66af2f6cc4e623c41f5ebcbc37f0f5dd3172b5b4a9d",
+   "nonzero_command_count": 2,
+   "memory_command_count": 0,
+   "validator_command_count": 0,
+   "terminal_failure": null,
+   "empty_reader_events": [
+    {
+     "id": "item_21",
+     "scope": "framework",
+     "path": "FRAMEWORK.md",
+     "start": 401
+    }
+   ]
+  },
+  {
+   "pair": 2,
+   "arm": "A",
+   "block": 1,
+   "selected_pair": true,
+   "directory": "/tmp/framework-retrieval-r001-repeat-20260914-02",
+   "status": "pending-review",
+   "reason": "answer-captured-not-graded",
+   "seconds": 198.579,
+   "usage_status": "observed",
+   "input": 873046,
+   "cached": 830080,
+   "uncached": 42966,
+   "output": 7305,
+   "reasoning": 2427,
+   "total": 880351,
+   "groups": 2,
+   "required": 2,
+   "required_sources": {
+    "language": true,
+    "stack": true
+   },
+   "pages": 33,
+   "framework_pages": 25,
+   "project_pages": 8,
+   "commands": 37,
+   "reader_calls": 34,
+   "skill_reads": [],
+   "framework_lines": 650,
+   "unobserved_framework_spans": [],
+   "unobserved_framework_line_count": 0,
+   "framework_unique_lines": 650,
+   "framework_line_instances": 650,
+   "changes": [],
+   "invalid_event_lines": [],
+   "infrastructure_errors": [],
+   "result_sha256": "5eb8fbb4e687fd127286361a5d83b62913b5e641ff586195cfd39701f414a1ff",
+   "answer_sha256": "d8067d4acd46b4d02400a28e2a82c088f655f01c1dc2133c8d31628009696fb2",
+   "events_sha256": "afef893c576a347204d44060ce954d3c7e131c1df10dd830767d37946344302c",
+   "nonzero_command_count": 1,
+   "memory_command_count": 0,
+   "validator_command_count": 0,
+   "terminal_failure": null,
+   "empty_reader_events": [
+    {
+     "id": "item_41",
+     "scope": "framework",
+     "path": "templates/DEC-ADR.md",
+     "start": 1
+    }
+   ]
+  },
+  {
+   "pair": 2,
+   "arm": "B",
+   "block": 1,
+   "selected_pair": true,
+   "directory": "/tmp/framework-retrieval-r001-repeat-20260914-02",
+   "status": "pending-review",
+   "reason": "answer-captured-not-graded",
+   "seconds": 174.144,
+   "usage_status": "observed",
+   "input": 899950,
+   "cached": 851200,
+   "uncached": 48750,
+   "output": 6936,
+   "reasoning": 2389,
+   "total": 906886,
+   "groups": 2,
+   "required": 2,
+   "required_sources": {
+    "language": true,
+    "stack": true
+   },
+   "pages": 55,
+   "framework_pages": 48,
+   "project_pages": 7,
+   "commands": 62,
+   "reader_calls": 56,
+   "skill_reads": [
+    {
+     "path": "skills/audit/SKILL.md",
+     "pages": 13
+    }
+   ],
+   "framework_lines": 680,
+   "unobserved_framework_spans": [
+    {
+     "start": 281,
+     "end": 320
+    }
+   ],
+   "unobserved_framework_line_count": 40,
+   "framework_unique_lines": 640,
+   "framework_line_instances": 640,
+   "changes": [],
+   "invalid_event_lines": [],
+   "infrastructure_errors": [],
+   "result_sha256": "e4a713f0a71a254987a7befc184b55f483c1f2920a817a853935ec3aee72e704",
+   "answer_sha256": "4690a014db1af990a3dccd5c14cd5c1c99c0c51962de54b27db1764fd8fb6178",
+   "events_sha256": "f42f29bff1e41bcefd2159575c7e092fc29aa7f2b02491996abe3fc7b6452c42",
+   "nonzero_command_count": 1,
+   "memory_command_count": 0,
+   "validator_command_count": 0,
+   "terminal_failure": null,
+   "empty_reader_events": [
+    {
+     "id": "item_16",
+     "scope": "framework",
+     "path": "FRAMEWORK.md",
+     "start": 281
+    }
+   ]
+  },
+  {
+   "pair": 3,
+   "arm": "B",
+   "block": 1,
+   "selected_pair": false,
+   "directory": "/tmp/framework-retrieval-r001-repeat-20260914-03",
+   "status": "unavailable",
+   "reason": "incomplete-or-invalid-capture",
+   "seconds": 15.777,
+   "usage_status": "unknown",
+   "input": null,
+   "cached": null,
+   "uncached": null,
+   "output": null,
+   "reasoning": null,
+   "total": null,
+   "groups": 0,
+   "required": 2,
+   "required_sources": {
+    "language": false,
+    "stack": false
+   },
+   "pages": 1,
+   "framework_pages": 0,
+   "project_pages": 1,
+   "commands": 3,
+   "reader_calls": 1,
+   "skill_reads": [],
+   "framework_lines": 680,
+   "unobserved_framework_spans": [
+    {
+     "start": 1,
+     "end": 680
+    }
+   ],
+   "unobserved_framework_line_count": 680,
+   "framework_unique_lines": 0,
+   "framework_line_instances": 0,
+   "changes": [],
+   "invalid_event_lines": [],
+   "infrastructure_errors": [],
+   "result_sha256": "dd9a1d34841c4e9d22bb14345786205a9466f2c06413cff15bf2e070510262f0",
+   "answer_sha256": null,
+   "events_sha256": "2cda54b2244ae92e581df0a00677d4fa14775d451427592e518d63633668c63f",
+   "nonzero_command_count": 2,
+   "memory_command_count": 0,
+   "validator_command_count": 0,
+   "terminal_failure": "account-usage-limit",
+   "empty_reader_events": []
+  },
+  {
+   "pair": 3,
+   "arm": "A",
+   "block": 2,
+   "selected_pair": true,
+   "directory": "/tmp/framework-retrieval-r001-repeat-20260914-03-retry1",
+   "status": "pending-review",
+   "reason": "answer-captured-not-graded",
+   "seconds": 244.225,
+   "usage_status": "observed",
+   "input": 563870,
+   "cached": 473984,
+   "uncached": 89886,
+   "output": 8131,
+   "reasoning": 3953,
+   "total": 572001,
+   "groups": 2,
+   "required": 2,
+   "required_sources": {
+    "language": true,
+    "stack": true
+   },
+   "pages": 53,
+   "framework_pages": 41,
+   "project_pages": 12,
+   "commands": 60,
+   "reader_calls": 53,
+   "skill_reads": [
+    {
+     "path": "skills/audit/SKILL.md",
+     "pages": 12
+    }
+   ],
+   "framework_lines": 650,
+   "unobserved_framework_spans": [],
+   "unobserved_framework_line_count": 0,
+   "framework_unique_lines": 650,
+   "framework_line_instances": 650,
+   "changes": [],
+   "invalid_event_lines": [],
+   "infrastructure_errors": [],
+   "result_sha256": "6bb4d7bc7dd37c4aa90ca73d821f57ba8499d485d5f464b7c72aa99616503537",
+   "answer_sha256": "24c08b9eafa3b57ccc1215e7184f34e5143b95b2015494604a652f58501931b0",
+   "events_sha256": "2d8265abafe90ce127db0f558bba48483af99d11ef43e1c40aae63f92b0d623f",
+   "nonzero_command_count": 2,
+   "memory_command_count": 0,
+   "validator_command_count": 1,
+   "terminal_failure": null,
+   "empty_reader_events": []
+  },
+  {
+   "pair": 3,
+   "arm": "B",
+   "block": 2,
+   "selected_pair": true,
+   "directory": "/tmp/framework-retrieval-r001-repeat-20260914-03-retry1",
+   "status": "pending-review",
+   "reason": "answer-captured-not-graded",
+   "seconds": 266.102,
+   "usage_status": "observed",
+   "input": 860715,
+   "cached": 795904,
+   "uncached": 64811,
+   "output": 7475,
+   "reasoning": 2922,
+   "total": 868190,
+   "groups": 1,
+   "required": 2,
+   "required_sources": {
+    "language": true,
+    "stack": false
+   },
+   "pages": 50,
+   "framework_pages": 42,
+   "project_pages": 8,
+   "commands": 56,
+   "reader_calls": 51,
+   "skill_reads": [
+    {
+     "path": "skills/audit/SKILL.md",
+     "pages": 13
+    }
+   ],
+   "framework_lines": 680,
+   "unobserved_framework_spans": [],
+   "unobserved_framework_line_count": 0,
+   "framework_unique_lines": 680,
+   "framework_line_instances": 680,
+   "changes": [],
+   "invalid_event_lines": [],
+   "infrastructure_errors": [],
+   "result_sha256": "05400363e38413af2a2f6035eb62f5ab57077c352802c3f1443e9a5bc5e16830",
+   "answer_sha256": "6902fbb308367af66f16d6463bd5cf49f7c19bb44f150d9e2149dc6526041b93",
+   "events_sha256": "b8e26ca2611353466e8acdd14ba5c069ea6ae58dd0bfc87a7488c6a263bc499d",
+   "nonzero_command_count": 1,
+   "memory_command_count": 0,
+   "validator_command_count": 0,
+   "terminal_failure": null,
+   "empty_reader_events": [
+    {
+     "id": "item_50",
+     "scope": "project",
+     "path": "STACK.md",
+     "start": 1
+    }
+   ]
+  },
+  {
+   "pair": 4,
+   "arm": "A",
+   "block": 2,
+   "selected_pair": false,
+   "directory": "/tmp/framework-retrieval-r001-repeat-20260914-04",
+   "status": "pending-review",
+   "reason": "answer-captured-not-graded",
+   "seconds": 178.889,
+   "usage_status": "observed",
+   "input": 466391,
+   "cached": 392576,
+   "uncached": 73815,
+   "output": 5454,
+   "reasoning": 1994,
+   "total": 471845,
+   "groups": 2,
+   "required": 2,
+   "required_sources": {
+    "language": true,
+    "stack": true
+   },
+   "pages": 44,
+   "framework_pages": 35,
+   "project_pages": 9,
+   "commands": 49,
+   "reader_calls": 45,
+   "skill_reads": [
+    {
+     "path": "skills/resolve/SKILL.md",
+     "pages": 5
+    }
+   ],
+   "framework_lines": 650,
+   "unobserved_framework_spans": [],
+   "unobserved_framework_line_count": 0,
+   "framework_unique_lines": 650,
+   "framework_line_instances": 650,
+   "changes": [],
+   "invalid_event_lines": [],
+   "infrastructure_errors": [],
+   "result_sha256": "4002adc984e8f1f797a04e68a8da88673c37d943a70d2043f014b1f1ecbf3bf0",
+   "answer_sha256": "b25855389bda7459bb34a9b8c9e91027a246ca3efa4b5c51ef148078bb31680a",
+   "events_sha256": "21b7836d4711c5db237fab9bac2dd77a26682fa8470742e05d4e1bf9cd03ee6c",
+   "nonzero_command_count": 2,
+   "memory_command_count": 0,
+   "validator_command_count": 0,
+   "terminal_failure": null,
+   "empty_reader_events": [
+    {
+     "id": "item_55",
+     "scope": "framework",
+     "path": "schemas/framework/decision-record/v1.json",
+     "start": 41
+    }
+   ]
+  },
+  {
+   "pair": 4,
+   "arm": "B",
+   "block": 2,
+   "selected_pair": false,
+   "directory": "/tmp/framework-retrieval-r001-repeat-20260914-04",
+   "status": "unavailable",
+   "reason": "incomplete-or-invalid-capture",
+   "seconds": 80.578,
+   "usage_status": "unknown",
+   "input": null,
+   "cached": null,
+   "uncached": null,
+   "output": null,
+   "reasoning": null,
+   "total": null,
+   "groups": 0,
+   "required": 2,
+   "required_sources": {
+    "language": false,
+    "stack": false
+   },
+   "pages": 23,
+   "framework_pages": 20,
+   "project_pages": 3,
+   "commands": 27,
+   "reader_calls": 23,
+   "skill_reads": [],
+   "framework_lines": 680,
+   "unobserved_framework_spans": [],
+   "unobserved_framework_line_count": 0,
+   "framework_unique_lines": 680,
+   "framework_line_instances": 760,
+   "changes": [],
+   "invalid_event_lines": [],
+   "infrastructure_errors": [],
+   "result_sha256": "3a5def1f2e96767a29df19e949046fb7f37df00b16c19f9f74e9e70bbd0007f1",
+   "answer_sha256": null,
+   "events_sha256": "ee73a4fbeb17cf99b73e895951e4e512ae8a265fe21006e2427591f64bfe4656",
+   "nonzero_command_count": 2,
+   "memory_command_count": 0,
+   "validator_command_count": 0,
+   "terminal_failure": "account-usage-limit",
+   "empty_reader_events": []
+  },
+  {
+   "pair": 4,
+   "arm": "A",
+   "block": 3,
+   "selected_pair": true,
+   "directory": "/tmp/framework-retrieval-r001-repeat-20260914-04-retry1",
+   "status": "pending-review",
+   "reason": "answer-captured-not-graded",
+   "seconds": 179.364,
+   "usage_status": "observed",
+   "input": 587346,
+   "cached": 525568,
+   "uncached": 61778,
+   "output": 6048,
+   "reasoning": 1476,
+   "total": 593394,
+   "groups": 1,
+   "required": 2,
+   "required_sources": {
+    "language": true,
+    "stack": false
+   },
+   "pages": 27,
+   "framework_pages": 18,
+   "project_pages": 9,
+   "commands": 35,
+   "reader_calls": 31,
+   "skill_reads": [],
+   "framework_lines": 650,
+   "unobserved_framework_spans": [
+    {
+     "start": 41,
+     "end": 80
+    },
+    {
+     "start": 401,
+     "end": 440
+    },
+    {
+     "start": 561,
+     "end": 600
+    }
+   ],
+   "unobserved_framework_line_count": 120,
+   "framework_unique_lines": 530,
+   "framework_line_instances": 530,
+   "changes": [],
+   "invalid_event_lines": [],
+   "infrastructure_errors": [],
+   "result_sha256": "1a55c3ab7db5ff50405a99fee273c02edfc4bc7914eaa4841e886f2ed0c3933c",
+   "answer_sha256": "de811e1f43a2eadfcd7e10729229d1c9801ca7c369f488b9267eb0dd1818604b",
+   "events_sha256": "2ff5f5655c6127f863fd1db2d8860256d01dcdf7af6962dd8fcae3fb1b7c1d96",
+   "nonzero_command_count": 2,
+   "memory_command_count": 0,
+   "validator_command_count": 0,
+   "terminal_failure": null,
+   "empty_reader_events": [
+    {
+     "id": "item_11",
+     "scope": "framework",
+     "path": "FRAMEWORK.md",
+     "start": 41
+    },
+    {
+     "id": "item_20",
+     "scope": "framework",
+     "path": "FRAMEWORK.md",
+     "start": 401
+    },
+    {
+     "id": "item_24",
+     "scope": "framework",
+     "path": "FRAMEWORK.md",
+     "start": 561
+    },
+    {
+     "id": "item_32",
+     "scope": "project",
+     "path": "STACK.md",
+     "start": 41
+    }
+   ]
+  },
+  {
+   "pair": 4,
+   "arm": "B",
+   "block": 3,
+   "selected_pair": true,
+   "directory": "/tmp/framework-retrieval-r001-repeat-20260914-04-retry1",
+   "status": "pending-review",
+   "reason": "answer-captured-not-graded",
+   "seconds": 121.298,
+   "usage_status": "observed",
+   "input": 327974,
+   "cached": 265728,
+   "uncached": 62246,
+   "output": 4735,
+   "reasoning": 2117,
+   "total": 332709,
+   "groups": 2,
+   "required": 2,
+   "required_sources": {
+    "language": true,
+    "stack": true
+   },
+   "pages": 29,
+   "framework_pages": 20,
+   "project_pages": 9,
+   "commands": 32,
+   "reader_calls": 29,
+   "skill_reads": [],
+   "framework_lines": 680,
+   "unobserved_framework_spans": [],
+   "unobserved_framework_line_count": 0,
+   "framework_unique_lines": 680,
+   "framework_line_instances": 760,
+   "changes": [],
+   "invalid_event_lines": [],
+   "infrastructure_errors": [],
+   "result_sha256": "378c8ff46276c4777a6df2c12409f10fadfe3ecf0859a60d1faa4a192d41b365",
+   "answer_sha256": "6eb5ca9b11f35b270355879aaae30406f347f6ab3d6ac43c7ca32e9d14c91da3",
+   "events_sha256": "66449f94c8b35eae8779d72f8547355ee8b3da4aa275a7e14629c2916755143d",
+   "nonzero_command_count": 1,
+   "memory_command_count": 0,
+   "validator_command_count": 0,
+   "terminal_failure": null,
+   "empty_reader_events": []
+  },
+  {
+   "pair": 5,
+   "arm": "A",
+   "block": 3,
+   "selected_pair": true,
+   "directory": "/tmp/framework-retrieval-r001-repeat-20260914-05",
+   "status": "pending-review",
+   "reason": "answer-captured-not-graded",
+   "seconds": 167.355,
+   "usage_status": "observed",
+   "input": 403235,
+   "cached": 339456,
+   "uncached": 63779,
+   "output": 5556,
+   "reasoning": 1850,
+   "total": 408791,
+   "groups": 2,
+   "required": 2,
+   "required_sources": {
+    "language": true,
+    "stack": true
+   },
+   "pages": 37,
+   "framework_pages": 28,
+   "project_pages": 9,
+   "commands": 44,
+   "reader_calls": 39,
+   "skill_reads": [],
+   "framework_lines": 650,
+   "unobserved_framework_spans": [
+    {
+     "start": 361,
+     "end": 400
+    }
+   ],
+   "unobserved_framework_line_count": 40,
+   "framework_unique_lines": 610,
+   "framework_line_instances": 610,
+   "changes": [],
+   "invalid_event_lines": [],
+   "infrastructure_errors": [],
+   "result_sha256": "23db326fb024330c97c0e5ac001c08d0085ef0d50dce67b007018e3d1b6d2f0d",
+   "answer_sha256": "3fea5c465b3de8d9fd24172a3e5ed576b2f01aa6f500056217c8b74e1e696435",
+   "events_sha256": "0b8796bfa2889a2d44d784d293a8617444a4cb646f013d255de730cd1fdd5970",
+   "nonzero_command_count": 1,
+   "memory_command_count": 0,
+   "validator_command_count": 0,
+   "terminal_failure": null,
+   "empty_reader_events": [
+    {
+     "id": "item_18",
+     "scope": "framework",
+     "path": "FRAMEWORK.md",
+     "start": 361
+    },
+    {
+     "id": "item_40",
+     "scope": "framework",
+     "path": "templates/DEC-ADR.md",
+     "start": 1
+    }
+   ]
+  },
+  {
+   "pair": 5,
+   "arm": "B",
+   "block": 3,
+   "selected_pair": true,
+   "directory": "/tmp/framework-retrieval-r001-repeat-20260914-05",
+   "status": "pending-review",
+   "reason": "answer-captured-not-graded",
+   "seconds": 223.527,
+   "usage_status": "observed",
+   "input": 680917,
+   "cached": 605696,
+   "uncached": 75221,
+   "output": 6743,
+   "reasoning": 2314,
+   "total": 687660,
+   "groups": 2,
+   "required": 2,
+   "required_sources": {
+    "language": true,
+    "stack": true
+   },
+   "pages": 29,
+   "framework_pages": 18,
+   "project_pages": 11,
+   "commands": 32,
+   "reader_calls": 29,
+   "skill_reads": [],
+   "framework_lines": 680,
+   "unobserved_framework_spans": [],
+   "unobserved_framework_line_count": 0,
+   "framework_unique_lines": 680,
+   "framework_line_instances": 680,
+   "changes": [],
+   "invalid_event_lines": [],
+   "infrastructure_errors": [],
+   "result_sha256": "4d8957853818b9e517f7e16696e27d9abf233d61395e0324def116d4bcf2af16",
+   "answer_sha256": "69332d2cc0ae4d1c468158f29d335efa68e32cfdaddd66bc99dcdda1f4b25d38",
+   "events_sha256": "c574c1f93cd82f1749a98d24f85b08723b191c941160392d3e69f0624692836f",
+   "nonzero_command_count": 1,
+   "memory_command_count": 0,
+   "validator_command_count": 0,
+   "terminal_failure": null,
+   "empty_reader_events": []
+  }
+ ],
+ "not_invoked": [
+  {
+   "directory": "/tmp/framework-retrieval-r001-repeat-20260914-03",
+   "arm": "A",
+   "status": "not-run"
+  }
+ ],
+ "paired_summaries": [
+  {
+   "arm": "A",
+   "seconds": {
+    "n": 5,
+    "min": 167.355,
+    "median": 198.579,
+    "max": 261.397,
+    "sum": 1050.92
+   },
+   "tokens": {
+    "n": 5,
+    "min": 408791,
+    "median": 593394,
+    "max": 1890366,
+    "sum": 4344903
+   },
+   "uncached": {
+    "n": 5,
+    "min": 42966,
+    "median": 61778,
+    "max": 89886,
+    "sum": 312095
+   },
+   "cached": {
+    "n": 5,
+    "min": 339456,
+    "median": 525568,
+    "max": 1826816,
+    "sum": 3995904
+   },
+   "output": {
+    "n": 5,
+    "min": 5556,
+    "median": 7305,
+    "max": 9864,
+    "sum": 36904
+   },
+   "reasoning": {
+    "n": 5,
+    "min": 1476,
+    "median": 2427,
+    "max": 3953,
+    "sum": 12677
+   },
+   "pages": {
+    "n": 5,
+    "min": 27,
+    "median": 37,
+    "max": 53,
+    "sum": 203
+   },
+   "commands": {
+    "n": 5,
+    "min": 35,
+    "median": 44,
+    "max": 62,
+    "sum": 238
+   },
+   "complete_required_source_trials": 4
+  },
+  {
+   "arm": "B",
+   "seconds": {
+    "n": 5,
+    "min": 121.298,
+    "median": 211.736,
+    "max": 266.102,
+    "sum": 996.8069999999999
+   },
+   "tokens": {
+    "n": 5,
+    "min": 332709,
+    "median": 687660,
+    "max": 906886,
+    "sum": 3420704
+   },
+   "uncached": {
+    "n": 5,
+    "min": 48750,
+    "median": 62246,
+    "max": 75221,
+    "sum": 300861
+   },
+   "cached": {
+    "n": 5,
+    "min": 265728,
+    "median": 605696,
+    "max": 851200,
+    "sum": 3086208
+   },
+   "output": {
+    "n": 5,
+    "min": 4735,
+    "median": 6936,
+    "max": 7746,
+    "sum": 33635
+   },
+   "reasoning": {
+    "n": 5,
+    "min": 2117,
+    "median": 2389,
+    "max": 3166,
+    "sum": 12908
+   },
+   "pages": {
+    "n": 5,
+    "min": 29,
+    "median": 31,
+    "max": 55,
+    "sum": 194
+   },
+   "commands": {
+    "n": 5,
+    "min": 32,
+    "median": 36,
+    "max": 62,
+    "sum": 218
+   },
+   "complete_required_source_trials": 4
+  }
+ ],
+ "paired_differences": [
+  {
+   "pair": 1,
+   "block": 1,
+   "time_difference_B_minus_A": -49.661,
+   "token_difference_B_minus_A": -1265107,
+   "uncached_difference_B_minus_A": -3853
+  },
+  {
+   "pair": 2,
+   "block": 1,
+   "time_difference_B_minus_A": -24.435,
+   "token_difference_B_minus_A": 26535,
+   "uncached_difference_B_minus_A": 5784
+  },
+  {
+   "pair": 3,
+   "block": 2,
+   "time_difference_B_minus_A": 21.877,
+   "token_difference_B_minus_A": 296189,
+   "uncached_difference_B_minus_A": -25075
+  },
+  {
+   "pair": 4,
+   "block": 3,
+   "time_difference_B_minus_A": -58.066,
+   "token_difference_B_minus_A": -260685,
+   "uncached_difference_B_minus_A": 468
+  },
+  {
+   "pair": 5,
+   "block": 3,
+   "time_difference_B_minus_A": 56.172,
+   "token_difference_B_minus_A": 278869,
+   "uncached_difference_B_minus_A": 11442
+  }
+ ],
+ "temporal_blocks": [
+  {
+   "block": 1,
+   "arm": "A",
+   "seconds": {
+    "n": 2,
+    "min": 198.579,
+    "median": 229.988,
+    "max": 261.397,
+    "sum": 459.976
+   },
+   "tokens": {
+    "n": 2,
+    "min": 880351,
+    "median": 1385358.5,
+    "max": 1890366,
+    "sum": 2770717
+   },
+   "uncached": {
+    "n": 2,
+    "min": 42966,
+    "median": 48326,
+    "max": 53686,
+    "sum": 96652
+   }
+  },
+  {
+   "block": 1,
+   "arm": "B",
+   "seconds": {
+    "n": 2,
+    "min": 174.144,
+    "median": 192.94,
+    "max": 211.736,
+    "sum": 385.88
+   },
+   "tokens": {
+    "n": 2,
+    "min": 625259,
+    "median": 766072.5,
+    "max": 906886,
+    "sum": 1532145
+   },
+   "uncached": {
+    "n": 2,
+    "min": 48750,
+    "median": 49291.5,
+    "max": 49833,
+    "sum": 98583
+   }
+  },
+  {
+   "block": 2,
+   "arm": "A",
+   "seconds": {
+    "n": 1,
+    "min": 244.225,
+    "median": 244.225,
+    "max": 244.225,
+    "sum": 244.225
+   },
+   "tokens": {
+    "n": 1,
+    "min": 572001,
+    "median": 572001,
+    "max": 572001,
+    "sum": 572001
+   },
+   "uncached": {
+    "n": 1,
+    "min": 89886,
+    "median": 89886,
+    "max": 89886,
+    "sum": 89886
+   }
+  },
+  {
+   "block": 2,
+   "arm": "B",
+   "seconds": {
+    "n": 1,
+    "min": 266.102,
+    "median": 266.102,
+    "max": 266.102,
+    "sum": 266.102
+   },
+   "tokens": {
+    "n": 1,
+    "min": 868190,
+    "median": 868190,
+    "max": 868190,
+    "sum": 868190
+   },
+   "uncached": {
+    "n": 1,
+    "min": 64811,
+    "median": 64811,
+    "max": 64811,
+    "sum": 64811
+   }
+  },
+  {
+   "block": 3,
+   "arm": "A",
+   "seconds": {
+    "n": 2,
+    "min": 167.355,
+    "median": 173.3595,
+    "max": 179.364,
+    "sum": 346.719
+   },
+   "tokens": {
+    "n": 2,
+    "min": 408791,
+    "median": 501092.5,
+    "max": 593394,
+    "sum": 1002185
+   },
+   "uncached": {
+    "n": 2,
+    "min": 61778,
+    "median": 62778.5,
+    "max": 63779,
+    "sum": 125557
+   }
+  },
+  {
+   "block": 3,
+   "arm": "B",
+   "seconds": {
+    "n": 2,
+    "min": 121.298,
+    "median": 172.4125,
+    "max": 223.527,
+    "sum": 344.825
+   },
+   "tokens": {
+    "n": 2,
+    "min": 332709,
+    "median": 510184.5,
+    "max": 687660,
+    "sum": 1020369
+   },
+   "uncached": {
+    "n": 2,
+    "min": 62246,
+    "median": 68733.5,
+    "max": 75221,
+    "sum": 137467
+   }
+  }
+ ],
+ "accounting": {
+  "attempts": 13,
+  "completed_captures": 11,
+  "paired_captures": 10,
+  "completed_unpaired": 1,
+  "unknown_usage_attempts": 2,
+  "known_total_tokens": 8237452,
+  "paired_total_tokens": 7765607
+ },
+ "arithmetic_check": "PowerShell extraction cross-checked with JavaScript sums and medians",
+ "interpretation": "Source coverage is observed text in captured tool outputs, not cognition or attested model input. Unknown usage remains null."
+}

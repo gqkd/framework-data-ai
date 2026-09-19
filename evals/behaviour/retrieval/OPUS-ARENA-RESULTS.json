@@ -1,0 +1,109 @@
+{
+ "agent_runtime": "in-process subagents",
+ "date": "2026-09-15",
+ "findings": {
+  "arm_difference_confirmed_characters": {
+   "R016": -323,
+   "R022": 17987
+  },
+  "memory_engine_invocations": 0,
+  "memory_section_read_without_invoking": "R022-1-B read FRAMEWORK.md 612-680, which contains the Product Memory section, and declared it did not run memory.py",
+  "quality": "all four Opus trials pass their rubric; the codex baseline arm failed R016 by asserting 0 items/s",
+  "reading_volume_vs_codex": "Opus confirmed reading is 4.6x lower on R022-A and 4.7x lower on R016-A for identical coverage",
+  "required_group_coverage": "3/3 in all four trials, both arms, both questions"
+ },
+ "isolation": {
+  "comparability": "weaker isolation than the codex sandbox; do not pool with those captures",
+  "enforced": [
+   "sources and runtime read-only at OS level",
+   "fresh agent context, no inherited conversation"
+  ],
+  "not_enforced": [
+   "filesystem boundary",
+   "tool-call audit beyond the instrumented reader"
+  ],
+  "verification": "every source cited in the four answers appears in the instrumented read log"
+ },
+ "measurement_caveat": "characters are what the reader emitted; a whole-file read may be truncated by the agent output pipeline before the model sees it, so unconfirmed whole-file reads are reported separately",
+ "model": "opus",
+ "review_status": "pending-independent-human-review",
+ "schema": "framework/synthetic-retrieval-opus-arena/v1",
+ "trials": [
+  {
+   "arm": "A",
+   "author_side_grade": "pass",
+   "codex_author_side_grade": "pass",
+   "codex_total_characters": 113775,
+   "codex_uncached_tokens": 80115,
+   "confirmed_characters": 24543,
+   "duration_ms": 176756,
+   "emitted_characters": 60604,
+   "framework_characters": 43678,
+   "memory_engine_invoked": false,
+   "project_characters": 16926,
+   "question": "R022",
+   "required_groups": "3/3",
+   "subagent_tokens": 56762,
+   "tool_uses": 25,
+   "trial": "R022-1-A",
+   "unconfirmed_whole_file_characters": 36061
+  },
+  {
+   "arm": "B",
+   "author_side_grade": "pass",
+   "codex_author_side_grade": "pass",
+   "codex_total_characters": 172444,
+   "codex_uncached_tokens": 75954,
+   "confirmed_characters": 42530,
+   "duration_ms": 207249,
+   "emitted_characters": 80604,
+   "framework_characters": 65018,
+   "memory_engine_invoked": false,
+   "project_characters": 15586,
+   "question": "R022",
+   "required_groups": "3/3",
+   "subagent_tokens": 66472,
+   "tool_uses": 31,
+   "trial": "R022-1-B",
+   "unconfirmed_whole_file_characters": 38074
+  },
+  {
+   "arm": "A",
+   "author_side_grade": "pass",
+   "codex_author_side_grade": "fail",
+   "codex_total_characters": 58598,
+   "codex_uncached_tokens": 31863,
+   "confirmed_characters": 12571,
+   "duration_ms": 115061,
+   "emitted_characters": 12571,
+   "framework_characters": 2526,
+   "memory_engine_invoked": false,
+   "project_characters": 10045,
+   "question": "R016",
+   "required_groups": "3/3",
+   "subagent_tokens": 50718,
+   "tool_uses": 21,
+   "trial": "R016-1-A",
+   "unconfirmed_whole_file_characters": 0
+  },
+  {
+   "arm": "B",
+   "author_side_grade": "pass",
+   "codex_author_side_grade": "pass",
+   "codex_total_characters": 63909,
+   "codex_uncached_tokens": 43456,
+   "confirmed_characters": 12248,
+   "duration_ms": 120798,
+   "emitted_characters": 12248,
+   "framework_characters": 2203,
+   "memory_engine_invoked": false,
+   "project_characters": 10045,
+   "question": "R016",
+   "required_groups": "3/3",
+   "subagent_tokens": 48868,
+   "tool_uses": 18,
+   "trial": "R016-1-B",
+   "unconfirmed_whole_file_characters": 0
+  }
+ ]
+}

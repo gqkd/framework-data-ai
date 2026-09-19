@@ -1,0 +1,613 @@
+{
+  "agent_ablation_ready": false,
+  "byte_identical_builds": true,
+  "candidate": {
+    "commit": "faaf42259c7b43dfecbd1c52df21b2c4788cfc50",
+    "version": "3.8.1"
+  },
+  "cases": 4,
+  "cases_with_additional_required_groups": 0,
+  "dataset_generator_sha256": "41347bdce1802eec65ed6db8a26cedb839e55ae09c46f8cc256cc84a5c897dfb",
+  "generator_sha256": "332eeaca49388ffac7d24b012bcc37300ff903ec3cb22e0a835efae7f766a1d4",
+  "graph": {
+    "edges": 48,
+    "gaps": 17,
+    "nodes": 48,
+    "snapshot": "1c2f3699990487e2ddac34fb1a1245f958318be68f69b768871ff556f9fa1311"
+  },
+  "has_useful_and_no_useful_cases": false,
+  "inputs_unchanged": true,
+  "limitations": [
+    "Manually normalized development seeds; not fresh blind retrieval",
+    "A missing source group is not proof that the answer is impossible",
+    "Documentary graph only; code files remain available through direct reading",
+    "Exported document paths/bodies do not prove model receipt, reading or understanding",
+    "Truncation and mapping gaps limit interpretation, not silently counted as complete"
+  ],
+  "manifest_sha256": "2c52d59b39b5267b8ec2c2b1a14d8e9e4b2b1dac8cf96318f0e18cabaeb403cc",
+  "model_invocations": 0,
+  "oracle_sha256": "717c5ff6ac3480316d0b9f181eb96c3ee4223fed1968d9e85f8f515635a9d758",
+  "questions": [
+    {
+      "additional_documents": [],
+      "additional_required_groups": [],
+      "observations": {
+        "G": [
+          {
+            "body_characters_exported": 314,
+            "coverage": "available",
+            "documents": [
+              "products/alpha/LOG.md",
+              "products/beta/LOG.md"
+            ],
+            "edges": 0,
+            "gaps": 17,
+            "nodes": 2,
+            "selection_status": "matched",
+            "snapshot": "1c2f3699990487e2ddac34fb1a1245f958318be68f69b768871ff556f9fa1311",
+            "traversed_nodes": 0,
+            "truncated": false
+          }
+        ],
+        "S": [
+          {
+            "body_characters_exported": 314,
+            "coverage": "available",
+            "documents": [
+              "products/alpha/LOG.md",
+              "products/beta/LOG.md"
+            ],
+            "edges": 0,
+            "gaps": 17,
+            "nodes": 2,
+            "selection_status": "matched",
+            "snapshot": "1c2f3699990487e2ddac34fb1a1245f958318be68f69b768871ff556f9fa1311",
+            "traversed_nodes": 0,
+            "truncated": false
+          }
+        ]
+      },
+      "question": "R007",
+      "scores": {
+        "G": {
+          "covered_groups": [
+            0,
+            1
+          ],
+          "missing_groups": [
+            [
+              "products/alpha/cycles/ICG-001-boundary.md"
+            ],
+            [
+              "products/alpha/changes/CHG-001-boundary.md"
+            ]
+          ],
+          "non_required_documents": [],
+          "total_groups": 4
+        },
+        "S": {
+          "covered_groups": [
+            0,
+            1
+          ],
+          "missing_groups": [
+            [
+              "products/alpha/cycles/ICG-001-boundary.md"
+            ],
+            [
+              "products/alpha/changes/CHG-001-boundary.md"
+            ]
+          ],
+          "non_required_documents": [],
+          "total_groups": 4
+        }
+      },
+      "useful_source_discovery_delta": false
+    },
+    {
+      "additional_documents": [
+        "decisions/DEC-005-boundary.md"
+      ],
+      "additional_required_groups": [],
+      "observations": {
+        "G": [
+          {
+            "body_characters_exported": 2305,
+            "coverage": "available",
+            "documents": [
+              "decisions/DEC-005-boundary.md",
+              "products/alpha/changes/CHG-001-boundary.md",
+              "products/alpha/changes/CHG-002-trim.md",
+              "products/alpha/contracts/DC-001-item.md",
+              "products/beta/ARC.md",
+              "products/beta/contracts/DC-001-report.md"
+            ],
+            "edges": 3,
+            "gaps": 17,
+            "nodes": 8,
+            "selection_status": "matched",
+            "snapshot": "1c2f3699990487e2ddac34fb1a1245f958318be68f69b768871ff556f9fa1311",
+            "traversed_nodes": 3,
+            "truncated": false
+          }
+        ],
+        "S": [
+          {
+            "body_characters_exported": 1890,
+            "coverage": "available",
+            "documents": [
+              "products/alpha/changes/CHG-001-boundary.md",
+              "products/alpha/changes/CHG-002-trim.md",
+              "products/alpha/contracts/DC-001-item.md",
+              "products/beta/ARC.md",
+              "products/beta/contracts/DC-001-report.md"
+            ],
+            "edges": 0,
+            "gaps": 17,
+            "nodes": 5,
+            "selection_status": "matched",
+            "snapshot": "1c2f3699990487e2ddac34fb1a1245f958318be68f69b768871ff556f9fa1311",
+            "traversed_nodes": 0,
+            "truncated": false
+          }
+        ]
+      },
+      "question": "R013",
+      "scores": {
+        "G": {
+          "covered_groups": [
+            0,
+            3
+          ],
+          "missing_groups": [
+            [
+              "code/alpha-api/contracts/item.schema.json"
+            ],
+            [
+              "code/beta-worker/worker.py"
+            ]
+          ],
+          "non_required_documents": [
+            "decisions/DEC-005-boundary.md",
+            "products/alpha/changes/CHG-002-trim.md",
+            "products/beta/ARC.md",
+            "products/beta/contracts/DC-001-report.md"
+          ],
+          "total_groups": 4
+        },
+        "S": {
+          "covered_groups": [
+            0,
+            3
+          ],
+          "missing_groups": [
+            [
+              "code/alpha-api/contracts/item.schema.json"
+            ],
+            [
+              "code/beta-worker/worker.py"
+            ]
+          ],
+          "non_required_documents": [
+            "products/alpha/changes/CHG-002-trim.md",
+            "products/beta/ARC.md",
+            "products/beta/contracts/DC-001-report.md"
+          ],
+          "total_groups": 4
+        }
+      },
+      "useful_source_discovery_delta": false
+    },
+    {
+      "additional_documents": [],
+      "additional_required_groups": [],
+      "observations": {
+        "G": [
+          {
+            "body_characters_exported": 4064,
+            "coverage": "available",
+            "documents": [
+              "GLOSSARY.md",
+              "PLATFORM.md",
+              "decisions/DEC-003-identifiers.md",
+              "decisions/DEC-005-boundary.md",
+              "products/alpha/LOG.md",
+              "products/alpha/PBR.md",
+              "products/alpha/changes/CHG-001-boundary.md",
+              "products/alpha/cycles/ICG-001-boundary.md",
+              "products/beta/ARC.md",
+              "products/beta/PBR.md",
+              "products/beta/RSK.md"
+            ],
+            "edges": 2,
+            "gaps": 17,
+            "nodes": 12,
+            "selection_status": "matched",
+            "snapshot": "1c2f3699990487e2ddac34fb1a1245f958318be68f69b768871ff556f9fa1311",
+            "traversed_nodes": 1,
+            "truncated": false
+          }
+        ],
+        "S": [
+          {
+            "body_characters_exported": 4064,
+            "coverage": "available",
+            "documents": [
+              "GLOSSARY.md",
+              "PLATFORM.md",
+              "decisions/DEC-003-identifiers.md",
+              "decisions/DEC-005-boundary.md",
+              "products/alpha/LOG.md",
+              "products/alpha/PBR.md",
+              "products/alpha/changes/CHG-001-boundary.md",
+              "products/alpha/cycles/ICG-001-boundary.md",
+              "products/beta/ARC.md",
+              "products/beta/PBR.md",
+              "products/beta/RSK.md"
+            ],
+            "edges": 1,
+            "gaps": 17,
+            "nodes": 11,
+            "selection_status": "matched",
+            "snapshot": "1c2f3699990487e2ddac34fb1a1245f958318be68f69b768871ff556f9fa1311",
+            "traversed_nodes": 0,
+            "truncated": false
+          }
+        ]
+      },
+      "question": "R019",
+      "scores": {
+        "G": {
+          "covered_groups": [
+            0,
+            1
+          ],
+          "missing_groups": [
+            [
+              "code/alpha-api/service.py"
+            ],
+            [
+              "code/beta-worker/worker.py"
+            ],
+            [
+              "code/alpha-api/tests/test_service.py"
+            ],
+            [
+              "code/beta-worker/tests/test_worker.py"
+            ]
+          ],
+          "non_required_documents": [
+            "GLOSSARY.md",
+            "decisions/DEC-005-boundary.md",
+            "products/alpha/LOG.md",
+            "products/alpha/PBR.md",
+            "products/alpha/changes/CHG-001-boundary.md",
+            "products/alpha/cycles/ICG-001-boundary.md",
+            "products/beta/ARC.md",
+            "products/beta/PBR.md",
+            "products/beta/RSK.md"
+          ],
+          "total_groups": 6
+        },
+        "S": {
+          "covered_groups": [
+            0,
+            1
+          ],
+          "missing_groups": [
+            [
+              "code/alpha-api/service.py"
+            ],
+            [
+              "code/beta-worker/worker.py"
+            ],
+            [
+              "code/alpha-api/tests/test_service.py"
+            ],
+            [
+              "code/beta-worker/tests/test_worker.py"
+            ]
+          ],
+          "non_required_documents": [
+            "GLOSSARY.md",
+            "decisions/DEC-005-boundary.md",
+            "products/alpha/LOG.md",
+            "products/alpha/PBR.md",
+            "products/alpha/changes/CHG-001-boundary.md",
+            "products/alpha/cycles/ICG-001-boundary.md",
+            "products/beta/ARC.md",
+            "products/beta/PBR.md",
+            "products/beta/RSK.md"
+          ],
+          "total_groups": 6
+        }
+      },
+      "useful_source_discovery_delta": false
+    },
+    {
+      "additional_documents": [],
+      "additional_required_groups": [],
+      "observations": {
+        "G": [
+          {
+            "body_characters_exported": 839,
+            "coverage": "available",
+            "documents": [
+              "decisions/DEC-004-report-format.md",
+              "initiatives/reporting/SD-003-spreadsheet.md",
+              "products/beta/LOG.md"
+            ],
+            "edges": 0,
+            "gaps": 17,
+            "nodes": 3,
+            "selection_status": "matched",
+            "snapshot": "1c2f3699990487e2ddac34fb1a1245f958318be68f69b768871ff556f9fa1311",
+            "traversed_nodes": 0,
+            "truncated": false
+          }
+        ],
+        "S": [
+          {
+            "body_characters_exported": 839,
+            "coverage": "available",
+            "documents": [
+              "decisions/DEC-004-report-format.md",
+              "initiatives/reporting/SD-003-spreadsheet.md",
+              "products/beta/LOG.md"
+            ],
+            "edges": 0,
+            "gaps": 17,
+            "nodes": 3,
+            "selection_status": "matched",
+            "snapshot": "1c2f3699990487e2ddac34fb1a1245f958318be68f69b768871ff556f9fa1311",
+            "traversed_nodes": 0,
+            "truncated": false
+          }
+        ]
+      },
+      "question": "R022",
+      "scores": {
+        "G": {
+          "covered_groups": [
+            0,
+            1,
+            2
+          ],
+          "missing_groups": [],
+          "non_required_documents": [],
+          "total_groups": 3
+        },
+        "S": {
+          "covered_groups": [
+            0,
+            1,
+            2
+          ],
+          "missing_groups": [],
+          "non_required_documents": [],
+          "total_groups": 3
+        }
+      },
+      "useful_source_discovery_delta": false
+    }
+  ],
+  "receipts": [
+    {
+      "command": [
+        "/tmp/framework-phase7-validation-20260909/bin/python",
+        "-B",
+        "/tmp/graph-ablation-g0-19wqgpo6/prepared/arms/B/framework/memory.py",
+        "build",
+        "--root",
+        "/tmp/graph-ablation-g0-19wqgpo6/prepared/arms/B/project",
+        "--dry-run",
+        "--export"
+      ],
+      "exit_code": 0,
+      "label": "build-1",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sha256": "623b617fa106b808a76469ca16a058fd4b4e8cf0ebbaf5475723e611bb13e61a"
+    },
+    {
+      "command": [
+        "/tmp/framework-phase7-validation-20260909/bin/python",
+        "-B",
+        "/tmp/graph-ablation-g0-19wqgpo6/prepared/arms/B/framework/memory.py",
+        "build",
+        "--root",
+        "/tmp/graph-ablation-g0-19wqgpo6/prepared/arms/B/project",
+        "--dry-run",
+        "--export"
+      ],
+      "exit_code": 0,
+      "label": "build-2",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sha256": "623b617fa106b808a76469ca16a058fd4b4e8cf0ebbaf5475723e611bb13e61a"
+    },
+    {
+      "command": [
+        "/tmp/framework-phase7-validation-20260909/bin/python",
+        "-B",
+        "/tmp/graph-ablation-g0-19wqgpo6/prepared/arms/B/framework/memory.py",
+        "query",
+        "--root",
+        "/tmp/graph-ablation-g0-19wqgpo6/prepared/arms/B/project",
+        "--text",
+        "SIG-001",
+        "--search-engine",
+        "literal",
+        "--limit",
+        "20",
+        "--hops",
+        "0"
+      ],
+      "exit_code": 0,
+      "label": "R007-S-0",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sha256": "708813c57c4ee7397f4f36b9f4aabc3002b727497d1cbdcd858d37374f718304"
+    },
+    {
+      "command": [
+        "/tmp/framework-phase7-validation-20260909/bin/python",
+        "-B",
+        "/tmp/graph-ablation-g0-19wqgpo6/prepared/arms/B/framework/memory.py",
+        "query",
+        "--root",
+        "/tmp/graph-ablation-g0-19wqgpo6/prepared/arms/B/project",
+        "--text",
+        "SIG-001",
+        "--search-engine",
+        "literal",
+        "--limit",
+        "20",
+        "--hops",
+        "2"
+      ],
+      "exit_code": 0,
+      "label": "R007-G-0",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sha256": "ddea14b4430a4128968a91c15504304f6b2fa5f9eecea7f34c9653385854fa46"
+    },
+    {
+      "command": [
+        "/tmp/framework-phase7-validation-20260909/bin/python",
+        "-B",
+        "/tmp/graph-ablation-g0-19wqgpo6/prepared/arms/B/framework/memory.py",
+        "query",
+        "--root",
+        "/tmp/graph-ablation-g0-19wqgpo6/prepared/arms/B/project",
+        "--text",
+        "item_key",
+        "--search-engine",
+        "literal",
+        "--limit",
+        "20",
+        "--hops",
+        "0"
+      ],
+      "exit_code": 0,
+      "label": "R013-S-0",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sha256": "a35791945d2eba3d6e570d6a82cad778dc20a19ebaa92882a8a1ae9a720c3d9f"
+    },
+    {
+      "command": [
+        "/tmp/framework-phase7-validation-20260909/bin/python",
+        "-B",
+        "/tmp/graph-ablation-g0-19wqgpo6/prepared/arms/B/framework/memory.py",
+        "query",
+        "--root",
+        "/tmp/graph-ablation-g0-19wqgpo6/prepared/arms/B/project",
+        "--text",
+        "item_key",
+        "--search-engine",
+        "literal",
+        "--limit",
+        "20",
+        "--hops",
+        "2"
+      ],
+      "exit_code": 0,
+      "label": "R013-G-0",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sha256": "eae308d27cc597d5ce831e2bd7cdc9c48939b0ecbdaf513e7f64ce29d239ab24"
+    },
+    {
+      "command": [
+        "/tmp/framework-phase7-validation-20260909/bin/python",
+        "-B",
+        "/tmp/graph-ablation-g0-19wqgpo6/prepared/arms/B/framework/memory.py",
+        "query",
+        "--root",
+        "/tmp/graph-ablation-g0-19wqgpo6/prepared/arms/B/project",
+        "--text",
+        "identifier",
+        "--search-engine",
+        "literal",
+        "--limit",
+        "20",
+        "--hops",
+        "0"
+      ],
+      "exit_code": 0,
+      "label": "R019-S-0",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sha256": "b76828249fdf362f0b40f2545c26e2341fb0d533d0a42081a8b1cdc502e5f661"
+    },
+    {
+      "command": [
+        "/tmp/framework-phase7-validation-20260909/bin/python",
+        "-B",
+        "/tmp/graph-ablation-g0-19wqgpo6/prepared/arms/B/framework/memory.py",
+        "query",
+        "--root",
+        "/tmp/graph-ablation-g0-19wqgpo6/prepared/arms/B/project",
+        "--text",
+        "identifier",
+        "--search-engine",
+        "literal",
+        "--limit",
+        "20",
+        "--hops",
+        "2"
+      ],
+      "exit_code": 0,
+      "label": "R019-G-0",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sha256": "02dbe005a09b6bb564b2f3fd6b0728ac14f74b18cf4169eac89757013afa3f92"
+    },
+    {
+      "command": [
+        "/tmp/framework-phase7-validation-20260909/bin/python",
+        "-B",
+        "/tmp/graph-ablation-g0-19wqgpo6/prepared/arms/B/framework/memory.py",
+        "query",
+        "--root",
+        "/tmp/graph-ablation-g0-19wqgpo6/prepared/arms/B/project",
+        "--text",
+        "spreadsheet",
+        "--search-engine",
+        "literal",
+        "--limit",
+        "20",
+        "--hops",
+        "0"
+      ],
+      "exit_code": 0,
+      "label": "R022-S-0",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sha256": "56dff7e610e0e4f8ea2417047058c5b1e670b343d837004054609a4a068fa6ea"
+    },
+    {
+      "command": [
+        "/tmp/framework-phase7-validation-20260909/bin/python",
+        "-B",
+        "/tmp/graph-ablation-g0-19wqgpo6/prepared/arms/B/framework/memory.py",
+        "query",
+        "--root",
+        "/tmp/graph-ablation-g0-19wqgpo6/prepared/arms/B/project",
+        "--text",
+        "spreadsheet",
+        "--search-engine",
+        "literal",
+        "--limit",
+        "20",
+        "--hops",
+        "2"
+      ],
+      "exit_code": 0,
+      "label": "R022-G-0",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sha256": "165066184e07acac12e48bfd06a82971c30c3f2ca3f4d0d7b9f433257e718035"
+    }
+  ],
+  "remaining_gates": [
+    "Technically isolate provided graph navigation; zero hops still exports edges",
+    "Prepare paired same-runtime trials and qualify their sandbox",
+    "Persist intervention protocol and grading provenance before model dispatch"
+  ],
+  "runtime_inventory_sha256": "2c58116c70ccfbfc0fcfcd476b457543913ade57c3205e469c6ea6e2c525f649",
+  "schema": "framework/graph-ablation-qualification/v1",
+  "scope": "Source discovery only, not comprehension, quality or agent isolation",
+  "seeds_sha256": "090cb842bde244f0395b413f251b17c024e6ae1272aefa7c2b957c1f56edc993"
+}

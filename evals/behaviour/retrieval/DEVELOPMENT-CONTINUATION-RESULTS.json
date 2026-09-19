@@ -1,0 +1,256 @@
+{
+  "schema": "framework/development-continuation-summary/v1",
+  "recorded_on": "2026-09-16",
+  "scope": "Four development batches; R001 history and other-model experiments excluded. Captures are not independent quality grades.",
+  "input_manifest_sha256": "2c52d59b39b5267b8ec2c2b1a14d8e9e4b2b1dac8cf96318f0e18cabaeb403cc",
+  "runner_inputs": {
+    "evals/behaviour/memory/qualify.py": "33ec5761acc153339d3ccc714363f3c6fc6fc2dfbac467e11b69b175f49f5cf9",
+    "evals/behaviour/retrieval/diagnose_reads.py": "a8a13b57851a8ee02d06797d28b213e7a4aa2c003cca8385972181875b3006cc",
+    "evals/behaviour/retrieval/metrics.py": "fe51e331fe3f1d3a630c7473711dd6f18acfe0792e6c070ca27636f4160400fc",
+    "evals/behaviour/retrieval/prepare.py": "41347bdce1802eec65ed6db8a26cedb839e55ae09c46f8cc256cc84a5c897dfb",
+    "evals/behaviour/retrieval/read_source.py": "c220fa495690c2ef4475696776fbed2d9273363782d96177b8f14e679ca352e1",
+    "evals/behaviour/retrieval/read_source_flexible.py": "3e77075e64f94c37bf149ff3e09160e733d32a637abbdfcac73f878b2803dde6",
+    "evals/behaviour/retrieval/run.py": "168c04978dece0293def24929eb4b5274517899742a01dddab0701ecbf9f0ded",
+    "evals/behaviour/retrieval/run_flexible.py": "32f6dbe6c2ce8b0f24e080dfb1333e4b8af480ac924510e46fc85e26ce04a829"
+  },
+  "accounting": {
+    "attempted": 19,
+    "completed_captures": 16,
+    "selected_paired_captures": 14,
+    "selected_pairs": 7,
+    "preserved_additional_answers": 2,
+    "quota_failures": 3,
+    "known_total_tokens": 13265692,
+    "unknown_usage_attempts": 3,
+    "independently_graded_answers": 0,
+    "unique_questions_including_prior_R001": 8,
+    "question_bank_size": 24
+  },
+  "offline_verification": {
+    "evidence_hashes_verified": 111,
+    "preflights_passed": 19,
+    "relative_links_checked": 50,
+    "whitespace_files_checked": 7,
+    "suite": "python -B -m unittest discover -s tests/memory -p test_retrieval_*.py",
+    "passed": 100,
+    "seconds": 9.017,
+    "model_invocations": 0
+  },
+  "batches": [
+    {
+      "directory": "/tmp/framework-retrieval-development-flexible-20260914-01",
+      "status": "incomplete",
+      "attempted": 4,
+      "run_sha256": "fe00f547e884c6cfcd335324d7663523f987c077587cdffbb0f2ac32e7ffd6e8",
+      "requested_model": "gpt-5.6-sol",
+      "reasoning": "high",
+      "cli": "codex-cli 0.150.1",
+      "timeout_seconds": null
+    },
+    {
+      "directory": "/tmp/framework-retrieval-development-flexible-20260915-01",
+      "status": "incomplete",
+      "attempted": 5,
+      "run_sha256": "795152899f501000aa2a54d4e8cbca8be48e65ba1dc111520032a84cda81ea0a",
+      "requested_model": "gpt-5.6-sol",
+      "reasoning": "high",
+      "cli": "codex-cli 0.150.1",
+      "timeout_seconds": null
+    },
+    {
+      "directory": "/tmp/framework-retrieval-development-flexible-20260915-02",
+      "status": "incomplete",
+      "attempted": 6,
+      "run_sha256": "c8a247c3176408e1ce13604451f398b705d3c7ffef2b37f05372261143282cbc",
+      "requested_model": "gpt-5.6-sol",
+      "reasoning": "high",
+      "cli": "codex-cli 0.150.1",
+      "timeout_seconds": null
+    },
+    {
+      "directory": "/tmp/framework-retrieval-development-flexible-20260915-03",
+      "status": "pending-review",
+      "attempted": 4,
+      "run_sha256": "c02794d184a0e58b4af1634a6c06c15a24b6c1a06e73501add4141929e4e4866",
+      "requested_model": "gpt-5.6-sol",
+      "reasoning": "high",
+      "cli": "codex-cli 0.150.1",
+      "timeout_seconds": null
+    }
+  ],
+  "pairs": [
+    {
+      "question": "R004",
+      "A": 733234,
+      "B": 1042637,
+      "tokenDeltaPercent": 42.19703396187302,
+      "secondsA": 224.19,
+      "secondsB": 206.392,
+      "groupsA": "1/1",
+      "groupsB": "1/1"
+    },
+    {
+      "question": "R007",
+      "A": 575093,
+      "B": 1135117,
+      "tokenDeltaPercent": 97.37972814831689,
+      "secondsA": 183.576,
+      "secondsB": 214.163,
+      "groupsA": "4/4",
+      "groupsB": "4/4"
+    },
+    {
+      "question": "R010",
+      "A": 1172215,
+      "B": 836106,
+      "tokenDeltaPercent": -28.672982345388853,
+      "secondsA": 341.118,
+      "secondsB": 262.263,
+      "groupsA": "3/3",
+      "groupsB": "3/3"
+    },
+    {
+      "question": "R013",
+      "A": 825143,
+      "B": 1661972,
+      "tokenDeltaPercent": 101.41623936699457,
+      "secondsA": 379.908,
+      "secondsB": 322.5,
+      "groupsA": "4/4",
+      "groupsB": "4/4"
+    },
+    {
+      "question": "R016",
+      "A": 208470,
+      "B": 429971,
+      "tokenDeltaPercent": 106.25077948865544,
+      "secondsA": 96.566,
+      "secondsB": 142.629,
+      "groupsA": "3/3",
+      "groupsB": "3/3"
+    },
+    {
+      "question": "R019",
+      "A": 929352,
+      "B": 768650,
+      "tokenDeltaPercent": -17.291833449543336,
+      "secondsA": 318.564,
+      "secondsB": 302.113,
+      "groupsA": "5/6",
+      "groupsB": "6/6"
+    },
+    {
+      "question": "R022",
+      "A": 554768,
+      "B": 601883,
+      "tokenDeltaPercent": 8.492739307241948,
+      "secondsA": 245.741,
+      "secondsB": 175.185,
+      "groupsA": "3/3",
+      "groupsB": "3/3"
+    }
+  ],
+  "trials": [
+    {"batch":1,"id":"R016-1-B","selected_pair":true,"status":"pending-review","seconds":142.629,"exit_code":0,"usage":{"cached_input_tokens":381312,"entire_turn_capture":true,"input_tokens":424768,"output_tokens":5203,"reasoning_output_tokens":2562,"status":"observed","total_tokens":429971,"uncached_input_tokens":43456},"groups_covered":3,"groups_required":3,"source_requirements":{"gamma-arc":true,"gamma-manifest":true,"scheduler":true},"diagnostic_counts":{"command_failed":0,"empty_output":0,"missing_output":0,"partial_verified_text":0,"unrecognized_output":0,"unverified_or_truncated_output":0,"verified_text":12},"reader_commands":12,"unverified_reads":[],"commands":15,"memory_commands":[],"changes":[],"infrastructure_errors":[],"invalid_event_lines":[],"terminal_errors":[],"sha256":{"result.json":"3b032238181c7a4aae034ff6ee729425ad57810e284aa68c92cd7a39cb95109e","events.stdout":"c9e9c504c6c1e9547bf23ba109ab0510cc292d1a196ae70ac52b12d4e332b24b","answer.md":"86ccd1287c6d26e24417b7bdfdd1b60ec7aab36b4b9a5b91d8baef022ccbe189","reading-diagnostics.json":"447f02e107f0423d6fcd0b4736775190000453ccc9ba1f8dd0d7805be1f58531","before.json":"8d2d3165e5b4f5f4c3d05154082a17abf2f0b8a8cd76fb4d03373327310df28d","preflight.json":"2fd5275514cc67f60c5c9880dfce33e55dbff61130a2739ac5561674a2b6c0e4"}},
+    {"batch":1,"id":"R016-1-A","selected_pair":true,"status":"pending-review","seconds":96.566,"exit_code":0,"usage":{"cached_input_tokens":172416,"entire_turn_capture":true,"input_tokens":204279,"output_tokens":4191,"reasoning_output_tokens":1740,"status":"observed","total_tokens":208470,"uncached_input_tokens":31863},"groups_covered":3,"groups_required":3,"source_requirements":{"gamma-arc":true,"gamma-manifest":true,"scheduler":true},"diagnostic_counts":{"command_failed":0,"empty_output":1,"missing_output":0,"partial_verified_text":0,"unrecognized_output":0,"unverified_or_truncated_output":0,"verified_text":10},"reader_commands":11,"unverified_reads":[{"id":"item_1","status":"empty_output","characters":0,"command":"/bin/bash -lc '/tmp/framework-phase7-validation-20260909/bin/python ../tools/read_source.py project AGENTS.md'"}],"commands":16,"memory_commands":[],"changes":[],"infrastructure_errors":[],"invalid_event_lines":[],"terminal_errors":[],"sha256":{"result.json":"52551f77018520984cab8be06750e73288d9228abb2db2d21faa1c0d3d78c92a","events.stdout":"6bd001a49058143aff69eabd99c33574a1c91d2f2fdcf9156956554720e880c4","answer.md":"b57c00738786ec9371884e6c7c2d7a6ddeb805f9194138c1904112c1c8ca18ff","reading-diagnostics.json":"733d0eec7dd2209a779d70d07ea82b553b47633df9b5e0913efb9924e3b443f5","before.json":"f0dda8ee1cd3faeb2eb6b962ec605dd9c4e8ab6ac42ef393d7e1cdafb317730c","preflight.json":"402a34b9e0e9125f737322707571e7f6b0dac4404956e1774e115f22def1dfdc"}},
+    {"batch":1,"id":"R022-1-A","selected_pair":false,"status":"pending-review","seconds":215,"exit_code":0,"usage":{"cached_input_tokens":809984,"entire_turn_capture":true,"input_tokens":876590,"output_tokens":9355,"reasoning_output_tokens":4824,"status":"observed","total_tokens":885945,"uncached_input_tokens":66606},"groups_covered":3,"groups_required":3,"source_requirements":{"beta-log":true,"format-alternatives":true,"spreadsheet":true},"diagnostic_counts":{"command_failed":0,"empty_output":1,"missing_output":0,"partial_verified_text":0,"unrecognized_output":0,"unverified_or_truncated_output":0,"verified_text":18},"reader_commands":19,"unverified_reads":[{"id":"item_14","status":"empty_output","characters":0,"command":"/bin/bash -lc '/tmp/framework-phase7-validation-20260909/bin/python ../tools/read_source.py project STACK.md'"}],"commands":26,"memory_commands":[],"changes":[],"infrastructure_errors":[],"invalid_event_lines":[],"terminal_errors":[],"sha256":{"result.json":"733941c413626c4fc1f586683f27d37226d668902236883955092b20529a14cc","events.stdout":"45ffce64b2b97ab96ff97d7943a6f9fdfc386dd91f6cbed1b1edd68106fbda81","answer.md":"7e187c1840898784913731567ab038eb91707ce685c438d5a092091186859dc8","reading-diagnostics.json":"242061f02ab48681d6cf7f946e2242cade91fa1270cbcf406e95aff11e6b7899","before.json":"f0dda8ee1cd3faeb2eb6b962ec605dd9c4e8ab6ac42ef393d7e1cdafb317730c","preflight.json":"2fd5275514cc67f60c5c9880dfce33e55dbff61130a2739ac5561674a2b6c0e4"}},
+    {"batch":1,"id":"R022-1-B","selected_pair":false,"status":"unavailable","seconds":49.249,"exit_code":1,"usage":{"cached_input_tokens":null,"entire_turn_capture":false,"input_tokens":null,"output_tokens":null,"reason":"one-terminal-usage-required","reasoning_output_tokens":null,"status":"unknown","total_tokens":null,"uncached_input_tokens":null},"groups_covered":0,"groups_required":3,"source_requirements":{"beta-log":false,"format-alternatives":false,"spreadsheet":false},"diagnostic_counts":{"command_failed":0,"empty_output":1,"missing_output":0,"partial_verified_text":0,"unrecognized_output":0,"unverified_or_truncated_output":0,"verified_text":9},"reader_commands":10,"unverified_reads":[{"id":"item_15","status":"empty_output","characters":0,"command":"/bin/bash -lc '/tmp/framework-phase7-validation-20260909/bin/python ../tools/read_source.py framework SKILLS.md'"}],"commands":14,"memory_commands":[],"changes":[],"infrastructure_errors":[],"invalid_event_lines":[],"terminal_errors":["You've hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at Sep 15th, 2026 12:00 AM.","You've hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at Sep 15th, 2026 12:00 AM."],"sha256":{"result.json":"24307c93a6ed53c9ef0034828bcbcbb4aab85403b3668f1bdde368e951efef29","events.stdout":"993f247aabc47cd6c84e08fe50cf6b58a62eb42be0b1b66f792b0ab5c21dd2fe","reading-diagnostics.json":"46cd4ee89de3b1b1d103198066822910c73b72a3e26e83867eb81ea877414084","before.json":"8d2d3165e5b4f5f4c3d05154082a17abf2f0b8a8cd76fb4d03373327310df28d","preflight.json":"402a34b9e0e9125f737322707571e7f6b0dac4404956e1774e115f22def1dfdc"}},
+    {"batch":2,"id":"R022-1-A","selected_pair":true,"status":"pending-review","seconds":245.741,"exit_code":0,"usage":{"cached_input_tokens":464128,"entire_turn_capture":true,"input_tokens":544243,"output_tokens":10525,"reasoning_output_tokens":5354,"status":"observed","total_tokens":554768,"uncached_input_tokens":80115},"groups_covered":3,"groups_required":3,"source_requirements":{"beta-log":true,"format-alternatives":true,"spreadsheet":true},"diagnostic_counts":{"command_failed":0,"empty_output":0,"missing_output":0,"partial_verified_text":0,"unrecognized_output":0,"unverified_or_truncated_output":0,"verified_text":24},"reader_commands":24,"unverified_reads":[],"commands":32,"memory_commands":[],"changes":[],"infrastructure_errors":[],"invalid_event_lines":[],"terminal_errors":[],"sha256":{"result.json":"2abf9ec9ea7e0bb46ed04c5a740ef6ef623dd679d2ab261ac91a9d9c4f2ea934","events.stdout":"bae2e5ab374a4745ee51ab1108a157518bf412d9cdfdc1930c6db22895f74d83","answer.md":"aeeef480714fa65d86a455c09b3157195e24ee132c85586d73d9afbee027cfa5","reading-diagnostics.json":"68317f71d871e3577419286e75b83672c37f9f0b0ff28d362e0015413007ef86","before.json":"f17cbb491f5fb45bdd13ef59a4689770d4e07b4edb7ecf4d7f7764efdbeb3aa2","preflight.json":"c28332affc9f683cc477a0829d21c5ebb12c7c99531f4f4f6068605ef68410b7"}},
+    {"batch":2,"id":"R022-1-B","selected_pair":true,"status":"pending-review","seconds":175.185,"exit_code":0,"usage":{"cached_input_tokens":518016,"entire_turn_capture":true,"input_tokens":593970,"output_tokens":7913,"reasoning_output_tokens":4051,"status":"observed","total_tokens":601883,"uncached_input_tokens":75954},"groups_covered":3,"groups_required":3,"source_requirements":{"beta-log":true,"format-alternatives":true,"spreadsheet":true},"diagnostic_counts":{"command_failed":0,"empty_output":0,"missing_output":0,"partial_verified_text":0,"unrecognized_output":0,"unverified_or_truncated_output":0,"verified_text":25},"reader_commands":25,"unverified_reads":[],"commands":31,"memory_commands":[],"changes":[],"infrastructure_errors":[],"invalid_event_lines":[],"terminal_errors":[],"sha256":{"result.json":"fee9bcf183a943862f90c74d320c9866e83a495c2b1d499103b76e40ac352dd6","events.stdout":"449b4e0d6cd94e6b16596914e58158ff9db30c35b2ab5ecb7b7570ae400f7ed5","answer.md":"29fd0b46cdb8c7945cd4fe77099aa5cf495303845a993cfd91de8e8162c97aed","reading-diagnostics.json":"7c4c79a7c1372863e49896b568e4442129516c04a85a85494553112b904d8145","before.json":"eaf2a3f8d85a4845ac85578099552a17e79dfc111b7e7dc831b6d17c93e5c6c7","preflight.json":"c28332affc9f683cc477a0829d21c5ebb12c7c99531f4f4f6068605ef68410b7"}},
+    {"batch":2,"id":"R007-1-A","selected_pair":true,"status":"pending-review","seconds":183.576,"exit_code":0,"usage":{"cached_input_tokens":470784,"entire_turn_capture":true,"input_tokens":566974,"output_tokens":8119,"reasoning_output_tokens":3668,"status":"observed","total_tokens":575093,"uncached_input_tokens":96190},"groups_covered":4,"groups_required":4,"source_requirements":{"alpha-log":true,"approved":true,"beta-log":true,"classification":true},"diagnostic_counts":{"command_failed":0,"empty_output":2,"missing_output":0,"partial_verified_text":0,"unrecognized_output":0,"unverified_or_truncated_output":0,"verified_text":21},"reader_commands":23,"unverified_reads":[{"id":"item_21","status":"empty_output","characters":0,"command":"/bin/bash -lc '/tmp/framework-phase7-validation-20260909/bin/python ../tools/read_source.py project products/alpha/ARC.md'"},{"id":"item_20","status":"empty_output","characters":0,"command":"/bin/bash -lc '/tmp/framework-phase7-validation-20260909/bin/python ../tools/read_source.py project products/beta/PBR.md'"}],"commands":30,"memory_commands":[],"changes":[],"infrastructure_errors":[],"invalid_event_lines":[],"terminal_errors":[],"sha256":{"result.json":"bf8bee4db193ee2eccc8930e65fb024d2fbe14d22e455962dd427ac2d2f9add2","events.stdout":"d793163b94076d9fc233dfc4550d8fab520b98292c04e2b68e56bcee69e8719e","answer.md":"cf851cb9deef0c39c065d83804f28c8ee9390d95207614714aa593121f102cb6","reading-diagnostics.json":"4d4b00865ace04f316b54c1346f26cbcab471e921f9392ab030af26b18c76a5c","before.json":"f17cbb491f5fb45bdd13ef59a4689770d4e07b4edb7ecf4d7f7764efdbeb3aa2","preflight.json":"e81cb5f3e69f16ced9256f64f99e9023e2c811a07813685b4213db992a8508af"}},
+    {"batch":2,"id":"R007-1-B","selected_pair":true,"status":"pending-review","seconds":214.163,"exit_code":0,"usage":{"cached_input_tokens":1065984,"entire_turn_capture":true,"input_tokens":1126276,"output_tokens":8841,"reasoning_output_tokens":4424,"status":"observed","total_tokens":1135117,"uncached_input_tokens":60292},"groups_covered":4,"groups_required":4,"source_requirements":{"alpha-log":true,"approved":true,"beta-log":true,"classification":true},"diagnostic_counts":{"command_failed":0,"empty_output":2,"missing_output":0,"partial_verified_text":0,"unrecognized_output":0,"unverified_or_truncated_output":0,"verified_text":26},"reader_commands":28,"unverified_reads":[{"id":"item_5","status":"empty_output","characters":0,"command":"/bin/bash -lc '/tmp/framework-phase7-validation-20260909/bin/python ../tools/read_source.py project OPEN.md'"},{"id":"item_7","status":"empty_output","characters":0,"command":"/bin/bash -lc '/tmp/framework-phase7-validation-20260909/bin/python ../tools/read_source.py framework FRAMEWORK.md'"}],"commands":34,"memory_commands":[],"changes":[],"infrastructure_errors":[],"invalid_event_lines":[],"terminal_errors":[],"sha256":{"result.json":"4814ee8856233e6feed50c0ed10e6ed23314fc4d7e5ec489b2a5728c5330b67b","events.stdout":"aba3490050a0cee56bc38e3b647fc3e6f981ea1179820f4ac01d5b9e4becf40a","answer.md":"d42b289f5f1dae1498c238ace3a716a2420169fee17d3b8d29a1c464a4050458","reading-diagnostics.json":"59a5dbc54b88645bf7c2804c2883cc75c55156a6d9f412b83ff4fc11e0f789ac","before.json":"eaf2a3f8d85a4845ac85578099552a17e79dfc111b7e7dc831b6d17c93e5c6c7","preflight.json":"2fd5275514cc67f60c5c9880dfce33e55dbff61130a2739ac5561674a2b6c0e4"}},
+    {"batch":2,"id":"R004-1-A","selected_pair":false,"status":"unavailable","seconds":3.341,"exit_code":1,"usage":{"cached_input_tokens":null,"entire_turn_capture":false,"input_tokens":null,"output_tokens":null,"reason":"one-terminal-usage-required","reasoning_output_tokens":null,"status":"unknown","total_tokens":null,"uncached_input_tokens":null},"groups_covered":0,"groups_required":1,"source_requirements":{"sharing-alternatives":false},"diagnostic_counts":{"command_failed":0,"empty_output":0,"missing_output":0,"partial_verified_text":0,"unrecognized_output":0,"unverified_or_truncated_output":0,"verified_text":0},"reader_commands":0,"unverified_reads":[],"commands":0,"memory_commands":[],"changes":[],"infrastructure_errors":[],"invalid_event_lines":[],"terminal_errors":["You've hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at 11:04 AM.","You've hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at 11:04 AM."],"sha256":{"result.json":"21e723bd9d85df5ea1a2ffc1ba4702395dfb919e261c88692cc80e40f57c600d","events.stdout":"9f6e9847eb6dd31dabb77dc9b7f271079af585196979a78604b5daae38f6be97","reading-diagnostics.json":"03ad4528762ff881be34e26ac92a29ffa2394a849975136e915aaee66d8650db","before.json":"f17cbb491f5fb45bdd13ef59a4689770d4e07b4edb7ecf4d7f7764efdbeb3aa2","preflight.json":"3445df6192563f6ba64e27c86dda187835106337a1e3a8023c3a0f825cde94ce"}},
+    {"batch":3,"id":"R004-1-A","selected_pair":true,"status":"pending-review","seconds":224.19,"exit_code":0,"usage":{"cached_input_tokens":631808,"entire_turn_capture":true,"input_tokens":725358,"output_tokens":7876,"reasoning_output_tokens":3078,"status":"observed","total_tokens":733234,"uncached_input_tokens":93550},"groups_covered":1,"groups_required":1,"source_requirements":{"sharing-alternatives":true},"diagnostic_counts":{"command_failed":0,"empty_output":2,"missing_output":0,"partial_verified_text":0,"unrecognized_output":0,"unverified_or_truncated_output":0,"verified_text":24},"reader_commands":26,"unverified_reads":[{"id":"item_23","status":"empty_output","characters":0,"command":"/bin/bash -lc '/tmp/framework-phase7-validation-20260909/bin/python ../tools/read_source.py project code/alpha-api/tests/test_service.py'"},{"id":"item_24","status":"empty_output","characters":0,"command":"/bin/bash -lc '/tmp/framework-phase7-validation-20260909/bin/python ../tools/read_source.py project products/beta/contracts/DC-001-report.md'"}],"commands":39,"memory_commands":[],"changes":[],"infrastructure_errors":[],"invalid_event_lines":[],"terminal_errors":[],"sha256":{"result.json":"964613da028aeff0e48b2d964808cb9b08d0fbc5851ea4439fe32075d8205572","events.stdout":"b1c78c586c42b26e9921e4d5da9dad0f42b51ae3b2c170cde84c90d61fd31817","answer.md":"94a54cee04e6776c9ac34d60c385b677ade0a5a63d62e8934cbbfc10a9c62feb","reading-diagnostics.json":"ce78b47d56ae550a9bda1ba0362eda04be6def859dfa05ac6b6db55ca8cc08ea","before.json":"993a46c03dfaf66524bc4910736c8f611334da3d9bf041426a22dc8ac5ca355f","preflight.json":"1937d1f2b49c9743be8a1af6681d5be9e57073fcba3285acb14b2074bb4ace8f"}},
+    {"batch":3,"id":"R004-1-B","selected_pair":true,"status":"pending-review","seconds":206.392,"exit_code":0,"usage":{"cached_input_tokens":953984,"entire_turn_capture":true,"input_tokens":1033666,"output_tokens":8971,"reasoning_output_tokens":3798,"status":"observed","total_tokens":1042637,"uncached_input_tokens":79682},"groups_covered":1,"groups_required":1,"source_requirements":{"sharing-alternatives":true},"diagnostic_counts":{"command_failed":0,"empty_output":2,"missing_output":0,"partial_verified_text":0,"unrecognized_output":0,"unverified_or_truncated_output":0,"verified_text":25},"reader_commands":27,"unverified_reads":[{"id":"item_20","status":"empty_output","characters":0,"command":"/bin/bash -lc '/tmp/framework-phase7-validation-20260909/bin/python ../tools/read_source.py project products/alpha/product.yaml'"},{"id":"item_28","status":"empty_output","characters":0,"command":"/bin/bash -lc '/tmp/framework-phase7-validation-20260909/bin/python ../tools/read_source.py project products/alpha/contracts/DC-001-item.md'"}],"commands":38,"memory_commands":[],"changes":[],"infrastructure_errors":[],"invalid_event_lines":[],"terminal_errors":[],"sha256":{"result.json":"e855a93a3d7f3c057cd3b68b7a22bc5030bbfa77fc8380d99af362396385612b","events.stdout":"480cd4a37e0faf63dc8a3a3f83edc51f91b32fb2eb5da80a16cc4c6737489ef5","answer.md":"c8e1a0cb05db3b58ac18a9fabbcc70e8e11de0c0afc13e84b5759c95c29be98f","reading-diagnostics.json":"7e95a04c7aa259474988247179a2a2ccd7363e29c3493cb0c899bbb30962ced4","before.json":"9f91ee4da97a608a9a44e8851bf358e03fa24ea6d308a47fb9217af7d7ad5c63","preflight.json":"a60445ee820f4f026922683a737eafe4a17426a7e85be41aa0db56a6e242db18"}},
+    {"batch":3,"id":"R019-1-B","selected_pair":true,"status":"pending-review","seconds":302.113,"exit_code":0,"usage":{"cached_input_tokens":619136,"entire_turn_capture":true,"input_tokens":754843,"output_tokens":13807,"reasoning_output_tokens":6382,"status":"observed","total_tokens":768650,"uncached_input_tokens":135707},"groups_covered":6,"groups_required":6,"source_requirements":{"consumer-code":true,"consumer-tests":true,"platform":true,"producer-code":true,"producer-tests":true,"sharing":true},"diagnostic_counts":{"command_failed":0,"empty_output":1,"missing_output":0,"partial_verified_text":0,"unrecognized_output":0,"unverified_or_truncated_output":0,"verified_text":42},"reader_commands":43,"unverified_reads":[{"id":"item_19","status":"empty_output","characters":0,"command":"/bin/bash -lc '/tmp/framework-phase7-validation-20260909/bin/python ../tools/read_source.py project products/alpha/OPEN.md'"}],"commands":54,"memory_commands":[],"changes":[],"infrastructure_errors":[],"invalid_event_lines":[],"terminal_errors":[],"sha256":{"result.json":"8a9e91dc16df48561ac5218343eeef3d843ec069884cb7cdbeb95c4d132020a6","events.stdout":"7405e2feb03eca971843bd0b15eb019601fc9472f2dad9fcb191b0bfe9b9a64a","answer.md":"59635ffb292743f9409111afc83a9c0e2194495aecf26d935e0dc126d3de7e81","reading-diagnostics.json":"0a19b2e78497195aa446461add270a54317d550b7ed33ff19fca210e59287c2b","before.json":"9f91ee4da97a608a9a44e8851bf358e03fa24ea6d308a47fb9217af7d7ad5c63","preflight.json":"3445df6192563f6ba64e27c86dda187835106337a1e3a8023c3a0f825cde94ce"}},
+    {"batch":3,"id":"R019-1-A","selected_pair":true,"status":"pending-review","seconds":318.564,"exit_code":0,"usage":{"cached_input_tokens":856064,"entire_turn_capture":true,"input_tokens":915536,"output_tokens":13816,"reasoning_output_tokens":5898,"status":"observed","total_tokens":929352,"uncached_input_tokens":59472},"groups_covered":5,"groups_required":6,"source_requirements":{"consumer-code":true,"consumer-tests":false,"platform":true,"producer-code":true,"producer-tests":true,"sharing":true},"diagnostic_counts":{"command_failed":1,"empty_output":3,"missing_output":0,"partial_verified_text":0,"unrecognized_output":0,"unverified_or_truncated_output":0,"verified_text":37},"reader_commands":41,"unverified_reads":[{"id":"item_18","status":"empty_output","characters":0,"command":"/bin/bash -lc '/tmp/framework-phase7-validation-20260909/bin/python ../tools/read_source.py project products/gamma/OPEN.md'"},{"id":"item_19","status":"empty_output","characters":0,"command":"/bin/bash -lc '/tmp/framework-phase7-validation-20260909/bin/python ../tools/read_source.py project platform/OPEN.md'"},{"id":"item_39","status":"command_failed","characters":102,"command":"/bin/bash -lc '/tmp/framework-phase7-validation-20260915-02/bin/python ../tools/read_source.py project products/beta/ARC.md'"},{"id":"item_53","status":"empty_output","characters":0,"command":"/bin/bash -lc '/tmp/framework-phase7-validation-20260909/bin/python ../tools/read_source.py project code/beta-worker/tests/test_worker.py'"}],"commands":58,"memory_commands":[],"changes":[],"infrastructure_errors":[],"invalid_event_lines":[],"terminal_errors":[],"sha256":{"result.json":"405a7a6d2cad8bd84b402e0d5e9f9a111a59e0bd781d4ab3b32c8ed340b087c8","events.stdout":"0413106d4308b4cd1d5cd67dc48e404f0330e55ffe7263b23d83842cbdca1417","answer.md":"a2b8659d10361ef46335d86b6877976774f74c27783c29b961425877ec00a121","reading-diagnostics.json":"e21f462f5860c1e8df145b800e99fcdf739ee44b2d855aeb08abf3c0e513ad82","before.json":"993a46c03dfaf66524bc4910736c8f611334da3d9bf041426a22dc8ac5ca355f","preflight.json":"fdbf7bcd4fc93bf8b14f92fcd682b3ab8e7ac2c46997996ae83ff74067b13c09"}},
+    {"batch":3,"id":"R013-1-B","selected_pair":false,"status":"pending-review","seconds":265.345,"exit_code":0,"usage":{"cached_input_tokens":751488,"entire_turn_capture":true,"input_tokens":893097,"output_tokens":12039,"reasoning_output_tokens":5937,"status":"observed","total_tokens":905136,"uncached_input_tokens":141609},"groups_covered":4,"groups_required":4,"source_requirements":{"approved":true,"consumer-code":true,"item-contract":true,"schema":true},"diagnostic_counts":{"command_failed":0,"empty_output":0,"missing_output":0,"partial_verified_text":0,"unrecognized_output":0,"unverified_or_truncated_output":0,"verified_text":51},"reader_commands":51,"unverified_reads":[],"commands":71,"memory_commands":[],"changes":[],"infrastructure_errors":[],"invalid_event_lines":[],"terminal_errors":[],"sha256":{"result.json":"c822840f03f24f220a8cc4cc93887fa982874d498f9c4be781467d36bf3d0dc5","events.stdout":"aa1fcaaa95a30ffff78e7cff95bfea92a8241bef3a32ae628aaf9386bed10342","answer.md":"b21c9ac0f282a247fa688086b1c13946a811ce6e4a53d9010ebe12a67f05ec1a","reading-diagnostics.json":"d727b78aa6cde6e1c31701d2490247827654f99fd81ef416f798b462766f9013","before.json":"9f91ee4da97a608a9a44e8851bf358e03fa24ea6d308a47fb9217af7d7ad5c63","preflight.json":"a60445ee820f4f026922683a737eafe4a17426a7e85be41aa0db56a6e242db18"}},
+    {"batch":3,"id":"R013-1-A","selected_pair":false,"status":"unavailable","seconds":22.496,"exit_code":1,"usage":{"cached_input_tokens":null,"entire_turn_capture":false,"input_tokens":null,"output_tokens":null,"reason":"one-terminal-usage-required","reasoning_output_tokens":null,"status":"unknown","total_tokens":null,"uncached_input_tokens":null},"groups_covered":0,"groups_required":4,"source_requirements":{"approved":false,"consumer-code":false,"item-contract":false,"schema":false},"diagnostic_counts":{"command_failed":0,"empty_output":0,"missing_output":0,"partial_verified_text":0,"unrecognized_output":0,"unverified_or_truncated_output":0,"verified_text":4},"reader_commands":4,"unverified_reads":[],"commands":6,"memory_commands":[],"changes":[],"infrastructure_errors":[],"invalid_event_lines":[],"terminal_errors":["You've hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at 5:13 PM.","You've hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at 5:13 PM."],"sha256":{"result.json":"d20e54be09a0b85e279f0d4029abc8f4551193e3f147ccb022be19921195e692","events.stdout":"41865f4ad3aee92255e01ff68ef136074a072aec8347c60281e32a76bba3aa8d","reading-diagnostics.json":"d3b8895b7e986f791c175a281ed024e71f589e7b99a1abadd96b2f2ddfa07e61","before.json":"993a46c03dfaf66524bc4910736c8f611334da3d9bf041426a22dc8ac5ca355f","preflight.json":"402a34b9e0e9125f737322707571e7f6b0dac4404956e1774e115f22def1dfdc"}},
+    {"batch":4,"id":"R013-1-B","selected_pair":true,"status":"pending-review","seconds":322.5,"exit_code":0,"usage":{"cached_input_tokens":1523328,"entire_turn_capture":true,"input_tokens":1648931,"output_tokens":13041,"reasoning_output_tokens":7115,"status":"observed","total_tokens":1661972,"uncached_input_tokens":125603},"groups_covered":4,"groups_required":4,"source_requirements":{"approved":true,"consumer-code":true,"item-contract":true,"schema":true},"diagnostic_counts":{"command_failed":0,"empty_output":4,"missing_output":0,"partial_verified_text":0,"unrecognized_output":0,"unverified_or_truncated_output":0,"verified_text":33},"reader_commands":37,"unverified_reads":[{"id":"item_5","status":"empty_output","characters":0,"command":"/bin/bash -lc '/tmp/framework-phase7-validation-20260909/bin/python ../tools/read_source.py project products/alpha/product.yaml'"},{"id":"item_10","status":"empty_output","characters":0,"command":"/bin/bash -lc '/tmp/framework-phase7-validation-20260909/bin/python ../tools/read_source.py framework references/preamble.md'"},{"id":"item_27","status":"empty_output","characters":0,"command":"/bin/bash -lc '/tmp/framework-phase7-validation-20260909/bin/python ../tools/read_source.py project products/alpha/cycles/ICG-001-boundary.md'"},{"id":"item_25","status":"empty_output","characters":0,"command":"/bin/bash -lc '/tmp/framework-phase7-validation-20260909/bin/python ../tools/read_source.py project products/alpha/changes/CHG-002-trim.md'"}],"commands":61,"memory_commands":["/bin/bash -lc \"/tmp/framework-phase7-validation-20260909/bin/python ../framework/memory.py context --root . --goal \\\"Quali conseguenze avrebbe rinominare item_key nell'interfaccia di alpha?\\\" --skill audit --product alpha --mode analysis\""],"changes":[],"infrastructure_errors":[],"invalid_event_lines":[],"terminal_errors":[],"sha256":{"result.json":"23714cf12aabe8e391de236e311b7f59b5e4715e44d31463d92ee91cd1caff74","events.stdout":"3f47daec65ff031517104b251df80e9e6e1cbac3b18d1fb4ce47d5c950bfb504","answer.md":"7495eb1f788e49ec66fb8f92c7af7683dc10fc8efbe1d553b49eb4c0fca3c189","reading-diagnostics.json":"31d862f5c593e3a3427a9b047619f850670d58482b1ee4ba53d9bc2c1506f402","before.json":"7d9f077826cdf9f1c0514be0bd8059d7600dfa450908c8e4bb2321d656317570","preflight.json":"3eb41e69bffc4fffad887f92d2c850fa3351ae528d7b187a11325820b7d3ea6d"}},
+    {"batch":4,"id":"R013-1-A","selected_pair":true,"status":"pending-review","seconds":379.908,"exit_code":0,"usage":{"cached_input_tokens":740608,"entire_turn_capture":true,"input_tokens":809702,"output_tokens":15441,"reasoning_output_tokens":7830,"status":"observed","total_tokens":825143,"uncached_input_tokens":69094},"groups_covered":4,"groups_required":4,"source_requirements":{"approved":true,"consumer-code":true,"item-contract":true,"schema":true},"diagnostic_counts":{"command_failed":1,"empty_output":2,"missing_output":0,"partial_verified_text":0,"unrecognized_output":0,"unverified_or_truncated_output":0,"verified_text":31},"reader_commands":34,"unverified_reads":[{"id":"item_20","status":"command_failed","characters":102,"command":"/bin/bash -lc '/tmp/framework-phase7-validation-20260915-03/bin/python ../tools/read_source.py project products/alpha/PBR.md'"},{"id":"item_21","status":"empty_output","characters":0,"command":"/bin/bash -lc '/tmp/framework-phase7-validation-20260909/bin/python ../tools/read_source.py project GLOSSARY.md'"},{"id":"item_39","status":"empty_output","characters":0,"command":"/bin/bash -lc '/tmp/framework-phase7-validation-20260909/bin/python ../tools/read_source.py project code/beta-worker/tests/test_worker.py'"}],"commands":57,"memory_commands":[],"changes":[],"infrastructure_errors":[],"invalid_event_lines":[],"terminal_errors":[],"sha256":{"result.json":"6e78c168e02a7bc4833ca8ef7ddc6ad2431b3a5bde136b3a02cfe0e252df1e84","events.stdout":"951b32e6cb284b92c63c501246063746807879d422eab2c94b79e50a6355ac85","answer.md":"4e06254e452512babf56b199e09355304db40d9fc9355f1ac1f4156528c51573","reading-diagnostics.json":"fd2305d002e417c7c89bcc9234e307ec40b97ebddcef144188750e40b6b23541","before.json":"61b507f929345caa134197bcab84e7fc2ef2097974132b53eaf7bbaa15dc0cad","preflight.json":"f387265f6b5702afcce2a0ab5efa6b9daed84df373ba2a0b3dafc3d0ba3b2cd9"}},
+    {"batch":4,"id":"R010-1-A","selected_pair":true,"status":"pending-review","seconds":341.118,"exit_code":0,"usage":{"cached_input_tokens":1105792,"entire_turn_capture":true,"input_tokens":1161849,"output_tokens":10366,"reasoning_output_tokens":4630,"status":"observed","total_tokens":1172215,"uncached_input_tokens":56057},"groups_covered":3,"groups_required":3,"source_requirements":{"language":true,"old-language":true,"stack":true},"diagnostic_counts":{"command_failed":0,"empty_output":0,"missing_output":0,"partial_verified_text":0,"unrecognized_output":0,"unverified_or_truncated_output":0,"verified_text":25},"reader_commands":25,"unverified_reads":[],"commands":37,"memory_commands":[],"changes":[],"infrastructure_errors":[],"invalid_event_lines":[],"terminal_errors":[],"sha256":{"result.json":"60ecfea448bfbb6c33b160c83644401426a2ff63d395dc12f9e20bcf7e1e8ea7","events.stdout":"e88bb3eea997e29aa03a067cd7c8db21fa2a9bd3d9b2de26ac9d27cb69e4ca3c","answer.md":"6462723eff7657ec8c93331b1bbb6211c52436cb5520ad73db124815bd474893","reading-diagnostics.json":"605bb77b44d45ce71a82cd08100218548df1931253b334e1b26dfc3e89f6dd9d","before.json":"61b507f929345caa134197bcab84e7fc2ef2097974132b53eaf7bbaa15dc0cad","preflight.json":"8a81dc1a437c2a894ab63ee602a988930051fa6f296dfd49b880f043d00f032f"}},
+    {"batch":4,"id":"R010-1-B","selected_pair":true,"status":"pending-review","seconds":262.263,"exit_code":0,"usage":{"cached_input_tokens":769280,"entire_turn_capture":true,"input_tokens":826497,"output_tokens":9609,"reasoning_output_tokens":4783,"status":"observed","total_tokens":836106,"uncached_input_tokens":57217},"groups_covered":3,"groups_required":3,"source_requirements":{"language":true,"old-language":true,"stack":true},"diagnostic_counts":{"command_failed":1,"empty_output":0,"missing_output":0,"partial_verified_text":0,"unrecognized_output":0,"unverified_or_truncated_output":0,"verified_text":27},"reader_commands":28,"unverified_reads":[{"id":"item_13","status":"command_failed","characters":102,"command":"/bin/bash -lc '/tmp/framework-phase7-validation-20260915-03/bin/python ../tools/read_source.py project products/beta/product.yaml'"}],"commands":41,"memory_commands":[],"changes":[],"infrastructure_errors":[],"invalid_event_lines":[],"terminal_errors":[],"sha256":{"result.json":"4c0dbb26a92d98e5e63bdf5d2a1648c2f4d135d1f8ef5046cf9b0e2bc50f7474","events.stdout":"2eeea86827941badb4005a30ef53ec4783085f8c0736d3ebb9fac23e6dc15e67","answer.md":"b97b037bd2c9f9bd6c4c45fc926f0e5050b5288f4ce3227e6d3f831c1c674810","reading-diagnostics.json":"338fbc86f549eafb14e08504e406dfffd629db3795af624f4d69f5f40664a1a3","before.json":"7d9f077826cdf9f1c0514be0bd8059d7600dfa450908c8e4bb2321d656317570","preflight.json":"6924e842b12aba17e8b6d557aefff31f19f0b9e8d6edbc57f681a74f8956030f"}}
+  ],
+  "author_observations": [
+    {
+      "question": "R004",
+      "arms": [
+        "A",
+        "B"
+      ],
+      "review": "author-observation-only",
+      "observation": "Both explain statelessness and absence of measured caching need. Neither answer explicitly gives incompatible identifier semantics as the condition to reconsider sharing, although both required-source spans are captured. Independent rubric judgment pending."
+    },
+    {
+      "question": "R019",
+      "arms": [
+        "B"
+      ],
+      "review": "author-observation-only",
+      "observation": "Names alpha and beta, all three consumer tests including independent file import; retains static-callers non-exhaustiveness, no test execution, mandate preservation and missing runtime evidence. Required groups 6/6. Compare with A when complete."
+    },
+    {
+      "question": "R019",
+      "arms": [
+        "A",
+        "B"
+      ],
+      "review": "author-observation-only",
+      "observation": "Both answers identify alpha/beta, all three tests and non-exhaustiveness of local callers. A records 5/6 source groups because the consumer-tests reader output is empty, despite claiming a full read; B records 6/6. A actually executes the three synthetic tests successfully (verified command output); B explicitly does not execute them. These are different workflows, not evidence of graph use."
+    },
+    {
+      "question": "R013",
+      "arms": [
+        "B"
+      ],
+      "batch": "20260915-02",
+      "review": "author-observation-only; preserved additional response",
+      "observation": "Explains mandatory item_key/schema additionalProperties, direct consumer KeyError, contract major version and coordination, mandate preservation, independent file-import risk and conditional report-output impact. Three existing tests and explicit renamed_key -> KeyError probe verified in command outputs. Response remains additional after the paired A failed quota."
+    },
+    {
+      "question": "R013",
+      "arms": [
+        "B"
+      ],
+      "batch": "20260915-03",
+      "review": "author-observation-only",
+      "observation": "Identifies breaking rename, major-version coordination, preserved mandate, independently supplied consumer messages and green unit tests not proving integration. Explicitly rejects authority from untrusted review comment. Both test suites initially fail import rules, then 1+2 tests pass with PYTHONPATH configured; no renamed variant executed. Spontaneous memory context invocation emits parseable complete JSON in the captured stream (161138 characters), but answer declares truncation. Context partial, 52 requirements, 28 delivered chunks/99723 content characters, zero graph paths/edges, code not-requested. Not an attestation of what the model saw."
+    },
+    {
+      "question": "R013",
+      "arms": [
+        "A",
+        "B"
+      ],
+      "batch": "20260915-03",
+      "review": "author-observation-only",
+      "observation": "Both selected answers cover all four groups and explain breaking consumer access, contract major version/coordination and preservation mandate. Both distinguish possible report translation from compulsory report rename and do not change canonicalization automatically. A executes renamed payload KeyError probe; B explicitly reports inference rather than executing that variant, and adds untrusted-comment rejection/green unit tests not proving integration. No essential oracle consequence exclusively recovered by B established."
+    },
+    {
+      "question": "R010",
+      "arms": [
+        "A"
+      ],
+      "batch": "20260915-03",
+      "review": "author-observation-only",
+      "observation": "Correctly distinguishes superseded JavaScript DEC-001 from accepted Python DEC-002/STACK, scope alpha/beta only, gamma undecided and no universal JavaScript ban. Additional claim about incomplete PLATFORM cascade is incidental and not independently graded. No tests executed."
+    },
+    {
+      "question": "R010",
+      "arms": [
+        "A",
+        "B"
+      ],
+      "batch": "20260915-03",
+      "review": "author-observation-only",
+      "observation": "Both distinguish historical superseded JavaScript from accepted Python for alpha/beta, exclude gamma, cover all three required groups and avoid rewriting history. A runs validator/index checks; B explicitly does not. Additional PLATFORM cascade observations require separate judgment, not a new oracle condition."
+    }
+  ],
+  "limitations": [
+    "Independent answer review pending.",
+    "CLI captured text is not an attestation of model input.",
+    "Prior batches retained including orphan complete responses and unknown quota costs.",
+    "Version A/B is not a same-runtime graph ablation.",
+    "One spontaneous context invocation; no graph paths in that pack; code graph not requested."
+  ]
+}

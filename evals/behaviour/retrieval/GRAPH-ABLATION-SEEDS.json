@@ -1,0 +1,37 @@
+{
+  "schema": "framework/graph-ablation-seeds/v1",
+  "status": "declared-before-G0-measurement",
+  "scope": "Development only; manual query normalization, not a blind retrieval model or an oracle-derived optimum.",
+  "questions": {
+    "R007": {
+      "terms": [
+        "SIG-001"
+      ],
+      "reason": "Normalize signal number 001 to the framework's artifact identifier; do not preselect either product."
+    },
+    "R013": {
+      "terms": [
+        "item_key"
+      ],
+      "reason": "Exact identifier in the question."
+    },
+    "R019": {
+      "terms": [
+        "identifier"
+      ],
+      "reason": "English normalization of identificatori; same term in both conditions."
+    },
+    "R022": {
+      "terms": [
+        "spreadsheet"
+      ],
+      "reason": "Manual interpretation of the formatted-cell report proposal; already explored development case, not unseen."
+    }
+  },
+  "engine": "literal",
+  "limit": 20,
+  "control_hops": 0,
+  "graph_hops": 2,
+  "relations": "runtime default",
+  "model_invocations": 0
+}

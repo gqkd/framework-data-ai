@@ -1,0 +1,36 @@
+dataset_id: graph-calibration-v1
+review_status: author-draft-pending-independent-review
+review_scope: mechanical expected discovery is not independent semantic grading
+cases:
+  C001:
+    required_paths: [decisions/DEC-101-evaluator.md, decisions/DEC-102-ephemeral.md, decisions/DEC-103-compatibility.md]
+    must_include:
+      - Reusing an evaluator object does not authorize retaining caller arguments or computed values.
+      - A dictionary keyed by caller is also forbidden; test alternating callers with distinct inputs.
+      - Semantic changes require checks in both batch and interactive entry points.
+      - Incompatible rounding semantics is a condition for reconsidering shared rules.
+      - No measured speedup or deployed service is attested.
+    must_not: [Approve a cache, Treat document retrieval as proof tests ran]
+  C002:
+    required_paths: [decisions/DEC-201-format.md, decisions/DEC-202-wire.md]
+    must_include:
+      - CSV supersedes XML for new integrations.
+      - Existing readers need coordinated compatibility review.
+      - Deployment and migration are not attested.
+      - Typed nested values trigger reconsideration.
+    must_not: [Use the superseded record as current authority, Treat the workbook proposal as approved]
+  C003:
+    required_paths: [decisions/DEC-301-order.md]
+    must_include:
+      - Ascending record identifier with locale-independent comparison.
+      - Arrival order is not equivalent.
+      - An explicit event-time requirement in the consumer contract triggers review.
+    must_not: [Transfer diagnostic timeline ordering to business exports]
+  C004:
+    required_paths: [decisions/DEC-401-transport.md, products/alpha/contracts/DC-401-receipt.md]
+    must_include:
+      - accepted is validation for processing, not delivery.
+      - completed requires every declared destination to acknowledge.
+      - Changing these meanings requires a major version and consumer notice.
+      - The lack of a graph edge does not mean the contract or impact is absent.
+    must_not: [Infer no constraint from zero neighbours, Claim performance or runtime behaviour was measured]

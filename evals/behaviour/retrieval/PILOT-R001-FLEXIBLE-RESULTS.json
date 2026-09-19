@@ -1,0 +1,289 @@
+{
+  "schema": "framework/retrieval-flexible-pilot-summary/v1",
+  "question": "R001",
+  "mode": "instrumented-source-retrieval-flexible-v2",
+  "requested_model": "gpt-5.6-sol",
+  "actual_model_identity": null,
+  "requested_reasoning": "high",
+  "cli": "codex-cli 0.150.1",
+  "pair_order": "AB",
+  "timeout_seconds": null,
+  "model_invocations_attempted": 2,
+  "prepared_manifest_sha256": "2c52d59b39b5267b8ec2c2b1a14d8e9e4b2b1dac8cf96318f0e18cabaeb403cc",
+  "prompt_hashes": {
+    "R001-1-A": "d642aad9d6d0d0dff8c5a90ab1a33b7eee98d10cb010d9778539f4525f0db3a3",
+    "R001-1-B": "d642aad9d6d0d0dff8c5a90ab1a33b7eee98d10cb010d9778539f4525f0db3a3"
+  },
+  "runner_inputs": {
+    "evals/behaviour/memory/qualify.py": "33ec5761acc153339d3ccc714363f3c6fc6fc2dfbac467e11b69b175f49f5cf9",
+    "evals/behaviour/retrieval/diagnose_reads.py": "a8a13b57851a8ee02d06797d28b213e7a4aa2c003cca8385972181875b3006cc",
+    "evals/behaviour/retrieval/metrics.py": "fe51e331fe3f1d3a630c7473711dd6f18acfe0792e6c070ca27636f4160400fc",
+    "evals/behaviour/retrieval/prepare.py": "41347bdce1802eec65ed6db8a26cedb839e55ae09c46f8cc256cc84a5c897dfb",
+    "evals/behaviour/retrieval/read_source.py": "c220fa495690c2ef4475696776fbed2d9273363782d96177b8f14e679ca352e1",
+    "evals/behaviour/retrieval/read_source_flexible.py": "3e77075e64f94c37bf149ff3e09160e733d32a637abbdfcac73f878b2803dde6",
+    "evals/behaviour/retrieval/run.py": "168c04978dece0293def24929eb4b5274517899742a01dddab0701ecbf9f0ded",
+    "evals/behaviour/retrieval/run_flexible.py": "32f6dbe6c2ce8b0f24e080dfb1333e4b8af480ac924510e46fc85e26ce04a829"
+  },
+  "runner_input_checks": {
+    "evals/behaviour/memory/qualify.py": true,
+    "evals/behaviour/retrieval/diagnose_reads.py": true,
+    "evals/behaviour/retrieval/metrics.py": true,
+    "evals/behaviour/retrieval/prepare.py": true,
+    "evals/behaviour/retrieval/read_source.py": true,
+    "evals/behaviour/retrieval/read_source_flexible.py": true,
+    "evals/behaviour/retrieval/run.py": true,
+    "evals/behaviour/retrieval/run_flexible.py": true
+  },
+  "trials": [
+    {
+      "arm": "A",
+      "id": "R001-1-A",
+      "path": "/tmp/framework-retrieval-r001-flexible-20260914-01/trials/R001-1-A",
+      "status": "pending-review",
+      "quality": "pending-independent-review",
+      "seconds": 192.359,
+      "usage": {
+        "cached_input_tokens": 476032,
+        "entire_turn_capture": true,
+        "input_tokens": 578581,
+        "output_tokens": 5086,
+        "raw": [
+          {
+            "cache_write_input_tokens": 0,
+            "cached_input_tokens": 476032,
+            "input_tokens": 578581,
+            "output_tokens": 5086,
+            "reasoning_output_tokens": 1997
+          }
+        ],
+        "reasoning_output_tokens": 1997,
+        "status": "observed",
+        "total_tokens": 583667
+      },
+      "uncached_input_tokens": 102549,
+      "retrieval": {
+        "absence_checks": "not-automatically-graded",
+        "complete_delivery": true,
+        "groups_covered": 2,
+        "groups_required": 2,
+        "other_observations": [],
+        "required_sources": {
+          "language": true,
+          "stack": true
+        },
+        "semantic_review": "pending"
+      },
+      "source_output_status": "complete-observed-outputs",
+      "reader_commands": 13,
+      "whole_file_commands": 13,
+      "chosen_range_commands": 0,
+      "reader_counts": {
+        "command_failed": 0,
+        "empty_output": 0,
+        "missing_output": 0,
+        "partial_verified_text": 0,
+        "unrecognized_output": 0,
+        "unverified_or_truncated_output": 0,
+        "verified_text": 13
+      },
+      "empty_commands": [],
+      "all_command_count": 20,
+      "memory_cli_commands": 0,
+      "verified_source_lines": 1945,
+      "changes": [],
+      "invalid_event_lines": [],
+      "infrastructure_errors": [],
+      "hashes": {
+        "result.json": "f6116f1320b9f6a93466bff8c8b1ee53f74cbb2545b1a8af414818ad046e3ee5",
+        "answer.md": "a7eff25584adbf01bd1a4c3c986cb6bbb4cb9c96aa6c5e000ba69e860983bee8",
+        "events.stdout": "f186053c491277e5fa5afd798d32e99f985ece9c3a121d084619207ccbb097ac",
+        "events.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "reading-diagnostics.json": "457422982826dcf0e61336106b1aa12ecb5b2c15c3c8415f46cc577098ec2162",
+        "command.json": "652c401da0ac20d4d38fa2a5395a4dca64cf86b1663fa40506bfaa6fd71e799a",
+        "prompt.txt": "d642aad9d6d0d0dff8c5a90ab1a33b7eee98d10cb010d9778539f4525f0db3a3",
+        "before.json": "a5590d6ff2cdb4035213ae4a5aa4089825d764a50d7e06aba577e572f4ed1d42",
+        "preflight.json": "a60445ee820f4f026922683a737eafe4a17426a7e85be41aa0db56a6e242db18"
+      }
+    },
+    {
+      "arm": "B",
+      "id": "R001-1-B",
+      "path": "/tmp/framework-retrieval-r001-flexible-20260914-01/trials/R001-1-B",
+      "status": "pending-review",
+      "quality": "pending-independent-review",
+      "seconds": 249.301,
+      "usage": {
+        "cached_input_tokens": 276736,
+        "entire_turn_capture": true,
+        "input_tokens": 359507,
+        "output_tokens": 7050,
+        "raw": [
+          {
+            "cache_write_input_tokens": 0,
+            "cached_input_tokens": 276736,
+            "input_tokens": 359507,
+            "output_tokens": 7050,
+            "reasoning_output_tokens": 3780
+          }
+        ],
+        "reasoning_output_tokens": 3780,
+        "status": "observed",
+        "total_tokens": 366557
+      },
+      "uncached_input_tokens": 82771,
+      "retrieval": {
+        "absence_checks": "not-automatically-graded",
+        "complete_delivery": true,
+        "groups_covered": 2,
+        "groups_required": 2,
+        "other_observations": [],
+        "required_sources": {
+          "language": true,
+          "stack": true
+        },
+        "semantic_review": "pending"
+      },
+      "source_output_status": "incomplete-observed-outputs",
+      "reader_commands": 21,
+      "whole_file_commands": 14,
+      "chosen_range_commands": 7,
+      "reader_counts": {
+        "command_failed": 0,
+        "empty_output": 3,
+        "missing_output": 0,
+        "partial_verified_text": 0,
+        "unrecognized_output": 0,
+        "unverified_or_truncated_output": 0,
+        "verified_text": 18
+      },
+      "empty_commands": [
+        {
+          "item_id": "item_7",
+          "command": "/bin/bash -lc '/tmp/framework-phase7-validation-20260909/bin/python ../tools/read_source.py project products/alpha/product.yaml'"
+        },
+        {
+          "item_id": "item_29",
+          "command": "/bin/bash -lc '/tmp/framework-phase7-validation-20260909/bin/python ../tools/read_source.py framework SKILLS.md --start 1 --end 32'"
+        },
+        {
+          "item_id": "item_30",
+          "command": "/bin/bash -lc '/tmp/framework-phase7-validation-20260909/bin/python ../tools/read_source.py framework FRAMEWORK.md --start 250 --end 263'"
+        }
+      ],
+      "all_command_count": 26,
+      "memory_cli_commands": 0,
+      "verified_source_lines": 1553,
+      "changes": [],
+      "invalid_event_lines": [],
+      "infrastructure_errors": [],
+      "hashes": {
+        "result.json": "8945d477d09cdbd4de0d971652c75fff49ec2aff7f98b8d0443fabdeed7926e3",
+        "answer.md": "41fbf354df2a1e947ff3bf9c1b36998e2430defbd7aa5c9afe5f19549054d7ba",
+        "events.stdout": "5605f800428d80e0a27e4c6ba80d03fbad0c22f9fda9402e9503095bfb85dd13",
+        "events.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "reading-diagnostics.json": "a09f8959b894cd59144bfc678902267670a232b659b8d69259aeb55503c0f743",
+        "command.json": "2075299c7c5e8ca5975e30a271b5882e2620e1f8b65c2750eaeb5cd6deaa0838",
+        "prompt.txt": "d642aad9d6d0d0dff8c5a90ab1a33b7eee98d10cb010d9778539f4525f0db3a3",
+        "before.json": "2e3e1138ff5755019373e0db2601f69e62a8c4e706f3280c07b8d74f58f7dbf9",
+        "preflight.json": "3445df6192563f6ba64e27c86dda187835106337a1e3a8023c3a0f825cde94ce"
+      }
+    }
+  ],
+  "accounting": {
+    "known_tokens": 950224,
+    "unknown_usage_attempts": 0,
+    "process_seconds": 441.66,
+    "known_historical_tokens_including_v1": 12975779,
+    "historical_unknown_usage_attempts": 2,
+    "historical_attempts_including_v1": 19
+  },
+  "comparison": {
+    "total_token_difference_B_minus_A": -217110,
+    "total_token_percent_B_vs_A": -37.19758012702449,
+    "seconds_difference_B_minus_A": 56.942,
+    "seconds_percent_B_vs_A": 29.601942201820552
+  },
+  "limitations": [
+    "one development question; no independent answer grade",
+    "different reader experiment from v1; no pooling",
+    "CLI output not attested model-input payload",
+    "incomplete B output capture despite required-source coverage",
+    "cache and order not controlled; no causal saving claim"
+  ],
+  "arithmetic_check": {
+    "method": "PowerShell extraction independently recomputed in JavaScript",
+    "passed": true,
+    "total_tokens": 950224
+  },
+  "generator_input_checks": {
+    "evals/behaviour/retrieval/PROTOCOL.md": true,
+    "evals/behaviour/retrieval/corpus.yaml": true,
+    "evals/behaviour/retrieval/oracle.yaml": true,
+    "evals/behaviour/retrieval/prepare.py": true,
+    "evals/behaviour/retrieval/questions.yaml": true,
+    "evals/behaviour/retrieval/validation-expected.yaml": true,
+    "evals/fixtures/generators/memory.py": true
+  },
+  "run_hashes": {
+    "run.json": "243dea07813bd3650020554d86af07f92c62d546923f61e9ffd07f6ef31d4430",
+    "results.json": "6f2e1bf2be1502b200b732aa2ad9dcb9c9e7ad3914665892af4fd47cf118619e",
+    "evaluator/manifest.json": "2c52d59b39b5267b8ec2c2b1a14d8e9e4b2b1dac8cf96318f0e18cabaeb403cc",
+    "evaluator/oracle.json": "717c5ff6ac3480316d0b9f181eb96c3ee4223fed1968d9e85f8f515635a9d758",
+    "preregistered-plan": "2ac23dcba80486489d362de91f2dbe984bb6d6d30134038bb30b8da1b2a6d552"
+  },
+  "frameworks": {
+    "A": {
+      "version": "3.6.3",
+      "commit": "db75f310e2f42453cb0fe1b26573c3f6b5736790"
+    },
+    "B": {
+      "version": "3.8.1",
+      "commit": "faaf42259c7b43dfecbd1c52df21b2c4788cfc50"
+    }
+  },
+  "progress": {
+    "unique_questions": {
+      "completed": 1,
+      "total": 24
+    },
+    "development_questions": {
+      "completed": 1,
+      "total": 8
+    },
+    "pilot_captures": {
+      "completed": 2,
+      "total": 2
+    },
+    "independent_answer_reviews": {
+      "completed": 0,
+      "total": 2
+    }
+  },
+  "checks": {
+    "new_offline_tests": {
+      "passed": 17,
+      "seconds": 4.575
+    },
+    "full_selfcheck": {
+      "memory_tests_passed": 338,
+      "memory_tests_seconds": 265.695,
+      "all_checks_passed": true
+    },
+    "sandbox_preflight": {
+      "passed": 2,
+      "total": 2
+    }
+  },
+  "observation_discrepancy": {
+    "trial": "R001-1-B",
+    "file": "framework/FRAMEWORK.md",
+    "event": "item_9",
+    "captured_verified_lines": [
+      1,
+      680
+    ],
+    "answer_claim": "whole-file output truncated; reports selected intervals only",
+    "cause": "undetermined",
+    "model_input_attestation": false
+  }
+}

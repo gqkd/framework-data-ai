@@ -1,0 +1,186 @@
+{
+  "status": "prepared-not-executed",
+  "model_invocations_attempted": 0,
+  "selected": [
+    {
+      "arm": "B",
+      "id": "R016-1-B",
+      "question": "R016",
+      "repetition": 1,
+      "split": "development",
+      "status": "not-run"
+    },
+    {
+      "arm": "A",
+      "id": "R016-1-A",
+      "question": "R016",
+      "repetition": 1,
+      "split": "development",
+      "status": "not-run"
+    },
+    {
+      "arm": "A",
+      "id": "R022-1-A",
+      "question": "R022",
+      "repetition": 1,
+      "split": "development",
+      "status": "not-run"
+    },
+    {
+      "arm": "B",
+      "id": "R022-1-B",
+      "question": "R022",
+      "repetition": 1,
+      "split": "development",
+      "status": "not-run"
+    },
+    {
+      "arm": "A",
+      "id": "R007-1-A",
+      "question": "R007",
+      "repetition": 1,
+      "split": "development",
+      "status": "not-run"
+    },
+    {
+      "arm": "B",
+      "id": "R007-1-B",
+      "question": "R007",
+      "repetition": 1,
+      "split": "development",
+      "status": "not-run"
+    },
+    {
+      "arm": "A",
+      "id": "R004-1-A",
+      "question": "R004",
+      "repetition": 1,
+      "split": "development",
+      "status": "not-run"
+    },
+    {
+      "arm": "B",
+      "id": "R004-1-B",
+      "question": "R004",
+      "repetition": 1,
+      "split": "development",
+      "status": "not-run"
+    },
+    {
+      "arm": "B",
+      "id": "R019-1-B",
+      "question": "R019",
+      "repetition": 1,
+      "split": "development",
+      "status": "not-run"
+    },
+    {
+      "arm": "A",
+      "id": "R019-1-A",
+      "question": "R019",
+      "repetition": 1,
+      "split": "development",
+      "status": "not-run"
+    },
+    {
+      "arm": "B",
+      "id": "R013-1-B",
+      "question": "R013",
+      "repetition": 1,
+      "split": "development",
+      "status": "not-run"
+    },
+    {
+      "arm": "A",
+      "id": "R013-1-A",
+      "question": "R013",
+      "repetition": 1,
+      "split": "development",
+      "status": "not-run"
+    },
+    {
+      "arm": "A",
+      "id": "R010-1-A",
+      "question": "R010",
+      "repetition": 1,
+      "split": "development",
+      "status": "not-run"
+    },
+    {
+      "arm": "B",
+      "id": "R010-1-B",
+      "question": "R010",
+      "repetition": 1,
+      "split": "development",
+      "status": "not-run"
+    }
+  ],
+  "source_manifest_sha256": "2c52d59b39b5267b8ec2c2b1a14d8e9e4b2b1dac8cf96318f0e18cabaeb403cc",
+  "run_sha256": "9c2bdac7ab7844be324edb689e0bf3e13c96155c4feb748b0ae4ae74c182ee53",
+  "review_packet_hashes": {
+    "R004": "09c40ac5a9f08797d4bbe86745e4a51da2c44ca3c93759567583d785f7b0f2d3",
+    "R007": "a4731f896c43b4c81a043c5d347509831ad2bcfc74cd3e7b35668bbe90248837",
+    "R010": "62c9a2de2d48a19b0e5f5cfaa168793e8f88749a0254109a9c7637ff9f53e034",
+    "R013": "1b9b0ace251300c939640547b01cb84ff6e1e6a637eb08240d0c6c997944fd3b",
+    "R016": "af5afa27240f2067532025a92f21956977f2e6a01323b671b6c356f6d5333343",
+    "R019": "f53fee600d7e3199f9c3eedb32bf6e49486b799edb930c5812236afaecb0601b",
+    "R022": "9d9f7392ad6daa6ec3027d68bc037198eda95601224ebd05e833513111fde90c"
+  },
+  "generator_input_checks": {
+    "evals/behaviour/retrieval/PROTOCOL.md": true,
+    "evals/behaviour/retrieval/corpus.yaml": true,
+    "evals/behaviour/retrieval/oracle.yaml": true,
+    "evals/behaviour/retrieval/prepare.py": true,
+    "evals/behaviour/retrieval/questions.yaml": true,
+    "evals/behaviour/retrieval/validation-expected.yaml": true,
+    "evals/fixtures/generators/memory.py": true
+  },
+  "oracle_review_template": {
+    "independent_of_dataset_author": false,
+    "oracle_sha256": "717c5ff6ac3480316d0b9f181eb96c3ee4223fed1968d9e85f8f515635a9d758",
+    "prepared_manifest_sha256": "2c52d59b39b5267b8ec2c2b1a14d8e9e4b2b1dac8cf96318f0e18cabaeb403cc",
+    "reviewed_on": "",
+    "reviewed_questions": [
+      "R004",
+      "R007",
+      "R010",
+      "R013",
+      "R016",
+      "R019",
+      "R022"
+    ],
+    "reviewer": "",
+    "status": "pending-independent-human-review"
+  },
+  "gamma_code_exists_A": false,
+  "gamma_code_exists_B": false,
+  "schema": "framework/retrieval-development-review-preparation/v1",
+  "prepared_root": "/tmp/framework-retrieval-development-review-20260914-01",
+  "author_review": {
+    "completed_questions": [
+      "R004",
+      "R007",
+      "R010",
+      "R013",
+      "R016",
+      "R019",
+      "R022"
+    ],
+    "scope": "all seven generated review packets read in full, including their source texts",
+    "independent": false
+  },
+  "pending_human_review": true,
+  "offline_tests": {
+    "pattern": "test_retrieval_*.py",
+    "passed": 65,
+    "seconds": 10.769,
+    "model_invocations": 0
+  },
+  "concerns": [
+    {
+      "question": "R004",
+      "type": "rubric-scope",
+      "detail": "The mandatory review condition concerns when to reconsider sharing, beyond the question about retaining results. Supported by DEC-003 but may overconstrain a focused answer; human confirmation required. Frozen oracle unchanged."
+    }
+  ]
+}

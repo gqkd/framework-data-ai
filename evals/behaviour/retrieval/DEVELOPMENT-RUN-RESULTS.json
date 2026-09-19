@@ -1,0 +1,231 @@
+{
+  "accounting": {
+    "attempted": 5,
+    "completed_captures": 4,
+    "known_total_tokens": 2866861,
+    "not_run": 7,
+    "planned": 12,
+    "unavailable": 1,
+    "unknown_usage_attempts": 1
+  },
+  "block": "development-flexible-resume-20260915",
+  "configuration": {
+    "actual_model_identity": null,
+    "cli": "codex-cli 0.150.1",
+    "mode": "instrumented-source-retrieval-flexible-v2",
+    "pair_order": "scheduled",
+    "prepared_manifest_sha256": "2c52d59b39b5267b8ec2c2b1a14d8e9e4b2b1dac8cf96318f0e18cabaeb403cc",
+    "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+    "requested_model": "gpt-5.6-sol",
+    "requested_reasoning": "high"
+  },
+  "directory": "/tmp/framework-retrieval-development-flexible-20260915-01",
+  "frameworks": {
+    "A": {
+      "commit": "db75f310e2f42453cb0fe1b26573c3f6b5736790",
+      "version": "3.6.3"
+    },
+    "B": {
+      "commit": "faaf42259c7b43dfecbd1c52df21b2c4788cfc50",
+      "version": "3.8.1"
+    }
+  },
+  "not_a_model_delivery_attestation": true,
+  "previous_block_directory": "/tmp/framework-retrieval-development-flexible-20260914-01",
+  "review_status": "pending-independent-human-review",
+  "runner_inputs": {
+    "evals/behaviour/memory/qualify.py": "33ec5761acc153339d3ccc714363f3c6fc6fc2dfbac467e11b69b175f49f5cf9",
+    "evals/behaviour/retrieval/diagnose_reads.py": "a8a13b57851a8ee02d06797d28b213e7a4aa2c003cca8385972181875b3006cc",
+    "evals/behaviour/retrieval/metrics.py": "fe51e331fe3f1d3a630c7473711dd6f18acfe0792e6c070ca27636f4160400fc",
+    "evals/behaviour/retrieval/prepare.py": "41347bdce1802eec65ed6db8a26cedb839e55ae09c46f8cc256cc84a5c897dfb",
+    "evals/behaviour/retrieval/read_source.py": "c220fa495690c2ef4475696776fbed2d9273363782d96177b8f14e679ca352e1",
+    "evals/behaviour/retrieval/read_source_flexible.py": "3e77075e64f94c37bf149ff3e09160e733d32a637abbdfcac73f878b2803dde6",
+    "evals/behaviour/retrieval/run.py": "168c04978dece0293def24929eb4b5274517899742a01dddab0701ecbf9f0ded",
+    "evals/behaviour/retrieval/run_flexible.py": "32f6dbe6c2ce8b0f24e080dfb1333e4b8af480ac924510e46fc85e26ce04a829"
+  },
+  "schema": "framework/synthetic-retrieval-development-run/v1",
+  "scope": "Captured cost, duration and observed source groups. No answer grading is recorded here.",
+  "summary_from_runner": {
+    "arms": {
+      "A": {
+        "attempts": 3,
+        "attempts_with_unknown_tokens": 1,
+        "observed_token_subtotal": 1129861,
+        "pending_review": 2,
+        "trials_observed": 3
+      },
+      "B": {
+        "attempts": 2,
+        "attempts_with_unknown_tokens": 0,
+        "observed_token_subtotal": 1737000,
+        "pending_review": 2,
+        "trials_observed": 2
+      }
+    },
+    "note": "Observed subtotals include unsuccessful attempts; unknown costs are not zero.",
+    "quality_comparison": "not-performed",
+    "token_savings": null
+  },
+  "termination": {
+    "automatic_retry": false,
+    "elapsed_seconds": 3.341,
+    "exit_code": 1,
+    "provider_message": "You've hit your usage limit. Upgrade to Pro, visit the usage page to purchase more credits or try again at 11:04 AM.",
+    "trial": "R004-1-A",
+    "usage": "unknown; not zero"
+  },
+  "trials": [
+    {
+      "answer_md_sha256": "aeeef480714fa65d86a455c09b3157195e24ee132c85586d73d9afbee027cfa5",
+      "arm": "A",
+      "cached_input_tokens": 464128,
+      "changes": [],
+      "events_stdout_sha256": "bae2e5ab374a4745ee51ab1108a157518bf412d9cdfdc1930c6db22895f74d83",
+      "exit_code": 0,
+      "groups_covered": 3,
+      "groups_required": 3,
+      "id": "R022-1-A",
+      "infrastructure_errors": [],
+      "input_tokens": 544243,
+      "invalid_event_lines": [],
+      "output_tokens": 10525,
+      "question": "R022",
+      "reader_empty_output": 0,
+      "reader_verified_text": 24,
+      "reasoning_output_tokens": 5354,
+      "result_json_sha256": "2abf9ec9ea7e0bb46ed04c5a740ef6ef623dd679d2ab261ac91a9d9c4f2ea934",
+      "seconds": 245.741,
+      "status": "pending-review",
+      "total_tokens": 554768,
+      "uncached_input_tokens": 80115,
+      "usage_status": "observed"
+    },
+    {
+      "answer_md_sha256": "29fd0b46cdb8c7945cd4fe77099aa5cf495303845a993cfd91de8e8162c97aed",
+      "arm": "B",
+      "cached_input_tokens": 518016,
+      "changes": [],
+      "events_stdout_sha256": "449b4e0d6cd94e6b16596914e58158ff9db30c35b2ab5ecb7b7570ae400f7ed5",
+      "exit_code": 0,
+      "groups_covered": 3,
+      "groups_required": 3,
+      "id": "R022-1-B",
+      "infrastructure_errors": [],
+      "input_tokens": 593970,
+      "invalid_event_lines": [],
+      "output_tokens": 7913,
+      "question": "R022",
+      "reader_empty_output": 0,
+      "reader_verified_text": 25,
+      "reasoning_output_tokens": 4051,
+      "result_json_sha256": "fee9bcf183a943862f90c74d320c9866e83a495c2b1d499103b76e40ac352dd6",
+      "seconds": 175.185,
+      "status": "pending-review",
+      "total_tokens": 601883,
+      "uncached_input_tokens": 75954,
+      "usage_status": "observed"
+    },
+    {
+      "answer_md_sha256": "cf851cb9deef0c39c065d83804f28c8ee9390d95207614714aa593121f102cb6",
+      "arm": "A",
+      "cached_input_tokens": 470784,
+      "changes": [],
+      "events_stdout_sha256": "d793163b94076d9fc233dfc4550d8fab520b98292c04e2b68e56bcee69e8719e",
+      "exit_code": 0,
+      "groups_covered": 4,
+      "groups_required": 4,
+      "id": "R007-1-A",
+      "infrastructure_errors": [],
+      "input_tokens": 566974,
+      "invalid_event_lines": [],
+      "output_tokens": 8119,
+      "question": "R007",
+      "reader_empty_output": 2,
+      "reader_verified_text": 21,
+      "reasoning_output_tokens": 3668,
+      "result_json_sha256": "bf8bee4db193ee2eccc8930e65fb024d2fbe14d22e455962dd427ac2d2f9add2",
+      "seconds": 183.576,
+      "status": "pending-review",
+      "total_tokens": 575093,
+      "uncached_input_tokens": 96190,
+      "usage_status": "observed"
+    },
+    {
+      "answer_md_sha256": "d42b289f5f1dae1498c238ace3a716a2420169fee17d3b8d29a1c464a4050458",
+      "arm": "B",
+      "cached_input_tokens": 1065984,
+      "changes": [],
+      "events_stdout_sha256": "aba3490050a0cee56bc38e3b647fc3e6f981ea1179820f4ac01d5b9e4becf40a",
+      "exit_code": 0,
+      "groups_covered": 4,
+      "groups_required": 4,
+      "id": "R007-1-B",
+      "infrastructure_errors": [],
+      "input_tokens": 1126276,
+      "invalid_event_lines": [],
+      "output_tokens": 8841,
+      "question": "R007",
+      "reader_empty_output": 2,
+      "reader_verified_text": 26,
+      "reasoning_output_tokens": 4424,
+      "result_json_sha256": "4814ee8856233e6feed50c0ed10e6ed23314fc4d7e5ec489b2a5728c5330b67b",
+      "seconds": 214.163,
+      "status": "pending-review",
+      "total_tokens": 1135117,
+      "uncached_input_tokens": 60292,
+      "usage_status": "observed"
+    },
+    {
+      "arm": "A",
+      "cached_input_tokens": null,
+      "changes": [],
+      "events_stdout_sha256": "9f6e9847eb6dd31dabb77dc9b7f271079af585196979a78604b5daae38f6be97",
+      "exit_code": 1,
+      "groups_covered": 0,
+      "groups_required": 1,
+      "id": "R004-1-A",
+      "infrastructure_errors": [],
+      "input_tokens": null,
+      "invalid_event_lines": [],
+      "output_tokens": null,
+      "question": "R004",
+      "reader_empty_output": 0,
+      "reader_verified_text": 0,
+      "reasoning_output_tokens": null,
+      "result_json_sha256": "21e723bd9d85df5ea1a2ffc1ba4702395dfb919e261c88692cc80e40f57c600d",
+      "seconds": 3.341,
+      "status": "unavailable",
+      "total_tokens": null,
+      "uncached_input_tokens": null,
+      "usage_status": "unknown"
+    },
+    {
+      "id": "R004-1-B",
+      "status": "not-run"
+    },
+    {
+      "id": "R019-1-B",
+      "status": "not-run"
+    },
+    {
+      "id": "R019-1-A",
+      "status": "not-run"
+    },
+    {
+      "id": "R013-1-B",
+      "status": "not-run"
+    },
+    {
+      "id": "R013-1-A",
+      "status": "not-run"
+    },
+    {
+      "id": "R010-1-A",
+      "status": "not-run"
+    },
+    {
+      "id": "R010-1-B",
+      "status": "not-run"
+    }
+  ]
+}

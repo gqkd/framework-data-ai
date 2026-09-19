@@ -1,0 +1,33 @@
+dataset_id: graph-calibration-v1
+scope: authored mechanistic calibration; not blind routing or real-project effectiveness
+policy:
+  control_hops: 0
+  graph_hops: 2
+  limit: 20
+  relations: runtime default
+  seed_mode: explicit document path supplied in both question and engine query
+cases:
+  - id: C001
+    question: "Parti da decisions/DEC-101-evaluator.md. Possiamo mantenere risultati fra chiamate in una mappa per chiamante? Quali vincoli, test e condizioni di riesame contano?"
+    seed: decisions/DEC-101-evaluator.md
+    expected_additional_paths: [decisions/DEC-102-ephemeral.md, decisions/DEC-103-compatibility.md]
+    expected_unreached_required_paths: []
+    mechanism: two-hop chain of declared dependencies with different vocabulary
+  - id: C002
+    question: "Parti da decisions/DEC-201-format.md. Quale rappresentazione va usata per le nuove integrazioni, quali conseguenze ha il cambiamento e possiamo dire che sia gia in produzione?"
+    seed: decisions/DEC-201-format.md
+    expected_additional_paths: [decisions/DEC-202-wire.md]
+    expected_unreached_required_paths: []
+    mechanism: current decision reached from superseded record; history is not deleted
+  - id: C003
+    question: "Parti da decisions/DEC-301-order.md. Quale ordinamento devono avere le righe esportate e quando va riesaminato?"
+    seed: decisions/DEC-301-order.md
+    expected_additional_paths: []
+    expected_unreached_required_paths: []
+    mechanism: self-contained source; no expected navigation benefit
+  - id: C004
+    question: "Parti da decisions/DEC-401-transport.md. Nel refactoring del trasporto possiamo trattare accepted come completamento e cambiare il significato senza coordinamento?"
+    seed: decisions/DEC-401-transport.md
+    expected_additional_paths: []
+    expected_unreached_required_paths: [products/alpha/contracts/DC-401-receipt.md]
+    mechanism: prose reference deliberately lacks graph edge; direct reading remains possible
