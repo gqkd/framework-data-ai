@@ -59,6 +59,22 @@ VALIDATE_REL = "skills/audit/scripts/validate.py"
 # move it.
 ADOPT_CLEARS = ("FW001", "FW002", "FW003")
 
+# `AN003` names the finding it is about in square brackets at the head of its message.
+ANNOTATION_SUBJECT = re.compile(r"^\[([A-Z]{2,3}\d{3})\]")
+
+
+def adopt_clears(finding: dict) -> bool:
+    """True when `--adopt` removes this finding by writing the number, not by an edit.
+
+    Kept out of the loop that uses it so a test can state the rule directly: the defect
+    it encodes survived because nothing could name it. See the comment in the loop.
+    """
+    if finding.get("code") in ADOPT_CLEARS:
+        return True
+    about = ANNOTATION_SUBJECT.match(finding.get("message") or "")
+    return (finding.get("code") == "AN003"
+            and about is not None and about.group(1) in ADOPT_CLEARS)
+
 SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 VERSION_LINE = re.compile(r"^version:\s*['\"]?(\d[\d.]*)", re.M)
 # `# 2.0.0 -> 2.1.0.` and the one that opens the history, `# 1 -> 1.1.0.`
@@ -452,7 +468,19 @@ def main() -> int:
                     # there was nowhere for that to be written and nothing here to read
                     # it. There is now, and the guard keeps its meaning: it blocks on
                     # work outstanding, and an examined finding is not outstanding.
-                    where = ("version_line" if f["code"] in ADOPT_CLEARS
+                    # AND THE SAME DEADLOCK RETURNS ONE LEVEL UP, THROUGH THE
+                    # ANNOTATION. A repository that asks for `require_all` gets an
+                    # `AN003` for every unannotated warning -- including the `FW001` and
+                    # `FW003` that exist only because this migration has not happened
+                    # yet. That `AN003` is not in `ADOPT_CLEARS`, so it landed under NEW
+                    # and refused the adoption that would have removed the finding it
+                    # was reporting about. The only ways out were to annotate a finding
+                    # that is about to vanish -- which the next run reports as `AN001`,
+                    # obsolete -- or to stop asking for all annotations. Both punish the
+                    # project for taking the framework seriously, which is the sentence
+                    # written above about the pin, word for word. An annotation finding
+                    # whose subject `--adopt` clears is cleared by `--adopt` too.
+                    where = ("version_line" if adopt_clears(f)
                              else "accepted" if k in new and new[k].get("accepted")
                              else "already_there" if k in old and k in new
                              else "new" if k in new else "gone")
