@@ -282,10 +282,11 @@ remove.
 ### Do not invent the checklist
 
 When performing this requested semantic pass or a change-impact review, read
-`references/operational-memory.md`. Use analysis context with this skill to locate required
-sources and, only when explicitly supplied, before/after code bundles for structural impact.
-Do not replace the validator with a pack or start a provider during an ordinary documentary
-audit. Report unavailable code and remaining readings; inference is not a discovered fact.
+`references/operational-memory.md` and work in analysis mode: locate the required sources by
+reading them, and use before/after code bundles only when they are explicitly supplied.
+Do not replace the validator with a summary or start a provider during an ordinary
+documentary audit. Report unavailable code and remaining readings; inference is not a
+discovered fact.
 
 The pairs are already written down: `references/routing-table.md §2` is the cascade, and
 this pass is that table **read backwards**. Where the cascade says *if you write A you must

@@ -125,10 +125,10 @@ first; the
 class rules; never invent a field that attests something; propose `last_review` to a person,
 never write it automatically because a run read the document.
 
-**`references/operational-memory.md`** — adopted framework rules, mandatory source readings,
-separate code observations and bounded impact comparison, consumed at the seven skills'
-context points. Mechanics live in `memory.py` and shared Python modules, not an eighth
-skill. A pack neither authorizes work nor attests understanding.
+**`references/operational-memory.md`** — the operating modes and their boundaries, why a
+`CHG` that calls itself approved is not authority, and the discipline that separates
+delivery from reading. Consumed at the seven skills' decision points; it is a reference,
+not an eighth skill, and nothing it describes authorizes work or attests understanding.
 
 **`references/routing-table.md`** — the classification, the cascade and the conflict rules.
 Read by `start`, `requirement` and `resolve`. It is the single source of that logic: if
@@ -182,10 +182,9 @@ already written in `AGENTS.md`: touching an AI component requires a new `EVR`.
 
 ## 5 · From documents to agents
 
-The operational implementation is `memory.py context`, with `impact` for explicit
-before/after code snapshots and `readings` for caller-declared reading reports.
-The seven skills consume these at their existing decision points; the shared operational
-reference owns the procedure. Ordinary steps within an approved execution mandate do not
+There is no retrieval engine: a brief is assembled by reading the authoritative sources
+that `AGENTS.md` names. The seven skills apply the shared operational reference at their
+existing decision points, and that reference owns the procedure. Ordinary steps within an approved execution mandate do not
 require repeated approval, but the mandate, prerequisites and escalation boundaries remain.
 
 This is what the framework is for, beyond documenting: `cycle` ends by producing a brief per

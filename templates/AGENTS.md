@@ -79,8 +79,9 @@ here.
 ## Context and execution scope
 
 Use the adopted framework's `references/operational-memory.md` when assembling an agent
-brief or reviewing consequences. If optional memory tooling is unavailable, read the same
-authoritative sources directly and state missing observations.
+brief or reviewing consequences: it holds the mode boundaries and the evidence discipline.
+Assemble the brief by reading the authoritative sources this file names, and state which
+observations are missing rather than filling them.
 
 Analysis/proposal is not implementation and needs no CHG merely to answer. For execution,
 read the approved CHG's scope, preservation clauses and acceptance criteria, the ICG and

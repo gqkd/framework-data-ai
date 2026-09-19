@@ -20,11 +20,9 @@ decisions, products, initiatives and corpus, live in that project's repository, 
 | `templates/` | One template per artifact, each with its anti-patterns at the bottom |
 | `schemas/` | The artifact catalog and what each type is allowed to be. `artifact-types.yaml` is the source; `generate.py` projects it into the JSON Schemas, into `FRAMEWORK.md §7` and into `templates/README.md` |
 | `skills/` | The skills themselves. `audit/` also carries the gate: `scripts/validate.py`, `scripts/migrate.py` and `checks.yaml` |
-| `src/framework_data_ai/` | Shared reading/resolution, documentary memory and a separate code graph. Loaded from this checkout; no package installation required |
-| `memory.py` | Opt-in `doctor`, `gaps`, `build`, `query`, `code`, `context`, `impact`, `readings`, `view` CLI. See `references/product-memory.md`; the observer and [offline viewer](references/memory-viewer.md) are independent options |
-| `providers.lock.json`, `third_party/` | Pinned optional provider, reviewed-source provenance and generated integration inventory; no bundled binary or model |
+| `src/framework_data_ai/` | Shared reading and resolution, the artifact contracts and a separate code-observation layer, used by the opt-in verification profiles. Loaded from this checkout; no package installation required |
 | `ci/` | Legacy PR template/workflow, optional trusted-base documentary controller, contribution-policy and CODEOWNERS adoption examples; see `references/contributions.md` |
-| `references/` | Shared by the skills: the common preamble, routing table and operational-memory reading/scope rules |
+| `references/` | Shared by the skills: the common preamble, the routing table, the operating-mode and evidence rules, the contribution trust boundary and the adoption procedure |
 | `tests/selfcheck.py` | The framework checked against itself. Runs in CI |
 | `tests/memory/` | Frozen acceptance inputs, deterministic memory tests and phase reports. Model evaluation results are separate |
 
@@ -141,7 +139,7 @@ marketplace by URL. Nothing above requires this.
 <!-- generated: cost -->
 *Generated from the skills themselves. Edit those, not this line.*
 
-**7 skills**, whose names and descriptions are about 6,013 characters, so roughly **1,503 tokens** loaded into every session at four characters each, whether or not a skill runs. Each one costs another two to three thousand when it does.
+**7 skills**, whose names and descriptions are about 6,501 characters, so roughly **1,625 tokens** loaded into every session at four characters each, whether or not a skill runs. Each one costs another two to three thousand when it does.
 <!-- /generated -->
 
 ### If you have client documents to read
@@ -217,7 +215,7 @@ Other new documentary writes/cascades come back as a diff and a question. Ordina
 technical edits and tests within an implementation already approved through the project
 process need no per-step approval. New decisions, wider scope/cascades, immutable-body
 edits and additional permissions still require escalation. Analysis alone grants no
-implementation authority; a context pack grants none either. See
+implementation authority, and neither does locating the mandate that would. See
 [`references/operational-memory.md`](references/operational-memory.md).
 
 **They will not overwrite a definition.** In a test, the glossary said a customer is active

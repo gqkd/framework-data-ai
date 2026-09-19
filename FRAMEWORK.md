@@ -655,26 +655,27 @@ completeness of the picture.
 6. **If a fact is not documented, say so.** The absence is information. An agent that fills
    a gap with a plausible assumption does more damage than one that stops.
 
-## 12. Optional operational memory
+## 12. Optional contribution and release verification
 
-Product Memory makes the existing sources easier to assemble for development without
-replacing this model. Its graphs and reports are derived, not new product artifacts:
+Nothing in this section changes the model above. Two profiles of the validator are added,
+selected only on the command line, and the default `legacy` profile is untouched:
 
 ```text
-authoritative Markdown/YAML --> documentary graph --> context + required source readings
-explicit captured code -------> separate code graph --> bounded structural impact
 approved Git objects + witnessed execution receipts --> opt-in contribution/release gates
 ```
 
-Declared component roots bridge current/target/design views to code; they are not proof
-of implementation. Missing observations remain missing, and inferred relations cannot
-become constraints. An assembled pack does not establish approval or agent understanding.
-The default validator stays compatible; strict gates are explicitly selected and retain
-their independent trusted-caller boundary. Integration and deployment remain separate.
+A project may bind an approved `CHG` to the repositories, paths, documentary obligations
+and tests it authorizes, in a policy committed **before** the work it governs. The gate
+reads Git objects at full commit ids — not the working tree and not the pull request body —
+and fails closed when history, access, policy or execution evidence is missing.
 
-Use `references/adoption.md` to separate upgrade, explicit commands and forward-only
-mapping enrichment; `references/product-memory.md` owns the runtime contract. No graph
-database, embeddings, customer-data ingestion, background agent or viewer is required.
-For optional read-only visual inspection, `memory.py view` exports a self-contained HTML.
-`references/memory-viewer.md` owns the revision, privacy, bounds and dependency contract;
-its presentation links never become authoritative graph edges or evidence of understanding.
+**What it does not do, stated because the limit is measured.** Its path scope is per path:
+a contribution that exceeds its mandate *inside* a file the mandate authorizes is not
+caught. An unfulfilled documentary obligation is. Neither profile proves semantic
+preservation, and neither replaces human review, a merge or a deployment.
+
+`references/contributions.md` owns the trust boundary and says which inputs the caller, not
+the framework, must authenticate. `references/adoption.md` separates upgrade from explicit
+commands. **There is no documentary retrieval engine, no context pack and no graph
+navigation:** that work was measured and is not part of this framework — see
+`references/operational-memory.md`, which keeps the reading discipline that survived it.

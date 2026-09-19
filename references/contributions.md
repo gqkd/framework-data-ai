@@ -1,8 +1,8 @@
 # Contributions: approved base, bounded scope and execution evidence
 
 Use this for external contributions and multi-repository PR assessment. It extends, not
-replaces, the operational reading procedure. No graph, context pack, branch-local CHG,
-PR body or uploaded JSON authenticates its own authority.
+replaces, the operational reading procedure. No branch-local CHG, PR body or uploaded
+JSON authenticates its own authority.
 
 ## Two explicit profiles
 
@@ -51,7 +51,8 @@ authoritative check. Use an approved workflow/pin and protected review rules.
 
 There is no automatic fallback to the documentary repository's latest main. Missing
 cross-repository access is an unavailable gate, not a successful partial approval. Never
-give fork code documentary credentials, shared privileged caches or a broader context pack.
+give fork code documentary credentials, shared privileged caches or a wider documentary
+scope than its mandate names.
 Classifications/exclusions restrict selected documentary evidence; they are not an ACL.
 
 ## The approved policy

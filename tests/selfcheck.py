@@ -208,7 +208,9 @@ def _markers():
 
 @check("every check the validator emits is in the catalog, and the reverse")
 def _catalog_matches_code():
-    emitted = set(re.findall(r'report\.add\(\s*"([A-Z]{2,3}\d{3})"', VALIDATE.read_text()))
+    sources = [VALIDATE, *sorted((ROOT / "src/framework_data_ai").glob("*.py"))]
+    emitted = set(re.findall(r'report\.add\(\s*"([A-Z]{2,3}\d{3})"',
+                             "\n".join(path.read_text() for path in sources)))
     catalogued = set(CHECKS["checks"])
     off = {c for c, s in CHECKS["checks"].items()
            if s.get("level") in ("off", False)}
@@ -262,7 +264,16 @@ def _skill_references():
     # be naming one that something it ships accepts. What the union gives up is telling a
     # `migrate.py` flag written against `validate.py` from a correct one, which is a typo
     # this cannot see and a reader can.
-    known_flags = {f for script in sorted((ROOT / "skills").rglob("scripts/*.py"))
+    # The operational CLI ships at the root, with its argparse definitions in the core --
+    # when it ships at all. From 3.7.0 the documentary retrieval engine is not part of the
+    # framework, so the file is included only if it exists rather than being assumed: a
+    # hard-coded path here would fail as a missing file instead of reporting a stale flag,
+    # which is the failure this check exists to make legible.
+    scripts = [*sorted((ROOT / "skills").rglob("scripts/*.py"))]
+    operational_cli = ROOT / "src/framework_data_ai/memory/cli.py"
+    if operational_cli.exists():
+        scripts.append(operational_cli)
+    known_flags = {f for script in scripts
                    for f in re.findall(r'"(--[a-z-]+)"', script.read_text())}
     problems = []
 
@@ -3181,12 +3192,22 @@ def _migration_is_executable():
                 old_commit, old_version = sha, v
                 break
         if old_version:
+            # --adopt must bind committed bytes, not this possibly dirty working tree.
+            # Exercise it against an isolated clean checkout of the committed runtime;
+            # test_adoption.py separately covers the complete proposed source export.
+            trusted_target = proj / "trusted-framework"
+            clone = subprocess.run(["git", "clone", "--local", "--no-hardlinks", str(ROOT),
+                                    str(trusted_target)], capture_output=True, text=True)
+            if clone.returncode:
+                return problems + ["could not create the isolated migration target: " + clone.stderr]
+            proj = proj / "project"
+            proj.mkdir()
             cfg = proj / "framework.yaml"
             cfg.write_text(f'framework_version: "{old_version}"\n'
                            f'framework_commit: "{old_commit}"\n')
             subprocess.run([sys.executable,
                             str(ROOT / "skills" / "audit" / "scripts" / "migrate.py"),
-                            "--root", str(proj), "--adopt"],
+                            "--root", str(proj), "--framework", str(trusted_target), "--adopt"],
                            capture_output=True, text=True)
             after = cfg.read_text()
             if REGISTRY["version"] not in after:
@@ -4552,6 +4573,21 @@ def _change_set_review():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+
+@check("contribution authority, artifact resolution and code-observation contracts")
+def _contracts_suite():
+    r = subprocess.run([sys.executable, "-B", "-m", "unittest", "discover",
+                        "-s", "tests/memory", "-v"], cwd=ROOT,
+                       capture_output=True, text=True)
+    if r.returncode:
+        return [r.stdout + r.stderr]
+    # Print the unit-suite summary, including any future expected failures rather than
+    # concealing them behind selfcheck's overall result.
+    for line in r.stderr.splitlines():
+        if "expected failure" in line or line.startswith(("Ran ", "OK")):
+            print(f"       {line}")
+    return []
+
 
 print()
 if failures:

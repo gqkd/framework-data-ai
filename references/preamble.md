@@ -11,9 +11,11 @@ merely to answer a question. An implementation already approved through the proj
 permits ordinary technical steps inside its bounds; new decisions, expanded scope/cascades,
 immutable-body edits and external permissions still require escalation.
 
-When assembling a development brief or examining consequences with Product Memory, read
-`references/operational-memory.md`. Its derived reports grant no authority and cannot
-update `last_review`. Editorial approval and narrow append/transcription rules remain below.
+When assembling a development brief or examining consequences, read
+`references/operational-memory.md`: it holds the mode boundaries, why locating a mandate is
+not verifying it, and what a piece of retrieved evidence is worth. Nothing it describes
+grants authority or updates `last_review`. Editorial approval and the narrow
+append/transcription rules remain below.
 
 Read, in this order:
 

@@ -794,10 +794,10 @@ exemptions.
 
 ### What stays by hand
 
-`references/adoption.md` separates this upgrade from memory activation and mapping
-enrichment. `memory.py gaps` reports optional questions, not mandatory migration repairs.
-Provider setup, strict CI trust inputs, remote protections and viewer/retrieval extensions
-are independent choices; this process does not activate them.
+`references/adoption.md` separates this upgrade from the choices that follow it. Strict CI
+trust inputs, the contribution policy a project writes for its own mandates and remote
+branch protections are independent decisions; this process does not activate them, and no
+check here prescribes a mandatory repair.
 
 Migrating the artifacts. A `MAJOR` is, by the framework's own definition, a document that
 used to validate and no longer does: a renamed field, a narrowed enum, a type removed. The

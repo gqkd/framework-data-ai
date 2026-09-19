@@ -1096,7 +1096,40 @@
 # all and is the same family: a positional cross-reference inside a document, "the register that
 # does not follow rule 2", which broke in 3.6.2 when an item was inserted above it and was caught
 # by reading a diff rather than by any check.
-version: "3.6.3"
+# 3.6.3 -> 3.7.0. Contribution and release verification: opt-in evidence, not a second authority.
+# MINOR: no new required field, no new gate and no new mandatory reading for existing
+# projects. The `legacy` profile of validate.py is unchanged and stays the default; its
+# output continues to say that authority is not verified. Two opt-in profiles are added,
+# `strict-contribution` and `strict-release`, selected only on the command line and never
+# by a proposed framework.yaml.
+#
+# WHAT IT DOES. A project may bind an approved CHG to the repositories, paths, documentary
+# obligations and tests it authorizes, in .framework/contribution-policy.json committed
+# before the work it governs. The strict profile reads Git objects at full commit ids --
+# not the working tree, not the PR body -- and fails closed when history, access, policy or
+# execution evidence is missing. references/contributions.md owns the trust boundary and
+# says plainly what the caller, not the framework, must authenticate.
+#
+# WHAT IT DOES NOT DO, and the limit is measured rather than estimated. The path scope is
+# per path: a contribution that exceeds its mandate inside a file the mandate authorizes is
+# not caught. An unfulfilled documentary obligation is caught. Neither profile proves
+# semantic preservation, and neither replaces human review, a merge or a deployment.
+#
+# ADOPTION. Compare the full previous and new framework trees with migrate.py, adopt only
+# with approval, and write the policy before the implementation it governs. FW001/FW002/
+# FW003 report version and pin work; AN001 reports obsolete annotations. references/
+# adoption.md owns the procedure and its limits. Nothing here installs a plugin, adopts a
+# product, publishes a release or activates remote CI.
+#
+# WHAT IS DELIBERATELY ABSENT. The documentary retrieval engine of the unreleased Product
+# Memory work -- query, search, context packs, graph navigation and the offline viewer --
+# is not part of this version. It was measured on 19/09/2026 with a graph-on against
+# graph-off ablation on one runtime: +17.1% tokens, no additional required source group and
+# no different answer in four pairs, agreeing with three model-free measurements. The work
+# is archived on the tag product-memory-3.8.1 and was never released. The contracts layer
+# and code observation it shares with this version remain, because the contribution gate
+# uses them. Do not re-propose the retrieval channel without new evidence.
+version: "3.7.0"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of
