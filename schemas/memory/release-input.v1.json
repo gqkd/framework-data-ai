@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "framework-memory/release-input/v1",
+  "$ref": "#/$defs/release-input",
+  "$defs": {
+    "full-commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$"
+    },
+    "nonempty": {
+      "type": "string",
+      "minLength": 1
+    },
+    "relative-path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*\\\\)(?!.*:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*//).+$"
+    },
+    "release-input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "framework_commit",
+        "documents",
+        "manifest",
+        "stage",
+        "classifications",
+        "exclude",
+        "repositories",
+        "receipts"
+      ],
+      "properties": {
+        "schema": {
+          "const": "framework-memory/release-input/v1"
+        },
+        "framework_commit": {
+          "$ref": "#/$defs/full-commit"
+        },
+        "documents": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "repository",
+            "root",
+            "commit",
+            "approved_tip"
+          ],
+          "properties": {
+            "repository": {
+              "$ref": "#/$defs/nonempty"
+            },
+            "root": {
+              "$ref": "#/$defs/nonempty"
+            },
+            "commit": {
+              "$ref": "#/$defs/full-commit"
+            },
+            "approved_tip": {
+              "$ref": "#/$defs/full-commit"
+            }
+          }
+        },
+        "manifest": {
+          "$ref": "#/$defs/relative-path"
+        },
+        "stage": {
+          "enum": [
+            "prepared",
+            "implemented",
+            "verified"
+          ]
+        },
+        "classifications": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "public",
+              "internal",
+              "confidential"
+            ]
+          }
+        },
+        "exclude": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/relative-path"
+          }
+        },
+        "repositories": {
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/repository-id"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "repository",
+              "root",
+              "default_branch",
+              "approved_tip"
+            ],
+            "properties": {
+              "repository": {
+                "$ref": "#/$defs/nonempty"
+              },
+              "root": {
+                "$ref": "#/$defs/nonempty"
+              },
+              "default_branch": {
+                "$ref": "#/$defs/nonempty"
+              },
+              "approved_tip": {
+                "$ref": "#/$defs/full-commit"
+              }
+            }
+          }
+        },
+        "receipts": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "digest",
+              "producer",
+              "run",
+              "stage"
+            ],
+            "properties": {
+              "path": {
+                "$ref": "#/$defs/nonempty"
+              },
+              "digest": {
+                "$ref": "#/$defs/sha256"
+              },
+              "producer": {
+                "$ref": "#/$defs/nonempty"
+              },
+              "run": {
+                "$ref": "#/$defs/nonempty"
+              },
+              "stage": {
+                "$ref": "#/$defs/release-stage"
+              }
+            }
+          }
+        }
+      }
+    },
+    "release-stage": {
+      "enum": [
+        "pre-release",
+        "integration",
+        "deployment"
+      ]
+    },
+    "repository-id": {
+      "type": "string",
+      "pattern": "^repository:(?:product:[a-z0-9][a-z0-9-]*|platform):[a-z][a-z0-9._-]*$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

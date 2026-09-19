@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "framework-memory/contribution-report/v1",
+  "$ref": "#/$defs/contribution-report",
+  "$defs": {
+    "contribution-report": {
+      "type": "object",
+      "required": [
+        "schema",
+        "profile",
+        "gate",
+        "authorization",
+        "review_required",
+        "deployment",
+        "checks",
+        "findings",
+        "limitations"
+      ],
+      "properties": {
+        "schema": {
+          "const": "framework-memory/contribution-report/v1"
+        },
+        "profile": {
+          "const": "strict-contribution"
+        },
+        "gate": {
+          "enum": [
+            "passed",
+            "failed"
+          ]
+        },
+        "authorization": {
+          "enum": [
+            "not-verified",
+            "verified-against-caller-trusted-base"
+          ]
+        },
+        "review_required": {
+          "const": true
+        },
+        "deployment": {
+          "const": "not-assessed"
+        },
+        "checks": {
+          "const": "bounded-structural-and-receipt-checks"
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

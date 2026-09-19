@@ -1,0 +1,773 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "framework-memory/documentary-query/v1",
+  "$ref": "#/$defs/documentary-query",
+  "$defs": {
+    "documentary-query": {
+      "type": "object",
+      "required": [
+        "schema",
+        "snapshot",
+        "purpose",
+        "coverage",
+        "mapping_complete",
+        "truncated",
+        "bounds",
+        "code_observation",
+        "selection_status",
+        "nodes",
+        "edges",
+        "paths",
+        "sources",
+        "documents",
+        "search",
+        "issues",
+        "gaps",
+        "limitations"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {
+          "const": "framework-memory/documentary-query/v1"
+        },
+        "snapshot": {
+          "type": "string"
+        },
+        "purpose": {
+          "type": "string"
+        },
+        "coverage": {
+          "enum": [
+            "available",
+            "partial"
+          ]
+        },
+        "mapping_complete": {
+          "type": "boolean"
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "bounds": {
+          "type": "object",
+          "required": [
+            "limit",
+            "hops"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "hops": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "code_observation": {
+          "const": "not_requested"
+        },
+        "selection_status": {
+          "enum": [
+            "matched",
+            "no-match-in-selected-documentation"
+          ]
+        },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          }
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/edge"
+          }
+        },
+        "paths": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "node",
+              "steps"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "node": {
+                "type": "string"
+              },
+              "steps": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "edge",
+                    "direction"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "edge": {
+                      "type": "string"
+                    },
+                    "direction": {
+                      "enum": [
+                        "forward",
+                        "reverse"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/source"
+          }
+        },
+        "documents": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "node",
+              "source",
+              "body_first_line",
+              "body",
+              "content_role"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "node": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "body_first_line": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "body": {
+                "type": "string"
+              },
+              "content_role": {
+                "const": "source-evidence-not-executable-instructions"
+              }
+            }
+          }
+        },
+        "search": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "issues": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/issue"
+          }
+        },
+        "gaps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/issue"
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "required": [
+        "id",
+        "relation",
+        "source",
+        "target",
+        "provenance",
+        "data"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "relation": {
+          "enum": [
+            "affected_by",
+            "applies_to",
+            "belongs_to",
+            "constrained_by",
+            "derives_from",
+            "documents",
+            "preserves",
+            "realized_in",
+            "supersedes",
+            "targets"
+          ]
+        },
+        "source": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        },
+        "provenance": {
+          "$ref": "#/$defs/provenance"
+        },
+        "data": {
+          "type": "object"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "relation": {
+                "const": "applies_to"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "provenance": {
+                "properties": {
+                  "assertion_method": {
+                    "const": "declared"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "relation": {
+                "const": "supersedes"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "provenance": {
+                "properties": {
+                  "assertion_method": {
+                    "const": "declared"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "relation": {
+                "const": "derives_from"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "provenance": {
+                "properties": {
+                  "assertion_method": {
+                    "const": "declared"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "relation": {
+                "const": "targets"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "provenance": {
+                "properties": {
+                  "assertion_method": {
+                    "const": "declared"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "relation": {
+                "const": "preserves"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "provenance": {
+                "properties": {
+                  "assertion_method": {
+                    "const": "declared"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "relation": {
+                "const": "constrained_by"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "provenance": {
+                "properties": {
+                  "assertion_method": {
+                    "const": "derived"
+                  },
+                  "rule": {
+                    "properties": {
+                      "id": {
+                        "const": "invert-constraint"
+                      },
+                      "version": {
+                        "const": "1"
+                      }
+                    },
+                    "required": [
+                      "origin_edge"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "relation": {
+                "const": "affected_by"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "provenance": {
+                "properties": {
+                  "assertion_method": {
+                    "const": "derived"
+                  },
+                  "rule": {
+                    "properties": {
+                      "id": {
+                        "const": "invert-navigation"
+                      },
+                      "version": {
+                        "const": "1"
+                      }
+                    },
+                    "required": [
+                      "origin_edge"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "relation": {
+                "const": "belongs_to"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "provenance": {
+                "properties": {
+                  "assertion_method": {
+                    "const": "derived"
+                  },
+                  "rule": {
+                    "properties": {
+                      "id": {
+                        "const": "owning-scope"
+                      },
+                      "version": {
+                        "const": "1"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "relation": {
+                "const": "documents"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "provenance": {
+                "properties": {
+                  "assertion_method": {
+                    "const": "derived"
+                  },
+                  "rule": {
+                    "properties": {
+                      "id": {
+                        "const": "component-declaration"
+                      },
+                      "version": {
+                        "const": "1"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "relation": {
+                "const": "realized_in"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "provenance": {
+                "properties": {
+                  "assertion_method": {
+                    "const": "derived"
+                  },
+                  "rule": {
+                    "properties": {
+                      "id": {
+                        "const": "declared-root-mapping"
+                      },
+                      "version": {
+                        "const": "1"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "identity": {
+      "type": "object",
+      "required": [
+        "document_repository",
+        "scope",
+        "local_id"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "document_repository": {
+          "$ref": "#/$defs/slug"
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1
+        },
+        "local_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "issue": {
+      "type": "object",
+      "required": [
+        "code",
+        "path",
+        "detail"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "detail": {
+          "type": "string"
+        }
+      }
+    },
+    "location": {
+      "type": "object",
+      "required": [
+        "source",
+        "start_line",
+        "end_line"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "start_line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "end_line": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "node": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "identity",
+        "label",
+        "provenance",
+        "observation",
+        "data"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "document",
+            "entry",
+            "scope",
+            "repository",
+            "component",
+            "code-root"
+          ]
+        },
+        "identity": {
+          "$ref": "#/$defs/identity"
+        },
+        "label": {
+          "type": "string"
+        },
+        "provenance": {
+          "$ref": "#/$defs/provenance"
+        },
+        "observation": {
+          "$ref": "#/$defs/observation"
+        },
+        "data": {
+          "type": "object"
+        }
+      }
+    },
+    "observation": {
+      "type": "object",
+      "required": [
+        "path_status",
+        "observation_status",
+        "freshness"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "path_status": {
+          "enum": [
+            "present",
+            "missing",
+            "unresolved",
+            "not_applicable"
+          ]
+        },
+        "observation_status": {
+          "enum": [
+            "available",
+            "partial",
+            "unavailable",
+            "not_requested"
+          ]
+        },
+        "freshness": {
+          "enum": [
+            "current",
+            "stale",
+            "unknown",
+            "not_applicable"
+          ]
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": [
+        "source_kind",
+        "assertion_method",
+        "sources"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "source_kind": {
+          "enum": [
+            "document",
+            "code",
+            "check"
+          ]
+        },
+        "assertion_method": {
+          "enum": [
+            "declared",
+            "derived",
+            "inferred"
+          ]
+        },
+        "sources": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/location"
+          }
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rule": {
+          "type": "object",
+          "required": [
+            "id",
+            "version"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "version": {
+              "type": "string",
+              "minLength": 1
+            },
+            "origin_edge": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "assertion_method": {
+                "const": "inferred"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "rationale"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "confidence"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "assertion_method": {
+                "const": "derived"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "rule"
+            ]
+          }
+        }
+      ]
+    },
+    "relative-path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*\\\\)(?!.*:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*//).+$"
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "id",
+        "path",
+        "revision",
+        "lines"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "path": {
+          "$ref": "#/$defs/relative-path"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "lines": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  }
+}

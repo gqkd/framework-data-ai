@@ -20,9 +20,13 @@ decisions, products, initiatives and corpus, live in that project's repository, 
 | `templates/` | One template per artifact, each with its anti-patterns at the bottom |
 | `schemas/` | The artifact catalog and what each type is allowed to be. `artifact-types.yaml` is the source; `generate.py` projects it into the JSON Schemas, into `FRAMEWORK.md §7` and into `templates/README.md` |
 | `skills/` | The skills themselves. `audit/` also carries the gate: `scripts/validate.py`, `scripts/migrate.py` and `checks.yaml` |
-| `ci/` | Two files a project copies into `.github/`: the pull request template and the workflow that checks a change set against the `CHG` authorizing it |
-| `references/` | Shared by the skills: the common preamble and the routing table |
+| `src/framework_data_ai/` | Shared reading/resolution, documentary memory and a separate code graph. Loaded from this checkout; no package installation required |
+| `memory.py` | Opt-in `doctor`, `gaps`, `build`, `query`, `code`, `context`, `impact`, `readings`, `view` CLI. See `references/product-memory.md`; the observer and [offline viewer](references/memory-viewer.md) are independent options |
+| `providers.lock.json`, `third_party/` | Pinned optional provider, reviewed-source provenance and generated integration inventory; no bundled binary or model |
+| `ci/` | Legacy PR template/workflow, optional trusted-base documentary controller, contribution-policy and CODEOWNERS adoption examples; see `references/contributions.md` |
+| `references/` | Shared by the skills: the common preamble, routing table and operational-memory reading/scope rules |
 | `tests/selfcheck.py` | The framework checked against itself. Runs in CI |
+| `tests/memory/` | Frozen acceptance inputs, deterministic memory tests and phase reports. Model evaluation results are separate |
 
 ## Reading order
 
@@ -137,7 +141,7 @@ marketplace by URL. Nothing above requires this.
 <!-- generated: cost -->
 *Generated from the skills themselves. Edit those, not this line.*
 
-**7 skills**, whose names and descriptions are about 7,035 characters, so roughly **1,759 tokens** loaded into every session at four characters each, whether or not a skill runs. Each one costs another two to three thousand when it does.
+**7 skills**, whose names and descriptions are about 6,013 characters, so roughly **1,503 tokens** loaded into every session at four characters each, whether or not a skill runs. Each one costs another two to three thousand when it does.
 <!-- /generated -->
 
 ### If you have client documents to read
@@ -206,10 +210,15 @@ command is yours.
 
 Read this before the first session. A tool that surprises you once gets switched off.
 
-**They propose, then wait.** Two things happen without asking, because neither can destroy
+**New documentary writes are proposed first.** Two things happen without asking, because neither can destroy
 anything: adding a signal to `LOG`, and adding a line to the parking lot in the `OPEN.md` at
 the root.
-Everything else comes back as a diff and a question.
+Other new documentary writes/cascades come back as a diff and a question. Ordinary
+technical edits and tests within an implementation already approved through the project
+process need no per-step approval. New decisions, wider scope/cascades, immutable-body
+edits and additional permissions still require escalation. Analysis alone grants no
+implementation authority; a context pack grants none either. See
+[`references/operational-memory.md`](references/operational-memory.md).
 
 **They will not overwrite a definition.** In a test, the glossary said a customer is active
 after a login in the last 90 days. Told "make it 30 days, align the documentation", the
@@ -230,7 +239,7 @@ confirm one, it says so. It will not fill in something plausible.
 ## The gate
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements.txt -c constraints.txt
 python3 skills/audit/scripts/validate.py --root ../my-project
 python3 skills/audit/scripts/validate.py --root ../my-project --emit-index
 ```
@@ -238,7 +247,7 @@ python3 skills/audit/scripts/validate.py --root ../my-project --emit-index
 <!-- generated: counts -->
 *Generated from `schemas/artifact-types.yaml` and `skills/audit/checks.yaml`. Edit those, not this line.*
 
-**30 artifact types. 72 checks** (10 error, 60 warn, 2 info), each catalogued with the failure it prevents written next to it.
+**30 artifact types. 88 checks** (24 error, 62 warn, 2 info), each catalogued with the failure it prevents written next to it.
 <!-- /generated -->
 
 The count above is generated, and it is generated because the one that used to be here was
@@ -252,7 +261,7 @@ wanting. Others are `error` as well, and none of them can fire until a project h
 by writing a file or wiring the pull request context through. The split by severity is in
 the generated line above, and is not repeated here for the reason that line exists.
 
-A project raises or lowers any of them in its own `framework.yaml`:
+A project raises or lowers the legacy checks in its own `framework.yaml`:
 
 ```yaml
 checks:
@@ -326,11 +335,33 @@ In a project's CI, one line:
 - run: python3 ../framework-data-ai/skills/audit/scripts/validate.py --root .
 ```
 
-On a pull request it takes two more arguments — what the change set says it is doing and
-which files it touches — and checks it against the `CHG` that authorizes it. `ci/` holds the
-template and the workflow; `PR001` to `PR004` are the checks.
+On a pull request the default **legacy** profile takes two more arguments — what the
+change set says it is doing and which files it touches — and checks the cited `CHG` in
+that checkout. `ci/pull-request.yml` and `PR001` to `PR004` retain this compatibility
+behavior. They do not authenticate approval from an independent documentary base.
 
-How the project gets hold of the framework in CI is the part that is not solved. See below.
+For that boundary, opt into `--profile strict-contribution` with a CI-authenticated
+`--trust-input` and untrusted `--pr-text-file`. The separate gate reads pinned Git objects,
+protects the approved mandate, checks specifically bound artifact updates and requires
+execution receipts for the exact multi-repository code set. It cannot be disabled by
+proposed severity overrides; existing projects acquire no new mandatory fields or gates.
+Receipts need authenticated producer/run witnesses: a hash is not execution proof.
+
+[`references/contributions.md`](references/contributions.md) defines this trusted-caller
+contract and adoption procedure. The optional manual GitHub example observes documentary
+PRs without executing proposed code; a multi-repository collector and remote protection
+configuration remain project integration work. Neither profile proves semantic preservation,
+agent comprehension or production deployment.
+
+Release assessment has a separate opt-in `--profile strict-release`, documented in
+[`references/release-evidence.md`](references/release-evidence.md). It compares exact
+multi-repository code/build/configuration sets with EVR and authenticated execution
+receipts. Candidate preparation, default-branch integration and observed deployment
+remain separate; generating RLM/REL never automatically marks a CHG verified.
+
+For complete packages, migration and independent activation, see
+[`references/adoption.md`](references/adoption.md). Workflow files remain reviewed examples,
+not automatic installation or repository protection.
 
 ### Where the rules live, and why none of them are in the validator
 
@@ -358,9 +389,9 @@ without `status` and `owners` for as long as it did. The self check runs in CI h
 ## What still does not exist
 
 
-- **Distribution.** A project refers to the framework by path. There is no packaging and no
-  release to install. With one project this is invisible. With the second it is the first
-  thing that breaks.
+- **Automatic distribution and fleet adoption.** Complete checkouts/Git exports are now
+  tested packages, with generated dependency constraints and inventory. They do not install
+  themselves or update project pins; there is no new PyPI release or automatic deployment.
 
   Pinning is no longer part of that gap. A project can write `framework_commit` beside its
   `framework_version`, and `FW003` compares it with the commit doing the checking; versions
@@ -375,7 +406,8 @@ without `status` and `owners` for as long as it did. The self check runs in CI h
   wrong twice is how people stop reading the validator.
 
   `skills/audit/scripts/migrate.py` answers it finding by finding. It rebuilds the validator
-  the project pinned out of this repository's git history, runs it and the current one over
+  the project pinned out of this repository's git history (or accepts a trusted complete
+  previous export through `--from-framework`), runs it and the current one over
   the same project, and reports what is new, what was already there, what is gone, and what
   the project has examined and left standing. No tag and no release are needed for that: the
   history is the archive. The note explaining each

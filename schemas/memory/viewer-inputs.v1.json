@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "framework-memory/viewer-inputs/v1",
+  "$ref": "#/$defs/viewer-inputs",
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "viewer-inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "document_snapshot",
+        "code_snapshot",
+        "data_sha256",
+        "assets"
+      ],
+      "properties": {
+        "schema": {
+          "const": "framework-memory/viewer-inputs/v1"
+        },
+        "document_snapshot": {
+          "$ref": "#/$defs/sha256"
+        },
+        "code_snapshot": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/sha256"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "data_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "assets": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "$ref": "#/$defs/sha256"
+          }
+        }
+      }
+    }
+  }
+}

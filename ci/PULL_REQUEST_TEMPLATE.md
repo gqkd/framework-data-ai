@@ -1,7 +1,8 @@
 <!--
 Copy this file to `.github/PULL_REQUEST_TEMPLATE.md` in the project, not in the framework.
 The only line the check reads is the one naming the change contract. Everything else here
-is for the person reviewing.
+is for the person reviewing in the legacy profile. The strict-contribution profile reads
+mandates from independent CI-selected Git history; PR text cannot supply trusted inputs.
 -->
 
 ## Change contract
@@ -38,4 +39,16 @@ the review is for.
 <!--
 Tests, the eval run, the manual check. If the `ICG` classified this as touching data, say
 which `DC` moved and to which version, and who was told.
+-->
+
+## Documentary base and code set
+
+<!--
+When using strict-contribution, cite the documentary repository and full mandate commit,
+the proposed documentary commit, and every code repository/commit in the reviewed set.
+These are requests/claims for the CI controller to verify, not an approval.
+Link the independently collected test runs and their exact code set. A digest copied
+from this PR is not an authenticated receipt. Fast-cycle tests do not replace mandatory
+tests in the approved policy. A no-chg reason still requires independent review.
+See the adopted framework's references/contributions.md.
 -->

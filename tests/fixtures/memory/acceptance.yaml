@@ -1,0 +1,76 @@
+contract_version: 1
+status: frozen-before-engine-implementation
+fixture_source: evals/fixtures/generators/memory.py
+behaviour_cases: evals/behaviour/memory/cases.yaml
+coverage_required:
+  - document-only
+  - negative-assertions
+  - authorization
+  - scope-collision
+  - qualified-join
+  - pr-impact
+  - multi-repository
+  - shared-code
+  - evidence-kinds
+  - full-decision
+  - alternatives
+  - constraints
+  - contract-impact
+  - no-customer-data
+  - unavailable-code
+  - snapshot-freshness
+  - current-target-delta
+  - external-contribution
+  - instruction-boundary
+  - relationship-discovery
+  - inferred-not-decided
+  - bounded-mandate
+  - release-evidence
+provider_conformance:
+  required_language: Python
+  required_facts: [files, definitions, direct-imports, direct-calls, source-locations]
+  must_distinguish: [resolved, unresolved, unsupported, unavailable]
+  cross_repository_imports: Resolve only against declared repository bindings; never invent a target.
+  json_schema: An input contract file, not a required programming-language analyzer.
+  not_claimed: [runtime-call-graph, all-languages, sql-lineage, customer-data-access]
+  execution: deferred-to-code-provider-phase
+# These are the frozen deterministic acceptance obligations of the full increment.
+# Their implementation phases are explicit: validating this list does not execute them.
+deferred_checks:
+  - {id: canonical-order, phase: 2, input: Same inputs in different scan orders, expect: Identical canonical bytes}
+  - {id: portable-facts, phase: 2, input: Different checkout paths and run timestamps, expect: No false canonical fact changes}
+  - {id: dirty-content, phase: 3, input: Two content changes while dirty remains true, expect: Different snapshot identities}
+  - {id: concurrent-write, phase: 3, input: File changes during snapshot construction, expect: No coherent snapshot is published}
+  - {id: scoped-identities, phase: 1, input: Same local ID in distinct products, expect: Distinct candidates and graph identities}
+  - {id: qualified-candidate, phase: 1, input: Qualified CHG reference and local ICG key, expect: Same impact obligations are retained}
+  - {id: document-only-memory, phase: 2, input: Product with SD but no code or ARC, expect: Documentary memory works without inventing implementation}
+  - {id: missing-provider, phase: 3, input: No installed provider, expect: Explicit unavailable evidence rather than complete empty graph}
+  - {id: parser-failure, phase: 3, input: A single source file fails parsing, expect: Partial coverage with the failed input named}
+  - {id: unresolved-code-edge, phase: 3, input: An import has no resolvable declared target, expect: No arbitrary target is assigned}
+  - {id: inverse-provenance, phase: 2, input: An inverse relation is marked declared, expect: Contract validation rejects it}
+  - {id: confidence-provenance, phase: 2, input: A non-inferred assertion carries confidence, expect: Contract validation rejects it}
+  - {id: legacy-decision, phase: 2, input: Historical DEC without applies_to, expect: It remains retrievable}
+  - {id: partial-supersession, phase: 2, input: A later decision replaces only part of an earlier one, expect: Remaining constraints are not automatically removed}
+  - {id: required-source-budget, phase: 4, input: Required decision sections exceed context budget, expect: Pack stays explicitly incomplete and reading remains required}
+  - {id: bounded-traversal, phase: 4, input: Cyclic graph or exceeded traversal limit, expect: No infinite loop and visible truncation}
+  - {id: pr-self-approval, phase: 5, input: CHG approval exists only in the proposed PR, expect: Strict profile does not accept it as authority}
+  - {id: restricted-source, phase: 4, input: A confidential document is outside run scope, expect: Neither indexing nor context export includes it}
+  - {id: old-test-evidence, phase: 6, input: Green evidence belongs to an earlier code set, expect: It does not attest the new set}
+  - {id: unrelated-contract, phase: 5, input: Diff updates a DC other than the affected contract, expect: Specific obligation remains unmet}
+  - {id: legacy-schema, phase: 7, input: Existing artifacts omit all new metadata, expect: No new mandatory fields are imposed}
+  - {id: historical-export, phase: 1, input: Validator launched from a Git export, expect: Entry points work without the live checkout}
+  - {id: overlapping-roots, phase: 3, input: One changed path belongs to multiple component roots, expect: Every relevant component is reported}
+  - {id: removable-provider, phase: 7, input: Code or search provider is removed, expect: Documentary core remains usable}
+known_regressions:
+  qualified-impact-join:
+    phase_to_fix: 1
+    checks: [CHG002, PR004]
+    tests: [test_qualified_change_preserves_architecture_obligation, test_qualified_pr_preserves_arc_obligation]
+  triage-scope:
+    phase_to_fix: 1
+    checks: [ICG001]
+    tests: [test_same_number_does_not_triage_another_product]
+change_policy: >-
+  Changes to fixture meaning, required sources, critical failures or expected answers
+  require an explicit contract-version bump and rationale. A failing agent answer is not
+  a reason to weaken the expected answer. Remove expectedFailure only with the phase-one fix.

@@ -466,19 +466,21 @@ flowchart TB
   ok(["CHG approved"]) --> impl["Implementation"]
   impl --> pr["The pull request cites the CHG"]
   pr --> mand["Mandate, guardrails, done-when"]
-  mand --> tests["Tests"]
+  mand --> tests["Required test and evaluation evidence"]
   tests --> val["validator, pull request mode"]
   val --> rev["Human review:<br/>did it stay inside field 2?"]
   rev --> merge["Merge"]
   merge --> impd(["CHG implemented"])
-  impd --> evr["EVR / RLM, where there is one"]
-  evr --> ver(["CHG verified"])
+  impd --> evr["Exact release candidate / RLM"]
+  evr --> obs["Authorized deployment:<br/>same set observed, smoke passed"]
+  obs --> ver(["CHG verified"])
 ```
 
 ### What CI checks
 
-The link between the pull request and the `CHG` is deterministic, so it is a check and not a
-judgement. The validator runs it when it is given the pull request context:
+The link between the pull request and the cited `CHG` is deterministic. The default
+**legacy** profile checks that declaration in the selected checkout, not independently
+approved authority. It runs when given the pull request context:
 
 ```bash
 git diff --name-only "origin/$BASE...$HEAD" > changed.txt
@@ -504,6 +506,16 @@ workflow file the first time it blocks a typo.
 project. The template asks for the `CHG` in the body; the workflow runs the full validator
 plus the pull request mode.
 
+For independent authority, explicitly adopt the `strict-contribution` profile described
+in [`references/contributions.md`](references/contributions.md). It reads a CI-selected
+approved documentary base, protects the mandate, checks specifically bound artifact/path
+obligations and authenticates receipt consistency for the exact multi-repository code set.
+The CI controller must establish the approval and receipt witnesses; the verifier does
+not infer them from PR text. Strict `no-chg` requires independent review of the exact
+request and retains mandatory tests. The optional manual documentary controller is not
+an automatic multi-repository required check; integration and remote protections remain
+explicit adoption work. Keep the ordinary documentary audit alongside the strict gate.
+
 ### What `audit` checks, and what it does not
 
 `audit` runs `validate.py` over the artifacts: front matter, mandatory sections, the
@@ -511,9 +523,10 @@ reference chain, and — with the pull request context — the four checks above
 request that means the documents it touches have to be valid and the link to the `CHG` has
 to exist.
 
-What `audit` cannot do on its own is read the code. If the `CHG` says *what must not change*
-and the pull request changes it, no check notices. That is the human review, and it is the
-reason field 2 of a `CHG` exists.
+An operational impact report can expose structural changes in explicitly observed code,
+and the strict gate can detect scope/evidence violations. Neither proves that the code
+preserves *what must not change*. That still needs source/test evidence and human semantic
+review; it is the reason field 2 of a `CHG` exists. A passed gate does not merge or deploy.
 
 ### States
 
@@ -529,7 +542,8 @@ bridge to the pull request, not the model.
 
 ### Trigger
 
-A set of `CHG` is `implemented` and a release candidate is cut.
+A candidate for approved changes is ready to be evaluated. Existing implemented changes
+retain their evidence; a changed candidate needs a new evaluation of its exact set.
 
 ### Actors
 
@@ -542,16 +556,18 @@ A set of `CHG` is `implemented` and a release candidate is cut.
 
 ```mermaid
 flowchart TB
-  rc["Release candidate commit"] --> freeze["EVP frozen"]
-  freeze --> eval["Evaluation run"]
+  rc["Release candidate repository set"] --> freeze["EVP frozen"]
+  freeze --> build["Candidate builds with immutable digests"]
+  build --> eval["Evaluation and integration runs"]
   eval --> EVR(["EVR with verified_code"])
   EVR --> cmp["Measured against the<br/>frozen thresholds"]
   cmp --> RG{"RG"}
   RG -->|"go"| REL(["REL"])
   REL --> RLM(["RLM"])
-  RLM --> build["Tag and build"]
-  build --> dep["Deploy, run by the team"]
-  dep --> ver(["CHG verified"])
+  RLM --> merged["All evaluated commits on their default branches:<br/>CHG implemented"]
+  merged --> dep["Authorized deploy, run by the team"]
+  dep --> smoke["Whole set observed in target;<br/>smoke passed"]
+  smoke --> ver(["CHG verified"])
   RG -->|"no-go"| rework["Rework"]
   rework --> rc2["A new candidate"]
   rc2 --> freeze
@@ -566,7 +582,10 @@ the `LOG` like any other signal (`P-09`).
 `release`. The skill prepares the evidence and the manifest and recomputes the `evp_hash`,
 which is what proves the plan it measured against is the one that was frozen; `RLM001` and
 `RLM002` report a manifest with no rollback target or with the procedure declared untested.
-The deploy command stays with the team.
+The deploy command stays with the team. `references/release-evidence.md` defines the
+opt-in exact-set gate, independent pre-release/integration/deployment receipts and
+default-branch verification. Receipt collection and remote execution remain project
+integration work. Preparing RLM/REL does not itself close a CHG.
 
 ## P-09 · Incident and recovery
 
@@ -730,7 +749,7 @@ validator's report, or a planned update.
 flowchart TB
   dec["framework_version,<br/>as the project declares it"] --> mig["migrate.py"]
   mig --> notes["The migration notes<br/>for every version crossed"]
-  mig --> old["The validator of that version,<br/>rebuilt from git history"]
+  mig --> old["The pinned validator tree,<br/>Git history or trusted complete export"]
   mig --> new["The current validator"]
   old --> split{"The two reports,<br/>compared"}
   new --> split
@@ -740,7 +759,9 @@ flowchart TB
   work --> art["The artifacts migrated"]
   art --> idx["--emit-index"]
   idx --> val["validator"]
-  val --> adopt["migrate.py --adopt"]
+  val --> approval["Explicit adoption approval"]
+  approval --> adopt["migrate.py --adopt<br/>version and existing pin only"]
+  adopt -. "independent opt-in" .-> memory["Memory commands and gaps report"]
 ```
 
 Everything above the migration itself is one command:
@@ -749,8 +770,8 @@ Everything above the migration itself is one command:
 python3 skills/audit/scripts/migrate.py --root <project>
 ```
 
-It reads the project's `framework_version`, rebuilds from the framework's own git history
-the version in which that number was current, runs **that** validator and the current one
+It reads the project's `framework_version` and available `framework_commit`, reconstructs
+that complete framework from Git (or uses a trusted `--from-framework` export), runs **that** validator and the current one
 over the same project, and splits the findings four ways. It is the distinction `FW001`
 exists to make possible, made finding by finding instead of as a general warning: getting it
 wrong twice is how a team stops reading the validator.
@@ -772,6 +793,11 @@ annotation matching no finding is an error, so the file cannot quietly become a 
 exemptions.
 
 ### What stays by hand
+
+`references/adoption.md` separates this upgrade from memory activation and mapping
+enrichment. `memory.py gaps` reports optional questions, not mandatory migration repairs.
+Provider setup, strict CI trust inputs, remote protections and viewer/retrieval extensions
+are independent choices; this process does not activate them.
 
 Migrating the artifacts. A `MAJOR` is, by the framework's own definition, a document that
 used to validate and no longer does: a renamed field, a narrowed enum, a type removed. The
@@ -1136,13 +1162,16 @@ results.
 
 ```mermaid
 flowchart LR
-  done(["CHG implemented"]) --> rc["Release candidate"]
+  done(["Approved changes ready for evaluation"]) --> rc["Exact release candidate"]
   rc --> freeze["EVP frozen"]
-  freeze --> EVR(["EVR"])
+  freeze --> builds["Builds, evaluation and integration"]
+  builds --> EVR(["EVR"])
   EVR --> RG{"RG"}
   RG -->|"go"| REL(["REL and RLM"])
-  REL --> dep["Build, tag, deploy"]
-  dep --> ver(["CHG verified"])
+  REL --> merged["Evaluated commits integrated:<br/>CHG implemented"]
+  merged --> dep["Authorized deploy"]
+  dep --> observed["Exact running set + passed smoke"]
+  observed --> ver(["CHG verified"])
   RG -->|"no-go"| rework["Rework, a new candidate"]
   rework --> rc
 ```

@@ -1,25 +1,21 @@
 ---
 name: audit
 description: >
-  Check a Data & AI framework repository against its own rules: run the validator,
-  interpret what it found, and fix what is safe to fix. When asked whether the documents
-  agree with each other, it goes a step further and reads both ends of the pairs that have
-  to say the same thing, which no script can decide. Use when asked to audit, check or
-  validate the documentation, when asked whether the docs are consistent, whether they
-  contradict each other, or whether something is out of date, when the framework check is
-  failing in CI, before merging a change to the artifacts, or when asked to regenerate
-  `decisions/INDEX.md` or `TRACEABILITY.md`. Triggers on "è tutto a posto", "controlla i
-  documenti", "i documenti sono coerenti", "controlla la coerenza", "verifica che i
-  documenti non si contraddicano", "fai un audit della documentazione", "il check in CI è
-  rosso", "check the docs", "are the docs consistent", "do these documents contradict each
-  other", "audit the documentation", "the framework check is failing". Use it also to check
-  a pull request against the change contract that authorizes it, and to adopt a new version
-  of the framework: "questa PR si può mergiare", "il check della PR è rosso", "aggiorniamo il
-  framework", "che cosa cambia con la nuova versione", "can this PR be merged", "migrate to
-  the new framework version".
+  Audit a Data & AI framework repository: run and interpret the validator, fix what is
+  safe, and, when requested, read linked documents for semantic coherence that scripts
+  cannot decide. Use for consistency, contradictions, stale documentation, failing CI,
+  pre-merge artifact checks, regenerating decisions/INDEX.md or TRACEABILITY.md, checking
+  a PR against its authorizing CHG, and evaluating or adopting a new framework version.
+  Triggers include "è tutto a posto", "controlla i documenti", "controlla la coerenza",
+  "i documenti si contraddicono", "il check in CI è rosso", "questa PR si può mergiare",
+  "aggiorniamo il framework", "che cosa cambia con la nuova versione", "check the docs",
+  "are the docs consistent", "audit the documentation", "can this PR be merged",
+  "migrate to the new framework version".
 ---
 
 # audit
+
+Read `references/preamble.md`, which sits at `${CLAUDE_PLUGIN_ROOT}`, first.
 
 The validator is a script, and it runs the same way here and in CI: one implementation,
 two entry points. What this skill adds is not more checking, it is the judgment about what
@@ -285,6 +281,12 @@ remove.
 
 ### Do not invent the checklist
 
+When performing this requested semantic pass or a change-impact review, read
+`references/operational-memory.md`. Use analysis context with this skill to locate required
+sources and, only when explicitly supplied, before/after code bundles for structural impact.
+Do not replace the validator with a pack or start a provider during an ordinary documentary
+audit. Report unavailable code and remaining readings; inference is not a discovered fact.
+
 The pairs are already written down: `references/routing-table.md §2` is the cascade, and
 this pass is that table **read backwards**. Where the cascade says *if you write A you must
 also update B*, this asks *does B still reflect A*. One source, not two, and the same reason
@@ -331,6 +333,10 @@ state what was decided, so a contradiction of this kind is visible from the head
 without reading either body. Naming the decision is not evidence of agreeing with it, and that
 is the sentence to carry into the pass.
 
+This heading pass is a triage aid, not full decision reading. Once a decision is applicable
+to the operational assessment, read its Decision, Consequences and any Review condition in
+full; include Alternatives for reconsideration, as the shared operational reference requires.
+
 `evals/behaviour/audit/cases.yaml` carries a repository built for exactly this shape, where the
 validator reports nothing at all and one document cites a decision and describes the arrangement
 that decision removed. It runs only by hand, because the eval suite needs a model and is not in
@@ -356,6 +362,17 @@ the same case: this pass reads documents, and where the answer is in a repositor
 which repository and stops.
 
 ## The change set and its contract
+
+An operational context reports the declared mandate, not trusted approval. For an external
+contribution, an approved CHG introduced only in that contribution cannot independently
+authorize it. These legacy PR checks do not establish a trusted documentary base; state that
+limit and use the project's review process. For the opt-in `strict-contribution` profile,
+read `references/contributions.md`: it verifies an independent CI-selected documentary
+base, exact path/artifact obligations and authenticated receipt witnesses. Use
+`--profile strict-contribution` with `--trust-input` supplied by that trusted controller,
+never reconstructed from the PR's own claims. Missing access or receipts blocks this
+profile; do not substitute a legacy pass. Structural impact is not a semantic-preservation
+proof and a reading report is not execution evidence.
 
 A pull request is the one moment where the documents and the work are in the same place, and
 until `PR001` to `PR004` existed nothing looked at them together. The framework has exactly
@@ -391,6 +408,10 @@ question.
 
 ## Adopting a new version of the framework
 
+Read `references/adoption.md` for upgrade, explicit memory use and optional mapping
+enrichment. Keep them separate. A migration request alone does not authorize `--adopt`,
+plugin installation, code-provider execution or historical metadata enrichment.
+
 `FW001` says the rules moved. It cannot say which of the findings in front of you moved with
 them, and those need opposite responses: one is a migration, the other is a repair.
 
@@ -398,8 +419,9 @@ them, and those need opposite responses: one is a migration, the other is a repa
 python3 "${CLAUDE_PLUGIN_ROOT:?}/skills/audit/scripts/migrate.py" --root <project>
 ```
 
-It reads the project's `framework_version`, rebuilds the validator from that version out of
-the framework's own git history, runs both over the same repository, and splits the
+It reads the project's `framework_version` and available `framework_commit`, reconstructs
+the previous complete framework (or uses explicit `--from-framework`), runs each validator
+in its own process over the same repository, and splits the
 findings:
 
 - **new** — reported only by the new validator. This is the migration work.

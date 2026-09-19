@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "framework-memory/release-set/v1",
+  "$ref": "#/$defs/release-set",
+  "$defs": {
+    "full-commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$"
+    },
+    "nonempty": {
+      "type": "string",
+      "minLength": 1
+    },
+    "relative-path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*\\\\)(?!.*:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*//).+$"
+    },
+    "release-set": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "repositories",
+        "dependencies"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "repositories": {
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 100,
+          "propertyNames": {
+            "$ref": "#/$defs/repository-id"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "commit",
+              "build_digest"
+            ],
+            "properties": {
+              "commit": {
+                "$ref": "#/$defs/full-commit"
+              },
+              "build_digest": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              }
+            }
+          }
+        },
+        "dependencies": {
+          "type": "array",
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "manifest",
+              "release_set_hash",
+              "compatibility"
+            ],
+            "properties": {
+              "manifest": {
+                "$ref": "#/$defs/relative-path"
+              },
+              "release_set_hash": {
+                "$ref": "#/$defs/sha256"
+              },
+              "compatibility": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "path",
+                  "sha256",
+                  "section"
+                ],
+                "properties": {
+                  "path": {
+                    "$ref": "#/$defs/relative-path"
+                  },
+                  "sha256": {
+                    "$ref": "#/$defs/sha256"
+                  },
+                  "section": {
+                    "$ref": "#/$defs/nonempty"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "repository-id": {
+      "type": "string",
+      "pattern": "^repository:(?:product:[a-z0-9][a-z0-9-]*|platform):[a-z][a-z0-9._-]*$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

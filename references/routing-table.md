@@ -156,6 +156,12 @@ the sales deck, which is the least reliable one about facts.
 
 ## 5 · How much to apply without asking
 
+This governs new classifications and their documentary cascades, not every technical step
+of a separately approved implementation. The preamble and
+`references/operational-memory.md` distinguish analysis, proposal and bounded execution.
+Memory's structural matches and hypotheses inform classification; they do not choose its
+destination, close an open decision or satisfy a cascade obligation.
+
 **Autonomy is inversely proportional to the breadth of the cascade.**
 
 **Apply directly**, without asking: one destination, append-only class, no interpretation,

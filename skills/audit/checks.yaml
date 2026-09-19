@@ -1194,6 +1194,74 @@ checks:
       because the other repair is legitimate and common: the classification was wrong, and
       the `ICG` is what has to move.
 
+  # RLS001/2 inspect only the optional new release_set. RLS003..7 are strict-release only.
+  RLS001:
+    level: warn
+    title: release set has an invalid or incomplete repository and build binding
+    prevents: Broadcasting one commit across a distributed set or silently omitting required code.
+  RLS002:
+    level: warn
+    title: candidate and evaluation attest different versions or change sets
+    prevents: Green evidence for old code, another build, configuration or plan closing the new candidate.
+  RLS003:
+    level: error
+    title: required trusted release inputs or frozen plan are unavailable or invalid
+    prevents: Missing history, scope, runtime or frozen plan becoming a passed release gate.
+  RLS004:
+    level: error
+    title: release execution evidence is unauthenticated, missing, failed or mismatched
+    prevents: A generated manifest or self-declared verdict standing in for independently witnessed execution.
+  RLS005:
+    level: error
+    title: deployment observation does not match the whole candidate and environment
+    prevents: A partial deployment or staging smoke run claiming a verified production release.
+  RLS006:
+    level: error
+    title: claimed implementation or closure lacks current authority or default-branch integration
+    prevents: Unmerged or revoked work being called implemented or verified, or assuming every default branch is main.
+  RLS007:
+    level: error
+    title: shared release or compatibility source does not match its pinned reference
+    prevents: Dependency versions or compatibility conditions changing without re-evaluation of the candidate.
+
+  # Opt-in strict-contribution only, never run in legacy and never disabled by PR config.
+  AUT001:
+    level: error
+    title: required trusted contribution input is unavailable or invalid
+    prevents: Missing access, history, runtime rules or policy being read as approval.
+  AUT002:
+    level: error
+    title: mandate is not independently approved in the trusted base
+    prevents: A PR approving its own CHG or supplying a missing or ambiguous classification.
+  AUT003:
+    level: error
+    title: approved normative or historical immutable content changed
+    prevents: Preserving a CHG identifier while changing what it authorizes.
+  AUT004:
+    level: error
+    title: paths or repositories are outside the approved machine-readable binding
+    prevents: An omitted repository or unbound file being read as reviewed scope.
+  AUT005:
+    level: error
+    title: the specifically affected artifact obligation is unmet
+    prevents: Updating an unrelated DC or leaving its version unchanged to clear an impact gate.
+  AUT006:
+    level: error
+    title: no-chg exception lacks independent review of the exact request
+    prevents: A reason in untrusted PR text becoming an automatic review bypass.
+  EVI001:
+    level: error
+    title: receipt digest, producer or run is not authenticated by the calling CI
+    prevents: PR-authored green JSON standing in for independently collected execution evidence.
+  EVI002:
+    level: error
+    title: execution evidence belongs to another code set or mandate
+    prevents: Reusing a green test for different commits, policy, command or documentary base.
+  EVI003:
+    level: error
+    title: mandatory execution evidence is missing or failed
+    prevents: Fast-cycle selection or an empty graph removing mandatory tests.
+
 # ON THE PROSE COUPLED CHECKS. There are none left. REG002 and REG003 used to read the body
 # of `OPEN.md` -- the `### OD-NNN` headings and the "Cost to reverse" and "Default in force"
 # lines inside each entry -- which is the fragility the section markers removed, one level

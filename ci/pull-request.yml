@@ -13,6 +13,12 @@
 
 name: pull request
 
+# Legacy compatibility asset: it does NOT authenticate a documentary base or receipts.
+# For strict opt-in and independent CI inputs, see references/contributions.md and
+# ci/contribution.yml. Do not turn this pull_request job into a privileged job.
+permissions:
+  contents: read
+
 on:
   pull_request:
 
@@ -24,6 +30,7 @@ jobs:
         with:
           # The base branch has to be there for the diff below.
           fetch-depth: 0
+          persist-credentials: false
 
       - uses: actions/checkout@v4
         with:
@@ -41,17 +48,21 @@ jobs:
           # the commit form is the one that binds either way.
           ref: COMMIT_OR_TAG
           path: .framework
+          persist-credentials: false
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - run: pip install pyyaml jsonschema
+      - run: python -m pip install -r .framework/requirements.txt -c .framework/constraints.txt
 
       - name: which files this change set touches
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_SHA: ${{ github.sha }}
         run: |
           git diff --name-only \
-            "origin/${{ github.base_ref }}...${{ github.sha }}" > /tmp/changed.txt
+            "origin/$BASE_REF...$HEAD_SHA" > /tmp/changed.txt
           cat /tmp/changed.txt
 
       - name: the artifacts, and the contract that authorizes the change

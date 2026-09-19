@@ -41,6 +41,7 @@ GENERATED = {
     "platform": ("platform.py", "platform"),
     "review": ("review.py", "review/gap"),
     "coherence": ("coherence.py", "coherence/contradiction"),
+    "memory": ("memory.py", "memory"),
 }
 STATIC = {
     "resolve/ordering-a": "ordering-a",

@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "framework-memory/release-report/v1",
+  "$ref": "#/$defs/release-report",
+  "$defs": {
+    "release-report": {
+      "type": "object",
+      "required": [
+        "schema",
+        "profile",
+        "gate",
+        "requested",
+        "supported_state",
+        "status_changed",
+        "deployment_executed",
+        "atomic",
+        "review_required",
+        "findings",
+        "limitations"
+      ],
+      "properties": {
+        "schema": {
+          "const": "framework-memory/release-report/v1"
+        },
+        "profile": {
+          "const": "strict-release"
+        },
+        "gate": {
+          "enum": [
+            "passed",
+            "failed"
+          ]
+        },
+        "requested": {
+          "enum": [
+            "prepared",
+            "implemented",
+            "verified"
+          ]
+        },
+        "supported_state": {
+          "enum": [
+            "not-established",
+            "prepared",
+            "implemented",
+            "verified"
+          ]
+        },
+        "status_changed": {
+          "const": false
+        },
+        "deployment_executed": {
+          "const": false
+        },
+        "atomic": {
+          "const": false
+        },
+        "review_required": {
+          "const": true
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

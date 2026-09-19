@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "framework-memory/manifest/v1",
+  "$ref": "#/$defs/manifest",
+  "$defs": {
+    "manifest": {
+      "type": "object",
+      "required": [
+        "schema",
+        "id",
+        "inputs",
+        "files"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema": {
+          "const": "framework-memory/manifest/v1"
+        },
+        "id": {
+          "type": "string"
+        },
+        "inputs": {
+          "type": "object"
+        },
+        "files": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "schema": "framework-memory/contribution-policy/v1",
+  "document_repository": "https://github.com/YOUR-ORG/product-docs",
+  "classifications": ["public", "internal"],
+  "exclude": ["_meta/corpus"],
+  "repositories": {
+    "repository:product:sample:api": "https://github.com/YOUR-ORG/sample-api"
+  },
+  "mandates": {
+    "products/sample/changes/CHG-001-contract.md": {
+      "repositories": ["repository:product:sample:api"],
+      "paths": {
+        "documents": ["products/sample/contracts/DC-001-input.md"],
+        "repository:product:sample:api": ["src/api", "tests/contracts"]
+      },
+      "obligations": [{"impact": "data", "path": "products/sample/contracts/DC-001-input.md"}],
+      "tests": ["contract-suite"]
+    }
+  },
+  "tests": {
+    "contract-suite": {
+      "command": ["python", "-m", "unittest", "discover", "-s", "tests/contracts"],
+      "producer": "YOUR-TRUSTED-CI/contract-suite"
+    }
+  },
+  "exception_reviewers": ["YOUR-INDEPENDENT-REVIEWER"],
+  "exception_tests": ["contract-suite"]
+}

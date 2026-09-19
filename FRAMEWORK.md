@@ -368,6 +368,12 @@ something nobody has built.
 and not enough for a rollback. The manifest is the same release in machine-readable form,
 with commit, digest, model, prompt and dataset versions, `EVR` and `CHG` included, rollback
 target.
+New RLMs may describe an exact multi-repository `release_set`; its derived identity also
+binds build, configuration, AI/data inputs and shared-release dependencies. Historical
+single-repository manifests remain readable and are never rewritten. A prepared manifest
+does not establish deployment: evaluated code on each actual default branch supports
+`implemented`; `verified` additionally needs the same running set and passed smoke evidence.
+The opt-in checks and trusted-caller boundary are in `references/release-evidence.md`.
 
 **`LOG` absorbs the feedback.** There is no separate "feedback" document: everything goes
 into `LOG` with `type: incident | drift | feedback | request | metric | compliance`. The
@@ -648,3 +654,27 @@ completeness of the picture.
    · you release → `REL` **and** `RLM`.
 6. **If a fact is not documented, say so.** The absence is information. An agent that fills
    a gap with a plausible assumption does more damage than one that stops.
+
+## 12. Optional operational memory
+
+Product Memory makes the existing sources easier to assemble for development without
+replacing this model. Its graphs and reports are derived, not new product artifacts:
+
+```text
+authoritative Markdown/YAML --> documentary graph --> context + required source readings
+explicit captured code -------> separate code graph --> bounded structural impact
+approved Git objects + witnessed execution receipts --> opt-in contribution/release gates
+```
+
+Declared component roots bridge current/target/design views to code; they are not proof
+of implementation. Missing observations remain missing, and inferred relations cannot
+become constraints. An assembled pack does not establish approval or agent understanding.
+The default validator stays compatible; strict gates are explicitly selected and retain
+their independent trusted-caller boundary. Integration and deployment remain separate.
+
+Use `references/adoption.md` to separate upgrade, explicit commands and forward-only
+mapping enrichment; `references/product-memory.md` owns the runtime contract. No graph
+database, embeddings, customer-data ingestion, background agent or viewer is required.
+For optional read-only visual inspection, `memory.py view` exports a self-contained HTML.
+`references/memory-viewer.md` owns the revision, privacy, bounds and dependency contract;
+its presentation links never become authoritative graph edges or evidence of understanding.

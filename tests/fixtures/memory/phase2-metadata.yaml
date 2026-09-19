@@ -1,0 +1,29 @@
+# Additive overlays on disposable phase-zero fixture copies. Historical inputs unchanged.
+multi-repo:
+  products/alpha/ARC.md:
+    components:
+      component:product:alpha:api:
+        current:
+          section: current
+          code_roots: [{repository: product.api, path: '.'}]
+        target:
+          section: target
+          code_roots: [{repository: product.api, path: services/api}]
+  products/beta/ARC.md:
+    components:
+      component:product:beta:worker:
+        current:
+          section: current
+          code_roots: [{repository: product.worker, path: '.'}]
+  PLATFORM.md:
+    components:
+      component:platform:rules:
+        current:
+          code_roots: [{repository: platform.rules, path: '.'}]
+  decisions/DEC-001-shared-rule.md:
+    applies_to: [component:platform:rules]
+document-only:
+  initiatives/synthetic-design/SD-001-processor.md:
+    components:
+      component:product:alpha:processor:
+        design: {section: Designed outcome}

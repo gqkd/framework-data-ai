@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "framework-memory/contribution-policy/v1",
+  "$ref": "#/$defs/contribution-policy",
+  "$defs": {
+    "contribution-policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "document_repository",
+        "classifications",
+        "exclude",
+        "repositories",
+        "mandates",
+        "tests",
+        "exception_reviewers",
+        "exception_tests"
+      ],
+      "properties": {
+        "schema": {
+          "const": "framework-memory/contribution-policy/v1"
+        },
+        "document_repository": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "classifications": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "public",
+              "internal",
+              "confidential"
+            ]
+          }
+        },
+        "exclude": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/relative-path"
+          }
+        },
+        "repositories": {
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/repository-id"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/nonempty"
+          }
+        },
+        "mandates": {
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/relative-path"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "repositories",
+              "paths",
+              "obligations",
+              "tests"
+            ],
+            "properties": {
+              "repositories": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "$ref": "#/$defs/repository-id"
+                }
+              },
+              "paths": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "array",
+                  "uniqueItems": true,
+                  "items": {
+                    "$ref": "#/$defs/relative-path"
+                  }
+                }
+              },
+              "obligations": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "impact",
+                    "path"
+                  ],
+                  "properties": {
+                    "impact": {
+                      "enum": [
+                        "architecture",
+                        "data",
+                        "risk-compliance"
+                      ]
+                    },
+                    "path": {
+                      "$ref": "#/$defs/relative-path"
+                    }
+                  }
+                }
+              },
+              "tests": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "$ref": "#/$defs/nonempty"
+                }
+              }
+            }
+          }
+        },
+        "tests": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "command",
+              "producer"
+            ],
+            "properties": {
+              "command": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/nonempty"
+                }
+              },
+              "producer": {
+                "$ref": "#/$defs/nonempty"
+              }
+            }
+          }
+        },
+        "exception_reviewers": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/nonempty"
+          }
+        },
+        "exception_tests": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/nonempty"
+          }
+        }
+      }
+    },
+    "nonempty": {
+      "type": "string",
+      "minLength": 1
+    },
+    "relative-path": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?!/)(?!.*\\\\)(?!.*:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*//).+$"
+    },
+    "repository-id": {
+      "type": "string",
+      "pattern": "^repository:(?:product:[a-z0-9][a-z0-9-]*|platform):[a-z][a-z0-9._-]*$"
+    }
+  }
+}
