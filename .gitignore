@@ -8,3 +8,6 @@ venv/
 # L'artefatto durevole è l'ING.md del progetto, non questo.
 ingest-out/
 evals/fixtures/build/
+
+# Analisi di lavoro, non artefatti: il documento dentro dichiara di stare qui.
+notes/
