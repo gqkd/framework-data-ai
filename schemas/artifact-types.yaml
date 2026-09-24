@@ -1129,7 +1129,65 @@
 # is archived on the tag product-memory-3.8.1 and was never released. The contracts layer
 # and code observation it shares with this version remain, because the contribution gate
 # uses them. Do not re-propose the retrieval channel without new evidence.
-version: "3.7.0"
+# 3.7.0 -> 4.0.0. AN ATTESTATION THAT CANNOT BE TRUE IS AN ERROR, AND THE HONEST ONE STOPS
+# COSTING A WARNING. MAJOR by the rule at the top of this file, twice over: a check arrives at
+# `error` with no opt-in, and a check is retired while another takes its place.
+#
+# WHAT WAS WRONG. `last_review` attests that a person read a living document and found it still
+# true. The two checks that read it looked at collisions between documents (`LC005`, several
+# documents on one minute) and at changes after the attestation (`LC006`). Neither looked at the
+# other direction: a value later than the commit that carries it, which cannot be the instant
+# anybody finished reading. In one repository four living documents were attested with instants
+# up to an hour and a half after their own commits, chosen apart from each other so that `LC005`
+# stayed quiet, and nothing reported it. Corrected by hand to the commit's own time they collided
+# on one minute, and `LC005` fired; the comment saying what each reading had covered changed as
+# well, and `LC006` fired. There was no honest way to attest a reading without a warning.
+#
+# WHAT ARRIVES.
+#   `LC007`, `error`. A `last_review` later than the committer date of the commit that introduced
+#   the current value of its line, compared at the minute with no tolerance; a value on a line
+#   not yet committed is compared with the current time. Timezones: a value written with an
+#   offset is an instant; a bare value is read in the offset of that commit, or in this machine's
+#   offset when the line is not committed, and the finding says which of the two it used.
+#   `review_scope`, an optional field beside `last_review` on every living type: what the reading
+#   covered, as a sentence. The attestation block is those two fields and nothing else: `LC006`
+#   excludes them from the attested text and counts everything else as text, YAML comments
+#   included. `LC003` reports the field on an immutable exactly as it reports `last_review`.
+#   `LC008`, `warn`. The note is empty on a document attested after its creation, identical across
+#   documents attested in one commit, or unchanged from the previous attestation of the same
+#   document. It is a proxy and says so: a note written to be different passes it, and no check
+#   can read whether a reading happened.
+#   `LC005` is retired and its code is not reused. An annotation on it is what `AN001` reports.
+#   `skills/audit/scripts/attest.py`. A person runs it after committing the content: it writes the
+#   current instant with its offset and the note, prints the commit whose text it attests, and
+#   does not commit. An agent does not run it. The rule that an agent proposes `last_review` and
+#   never writes it stands, and it now covers the command.
+#   A shallow clone stops the validator with exit 2 and a message that says to fetch the full
+#   history. Nothing about attestations is skipped in silence.
+#
+# ADOPTION, IN THIS ORDER. The order is forced, and for one step it is the reverse of the rule
+# written further up in this file.
+#   0. `AN001` names every annotation left on `LC005`, and every `LC006` annotation whose finding
+#      is gone. Remove them: `--adopt` refuses while they stand.
+#   1. `LC007` names every attestation later than its own commit. Reattest those documents with
+#      the command, which writes the offset. An `error` is not annotatable and blocks `--adopt`,
+#      so this repair comes before adopting -- the one place where "adopt first, write the field
+#      afterwards" does not hold, because the field is not new: its value was false.
+#   2. `LC008` names every living document attested after its creation with no note. Write
+#      `review_scope` with what the last reading covered, in a commit that touches only the
+#      attestation block, so that `LC006` does not count it as a change.
+#   3. Fetch the full history wherever the validator runs: `fetch-depth: 0` on `actions/checkout`,
+#      `GIT_DEPTH: 0` on GitLab, `fetchDepth: 0` on Azure Pipelines. No check reports this one:
+#      the validator refuses to run without it, and `migrate.py` cannot compare in a clone that
+#      lacks it.
+#   Bare `last_review` values stay valid; the command no longer writes them.
+#
+# MEASURED, ON ONE REPOSITORY OF ABOUT 150 COMMITS AND 26 LIVING DOCUMENTS. Reading the commit
+# behind each attested line costs a `git blame` per living document, about 20 ms each. The
+# validator's own fixtures were run under `LC007` before it shipped: six release fixtures carried
+# an attestation two days after the commit that introduced it, in a repository whose subject is
+# documents going out of date.
+version: "4.0.0"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of

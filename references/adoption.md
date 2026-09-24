@@ -83,6 +83,35 @@ protection, and nothing here performs a merge or a deployment.
 exceeds its mandate inside a file the mandate authorizes is not caught. An unfulfilled
 documentary obligation is caught. Neither profile proves semantic preservation.
 
+## 3. Adopting 4.0.0: the attestations of rereading
+
+`4.0.0` adds an `error`, `LC007`, that fires on a `last_review` later than the commit that
+introduced it, and a field, `review_scope`, that says what a reading covered. The migration
+is three steps and one preliminary, in this order, because each one is what unblocks the
+next. The check that recognises each step is named beside it.
+
+0. **Remove the annotations that explain nothing any more.** `LC005` is retired and never
+   fires again; `LC006` no longer counts a change to `review_scope` as a change. `AN001`
+   names every annotation in `.framework/expected-findings.yaml` whose finding is gone, and
+   `--adopt` refuses while one stands.
+1. **Correct the attestations that cannot be true.** `LC007` names every living document
+   whose `last_review` is later than the commit that carries it. Reattest each one with
+   `skills/audit/scripts/attest.py`, run by a person after the content is committed: it
+   writes the current instant with its offset and the coverage note, and does not commit.
+   This is the one step that comes **before** adopting the version, against the general
+   rule that the field is written afterwards: an `error` cannot be annotated and blocks
+   `--adopt`, and the field is not new -- its value was false.
+2. **Say what the last reading covered.** `LC008` names every living document attested
+   after its creation that carries no `review_scope`. Write the field with what the last
+   reading covered, in a commit that touches only `last_review` and `review_scope`, so that
+   `LC006` does not count the edit as a change to the attested text. Bare `last_review`
+   values without an offset stay valid; the command no longer produces them.
+3. **Fetch the full history where the validator runs.** `4.0.0` reads the commit behind
+   every attested line and refuses to run in a shallow clone, with exit 2 and a message.
+   No check reports this: the validator stops. `fetch-depth: 0` on every `actions/checkout`
+   of the project, as `ci/pull-request.yml` already asks; `GIT_DEPTH: 0` on GitLab,
+   `fetchDepth: 0` on Azure Pipelines. `migrate.py` needs the same history to compare.
+
 ## Distribution, dependencies and rollback
 
 The distribution is the complete repository or a complete Git archive, also usable through
