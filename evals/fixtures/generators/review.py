@@ -37,6 +37,7 @@ import sys
 from pathlib import Path
 
 import yaml
+from attested import reread     # beside this script: sys.path[0] when run as one
 
 # The version is read and not written, for the reason `tests/selfcheck.py` asserts across the
 # whole repository: a literal here is a line that goes wrong silently the day the framework
@@ -51,13 +52,7 @@ DAY20 = "2026-06-20 16:00"
 
 
 def fm(**kw) -> str:
-    # A LIVING DOCUMENT REREAD ON A DAY OTHER THAN THE ONE IT WAS CREATED CARRIES THE
-    # SENTENCE `LC008` ASKS FOR, unless the fixture writes its own: the note is what a
-    # reading leaves behind, and a fixture that plants no defect there has to carry it or
-    # the finding it exists to produce arrives inside a list of unrelated ones.
-    if (kw.get("lifecycle") == "living" and "last_review" in kw and "review_scope" not in kw
-            and str(kw.get("created", ""))[:10] != str(kw.get("last_review", ""))[:10]):
-        kw["review_scope"] = "the whole file"
+    kw = reread(kw)                  # `review_scope` where a reading is owed: attested.py
     return "---\n" + "\n".join(f"{k}: {v}" for k, v in kw.items()) + "\n---\n\n"
 
 

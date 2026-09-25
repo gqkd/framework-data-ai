@@ -54,6 +54,7 @@ def review() -> str:
 
 import sys
 from pathlib import Path
+from attested import reread     # beside this script: sys.path[0] when run as one
 
 D = Path(sys.argv[1])
 NOW, TODAY = "2026-08-09 09:00", "2026-08-09"
@@ -67,13 +68,7 @@ VERSION = re.search(r"^version:\s*[\"']?([\d.]+)", REGISTRY.read_text(encoding="
 
 
 def fm(**kw):
-    # A LIVING DOCUMENT REREAD ON A DAY OTHER THAN THE ONE IT WAS CREATED CARRIES THE
-    # SENTENCE `LC008` ASKS FOR, unless the fixture writes its own: the note is what a
-    # reading leaves behind, and a fixture that plants no defect there has to carry it or
-    # the finding it exists to produce arrives inside a list of unrelated ones.
-    if (kw.get("lifecycle") == "living" and "last_review" in kw and "review_scope" not in kw
-            and str(kw.get("created", ""))[:10] != str(kw.get("last_review", ""))[:10]):
-        kw["review_scope"] = "the whole file"
+    kw = reread(kw)                  # `review_scope` where a reading is owed: attested.py
     return "---\n" + "\n".join(f"{k}: {v}" for k, v in kw.items()) + "\n---\n\n"
 
 

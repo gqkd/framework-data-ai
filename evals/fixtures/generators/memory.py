@@ -9,12 +9,24 @@ Only fixture content and commit identities are deterministic, not Git's internal
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+import importlib.util
 import os
 from pathlib import Path
 import subprocess
 import sys
 
 import yaml
+
+# THE SIBLING HELPER, BY PATH AND NOT THROUGH `sys.path`. This file is also imported as a module
+# by `tests/memory/test_phase0.py`, and putting this directory at the front of `sys.path` there
+# would shadow the standard `platform` module with `platform.py` beside this file, which is
+# what `jsonschema` imports through `attrs`: every other test in that process then fails to
+# import. Run as a script the directory is on the path already; imported, it must not be.
+_attested_spec = importlib.util.spec_from_file_location(
+    "_attested", Path(__file__).resolve().parent / "attested.py")
+_attested = importlib.util.module_from_spec(_attested_spec)
+_attested_spec.loader.exec_module(_attested)
+reread = _attested.reread
 
 ROOT = Path(__file__).resolve().parents[3]
 VERSION = yaml.safe_load((ROOT / "schemas/artifact-types.yaml").read_text())["version"]
@@ -48,9 +60,7 @@ class Documents:
             ).strftime("%Y-%m-%d %H:%M")
             self.sequence += 1
         meta.update(fields)
-        # Reread on a day other than its creation, so `LC008` asks what the reading covered.
-        if lifecycle == "living" and "last_review" in meta:
-            meta.setdefault("review_scope", "the whole file")
+        meta = reread(meta)              # `review_scope` where a reading is owed: attested.py
         header = yaml.safe_dump(meta, sort_keys=False, allow_unicode=True)
         write(self.root, path, f"---\n{header}---\n\n{body.rstrip()}\n")
 
