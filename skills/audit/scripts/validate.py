@@ -477,10 +477,10 @@ def load_config(project: dict) -> tuple[dict, int]:
                       "line is ignored until it adopts, and `migrate.py --adopt` removes it.",
                       file=sys.stderr)
                 continue
-            sys.exit(f"framework.yaml overrides {code!r}, which was retired in {since}: "
-                     "nothing emits it and no level brings it back. Remove the line; the "
-                     "catalog says what took its place, and `migrate.py --adopt` would have "
-                     "removed it with the number.")
+            refuse(f"framework.yaml overrides {code!r}, which was retired in {since}: nothing "
+                   "emits it and no level brings it back. Remove the line; the catalog says "
+                   "what took its place, and `migrate.py --adopt` would have removed it with "
+                   "the number. Nothing was checked.")
         checks[code] = {**checks[code], **override}
     return checks, stale_days
 
@@ -681,8 +681,8 @@ MOMENT_FORMATS = ("%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M",
                   # With an offset, which is what `attest.py` writes from 4.0.0. `+02:00`,
                   # `+0200` and `Z` all parse. Without seconds the value is not a YAML
                   # timestamp and arrives as a string, which is why the forms are listed.
-                  "%Y-%m-%d %H:%M %z", "%Y-%m-%dT%H:%M%z",
-                  "%Y-%m-%d %H:%M:%S %z", "%Y-%m-%dT%H:%M:%S%z")
+                  "%Y-%m-%d %H:%M %z", "%Y-%m-%dT%H:%M%z", "%Y-%m-%d %H:%M%z",
+                  "%Y-%m-%d %H:%M:%S %z", "%Y-%m-%dT%H:%M:%S%z", "%Y-%m-%d %H:%M:%S%z")
 
 
 def parse_moment(v) -> datetime | None:
@@ -759,8 +759,13 @@ def check_lifecycle(a: Artifact, stale_days: int, now: datetime, report: Report)
 # which commit wrote which line -- so it is read once, here, and handed to each.
 
 ATTESTATION_FIELDS = ("last_review", "review_scope")
-ATTESTATION_KEY = re.compile(r"^(last_review|review_scope):")
-REVIEW_KEY = re.compile(r"^last_review:")
+ATTESTATION_KEY = re.compile(r"""^["']?(last_review|review_scope)["']?\s*:""")
+REVIEW_KEY = re.compile(r"""^["']?last_review["']?\s*:""")
+# A `review_scope:` line whose value is empty or a block scalar indicator (`>-`, `|`): only
+# then do the indented lines that follow belong to the note. After a plain value -- and always
+# after `last_review`, which is one scalar -- an indented line is a comment or a hand written
+# continuation, and both are text.
+BLOCK_SCALAR = re.compile(r"""^["']?review_scope["']?\s*:\s*(?:[>|][-+0-9]*)?\s*(?:#.*)?$""")
 
 
 def _front_matter_lines(text: str) -> tuple[int, int]:
@@ -793,20 +798,34 @@ def split_attestation(text: str) -> tuple[str, str]:
     """
     lines = text.split("\n")
     lo, hi = _front_matter_lines(text)
-    kept, block = [], []
-    inside = False
-    for i, line in enumerate(lines):
-        if lo <= i < hi:
-            if ATTESTATION_KEY.match(line):
-                inside = True
-                block.append(line)
-                continue
-            if inside and (not line.strip() or line[0] in " \t"):
-                block.append(line)
-                continue
-            inside = False
-        kept.append(line)
-    return "\n".join(kept), "\n".join(block)
+    inside = {i for start, end in attestation_spans(lines, lo, hi) for i in range(start, end)}
+    kept = [line for i, line in enumerate(lines) if i not in inside]
+    return "\n".join(kept), "\n".join(lines[i] for i in sorted(inside))
+
+
+def attestation_spans(lines: list[str], lo: int, hi: int) -> list[tuple[int, int]]:
+    """The half open index ranges of the attestation block, inside lines `lo:hi`.
+
+    One range per key. `last_review` is one line, always: it is a scalar, and an indented
+    line under it is a YAML comment, which is text. `review_scope` takes its indented and
+    blank lines only when its own line opens a block scalar or carries no value, because
+    that is what `attest.py` writes and the only case where the lines below are the note; a
+    `#` inside a block scalar is content, and is the note's. `attest.py` uses the same ranges
+    to replace the block, so the two cannot disagree about where it ends.
+    """
+    spans = []
+    i = lo
+    while i < hi:
+        if ATTESTATION_KEY.match(lines[i]):
+            start = i
+            i += 1
+            if BLOCK_SCALAR.match(lines[start]):
+                while i < hi and (not lines[i].strip() or lines[i][0] in " \t"):
+                    i += 1
+            spans.append((start, i))
+            continue
+        i += 1
+    return spans
 
 
 def _review_line(text: str) -> int | None:
@@ -867,8 +886,9 @@ class Repository:
     """
     root: Path
     prefix: str
-    tracked: set[str]
-    commits: dict[str, list[tuple[str, datetime]]]
+    in_head: set[str]                    # files under the root that HEAD holds, root-relative
+    has_head: bool
+    _commits: dict[str, list[tuple[str, datetime]]] | None = None
     _batch: subprocess.Popen | None = None
     _blobs: dict[str, str | None] = field(default_factory=dict)
 
@@ -885,33 +905,52 @@ class Repository:
                    "`git fetch --unshallow` here; in CI, `fetch-depth: 0` on actions/checkout, "
                    "`GIT_DEPTH: 0` on GitLab, `fetchDepth: 0` on Azure Pipelines. Nothing was "
                    "checked.")
-        files = _git(["ls-files", "-z"], root)
-        if files is None or files.returncode != 0:
-            refuse(f"{root} is inside a repository whose index could not be read: "
-                   f"{_last_line(files)}. Nothing was checked.")
-        tracked = {p for p in files.stdout.split("\0") if p}
-        commits: dict[str, list[tuple[str, datetime]]] = {}
-        # A repository with no commit yet has a history that is empty rather than unreadable:
-        # the first documented set, written and not yet committed, is a state a project is in
-        # for an afternoon, and every line in it is simply not committed.
+        # THE FILES HEAD HOLDS, AND NOT THE INDEX. A file added and not yet committed is in
+        # `git ls-files` and has no line in any commit, so `git blame` on it fails: every one of
+        # its lines is simply not committed, which is what the clock is for. A repository with
+        # no commit yet is the same state for every file -- the first documented set, written
+        # in an afternoon -- and has a history that is empty rather than unreadable.
         head = _git(["rev-parse", "--verify", "-q", "HEAD"], root)
-        if head is not None and head.returncode == 0:
-            log = _git(["log", "--format=%x00%H%x00%aI", "--name-only", "--no-renames"], root)
-            if log is None or log.returncode != 0:
-                refuse(f"{root} is inside a repository whose history could not be read: "
-                       f"{_last_line(log)}. Nothing was checked.")
-            sha = when = ""
-            for line in log.stdout.splitlines():
-                if line.startswith("\x00"):
-                    _, sha, when = line.split("\x00")
-                    continue
-                path = line.strip()
-                if path:
-                    commits.setdefault(path, []).append((sha, datetime.fromisoformat(when)))
-        return cls(root, prefix, tracked, commits)
+        has_head = head is not None and head.returncode == 0
+        in_head: set[str] = set()
+        if has_head:
+            tree = _git(["ls-tree", "-r", "-z", "--name-only", "--full-tree", "HEAD"], root)
+            if tree is None or tree.returncode != 0:
+                refuse(f"{root} is inside a repository whose HEAD could not be read: "
+                       f"{_last_line(tree)}. Nothing was checked.")
+            in_head = {p[len(prefix):] for p in tree.stdout.split("\0")
+                       if p and p.startswith(prefix)}
+        return cls(root, prefix, in_head, has_head)
 
     def is_tracked(self, rel: str) -> bool:
-        return rel in self.tracked
+        """Whether HEAD holds a version of `rel`: the condition for a line to have a commit."""
+        return rel in self.in_head
+
+    @property
+    def commits(self) -> dict[str, list[tuple[str, datetime]]]:
+        """Every path in the history with the commits that touched it, read when first asked.
+
+        One `git log` for the whole history, and only when a check needs it: a run with no
+        attested document, or one that only regenerates the indices, does not pay for it.
+        """
+        if self._commits is None:
+            commits: dict[str, list[tuple[str, datetime]]] = {}
+            if self.has_head:
+                log = _git(["log", "--format=%x00%H%x00%aI", "--name-only", "--no-renames"],
+                           self.root)
+                if log is None or log.returncode != 0:
+                    refuse(f"{self.root} is inside a repository whose history could not be "
+                           f"read: {_last_line(log)}. Nothing was checked.")
+                sha = when = ""
+                for line in log.stdout.splitlines():
+                    if line.startswith("\x00"):
+                        _, sha, when = line.split("\x00")
+                        continue
+                    path = line.strip()
+                    if path:
+                        commits.setdefault(path, []).append((sha, datetime.fromisoformat(when)))
+            self._commits = commits
+        return self._commits
 
     def commits_of(self, rel: str) -> list[tuple[str, datetime]]:
         """The commits touching `rel`, newest first, each with its author instant."""
@@ -928,28 +967,39 @@ class Repository:
                     out.add(name[len(self.prefix):])
         return out
 
-    def blame(self, rel: str, line: int) -> tuple[str | None, datetime | None, datetime | None]:
+    def blame(self, rel: str, line: int) -> tuple[str | None, datetime | None, datetime | None, bool]:
         """Which commit wrote line `line` of `rel` as it stands in the working tree.
 
-        Returns the sha with its committer and author instants, each in the offset the
-        commit recorded, or three Nones for a line not yet committed. `blame.ignoreRevsFile`
-        is switched off for the call: a project that lists its reformatting commits there
-        would have the line attributed to an older commit than the one that wrote the value,
-        and this asks who wrote the value.
+        Returns the sha, its committer and author instants in the offset the commit
+        recorded, and whether that commit is the one that brought the file into the history
+        -- `git blame` says so by giving no `previous` version, and it follows renames, so a
+        renamed file is not born again at the rename. Four Nones and False for a line not yet
+        committed.
+
+        `-w -M`, so that a commit which re-indented the line or moved it among the other
+        keys is not read as the commit that wrote the value: the question is who wrote the
+        value, and a formatter did not. What still moves the answer is a change to the
+        line's content -- quoting the value, adding an offset -- and the catalog says so.
+        `blame.ignoreRevsFile` is switched off for the call: a project that lists its
+        reformatting commits there would have the line attributed to an older commit than
+        the one that wrote the value.
         """
-        r = _git(["-c", "blame.ignoreRevsFile=", "blame", "-L", f"{line},{line}",
+        r = _git(["-c", "blame.ignoreRevsFile=", "blame", "-w", "-M", "-L", f"{line},{line}",
                   "--porcelain", "--", rel], self.root)
         if r is None or r.returncode != 0:
             refuse(f"`git blame` could not read {rel}: {_last_line(r)}. Nothing was checked.")
         head = r.stdout.split("\n", 1)[0].split()
         sha = head[0] if head else ""
         if not sha or set(sha) == {"0"}:
-            return None, None, None
+            return None, None, None, False
         fields: dict[str, str] = {}
+        first = True
         for row in r.stdout.splitlines()[1:]:
             key, _, value = row.partition(" ")
             if key in ("author-time", "author-tz", "committer-time", "committer-tz"):
                 fields[key] = value
+            elif key == "previous":
+                first = False
 
         def instant(kind: str) -> datetime:
             tz = fields[f"{kind}-tz"]
@@ -958,11 +1008,11 @@ class Repository:
             return datetime.fromtimestamp(int(fields[f"{kind}-time"]), offset)
 
         try:
-            return sha, instant("committer"), instant("author")
+            return sha, instant("committer"), instant("author"), first
         except (KeyError, ValueError):
             refuse(f"`git blame` answered for {rel} without the dates of {sha[:12]}. "
                    "Nothing was checked.")
-            return None, None, None          # unreachable: `refuse` exits
+            return None, None, None, False   # unreachable: `refuse` exits
 
     def blob(self, rev: str, rel: str) -> str | None:
         """The file at `rev`, or None when it is not there. One process serves them all."""
@@ -1013,8 +1063,8 @@ class Attestation:
     sha: str | None                      # the commit that wrote the current value, or None
     committed: datetime | None           # its committer instant, in the commit's own offset
     authored: datetime | None            # its author instant, likewise
-    created_by: str | None               # the commit that brought the file into the history
-    tracked: bool                        # whether the file is in the index at all
+    first: bool                          # that commit is the one that brought the file in
+    tracked: bool                        # whether HEAD holds a version of the file at all
 
     @property
     def instant(self) -> tuple[datetime, str]:
@@ -1066,13 +1116,12 @@ def read_attestations(arts: list[Artifact], repo: Repository | None) -> list[Att
         text = a.path.read_text(encoding="utf-8", errors="replace")
         line = _review_line(text)
         rel = a.rel.replace("\\", "/")
-        sha = committed = authored = created_by = None
+        sha = committed = authored = None
+        first = False
         tracked = repo is not None and repo.is_tracked(rel)
         if tracked and line is not None:
-            sha, committed, authored = repo.blame(rel, line)
-            history = repo.commits_of(rel)
-            created_by = history[-1][0] if history else None
-        out.append(Attestation(a, value, line, sha, committed, authored, created_by, tracked))
+            sha, committed, authored, first = repo.blame(rel, line)
+        out.append(Attestation(a, value, line, sha, committed, authored, first, tracked))
     return out
 
 
@@ -1103,11 +1152,12 @@ def check_review_not_ahead(attestations: list[Attestation], now: datetime,
         if att.sha is None:
             if _minute(value) <= _minute(now):
                 continue
+            clock = (f"carries its own offset {_offset(value)}" if att.value.tzinfo is not None
+                     else f"is read in this machine's offset {_offset(value)}")
             report.add("LC007", att.artifact.rel,
-                       f"`last_review` says {raw}, and the line is not committed, so it is "
-                       f"{how.replace(', because the line is not committed', '')} and compared "
-                       f"with the current time on this machine, {now:%Y-%m-%d %H:%M} "
-                       f"{_offset(now)}: the value is after it. A reading cannot be attested "
+                       f"`last_review` says {raw}, and the line is not committed: the value "
+                       f"{clock}, and it is after the current time on this machine, "
+                       f"{now:%Y-%m-%d %H:%M} {_offset(now)}. A reading cannot be attested "
                        "before the clock reaches it, so this instant was chosen, not read. "
                        "`attest.py` writes the instant it runs at, with its offset.")
             continue
@@ -1229,6 +1279,11 @@ def _normalized(note) -> str:
     return " ".join(str(note or "").split())
 
 
+def _same_minute(a: datetime, b: datetime, offset) -> bool:
+    """Whether two values, naive or aware, name the same minute once read in `offset`."""
+    return _minute(as_instant(a, offset)[0]) == _minute(as_instant(b, offset)[0])
+
+
 def check_review_scope(attestations: list[Attestation], repo: Repository | None,
                        report: Report) -> None:
     """The sentence beside the stamp: absent, shared across a batch, or copied forward.
@@ -1261,7 +1316,7 @@ def check_review_scope(attestations: list[Attestation], repo: Repository | None,
         rel = a.rel.replace("\\", "/")
         raw = a.meta.get("last_review")
         if att.sha is not None:
-            owed = att.created_by is not None and att.sha != att.created_by
+            owed = not att.first         # written by a later commit than the one that created the file
         elif att.tracked:
             owed = True                  # an existing document, attested again and not yet committed
         else:
@@ -1291,8 +1346,10 @@ def check_review_scope(attestations: list[Attestation], repo: Repository | None,
             continue
         prior_note = _normalized(previous.get("review_scope"))
         prior_value = parse_moment(previous.get("last_review"))
-        if (prior_note and prior_note.casefold() == note.casefold()
-                and prior_value is not None and prior_value != att.value):
+        # Compared as instants, in the offset of the commit that wrote the line: a commit that
+        # only added the offset to the same minute did not move the stamp.
+        if (prior_note and prior_note.casefold() == note.casefold() and prior_value is not None
+                and not _same_minute(prior_value, att.value, att.committed.tzinfo)):
             report.add("LC008", a.rel,
                        f"commit {att.sha[:12]} moved `last_review` from "
                        f"{previous.get('last_review')} to {raw} and left `review_scope` as it "
@@ -3693,7 +3750,7 @@ def main() -> int:
     if args.list_checks:
         for code in sorted(config):
             spec = config[code]
-            print(f"{spec.get('level', 'warn'):<6} {code}  {spec.get('title', '')}")
+            print(f"{spec.get('level', 'warn'):<8} {code}  {spec.get('title', '')}")
         return 0
 
     report = Report(config)
@@ -3848,8 +3905,9 @@ def main() -> int:
         # measured, and in the case that produced that check the uncommitted edit was on a
         # living register.
         if uncommitted:
-            print(f"Living documents with uncommitted changes: {uncommitted}. The gaps below "
-                  "exclude them, so where one applies the real gap is larger.")
+            print(f"Living documents with uncommitted changes: {uncommitted}. They are compared "
+                  "against what is committed, so where one applies the real gap can be larger "
+                  "than the one stated.")
         if repo is None:
             print("History: none. This directory is not inside a git repository, so LC006 and "
                   "the history half of LC008 did not run, and LC007 compared every "

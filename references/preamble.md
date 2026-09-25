@@ -80,7 +80,7 @@ lost. If the answer is no, it was about the framework.
 
 | Class | What you may do |
 |---|---|
-| `living` | edit in place. `last_review` is proposed, never written by the run |
+| `living` | edit in place. `last_review` and `review_scope` are proposed, never written by the run; a person writes them with `attest.py` |
 | `immutable` | never edit the body. Create a new document with `supersedes`, move the old one to `status: superseded`. The `status` field is the one exception and moves in place |
 | `append-only` | never rewrite a line. Add a linked event |
 

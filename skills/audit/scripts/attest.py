@@ -23,11 +23,12 @@ stay where they were, because this edits lines and does not reserialise YAML.
 
 WHAT IT REFUSES, WITH EXIT 2. A root outside any git repository, or a shallow one: the instant
 written here is bound to the commit that will carry it, and there has to be a history for that
-commit to enter. A document that is not `living`, or not tracked. An empty `--scope`. And the
-one that matters most: attested text in the working tree that differs from `HEAD`. Attesting
-uncommitted content would bind the reading to a text that no commit holds yet, and the commit
-that follows would carry both the change and the stamp, which `LC006` correctly counts as a
-change. Commit the content first.
+commit to enter. A document that is not `living`, or not tracked. An empty `--scope`, or the
+sentence already in `review_scope`, which `LC008` would report as copied forward. And the one
+that matters most: attested text in the working tree or in the index that differs from `HEAD`.
+Attesting uncommitted content would bind the reading to a text that no commit holds yet, and
+the commit that follows would carry both the change and the stamp, which `LC006` correctly
+counts as a change. Commit the content first.
 
 AN AGENT DOES NOT RUN THIS. The rule in `references/preamble.md` is that an agent proposes
 `last_review` and never writes it, and this command is the way a person writes it. The
@@ -52,52 +53,66 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import validate as v  # noqa: E402  (the validator's helpers, not its main)
 
 
-PLAIN_SCALAR = re.compile(r"[A-Za-z0-9À-ɏ][^:#]*")
+PLAIN_SCALAR = re.compile(r"[A-Za-zÀ-ɏ][^:#]*")
+# Words YAML reads as something other than a string, and would hand `LC008` as a boolean or
+# a null: `review_scope: no` is an empty note to the validator. Written as a block instead.
+YAML_WORDS = {"yes", "no", "true", "false", "on", "off", "null", "y", "n", "~"}
+INLINE_COMMENT = re.compile(r"\s+#.*$")
 
 
 def scope_lines(scope: str) -> list[str]:
     """`review_scope` as YAML lines: a plain scalar when that is safe, a folded block otherwise.
 
-    A plain scalar cannot carry `: ` or ` #` and should not start with an indicator, so
-    anything longer than a line or containing either goes into `>-`, which folds the wrapped
+    A plain scalar cannot carry `: ` or ` #`, should not start with an indicator or a digit,
+    and must not be a word YAML reads as a boolean or a null, so anything longer than a line,
+    containing either, or spelled like one of those goes into `>-`, which folds the wrapped
     lines back into one sentence when read.
     """
-    if len(scope) <= 80 and PLAIN_SCALAR.fullmatch(scope):
+    if (len(scope) <= 80 and PLAIN_SCALAR.fullmatch(scope)
+            and scope.casefold() not in YAML_WORDS):
         return [f"review_scope: {scope}"]
     return ["review_scope: >-"] + ["  " + line for line in textwrap.wrap(scope, 88)]
 
 
 def rewrite(text: str, stamp: str, scope: str) -> str:
-    """The document with its attestation block replaced, and nothing else moved."""
+    """The document with its attestation block replaced, and nothing else moved.
+
+    The block is found with the validator's own `attestation_spans`, so what this replaces is
+    exactly what `LC006` will step over. A comment on the `last_review` line itself survives
+    on the new line: it is text, and the command does not delete text.
+    """
     lines = text.split("\n")
     lo, hi = v._front_matter_lines(text)
     if hi == 0:
         raise ValueError("no front matter")
-    # Drop the existing `review_scope` block, remember where `last_review` and `created` are.
-    kept: list[str] = []
-    review_at = created_at = None
-    skipping = False
-    for i, line in enumerate(lines):
-        if lo <= i < hi:
-            if line.startswith("review_scope:"):
-                skipping = True
-                continue
-            if skipping and (not line.strip() or line[0] in " \t"):
-                continue
-            skipping = False
-            if line.startswith("last_review:"):
-                review_at = len(kept)
-            elif line.startswith("created:"):
-                created_at = len(kept)
-        kept.append(line)
-    new_block = [f"last_review: {stamp}"] + scope_lines(scope)
+    spans = v.attestation_spans(lines, lo, hi)
+    review_at = next((s for s, e in spans if v.REVIEW_KEY.match(lines[s])), None)
+    comment = ""
     if review_at is not None:
-        kept[review_at:review_at + 1] = new_block
-    else:
+        m = INLINE_COMMENT.search(lines[review_at])
+        comment = m.group(0) if m else ""
+    new_block = [f"last_review: {stamp}{comment}"] + scope_lines(scope)
+    if review_at is None:
         # No stamp yet (`LC001`): after `created`, or at the end of the front matter.
-        at = created_at + 1 if created_at is not None else (hi - (len(lines) - len(kept)))
+        created_at = next((i for i in range(lo, hi) if lines[i].startswith("created:")), None)
+        at = created_at + 1 if created_at is not None else hi
+        drop = {i for s, e in spans for i in range(s, e)}
+        kept = [line for i, line in enumerate(lines) if i not in drop]
+        at -= sum(1 for i in drop if i < at)
         kept[at:at] = new_block
-    return "\n".join(kept)
+        return "\n".join(kept)
+    out: list[str] = []
+    i = 0
+    while i < len(lines):
+        span = next(((s, e) for s, e in spans if s == i), None)
+        if span is None:
+            out.append(lines[i])
+            i += 1
+            continue
+        if span[0] == review_at:
+            out.extend(new_block)
+        i = span[1]                      # the other key's block goes: it is rewritten here
+    return "\n".join(out)
 
 
 def content_commit(repo: v.Repository, rel: str) -> tuple[str, datetime, str] | None:
@@ -158,11 +173,18 @@ def main() -> int:
     head = repo.blob("HEAD", rel)
     if head is None:
         v.refuse(f"{rel} is tracked but has no committed version. Commit the content first.")
-    if v.split_attestation(text)[0] != v.split_attestation(head)[0]:
-        v.refuse(f"{rel}: the attested text in the working tree differs from HEAD. Commit the "
-                 "content first, then attest. The instant written here covers the text as "
-                 "committed and nothing else; a commit carrying both the change and the stamp "
-                 "is counted by `LC006` as a change, correctly.")
+    staged = repo.blob("", rel)          # `:path` is the index
+    for where, version in (("the working tree", text), ("the index", staged)):
+        if version is not None and v.split_attestation(version)[0] != v.split_attestation(head)[0]:
+            v.refuse(f"{rel}: the attested text in {where} differs from HEAD. Commit the "
+                     "content first, then attest. The instant written here covers the text as "
+                     "committed and nothing else; a commit carrying both the change and the "
+                     "stamp is counted by `LC006` as a change, correctly.")
+    if " ".join(str(meta.get("review_scope") or "").split()).casefold() == scope.casefold():
+        v.refuse(f"{rel}: `--scope` is the sentence already there. `LC008` would report the "
+                 "note copied forward, because the same sentence describes two readings. A "
+                 "reading that covered the same parts still happened at another time, over "
+                 "text that had a chance to change: say so in the sentence.")
 
     attests = content_commit(repo, rel)
     now = datetime.now().astimezone().replace(second=0, microsecond=0)

@@ -239,8 +239,10 @@ cases:
       living documents at the same minute -- one of them opening with a notice, left standing
       by that same run, saying the rest of it was still written against something superseded
       and had to be reread in full. Reading is not the part a check can reach; who is making
-      the claim is. A run lists what it read and offers the instant, a person puts it in, and
-      `LC008` reports the shape when it happens anyway. An edit whose value
+      the claim is. A run lists what it read and offers the sentence for `review_scope`; a
+      person attests, and the clock gives the instant. `LC005` used to report the minute six
+      documents shared and is retired; `LC008` reports the shape that is left when it happens
+      anyway, a stamp with no sentence or one sentence pasted on several. An edit whose value
       comes from outside is the failure, whatever it looks like, and inventing a `trigger`
       for `OD-004` in the other fixture is the same failure wearing better clothes.
 

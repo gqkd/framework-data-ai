@@ -11,9 +11,11 @@ from datetime import datetime, timedelta
 from attested import reread     # beside this script: sys.path[0] when run as one
 
 # Every document here used to carry the same review instant, which is a claim that somebody
-# read the whole set in one minute -- the exact shape `LC005` reports, planted by the
-# generator in every fixture at once. Successive instants instead: a fixture that trips a
-# check it did not mean to plant teaches you to read past its output.
+# read the whole set in one minute -- the shape `LC005` reported until it was retired in
+# 4.0.0, planted by the generator in every fixture at once. Successive instants stay: the
+# check that reads attestations now, `LC008`, reads the sentence beside the stamp and not the
+# minute, and a fixture that says its documents were read one after another is telling the
+# truth about itself either way.
 _REVIEW_STEP = itertools.count()
 
 

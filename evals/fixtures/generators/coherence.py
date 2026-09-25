@@ -45,9 +45,10 @@ VERSION = yaml.safe_load(
 
 DAY = "2026-05-04 09:00"
 
-# Distinct instants, and not one batch stamp: `LC005` reports three living documents sharing a
-# minute, correctly, and a fixture whose subject is a reading has no business carrying the
-# shape of a reading that did not happen.
+# Distinct instants, and not one batch stamp: until 4.0.0 `LC005` reported three living
+# documents sharing a minute, and a fixture whose subject is a reading has no business carrying
+# the shape of a reading that did not happen. The check is retired and the instants stay, for
+# the same reason.
 LATER = "2026-06-15 10:00"
 REVIEWED = {"agents": "2026-06-15 10:00", "open": "2026-06-15 11:20",
             "product_open": "2026-06-15 14:05", "manifest": "2026-06-16 09:40",

@@ -361,10 +361,20 @@ def without_pins(text: str, codes) -> str:
         m = PIN_LINE.match(lines[i])
         if m and m.group(2) in codes:
             indent = len(m.group(1))
-            i += 1
-            while (i < len(lines) and lines[i].strip()
-                   and len(lines[i]) - len(lines[i].lstrip()) > indent):
-                i += 1
+            # The nested lines of the long form, with the blank and comment lines among them,
+            # up to the last line that is deeper than the key: a comment sitting between the
+            # key and its `level:` goes with the key, a comment before the next key stays.
+            end = i + 1
+            j = i + 1
+            while j < len(lines):
+                stripped = lines[j].strip()
+                deeper = len(lines[j]) - len(lines[j].lstrip()) > indent
+                if stripped and not stripped.startswith("#") and not deeper:
+                    break
+                if stripped and not stripped.startswith("#") and deeper:
+                    end = j + 1
+                j += 1
+            i = end
             continue
         kept.append(lines[i])
         i += 1
@@ -386,8 +396,13 @@ def adoption_problem(root, framework, current):
     return None
 
 
-def adopt(cfg: Path, version: str, commit: str | None, drop=()) -> None:
+def adopt(cfg: Path, version: str, commit: str | None, drop=()) -> str | None:
     """Write the new number, the pinned commit beside it when there is one, and no retired pin.
+
+    Returns the reason nothing was written, or None when it was. The one reason is a retired
+    pin the line based edit could not remove -- flow style, `checks: {LC005: warn}` -- because
+    writing the number and leaving the pin would stop the validator of the version just
+    adopted, which is the failure the removal exists to prevent.
 
     Both or neither, and that is the point of doing it here. A project that pins moves two
     facts at once; a migration that moved one of them would leave the pin naming the version
@@ -405,7 +420,7 @@ def adopt(cfg: Path, version: str, commit: str | None, drop=()) -> None:
     declared = f'framework_version: "{version}"'
     if not cfg.exists():
         cfg.write_text(declared + "\n", encoding="utf-8")
-        return
+        return None
     text = cfg.read_text(encoding="utf-8")
     line = re.compile(r"^framework_version:.*$", re.M)
     text = (line.sub(declared, text, count=1) if line.search(text)
@@ -417,7 +432,18 @@ def adopt(cfg: Path, version: str, commit: str | None, drop=()) -> None:
     # removed here with the number, or the validator of the version just adopted stops on it.
     if drop:
         text = without_pins(text, drop)
+        try:
+            left = (yaml.safe_load(text) or {}).get("checks") or {}
+        except yaml.YAMLError:
+            left = {}
+        still = sorted(c for c in drop if isinstance(left, dict) and c in left)
+        if still:
+            return (f"not adopted: framework.yaml pins {', '.join(still)} in a form this tool "
+                    "does not edit -- flow style, or a shape the line based removal does not "
+                    "recognise. Remove the line by hand, then adopt: written with the pin in "
+                    "place, the number would stop the validator it declares.")
     cfg.write_text(text, encoding="utf-8")
+    return None
 
 
 def verdict(report: dict) -> int:
@@ -586,8 +612,12 @@ def main() -> int:
             top = git(["rev-parse", "--show-toplevel"], framework)
             commit = (head.stdout.strip() if head.returncode == 0 and top.returncode == 0
                       and Path(top.stdout.strip()).resolve() == framework else None)
-            adopt(cfg, current, commit, drop=[p["code"] for p in retired_pins(root, framework)])
-            report["adopted"] = current
+            problem = adopt(cfg, current, commit,
+                            drop=[p["code"] for p in retired_pins(root, framework)])
+            if problem:
+                report["problems"].append(problem)
+            else:
+                report["adopted"] = current
 
     if args.json:
         print(json.dumps(report, indent=2, ensure_ascii=False))

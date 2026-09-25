@@ -203,7 +203,9 @@ checks:
     title: living document not reviewed for longer than stale_days
     prevents: >
       The same failure, arrived at slowly. Raise this to `error` the first time a decision
-      is taken on a document nobody had reread.
+      is taken on a document nobody had reread. Measured in days against this machine's
+      clock: a bare `last_review` is not resolved against its commit here, because hours do
+      not change a count of days and this runs before any history is read.
 
   LC003:
     level: warn
@@ -260,13 +262,21 @@ checks:
       commit, and the report grows a tail of rows that are not the problem. The rows somebody
       learns to skip are how a check dies.
 
-      THE BLOCK IS STRUCTURAL: `last_review` and `review_scope`, with their continuation lines,
-      and nothing else. A YAML comment beside the stamp is text, and editing it after the
-      reading counts, because the check cannot tell a comment about the reading from a comment
-      about the document -- and in the repository that produced this version the comment was
-      where the coverage of each reading was written, so every honest attestation reported
-      itself. The sentence belongs in `review_scope` now, and a commit that moves the block
-      AND changes something else counts, with the finding saying so where it is read.
+      THE BLOCK IS STRUCTURAL: the `last_review` line, and the `review_scope` line with the
+      indented lines below it when it opens a block scalar, which is what `attest.py` writes.
+      Nothing else. A YAML comment beside the stamp is text, on its own line or indented under
+      `last_review`, and editing it after the reading counts, because the check cannot tell a
+      comment about the reading from a comment about the document -- and in the repository
+      that produced this version the comment was where the coverage of each reading was
+      written, so every honest attestation reported itself. The sentence belongs in
+      `review_scope` now, and a commit that moves the block AND changes something else counts,
+      with the finding saying so where it is read.
+
+      ONE PREREQUISITE ON HOW BRANCHES LAND. The honest procedure is two commits, content and
+      then attestation, and a squash merge folds them into one: that commit changes text and
+      stamp together, and this check counts it, correctly, with the sentence saying why. A
+      merge commit or a rebase merge keeps the two apart. A project that squashes attests on
+      the branch that lands, after the squash, or accepts the finding.
 
       AND THE COMMIT THAT INTRODUCES A FILE IS NOT A CHANGE TO IT. A repository whose history
       begins after its documents do -- which is every project that adopted git once the
@@ -360,13 +370,21 @@ checks:
       invention of that sentence, which is the falsification made visible to whoever opens the
       file next. A person who did read pays one sentence per document.
 
-      NOT OWED ON DAY ONE. `start` writes the whole first set in one session and every document
-      is born attesting itself; there was nothing to reread. In the history that is a
-      `last_review` written by the commit that created the file. Outside any repository, or on a
-      line not yet committed in a file not yet tracked, it is a `last_review` on the same day as
-      `created`, the coarser rule because `created` is written as a day. The two shapes that
-      need the history -- shared across a commit, copied forward -- do not run outside a
-      repository or on a line not yet committed, and the empty note does.
+      NOT OWED ON DAY ONE, AND THREE WAYS OF TELLING DAY ONE. `start` writes the whole first set
+      in one session and every document is born attesting itself; there was nothing to reread.
+      In the history it is a `last_review` written by the commit that brought the file in, which
+      `git blame` reports directly and through renames. A line not yet committed in a file HEAD
+      already holds is a new attestation of an existing document, and owes the note. Outside any
+      repository, or in a file HEAD does not hold, it is a `last_review` on a day other than
+      `created`, the coarser rule because `created` is written as a day. The two shapes that need
+      the history -- shared across a commit, copied forward -- do not run outside a repository
+      or on a line not yet committed, and the empty note does.
+
+      THE COMMIT THAT WROTE THE LINE IS `git blame`'S ANSWER, WITH `-w -M`: a commit that
+      re-indented the line or moved it among the other keys is not read as having written it. A
+      commit that changed the line's content without moving the instant -- quoting the value,
+      adding an offset -- is, and then the note is owed on a document that was only reformatted.
+      Rare, and the repair is the sentence itself.
 
   # ── Identity and references ────────────────────────────────────────────────
   ID001:

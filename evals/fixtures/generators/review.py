@@ -26,8 +26,9 @@ What that produces, and the three properties are the reason for the three commit
 The third is the negative case and it is the one that costs the check its floor: rereading a
 document means editing it to write the date, so without an exclusion every honest review leaves
 a gap of the minutes between the stamp and the commit. `ARC.md` is reread by a commit that
-changes nothing but its `last_review` line, which is the shape that exclusion recognises, and
-it has a real change before it so the comparison has somewhere to step back to.
+changes nothing but its attestation block -- `last_review` and the `review_scope` sentence
+saying what the reading covered -- which is the shape that exclusion recognises, and it has a
+real change before it so the comparison has somewhere to step back to.
 """
 
 from __future__ import annotations
@@ -81,11 +82,14 @@ def build(root: Path) -> None:
             raise SystemExit(f"git {a} failed:\n{r.stderr}")
         return r.stdout.strip()
 
-    def arc(reviewed: str, delta: str) -> str:
-        return fm(schema="framework/architecture/v1", artifact_type="architecture",
-                  lifecycle="living", status="active", products="[atlas]",
-                  owners="[g.quaglia]", created=DAY1, last_review=reviewed,
-                  verified_code="\n  product.backend: 4c1f9ae") + (
+    def arc(reviewed: str, delta: str, scope: str | None = None) -> str:
+        fields = dict(schema="framework/architecture/v1", artifact_type="architecture",
+                      lifecycle="living", status="active", products="[atlas]",
+                      owners="[g.quaglia]", created=DAY1, last_review=reviewed)
+        if scope is not None:
+            fields["review_scope"] = scope
+        fields["verified_code"] = "\n  product.backend: 4c1f9ae"
+        return fm(**fields) + (
             "# Architecture\n\n"
             "<!-- section: current -->\n## Current\n\n"
             "The order service writes to the warehouse once a night.\n\n"
@@ -170,7 +174,8 @@ def build(root: Path) -> None:
     # reading takes, and the check has to see it as a reading rather than as a change, or
     # every honest review reports a gap of the minutes it took to commit.
     write(root, "products/atlas/ARC.md", arc(
-        DAY20, "The channel is carried but nothing reads it downstream yet."))
+        DAY20, "The channel is carried but nothing reads it downstream yet.",
+        scope="the whole architecture, after the channel change"))
     git("add", "-A")
     git("commit", "-q", "-m", "ARC: reread after the channel change", when=DAY20)
 

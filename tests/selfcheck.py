@@ -4714,6 +4714,94 @@ def _review_not_ahead():
         repo.write(doc, _brief("p", "2026-06-05 10:00 +02:00", scope="the whole file"))
         if repo.findings("LC007"):
             problems.append("an uncommitted value in the past was reported")
+        repo.write(doc, _brief("p", "2099-01-01 09:00 +09:00", scope="the whole file"))
+        found = repo.findings("LC007")
+        if len(found) != 1 or "own offset +09:00" not in found[0]["message"]:
+            problems.append(f"an uncommitted value carrying its own offset produced {found}: "
+                            "one LC007 saying the offset is the value's and not the machine's")
+
+        # A bare date is midnight, and midnight the day after a commit at 23:00 is after it.
+        repo.write(doc, _brief("p", "2026-06-06", scope="the whole file"))
+        repo.commit("attest with a date at 23:00 the evening before", "2026-06-05T23:00:00+02:00")
+        if not repo.findings("LC007"):
+            problems.append("a bare date one day after the commit that carries it was not "
+                            "reported: the date alone counts as midnight, which is after 23:00")
+        repo.write(doc, _brief("p", "2026-06-05", scope="the whole file, again"))
+        repo.commit("attest with the date of the commit", "2026-06-05T23:30:00+02:00")
+        if repo.findings("LC007"):
+            problems.append("a bare date equal to the commit's day was reported")
+
+        # A bare `.yaml` artifact is front matter throughout, and its stamp is read the same.
+        repo.write("products/p/product.yaml",
+                   "schema: framework/product-manifest/v1\nartifact_type: product-manifest\n"
+                   "lifecycle: living\nstatus: active\nproducts: [p]\nname: P\n"
+                   "one_liner: one\nowners: [o]\ncreated: 2026-06-01\n"
+                   "last_review: 2026-06-07 12:00\nreview_scope: the whole manifest\n"
+                   "stage:\n  phase: F4\n  since: 2026-06-01\n")
+        repo.commit("attest the manifest ahead of its commit", "2026-06-07T11:00:00+02:00")
+        found = [f for f in repo.findings("LC007") if f["path"].endswith("product.yaml")]
+        if len(found) != 1:
+            problems.append(f"a bare .yaml artifact attested an hour ahead of its commit "
+                            f"produced {len(found)} LC007: its stamp is read like any other")
+    return problems
+
+
+@check("a file HEAD does not hold is compared with the clock, and a reformatting commit does not write the stamp")
+def _history_edges():
+    # TWO EVERYDAY STATES THAT ARE NOT IN ANY COMMIT: a file added to the index and not yet
+    # committed, and a repository with files staged and no commit at all. Both are in
+    # `git ls-files` and in no commit, and `git blame` on either fails; the first version
+    # read the index and stopped there with "nothing was checked", where the docstring
+    # promised "simply not committed". And two everyday commits that do not write the stamp:
+    # one that re-indents the line, one that moves it among the other keys.
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = _Repo(Path(tmp) / "r")
+        repo.write("products/p/PBR.md", _brief("p", "2026-06-01 09:00"))
+        repo.git("add", "-A")            # staged, and no commit yet
+        rc, out, err = repo.validate()
+        if rc not in (0, 1) or out is None:
+            problems.append(f"a repository with staged files and no commit stopped the "
+                            f"validator (exit {rc}): {err.strip()[-200:]}")
+        elif [f for f in out["findings"] if f["code"] in ("LC006", "LC007", "LC008")]:
+            problems.append("a day-one set staged and not committed was reported")
+        repo.write("products/p/PBR.md", _brief("p", "2099-01-01 09:00"))
+        if not repo.findings("LC007"):
+            problems.append("a value in 2099 in a repository with no commit was not compared "
+                            "with the clock")
+        repo.write("products/p/PBR.md", _brief("p", "2026-06-01 09:00"))
+        repo.commit("first", "2026-06-01T09:00:00+02:00")
+        repo.write("products/q/PBR.md", _brief("q", "2026-06-02 09:00"))
+        repo.git("add", "-A")            # a new file staged above a history
+        rc, out, err = repo.validate()
+        if rc not in (0, 1) or out is None:
+            problems.append(f"a new file staged and not committed stopped the validator "
+                            f"(exit {rc}): {err.strip()[-200:]}")
+        elif [f for f in out["findings"] if f["code"] == "LC007"]:
+            problems.append("a staged file with a past stamp produced LC007")
+        repo.commit("second product", "2026-06-02T09:00:00+02:00")
+
+        # A reformatting commit: the stamp line re-indented and moved among the keys. Neither
+        # wrote the value, so neither is read as the attestation, and the day-one document
+        # owes no note afterwards.
+        text = (repo.path / "products/q/PBR.md").read_text(encoding="utf-8")
+        head, body = text.split("\n---\n", 1)
+        fields = head.split("\n")[1:]
+        moved = [l for l in fields if not l.startswith("last_review:")]
+        moved.insert(2, next(l for l in fields if l.startswith("last_review:")))
+        repo.write("products/q/PBR.md", "---\n" + "\n".join(moved) + "\n---\n" + body)
+        repo.commit("reorder the keys", "2026-06-20T09:00:00+02:00")
+        found = repo.findings("LC008")
+        if [f for f in found if f["path"] == "products/q/PBR.md"]:
+            problems.append("a commit that moved the `last_review` line among the keys was "
+                            "read as the commit that wrote it, and a day-one document was "
+                            "asked for a note")
+        # And blame's rename following: the file moves, and is not born again at the move.
+        repo.git("mv", "products/q/PBR.md", "products/q/PBR-renamed.md")
+        repo.commit("rename", "2026-06-21T09:00:00+02:00")
+        if [f for f in repo.findings("LC008") if "renamed" in f["path"]]:
+            problems.append("a renamed day-one document was asked for a note: the rename did "
+                            "not write the stamp")
     return problems
 
 
@@ -4811,10 +4899,34 @@ def _review_gap_on_the_block():
                             "the author dates did not, and LC006 reads the author's while LC007 "
                             "reads the committer's")
 
-        # 19. Adoption: the note arrives later, in a commit that moves nothing else.
-        repo.write(doc, _brief("p", "2026-06-14 10:00 +02:00", scope="the whole file, reread, "
+        # An indented comment under `last_review:` is text, however it is indented.
+        repo.write(doc, _brief("p", "2026-06-14 10:00 +02:00", scope="the whole file, reread",
+                               body="It does four things.", comment="covered §1 only")
+                   .replace("\nreview_scope:", "\n  # an indented comment under the stamp\nreview_scope:", 1))
+        repo.commit("add an indented comment under the stamp", "2026-06-15T09:00:00+02:00")
+        if not repo.findings("LC006"):
+            problems.append("an indented comment added under `last_review` was read as part "
+                            "of the attestation block: a comment is text wherever it sits")
+        repo.write(doc, _brief("p", "2026-06-15 10:00 +02:00", scope="the whole file, after the comment",
+                               body="It does four things.", comment="covered §1 only")
+                   .replace("\nreview_scope:", "\n  # an indented comment under the stamp\nreview_scope:", 1))
+        repo.commit("attest after the comment", "2026-06-15T10:05:00+02:00")
+        # A block scalar written by hand, with a blank line after it, changed alone.
+        hand = (repo.path / doc).read_text(encoding="utf-8").replace(
+            "review_scope: the whole file, after the comment\n",
+            "review_scope: >-\n  the whole file, after the comment,\n  written by hand\n\n", 1)
+        repo.write(doc, hand)
+        repo.commit("reword the note as a block", "2026-06-16T09:00:00+02:00")
+        if repo.attestation_codes():
+            problems.append(f"a `review_scope` rewritten by hand as a block scalar produced "
+                            f"{sorted(repo.attestation_codes())}: the block is the note")
+
+        # 19. Adoption: the note arrives later, in a commit that moves nothing else -- the
+        # indented comment planted above stays where it is, or its removal is a change.
+        repo.write(doc, _brief("p", "2026-06-15 10:00 +02:00", scope="the whole file, reread, "
                                "written after the fact", body="It does four things.",
-                               comment="covered §1 only"))
+                               comment="covered §1 only")
+                   .replace("\nreview_scope:", "\n  # an indented comment under the stamp\nreview_scope:", 1))
         repo.commit("add the note", "2026-06-21T09:00:00+02:00")
         if repo.attestation_codes():
             problems.append(f"adding `review_scope` without moving `last_review` produced "
@@ -4895,14 +5007,23 @@ def _review_scope():
         repo.commit("attest with a note", "2026-06-06T10:05:00+02:00")
         if repo.findings("LC008"):
             problems.append("a note written for the first time was reported as copied forward")
-        # 17. The stamp moves and the sentence does not.
-        repo.write(doc, _brief("p", "2026-06-07 10:00 +02:00", created="2026-06-01",
+        # 17. The stamp moves and the sentence does not. A bare value, so that the case below
+        # can add the offset to it.
+        repo.write(doc, _brief("p", "2026-06-07 10:00", created="2026-06-01",
                                scope="the whole file"))
         repo.commit("attest with the same note", "2026-06-07T10:05:00+02:00")
         found = repo.findings("LC008")
         if len(found) != 1 or "left `review_scope` as it was" not in found[0]["message"]:
             problems.append(f"a stamp moved with its sentence unchanged produced {found}: one "
                             "finding saying the note was copied forward")
+        # The same minute with an offset added, same sentence: the stamp did not move.
+        repo.write(doc, _brief("p", "2026-06-07 10:00 +02:00", created="2026-06-01",
+                               scope="the whole file"))
+        repo.commit("add the offset to the stamp", "2026-06-07T10:10:00+02:00")
+        if repo.findings("LC008"):
+            problems.append("a commit that only added the offset to the same minute was "
+                            "reported as the note copied forward: naive and aware values "
+                            "naming one minute are the same stamp")
         # 18 again. A different sentence, and nothing to report.
         repo.write(doc, _brief("p", "2026-06-08 10:00 +02:00", created="2026-06-01",
                                scope="§1 only, after the change of the 7th"))
@@ -4966,6 +5087,12 @@ def _shallow_clone_stops():
         if "fetch" not in r.stderr or "fetch-depth" not in r.stderr:
             problems.append("the message does not say how to fetch the history, in the words "
                             "the CI configuration uses")
+        r = subprocess.run([sys.executable, str(ATTEST), "--root", str(clone),
+                            "products/p/PBR.md", "--scope", "the whole file, again"],
+                           capture_output=True, text=True)
+        if r.returncode != 2 or "fetch" not in r.stderr:
+            problems.append(f"attest.py ran in a shallow clone (exit {r.returncode}): the "
+                            "stamp binds to a commit in a history that is not there")
         # And the same clone made whole is a repository like any other.
         subprocess.run(["git", "-C", str(clone), "fetch", "-q", "--unshallow"],
                        capture_output=True, text=True)
@@ -4987,10 +5114,12 @@ def _attest_command():
     with tempfile.TemporaryDirectory() as tmp:
         repo = _Repo(Path(tmp) / "r")
         doc = "products/p/PBR.md"
-        repo.write(doc, _brief("p", "2026-06-01 09:00", comment="a comment that stays"))
+        inline = lambda text: text.replace("last_review: 2026-06-01 09:00\n",
+                                           "last_review: 2026-06-01 09:00   # on the line\n", 1)
+        repo.write(doc, inline(_brief("p", "2026-06-01 09:00", comment="a comment that stays")))
         repo.commit("first", "2026-06-01T09:00:00+02:00")
-        repo.write(doc, _brief("p", "2026-06-01 09:00", body="It does two things.",
-                               comment="a comment that stays"))
+        repo.write(doc, inline(_brief("p", "2026-06-01 09:00", body="It does two things.",
+                                      comment="a comment that stays")))
         content = repo.commit("change the text", "2026-06-10T09:00:00+02:00")
 
         def attest(rel: str, scope: str, env: dict | None = None):
@@ -5017,6 +5146,9 @@ def _attest_command():
         if "# a comment that stays" not in text:
             problems.append("a YAML comment in the front matter was lost: the command edits "
                             "lines and does not reserialise")
+        if not re.search(r"^last_review: .*   # on the line$", text, re.M):
+            problems.append("a comment on the `last_review` line itself was lost: it is text, "
+                            "and the command does not delete text")
         order = [k for k in ("created", "last_review", "review_scope", "# a comment") if k in text]
         if [text.index(k) for k in order] != sorted(text.index(k) for k in order):
             problems.append("the attestation block did not land where `last_review` was")
@@ -5044,6 +5176,28 @@ def _attest_command():
         r = attest(doc, "   ")
         if r.returncode != 2 or "empty" not in r.stderr:
             problems.append(f"an empty --scope was accepted (exit {r.returncode})")
+        r = attest(doc, "the whole file: both things it does now")
+        if r.returncode != 2 or "already there" not in r.stderr:
+            problems.append(f"the sentence already in `review_scope` was accepted again (exit "
+                            f"{r.returncode}): LC008 would report it copied forward")
+        repo.write(doc, before.replace("It does two things.", "It does three things."))
+        repo.git("add", "-A")            # staged, not committed: the index differs from HEAD
+        repo.write(doc, before)          # and the working tree does not, so only the index does
+        r = attest(doc, "the whole file, staged")
+        if r.returncode != 2 or "the index" not in r.stderr:
+            problems.append(f"content staged and not committed was attested (exit "
+                            f"{r.returncode}): the commit that follows would carry both")
+        repo.git("reset", "-q")
+        repo.write(doc, before)
+        # A sentence YAML would read as a boolean is written so that it stays a sentence.
+        r = attest(doc, "no")
+        after = (repo.path / doc).read_text(encoding="utf-8")
+        note, _, _ = _load(VALIDATE, "validate_for_attest_words").parse_front_matter(after)
+        if r.returncode != 0 or note.get("review_scope") != "no":
+            problems.append(f"`--scope no` was written so that YAML reads "
+                            f"{note.get('review_scope')!r}: a word YAML reads as a boolean has "
+                            "to be written as a string")
+        repo.write(doc, before)
         repo.write(doc, before.replace("It does two things.", "It does three things."))
         r = attest(doc, "the whole file")
         if r.returncode != 2 or "differs from HEAD" not in r.stderr:
@@ -5102,10 +5256,10 @@ def _retired_codes():
                                              "checks:\n  LC005: warn\n")
         r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(root), "--json"],
                            capture_output=True, text=True)
-        if r.returncode == 0 or "retired" not in r.stderr or r.stdout.strip():
+        if r.returncode != 2 or "retired" not in r.stderr or r.stdout.strip():
             problems.append(f"a framework.yaml declaring this version and pinning LC005 ran "
                             f"(exit {r.returncode}): a pin on a retired code switches nothing "
-                            "on and has to be said")
+                            "on, and the stop is a run that did not happen, which is exit 2")
         # Declaring the version before the one that retired it, the same line is not wrong
         # yet: the run goes on, says so on stderr, and `migrate.py` can compare.
         previous = _previous_version()
@@ -5117,9 +5271,9 @@ def _retired_codes():
         r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(root), "--json",
                             "--stale-days", "36500"], capture_output=True, text=True)
         if r.returncode not in (0, 1) or not r.stdout.strip():
-            problems.append(f"a framework.yaml declaring 3.7.0 and pinning LC005 was stopped "
-                            f"(exit {r.returncode}): the project has not adopted the version "
-                            "that retired the code, and stopping it hides the migration")
+            problems.append(f"a framework.yaml declaring {previous} and pinning LC005 was "
+                            f"stopped (exit {r.returncode}): the project has not adopted the "
+                            "version that retired the code, and stopping it hides the migration")
         elif "retired" not in r.stderr or "ignored" not in r.stderr:
             problems.append("the ignored pin was not said on stderr: a line that switches "
                             "nothing on has to be announced somewhere")
@@ -5150,6 +5304,21 @@ def _retired_pin_migrates():
                                 ["LC005"])
     if "level" in kept or "XP003: off" not in kept:
         problems.append(f"the long form left an orphan or took a neighbour: {kept!r}")
+    kept = migrate.without_pins('checks:\n  LC005:\n  # why\n    level: error\n'
+                                '  # the next one\n  XP003: off\n', ["LC005"])
+    if "level" in kept or "# the next one" not in kept or "XP003: off" not in kept:
+        problems.append(f"a comment between the key and its `level:` was left as an orphan, "
+                        f"or the next key's comment was taken: {kept!r}")
+    with tempfile.TemporaryDirectory() as tmp:
+        cfg = Path(tmp) / "framework.yaml"
+        flow = 'framework_version: N\nchecks: {LC005: warn, XP003: off}\n'
+        cfg.write_text(flow, encoding="utf-8")
+        why = migrate.adopt(cfg, REGISTRY["version"], None, drop=["LC005"])
+        if not why or "LC005" not in why:
+            problems.append("a flow style pin was not refused by --adopt: the number would be "
+                            "written with the pin in place, and the validator would stop")
+        if cfg.read_text(encoding="utf-8") != flow:
+            problems.append("--adopt wrote framework.yaml although it could not remove the pin")
 
     previous = _previous_version()
     if previous is None:
@@ -5223,6 +5392,30 @@ def _retired_pin_migrates():
     return problems
 
 
+@check("the static fixtures carry no attestation ahead of its commit and no reading without a note")
+def _static_fixtures_attest_cleanly():
+    # They sit inside this repository, so the history behind their lines is this
+    # repository's own: a stamp moved by a later commit of the framework owes the sentence,
+    # and three of them carry it for that reason. Nothing else validated them in place.
+    problems = []
+    roots = sorted(p.parent for p in (ROOT / "evals" / "fixtures" / "static").rglob("AGENTS.md"))
+    if not roots:
+        return ["no static fixture found: the check is not running"]
+    for root in roots:
+        r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(root), "--json",
+                            "--stale-days", "36500"], capture_output=True, text=True)
+        if r.returncode not in (0, 1) or not r.stdout.strip():
+            problems.append(f"{root.relative_to(ROOT)}: the validator did not run "
+                            f"(exit {r.returncode}): {r.stderr.strip()[-200:]}")
+            continue
+        found = [(f["code"], f["path"]) for f in json.loads(r.stdout)["findings"]
+                 if f["code"] in ("LC007", "LC008")]
+        if found:
+            problems.append(f"{root.relative_to(ROOT)}: reports {found}. A fixture whose stamp "
+                            "this repository's history contradicts teaches you to read past it")
+    return problems
+
+
 @check("the attestation fields are declared once, in the registry, and the validator and the living schemas agree")
 def _attestation_fields_agree():
     x = _load(VALIDATE, "validate_for_fields")
@@ -5249,7 +5442,7 @@ def _ci_assets_fetch_history():
     # exits 2 on every pull request, with a message about the clone. The assertion is here so
     # that the file cannot lose the setting without this going red.
     problems = []
-    for wf in sorted((ROOT / "ci").glob("*.yml")):
+    for wf in sorted([*(ROOT / "ci").glob("*.yml"), *(ROOT / "ci").glob("*.yaml")]):
         jobs = (yaml.safe_load(wf.read_text(encoding="utf-8")) or {}).get("jobs") or {}
         for name, job in jobs.items():
             for step in (job or {}).get("steps") or []:
@@ -5261,7 +5454,7 @@ def _ci_assets_fetch_history():
                     problems.append(f"ci/{wf.name}, job {name}: checks out {what} with "
                                     f"`fetch-depth: {depth!r}`. The validator reads the commit "
                                     "behind every attestation and stops in a clone without it")
-    if not problems and not list((ROOT / "ci").glob("*.yml")):
+    if not problems and not [*(ROOT / "ci").glob("*.yml"), *(ROOT / "ci").glob("*.yaml")]:
         problems.append("no workflow under ci/: the check is not running")
     return problems
 

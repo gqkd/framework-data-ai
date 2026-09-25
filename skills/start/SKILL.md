@@ -153,7 +153,9 @@ question about what we are building.
 
 Copy from `templates/` at the plugin root, fill the **front matter** and leave the body to
 the interview and the corpus. `created` and `last_review` take the real instant, to the
-minute. `owners` takes **the answer to the question the preamble told you to ask** and
+minute, and the same instant: a creation is not a reading, and this is the one time a run
+writes `last_review` -- from then on a person attests with `skills/audit/scripts/attest.py`,
+and `LC008` asks no note of a document born attesting itself. `owners` takes **the answer to the question the preamble told you to ask** and
 nothing else: this is the first skill to run in a repository, so it is the one that sets
 the name every later document copies, and a name inferred here propagates silently. A
 placeholder that survives into a real repository reads as a real value to anything that
