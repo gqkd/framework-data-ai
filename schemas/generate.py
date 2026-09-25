@@ -138,6 +138,15 @@ def build(name: str, spec: dict, registry: dict) -> dict:
 
     properties["created"] = {}
 
+    # THE ATTESTATION BLOCK, on the living types only: an immutable carrying either field is
+    # `LC003`. `last_review` stays untyped for the reason `created` is (see the docstring);
+    # `review_scope` is a string. Declared so that `FM006` measures a misspelt key against
+    # them, not so that the schema decides whether they are present: that is `LC001` and
+    # `LC008`, which know about day one and the schema does not.
+    if spec["lifecycle"] == "living":
+        for attested in registry.get("attestation_fields") or []:
+            properties[attested] = {} if attested == "last_review" else {"type": "string"}
+
     # Cardinality on `products`, where the template used to say it with a singular field
     # name. An unrecognised value stops the generator rather than being skipped: a
     # constraint quietly ignored is the one failure this whole file exists to avoid.
@@ -415,12 +424,18 @@ def counts(registry: dict) -> str:
     """
     checks = yaml.safe_load((HERE.parent / "skills" / "audit" / "checks.yaml")
                             .read_text(encoding="utf-8"))["checks"]
-    levels = Counter(c["level"] for c in checks.values())
+    # A retired code is in the catalog so that its number is never reused, and it is not a
+    # check: counting it would say the validator does something it does not.
+    live = {c: s for c, s in checks.items() if s.get("level") != "retired"}
+    retired = len(checks) - len(live)
+    levels = Counter(c["level"] for c in live.values())
     at = ", ".join(f"{levels[k]} {k}" for k in ("error", "warn", "info") if levels.get(k))
+    tail = (f", and {retired} retired code{'s' if retired != 1 else ''} whose number is never "
+            "reused." if retired else ".")
     return (f"*Generated from `schemas/artifact-types.yaml` and "
             f"`skills/audit/checks.yaml`. Edit those, not this line.*\n\n"
-            f"**{len(registry['types'])} artifact types. {len(checks)} checks** ({at}), "
-            "each catalogued with the failure it prevents written next to it.")
+            f"**{len(registry['types'])} artifact types. {len(live)} checks** ({at}), "
+            "each catalogued with the failure it prevents written next to it" + tail)
 
 
 def cost() -> str:

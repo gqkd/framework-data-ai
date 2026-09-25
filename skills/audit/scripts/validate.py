@@ -45,9 +45,9 @@ import json
 import re
 import subprocess
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from collections import Counter
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path, PurePosixPath
 
 try:
@@ -204,7 +204,7 @@ class Report:
         self.findings: list[Finding] = []
 
     def enabled(self, code: str) -> bool:
-        return self.level(code) != "off"
+        return self.level(code) not in ("off", RETIRED)
 
     def level(self, code: str) -> str:
         return (self.config.get(code) or {}).get("level", "warn")
@@ -220,19 +220,27 @@ class Report:
 
 
 LEVELS = {"error", "warn", "info", "off"}
+# A code that used to be a check and is not one any more. It stays in the catalog with the
+# version and the reason, and the number is never given to another failure: an annotation
+# joins on the code, and a code that changed meaning under an annotation would make a reason
+# written about one thing cover another. Only the catalog may say it; a project that pins a
+# retired code is told so and stopped, because the line switches nothing on.
+RETIRED = "retired"
 
 
-def normalize_level(v, code: str) -> str:
+def normalize_level(v, code: str, *, catalog: bool = False) -> str:
     """YAML 1.1 reads a bare `off` as the boolean False.
 
     `checks.yaml` quotes it, but a project's `framework.yaml` is not ours to quote, and a
     check silently reading as enabled because of a YAML quirk is the kind of failure that
     is only discovered by the incident it did not prevent. An unrecognised level stops the
-    validator instead of being ignored.
+    validator instead of being ignored. `retired` is a level only the catalog may declare.
     """
     if v is False:
         return "off"
     v = str(v)
+    if catalog and v == RETIRED:
+        return v
     if v not in LEVELS:
         sys.exit(f"{code}: unknown level {v!r}. One of: {', '.join(sorted(LEVELS))}")
     return v
@@ -388,6 +396,15 @@ def apply_annotations(report: Report, rows: list[dict], require_all: bool,
     for row in rows:
         matched = by_pair.get((row["code"], row["path"]))
         if not matched:
+            if report.level(row["code"]) == RETIRED:
+                since = (report.config.get(row["code"]) or {}).get("retired_in",
+                                                                    "an earlier version")
+                report.add("AN001", where,
+                           f"an annotation names [{row['code']}] {row['path']}, and "
+                           f"{row['code']} was retired in {since}: nothing reports it any "
+                           "more and nothing will. The annotation goes; the reason it "
+                           "carried belongs to the history of the file, not to its present.")
+                continue
             report.add("AN001", where,
                        f"an annotation names [{row['code']}] {row['path']}, and nothing "
                        "reports it. Either it was repaired, in which case the annotation "
@@ -431,7 +448,7 @@ def load_config(project: dict) -> tuple[dict, int]:
     checks: dict[str, dict] = {}
     for code, spec in (base.get("checks") or {}).items():
         spec = dict(spec or {})
-        spec["level"] = normalize_level(spec.get("level", "warn"), code)
+        spec["level"] = normalize_level(spec.get("level", "warn"), code, catalog=True)
         checks[code] = spec
 
     stale_days = int(project.get("stale_days", base.get("stale_days", 90)))
@@ -445,6 +462,11 @@ def load_config(project: dict) -> tuple[dict, int]:
             sys.exit(f"framework.yaml overrides {code!r}, which is not a check this "
                      "validator knows. A typo here switches nothing on, silently. "
                      "Run --list-checks for the catalog.")
+        if checks[code]["level"] == RETIRED:
+            sys.exit(f"framework.yaml overrides {code!r}, which was retired in "
+                     f"{checks[code].get('retired_in', 'an earlier version')}: nothing emits "
+                     "it and no level brings it back. Remove the line; the catalog says what "
+                     "took its place.")
         checks[code] = {**checks[code], **override}
     return checks, stale_days
 
@@ -641,7 +663,12 @@ def check_placeholders(a: Artifact, registry: dict, report: Report) -> None:
 
 MOMENT_FORMATS = ("%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M",
                   "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S",
-                  "%Y-%m-%d")
+                  "%Y-%m-%d",
+                  # With an offset, which is what `attest.py` writes from 4.0.0. `+02:00`,
+                  # `+0200` and `Z` all parse. Without seconds the value is not a YAML
+                  # timestamp and arrives as a string, which is why the forms are listed.
+                  "%Y-%m-%d %H:%M %z", "%Y-%m-%dT%H:%M%z",
+                  "%Y-%m-%d %H:%M:%S %z", "%Y-%m-%dT%H:%M:%S%z")
 
 
 def parse_moment(v) -> datetime | None:
@@ -653,6 +680,12 @@ def parse_moment(v) -> datetime | None:
 
     No truncation: `2026-07-29 HH:MM` is a half filled field, and letting it pass for
     midnight would turn it into a document reviewed today.
+
+    AN OFFSET MAKES THE VALUE AN INSTANT; WITHOUT ONE IT IS A WALL CLOCK READING. Both come
+    back from here as they are, aware or naive, and which clock a naive value was read on is
+    `as_instant`'s question, answered from the commit that carries the line. A `datetime`
+    with `tzinfo` is what YAML returns for `2026-07-29 14:30:00 +02:00`, and what the
+    format list above returns for the same value without seconds.
     """
     if isinstance(v, datetime):        # before date: it is a subclass of it
         return v
@@ -667,65 +700,6 @@ def parse_moment(v) -> datetime | None:
     return None
 
 
-# How many living documents have to share one instant before it stops being a coincidence.
-# Two is a person who finished the second one in the same minute, which happens. Three is a
-# batch, and a batch is not a reading.
-SAME_INSTANT_FLOOR = 3
-
-
-def check_review_batches(arts: list[Artifact], report: Report) -> None:
-    """Living documents attesting the same review instant.
-
-    `last_review` says a person read this document and found it still true, and no check
-    can verify a reading. What a check can see is the shape the false version takes: six
-    living documents in one repository stamped with the same minute, one of them carrying a
-    notice at the top saying it still had to be reread in full. That did not happen at
-    19:36 to six documents at once, and it is the only fact here a script can hold.
-
-    Timed to the minute rather than to the day, because a day is a plausible unit for real
-    work: reading four documents on a Tuesday is a Tuesday. Reading four in one minute is a
-    field edit.
-    """
-    by_instant: dict[str, list[str]] = {}
-    for a in arts:
-        if a.meta.get("lifecycle") != "living":
-            continue
-        raw = a.meta.get("last_review")
-        lr = parse_moment(raw)
-        # A bare date carries no minute, so it cannot say anything about batching: two
-        # documents reviewed on the same day are two documents reviewed on the same day.
-        # Read off the value and not off the clock: testing for midnight made the check
-        # blind to `00:00`, which is a real instant and the one a script would write.
-        # `2026-08-01 09:00` stays a string because YAML's timestamp shape wants seconds,
-        # and `2026-08-01 09:00:00` comes back a `datetime`. Both state a time; a `date`
-        # object and a plain `YYYY-MM-DD` do not.
-        stated_time = (isinstance(raw, datetime)
-                       or (isinstance(raw, str) and ":" in raw))
-        if lr is None or not stated_time:
-            continue
-        # A DAY ONE SET IS A CREATION AND NOT A REVIEW. `start` writes the whole first
-        # set in one session, legitimately, and every document is born with `created` and
-        # `last_review` at the same instant -- there is nothing to have reread, because
-        # nothing existed before. Counting those would make this check fire on every
-        # repository the framework itself creates, on its first day, which is the shortest
-        # path to it being switched off.
-        if parse_moment(a.meta.get("created")) == lr:
-            continue
-        by_instant.setdefault(lr.strftime("%Y-%m-%d %H:%M"), []).append(a.rel)
-
-    for instant, rels in sorted(by_instant.items()):
-        if len(rels) < SAME_INSTANT_FLOOR:
-            continue
-        listed = ", ".join(sorted(rels))
-        report.add("LC005", sorted(rels)[0],
-                   f"{len(rels)} living documents attest the same review instant "
-                   f"({instant}): {listed}. `last_review` is a claim that somebody read the "
-                   "document and found it still true, and one minute is not enough for all "
-                   "of them. If they really were read, the instant each reading finished is "
-                   "the honest value; if the date was written to clear `LC002`, the warning "
-                   "was doing its job and this is what replaced it.")
-
-
 def check_lifecycle(a: Artifact, stale_days: int, now: datetime, report: Report) -> None:
     lc = a.meta.get("lifecycle")
     if lc == "living":
@@ -734,22 +708,101 @@ def check_lifecycle(a: Artifact, stale_days: int, now: datetime, report: Report)
         if lr is None and raw not in (None, "", []):
             report.add("LC004", a.rel,
                        f"last_review is {raw!r}, which is not an instant: expected "
-                       "'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM'. While it stays like this the "
-                       "document never counts as reviewed.")
+                       "'YYYY-MM-DD', 'YYYY-MM-DD HH:MM' or 'YYYY-MM-DD HH:MM +HH:MM'. While "
+                       "it stays like this the document never counts as reviewed.")
         elif lr is None:
             report.add("LC001", a.rel,
                        "a living document needs last_review: without it there is no way "
                        "to notice it has gone stale")
         else:
-            age = (now - lr).days
+            # `LC002` asks how old, not which minute. A value carrying an offset is folded
+            # onto this machine's clock rather than resolved against a commit: hours do not
+            # change a count of days, and this runs before any history is read.
+            local = lr.astimezone().replace(tzinfo=None) if lr.tzinfo is not None else lr
+            age = (now - local).days
             if age > stale_days:
                 report.add("LC002", a.rel,
                            f"living document not reviewed for {age} days (threshold "
                            f"{stale_days}). A stale living document is worse than an "
                            "absent one: it gets read as current.")
-    elif lc == "immutable" and a.meta.get("last_review") is not None:
-        report.add("LC003", a.rel,
-                   "an immutable has no last_review: it is not reviewed, it is superseded")
+    elif lc == "immutable":
+        carried = [f for f in ATTESTATION_FIELDS if a.meta.get(f) is not None]
+        if carried:
+            named = " or ".join(f"`{f}`" for f in carried)
+            report.add("LC003", a.rel,
+                       f"an immutable has no {named}: it is not reviewed, it is superseded")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Attestations, and the history behind each one
+#
+# `last_review` is a claim that a person read a living document and found it still true, and
+# no check can verify a reading. What the history can verify is the shape a false claim takes,
+# and there are three of them, each with a check: an instant that cannot be true because the
+# line carrying it did not exist yet (`LC007`); text that changed after the instant that
+# attests it (`LC006`); and a stamp with no sentence saying what was read, or the same
+# sentence pasted onto several documents at once (`LC008`). All three read the same thing --
+# which commit wrote which line -- so it is read once, here, and handed to each.
+
+ATTESTATION_FIELDS = ("last_review", "review_scope")
+ATTESTATION_KEY = re.compile(r"^(last_review|review_scope):")
+REVIEW_KEY = re.compile(r"^last_review:")
+
+
+def _front_matter_lines(text: str) -> tuple[int, int]:
+    """The lines of `text` that are front matter, as a half open range of 0-based indices.
+
+    A bare `.yaml` artifact is front matter throughout; a document without any has an
+    empty range, so nothing in it can be an attestation line.
+    """
+    if text.startswith("---\n"):
+        end = text.find("\n---", 4)
+        if end == -1:
+            return 0, 0
+        return 1, text[:end].count("\n") + 1
+    if is_bare_yaml(text):
+        return 0, text.count("\n") + 1
+    return 0, 0
+
+
+def split_attestation(text: str) -> tuple[str, str]:
+    """The document without its attestation block, and the block on its own.
+
+    THE BLOCK IS STRUCTURAL AND NOT A COMMENT. It is the front matter lines that open with
+    `last_review:` or `review_scope:`, plus the indented or blank lines that continue them, up
+    to the next line at column zero. Everything else is attested text, YAML comments included.
+    A comment beside the stamp used to be where people wrote what a reading had covered, and
+    editing it after the reading is an edit to text nobody reread -- the check cannot tell a
+    comment that describes the reading from one that describes the document, and it does not
+    try. `review_scope` is where that sentence goes now, and the two fields are the only thing
+    a reading may write without the write counting as a change.
+    """
+    lines = text.split("\n")
+    lo, hi = _front_matter_lines(text)
+    kept, block = [], []
+    inside = False
+    for i, line in enumerate(lines):
+        if lo <= i < hi:
+            if ATTESTATION_KEY.match(line):
+                inside = True
+                block.append(line)
+                continue
+            if inside and (not line.strip() or line[0] in " \t"):
+                block.append(line)
+                continue
+            inside = False
+        kept.append(line)
+    return "\n".join(kept), "\n".join(block)
+
+
+def _review_line(text: str) -> int | None:
+    """The 1-based line carrying `last_review:` at column zero of the front matter."""
+    lines = text.split("\n")
+    lo, hi = _front_matter_lines(text)
+    for i in range(lo, hi):
+        if REVIEW_KEY.match(lines[i]):
+            return i + 1
+    return None
 
 
 def _git(args: list[str], cwd: Path) -> subprocess.CompletedProcess | None:
@@ -761,55 +814,310 @@ def _git(args: list[str], cwd: Path) -> subprocess.CompletedProcess | None:
         return None
 
 
-REVIEW_LINE = re.compile(r"^[+-]last_review:", re.M)
-CHANGED_LINE = re.compile(r"^[+-](?![+-])", re.M)
+def refuse(message: str) -> None:
+    """Stop before reporting anything, with the exit code that means "not run".
 
-
-def _history(root: Path) -> tuple[dict[str, list[tuple[str, str]]], str] | None:
-    """Every tracked path under `root`, with the commits that touched it, newest first.
-
-    One pass over the log rather than one question per document. The alternative is a
-    subprocess per artifact, which on a repository of any size is the check paying for
-    itself in seconds on every run, and a check that is slow is a check somebody moves out
-    of the loop that runs it.
-
-    Only the newest two commits per path are kept, plus the count. That is everything the
-    comparison needs and it stops the map growing with the history rather than with the
-    repository.
+    2 AND NOT 1. Exit 1 is the validator's verdict that a repository has errors, and a caller
+    reading the code alone -- a CI job, `migrate.py` -- has to tell "this repository is wrong"
+    from "nothing was checked". The strict profiles already use 2 for an invocation they
+    cannot act on, and this is the same claim. Stdout stays empty on purpose: a partial JSON
+    would be parsed.
     """
-    where = _git(["rev-parse", "--show-prefix"], root)
-    if where is None or where.returncode != 0:
-        return None                      # not inside a repository: there is nothing to read
-    prefix = where.stdout.strip()
-    log = _git(["log", "--format=%x00%H%x00%aI", "--name-only", "--no-renames"], root)
-    if log is None or log.returncode != 0:
-        return None
-    seen: dict[str, list[tuple[str, str]]] = {}
-    counts: dict[str, int] = {}
-    sha = when = ""
-    for line in log.stdout.splitlines():
-        if line.startswith("\x00"):
-            _, sha, when = line.split("\x00")
-            continue
-        path = line.strip()
-        if not path:
-            continue
-        counts[path] = counts.get(path, 0) + 1
-        if len(seen.setdefault(path, [])) < 2:
-            seen[path].append((sha, when))
-    return {p: (v, counts[p]) for p, v in seen.items()}, prefix
+    print(f"framework-data-ai: {message}", file=sys.stderr)
+    sys.exit(2)
 
 
-def check_review_gap(arts: list[Artifact], root: Path, report: Report,
-                     changed: set[str] | None = None) -> tuple[int, list]:
+@dataclass
+class Repository:
+    """What the checks on attestations read out of git, once per run.
+
+    NONE OF IT IS OPTIONAL INSIDE A REPOSITORY. A history that cannot be read is a run that
+    must not report, and `refuse` says so with exit 2 and the command that repairs it. A
+    shallow clone is the case that produced the rule: `actions/checkout` clones one commit
+    unless told otherwise, and in that clone every attestation is on a line whose commit is
+    absent. Reading that as "nothing to compare" would make the checks below pass exactly
+    where they run for everybody, and say nothing about it.
+
+    OUTSIDE ANY REPOSITORY THERE IS NOTHING TO FETCH, so `open` returns None and the checks
+    treat every line as not committed: `LC007` compares with the clock, `LC006` and the
+    history half of `LC008` do not run, and the report says so in a line rather than in a
+    finding. That is a project distributed as an archive, and unverifiable is not violated.
+
+    ONE `git log` FOR THE COMMITS AND ONE `git cat-file --batch` FOR THE CONTENTS. A
+    subprocess per question is the check paying for itself in seconds on every run, and a
+    slow check is one somebody moves out of the loop that runs it. The exception is
+    `git blame`, which has no batch form and runs once per attested line: about 20 ms each,
+    measured on a repository of 150 commits, and it is the price of asking which commit wrote
+    a line rather than which commit last touched a file. The two answers differ whenever a
+    file is edited after its stamp, which is the ordinary case.
+    """
+    root: Path
+    prefix: str
+    tracked: set[str]
+    commits: dict[str, list[tuple[str, datetime]]]
+    _batch: subprocess.Popen | None = None
+    _blobs: dict[str, str | None] = field(default_factory=dict)
+
+    @classmethod
+    def open(cls, root: Path) -> "Repository | None":
+        where = _git(["rev-parse", "--show-prefix"], root)
+        if where is None or where.returncode != 0:
+            return None                      # not inside a repository: nothing to read
+        prefix = where.stdout.strip()
+        shallow = _git(["rev-parse", "--is-shallow-repository"], root)
+        if shallow is not None and shallow.returncode == 0 and shallow.stdout.strip() == "true":
+            refuse(f"{root} is a shallow clone, and the checks on `last_review` read the "
+                   "commit behind every attestation. Fetch the full history first: "
+                   "`git fetch --unshallow` here; in CI, `fetch-depth: 0` on actions/checkout, "
+                   "`GIT_DEPTH: 0` on GitLab, `fetchDepth: 0` on Azure Pipelines. Nothing was "
+                   "checked.")
+        files = _git(["ls-files", "-z"], root)
+        if files is None or files.returncode != 0:
+            refuse(f"{root} is inside a repository whose index could not be read: "
+                   f"{_last_line(files)}. Nothing was checked.")
+        tracked = {p for p in files.stdout.split("\0") if p}
+        commits: dict[str, list[tuple[str, datetime]]] = {}
+        # A repository with no commit yet has a history that is empty rather than unreadable:
+        # the first documented set, written and not yet committed, is a state a project is in
+        # for an afternoon, and every line in it is simply not committed.
+        head = _git(["rev-parse", "--verify", "-q", "HEAD"], root)
+        if head is not None and head.returncode == 0:
+            log = _git(["log", "--format=%x00%H%x00%aI", "--name-only", "--no-renames"], root)
+            if log is None or log.returncode != 0:
+                refuse(f"{root} is inside a repository whose history could not be read: "
+                       f"{_last_line(log)}. Nothing was checked.")
+            sha = when = ""
+            for line in log.stdout.splitlines():
+                if line.startswith("\x00"):
+                    _, sha, when = line.split("\x00")
+                    continue
+                path = line.strip()
+                if path:
+                    commits.setdefault(path, []).append((sha, datetime.fromisoformat(when)))
+        return cls(root, prefix, tracked, commits)
+
+    def is_tracked(self, rel: str) -> bool:
+        return rel in self.tracked
+
+    def commits_of(self, rel: str) -> list[tuple[str, datetime]]:
+        """The commits touching `rel`, newest first, each with its author instant."""
+        return self.commits.get(self.prefix + rel, [])
+
+    def dirty(self) -> set[str]:
+        """Paths under the root with uncommitted changes, relative to the root."""
+        status = _git(["status", "--porcelain", "--", "."], self.root)
+        out = set()
+        if status is not None and status.returncode == 0:
+            for line in status.stdout.splitlines():
+                name = line[3:].strip().strip('"')
+                if name.startswith(self.prefix):
+                    out.add(name[len(self.prefix):])
+        return out
+
+    def blame(self, rel: str, line: int) -> tuple[str | None, datetime | None, datetime | None]:
+        """Which commit wrote line `line` of `rel` as it stands in the working tree.
+
+        Returns the sha with its committer and author instants, each in the offset the
+        commit recorded, or three Nones for a line not yet committed. `blame.ignoreRevsFile`
+        is switched off for the call: a project that lists its reformatting commits there
+        would have the line attributed to an older commit than the one that wrote the value,
+        and this asks who wrote the value.
+        """
+        r = _git(["-c", "blame.ignoreRevsFile=", "blame", "-L", f"{line},{line}",
+                  "--porcelain", "--", rel], self.root)
+        if r is None or r.returncode != 0:
+            refuse(f"`git blame` could not read {rel}: {_last_line(r)}. Nothing was checked.")
+        head = r.stdout.split("\n", 1)[0].split()
+        sha = head[0] if head else ""
+        if not sha or set(sha) == {"0"}:
+            return None, None, None
+        fields: dict[str, str] = {}
+        for row in r.stdout.splitlines()[1:]:
+            key, _, value = row.partition(" ")
+            if key in ("author-time", "author-tz", "committer-time", "committer-tz"):
+                fields[key] = value
+
+        def instant(kind: str) -> datetime:
+            tz = fields[f"{kind}-tz"]
+            sign = -1 if tz.startswith("-") else 1
+            offset = timezone(sign * timedelta(hours=int(tz[1:3]), minutes=int(tz[3:5])))
+            return datetime.fromtimestamp(int(fields[f"{kind}-time"]), offset)
+
+        try:
+            return sha, instant("committer"), instant("author")
+        except (KeyError, ValueError):
+            refuse(f"`git blame` answered for {rel} without the dates of {sha[:12]}. "
+                   "Nothing was checked.")
+            return None, None, None          # unreachable: `refuse` exits
+
+    def blob(self, rev: str, rel: str) -> str | None:
+        """The file at `rev`, or None when it is not there. One process serves them all."""
+        key = f"{rev}:{self.prefix}{rel}"
+        if key in self._blobs:
+            return self._blobs[key]
+        text: str | None = None
+        try:
+            if self._batch is None:
+                self._batch = subprocess.Popen(
+                    ["git", "-C", str(self.root), "cat-file", "--batch"],
+                    stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+            self._batch.stdin.write((key + "\n").encode("utf-8"))
+            self._batch.stdin.flush()
+            header = self._batch.stdout.readline().decode("utf-8", "replace").split()
+            if len(header) >= 3 and header[1] == "blob":
+                size = int(header[2])
+                data = self._batch.stdout.read(size + 1)[:size]
+                text = data.decode("utf-8", errors="replace")
+        except (OSError, ValueError):
+            text = None
+        self._blobs[key] = text
+        return text
+
+    def close(self) -> None:
+        if self._batch is not None:
+            try:
+                self._batch.stdin.close()
+                self._batch.wait(timeout=10)
+            except (OSError, subprocess.SubprocessError):
+                pass
+            self._batch = None
+
+
+def _last_line(r: subprocess.CompletedProcess | None) -> str:
+    if r is None:
+        return "git did not answer"
+    tail = (r.stderr or "").strip().splitlines()
+    return tail[-1] if tail else "no reason given"
+
+
+@dataclass
+class Attestation:
+    """One living document's `last_review`, and what the history says about the line."""
+    artifact: Artifact
+    value: datetime                      # `parse_moment(last_review)`, naive or aware
+    line: int | None                     # where `last_review:` sits in the source
+    sha: str | None                      # the commit that wrote the current value, or None
+    committed: datetime | None           # its committer instant, in the commit's own offset
+    authored: datetime | None            # its author instant, likewise
+    created_by: str | None               # the commit that brought the file into the history
+    tracked: bool                        # whether the file is in the index at all
+
+    @property
+    def instant(self) -> tuple[datetime, str]:
+        """The attested value as an instant, and a sentence saying which clock read it."""
+        return as_instant(self.value, self.committed.tzinfo if self.committed else None)
+
+
+def _offset(dt: datetime) -> str:
+    z = dt.strftime("%z")
+    return f"{z[:3]}:{z[3:]}" if len(z) == 5 else (z or "+00:00")
+
+
+def _minute(dt: datetime) -> datetime:
+    return dt.replace(second=0, microsecond=0)
+
+
+def as_instant(value: datetime, offset) -> tuple[datetime, str]:
+    """A wall clock value made into an instant, with the sentence that says which clock.
+
+    A `last_review` written with an offset is an instant already. A bare one is what a person
+    saw on their own clock, and the repository knows one thing about that clock: the offset of
+    the commit that carries the line, which is by construction the writer's. For a line not
+    yet committed there is no commit, so the only clock left is this machine's, and that
+    assumption is said in every finding built on it -- a validator run in a container at UTC
+    on a tree written at +02:00 reads a fresh attestation two hours later than it was written,
+    and the sentence is what makes that diagnosable rather than mysterious. The comparisons
+    are made at the minute, because that is the precision `last_review` is written at, and
+    with no tolerance beyond it: equality is not "after".
+    """
+    if value.tzinfo is not None:
+        return value, f"with its own offset {_offset(value)}"
+    if offset is not None:
+        v = value.replace(tzinfo=offset)
+        return v, f"read in the offset of the commit that carries it, {_offset(v)}"
+    v = value.replace(tzinfo=datetime.now().astimezone().tzinfo)
+    return v, (f"read in this machine's offset, {_offset(v)}, because the line is not "
+               "committed")
+
+
+def read_attestations(arts: list[Artifact], repo: Repository | None) -> list[Attestation]:
+    """Every living document with a `last_review` that parses, and the commit behind its line."""
+    out = []
+    for a in arts:
+        if a.meta.get("lifecycle") != "living":
+            continue
+        value = parse_moment(a.meta.get("last_review"))
+        if value is None:
+            continue
+        text = a.path.read_text(encoding="utf-8", errors="replace")
+        line = _review_line(text)
+        rel = a.rel.replace("\\", "/")
+        sha = committed = authored = created_by = None
+        tracked = repo is not None and repo.is_tracked(rel)
+        if tracked and line is not None:
+            sha, committed, authored = repo.blame(rel, line)
+            history = repo.commits_of(rel)
+            created_by = history[-1][0] if history else None
+        out.append(Attestation(a, value, line, sha, committed, authored, created_by, tracked))
+    return out
+
+
+def check_review_not_ahead(attestations: list[Attestation], now: datetime,
+                           report: Report) -> None:
+    """A `last_review` later than the moment the line carrying it entered the history.
+
+    `LC006` asks whether the text changed after the reading; `LC005` used to ask whether
+    several readings shared a minute. Neither looked in this direction, and it is the one a
+    chosen value takes: in one repository four living documents were attested with instants
+    up to ninety minutes after their own commits, picked apart from each other precisely so
+    that `LC005` stayed quiet. A value later than the commit that carries it cannot be the
+    instant anybody finished reading, so this is not a reading to redo: it is a date that is
+    false, and it is an error.
+
+    THE COMMITTER DATE OF THE COMMIT THAT WROTE THE LINE, found with `git blame` and not with
+    the last commit that touched the file. The last commit is in general a different one, and
+    a rebase moves the committer date forward without touching the value, so the bound only
+    gets looser: a value that was fine stays fine, and the one thing a rebase cannot do is
+    make a false value true. A line not yet committed is compared with the current time, and
+    the finding names the clock it used. At the minute, no tolerance, equality is not after:
+    the honest procedure writes the instant the command runs at and commits a minute later,
+    and reading the value as the end of its minute would have reported exactly those.
+    """
+    for att in attestations:
+        raw = att.artifact.meta.get("last_review")
+        value, how = att.instant
+        if att.sha is None:
+            if _minute(value) <= _minute(now):
+                continue
+            report.add("LC007", att.artifact.rel,
+                       f"`last_review` says {raw}, and the line is not committed, so it is "
+                       f"{how.replace(', because the line is not committed', '')} and compared "
+                       f"with the current time on this machine, {now:%Y-%m-%d %H:%M} "
+                       f"{_offset(now)}: the value is after it. A reading cannot be attested "
+                       "before the clock reaches it, so this instant was chosen, not read. "
+                       "`attest.py` writes the instant it runs at, with its offset.")
+            continue
+        if _minute(value) <= _minute(att.committed):
+            continue
+        report.add("LC007", att.artifact.rel,
+                   f"`last_review` says {raw}, {how}, and the line that carries it entered the "
+                   f"history in commit {att.sha[:12]} at {att.committed:%Y-%m-%d %H:%M} "
+                   f"{_offset(att.committed)}. A reading cannot be attested before its record "
+                   "exists: the value was chosen, not read. `LC006` is quiet because nothing "
+                   "changed after it; this is the direction it does not look in. Reattest "
+                   "with `attest.py`, which writes the instant it runs at, with its offset.")
+
+
+def check_review_gap(attestations: list[Attestation], repo: Repository | None,
+                     report: Report, changed: set[str] | None = None) -> tuple[int, list]:
     """A living document changed after the instant it says somebody read it.
 
-    `LC002` measures elapsed time and can only ever guess when truth decays. `LC005` catches
-    a batch of stamps written in one minute. Neither compares the attested instant with when
-    the document was last changed, and that comparison is the one question separating the two
-    things `last_review` exists to distinguish: read and still true, or edited since and never
-    reread. A document edited after the instant it attests contains text nobody attested, and
-    both other checks are silent about it.
+    `LC002` measures elapsed time and can only ever guess when truth decays. `LC007` catches an
+    instant that cannot be true. Neither compares the attested instant with when the document
+    was last changed, and that comparison is the one question separating the two things
+    `last_review` exists to distinguish: read and still true, or edited since and never reread.
+    A document edited after the instant it attests contains text nobody attested, and both
+    other checks are silent about it.
 
     TWO EXCLUSIONS, AND THE FIRST IS NOT A REFINEMENT. THE COMMIT THAT INTRODUCES A FILE IS
     NOT A CHANGE TO IT. A repository whose history begins after its documents do -- which is
@@ -823,8 +1131,11 @@ def check_review_gap(arts: list[Artifact], root: Path, report: Report,
     editing the document, so without this every honest review leaves a gap of the minutes
     between the stamp and the commit, and the report grows a tail of rows that are not the
     problem. The rows somebody learns to skip are how a check dies. So a commit whose only
-    change to this file is the `last_review` line is the reading, and the comparison steps
-    back to the one before it. A commit that moves the stamp AND anything else counts, which
+    change to a file is its attestation block -- `last_review` and `review_scope`, and nothing
+    else -- is the reading, and the comparison steps back to the commit before it, as many
+    times as it has to. The block is structural: a YAML comment beside the stamp is text, and
+    editing it counts, because the check cannot tell a comment about the reading from a
+    comment about the document. A commit that moves the block AND anything else counts, which
     is correct and is said in the message, because somebody looking at that finding has to
     know why it was not excluded.
 
@@ -833,60 +1144,46 @@ def check_review_gap(arts: list[Artifact], root: Path, report: Report,
     What replaces it is the ordering, which is by gap and not by path, because thirty findings
     sorted by size get read and thirty sorted alphabetically do not.
 
-    THE AUTHOR DATE AND NOT THE COMMIT DATE. A rebase moves the second without anybody
-    touching the document, which is the same family as the rename this check already cannot
-    see through. Returns how many living documents carry uncommitted changes, which the report
-    states as a note: those are excluded from the comparison, so a gap measured here can be
-    smaller than the real one, and that is worth a line rather than a finding that appears and
-    disappears with every save.
+    THE AUTHOR DATE AND NOT THE COMMIT DATE, the opposite of `LC007`, and both are right: a
+    rebase moves the committer date without anybody touching the document, so the instant the
+    text changed is the author's, while the instant a line could first exist is the
+    committer's. Returns how many living documents carry uncommitted changes, which the report
+    states as a note: those are compared against what is committed, so a gap measured here can
+    be smaller than the real one, and that is worth a line rather than a finding that appears
+    and disappears with every save.
     """
-    living = [a for a in arts if a.meta.get("lifecycle") == "living"
-              and parse_moment(a.meta.get("last_review")) is not None]
-    if not living:
-        return 0, []
-    read = _history(root)
-    if read is None:
+    if repo is None:
         return 0, []                     # no history to ask: unverifiable is not violated
-    history, prefix = read
-
-    dirty = set()
-    status = _git(["status", "--porcelain", "--", "."], root)
-    if status is not None and status.returncode == 0:
-        for line in status.stdout.splitlines():
-            name = line[3:].strip().strip('"')
-            if name.startswith(prefix):
-                dirty.add(name[len(prefix):])
-
+    dirty = repo.dirty()
     found = []
-    for a in living:
+    for att in attestations:
+        a = att.artifact
         rel = a.rel.replace("\\", "/")
-        entry = history.get(prefix + rel)
-        if entry is None:
+        history = repo.commits_of(rel)
+        if not history:
             continue                     # untracked: nothing recorded, nothing to compare
-        commits, count = entry
-        if count < 2:
-            continue                     # only the commit that brought it into the history
-        sha, when = commits[0]
-        why = ""
-        show = _git(["show", "--format=", "--unified=0", sha, "--", prefix + rel], root)
-        if show is not None and show.returncode == 0:
-            lines = CHANGED_LINE.findall(show.stdout)
-            if lines and len(lines) == len(REVIEW_LINE.findall(show.stdout)):
-                if count < 3:
-                    continue             # the reading, and before it only the import
-                sha, when = commits[1]
-            elif REVIEW_LINE.search(show.stdout):
-                why = (" That commit moved `last_review` and changed something else as well, "
-                       "so it counts: recording a reading is not a modification, and this was "
-                       "both.")
-        # Named apart from the `changed` parameter, which is the change set. They collided:
-        # the local overwrote the argument on the first document, and every later test of
-        # membership ran against a datetime.
-        moved = parse_moment(when.split("+")[0].split("Z")[0].replace("T", " ")[:16])
-        attested = parse_moment(a.meta.get("last_review"))
-        if moved is None or attested is None or moved <= attested:
+        content = None
+        for sha, when in history:
+            after = repo.blob(sha, rel)
+            before = repo.blob(f"{sha}^", rel)
+            if after is None or before is None:
+                break                    # the commit that brought the file in is not a change
+            kept_before, block_before = split_attestation(before)
+            kept_after, block_after = split_attestation(after)
+            if kept_before == kept_after:
+                continue                 # the attestation block alone moved: a reading
+            content = (sha, when, block_before != block_after)
+            break
+        if content is None:
             continue
-        found.append(((moved - attested), a, sha, moved, why))
+        sha, when, moved_stamp = content
+        attested, _ = att.instant
+        if _minute(when) <= _minute(attested):
+            continue
+        why = (" That commit moved the attestation block and changed something else as well, "
+               "so it counts: recording a reading is not a modification, and this was both."
+               if moved_stamp else "")
+        found.append((when - attested, a, sha, when, why))
 
     # BY GAP AND NOT BY PATH. The lesson is one version old: a document came out first in a
     # generated view because its directory sorted before the others, and being first was read
@@ -904,12 +1201,104 @@ def check_review_gap(arts: list[Artifact], root: Path, report: Report,
         size = _gap_size(gap)
         report.add("LC006", a.rel,
                    f"last changed {size} after the instant it attests: `last_review` says "
-                   f"{a.meta.get('last_review')} and commit {sha[:12]} touched it on "
-                   f"{when_changed:%Y-%m-%d %H:%M}. Whatever changed in between is text nobody has "
-                   f"said is still true. `LC002` is quiet because the date is recent and "
-                   f"`LC005` because the instant is unique; this is the same claim examined "
-                   f"from the side a date cannot show.{why}")
-    return len(dirty & {a.rel.replace("\\", "/") for a in living}), found
+                   f"{a.meta.get('last_review')} and commit {sha[:12]} touched its text on "
+                   f"{when_changed:%Y-%m-%d %H:%M} {_offset(when_changed)}. Whatever changed in "
+                   "between is text nobody has said is still true. `LC002` is quiet because "
+                   "the date is recent and `LC007` because the attestation is not ahead of its "
+                   "own commit; this is the same claim examined from the side a date cannot "
+                   "show. A change to `last_review` or `review_scope` alone would not have "
+                   f"counted; a YAML comment does.{why}")
+    return len(dirty & {att.artifact.rel.replace("\\", "/") for att in attestations}), found
+
+
+def _normalized(note) -> str:
+    return " ".join(str(note or "").split())
+
+
+def check_review_scope(attestations: list[Attestation], repo: Repository | None,
+                       report: Report) -> None:
+    """The sentence beside the stamp: absent, shared across a batch, or copied forward.
+
+    `last_review` says a person read this document and found it still true, and no check can
+    verify a reading. `LC005` used to look for the shape the false version takes -- several
+    documents stamped with one minute -- and the shape stopped being available the day the
+    instant became a thing that is read from the history rather than chosen: documents
+    attested in one commit share an instant by construction, honestly. What a reading leaves
+    behind that a batch does not is a sentence saying what was read, and this looks at that
+    sentence, three ways: missing, identical across the documents one commit attested, or the
+    same as at the previous attestation of the same document.
+
+    IT IS A PROXY, AND THE CATALOG SAYS SO. A note written to be different passes it, and a
+    batch that pastes three different sentences is invisible here. What it costs the person
+    who did read is one sentence per document, which is the smallest thing that separates a
+    reading from a stamp; what it costs the one who did not is having to invent that
+    sentence, which is the falsification made visible to whoever reads the file next.
+
+    OWED ONLY AFTER A READING OF A DOCUMENT THAT ALREADY EXISTED. On day one there is nothing
+    to have reread: `start` writes the whole first set in one session and every document is
+    born attesting itself. In the history that is a `last_review` line written by the commit
+    that created the file; outside any history, or for a line not yet committed in a file not
+    yet tracked, it is a `last_review` on the same day as `created`, the coarser rule because
+    `created` is written as a day and the finer one would fire on every new repository.
+    """
+    groups: dict[tuple[str, str], list[str]] = {}
+    for att in attestations:
+        a = att.artifact
+        rel = a.rel.replace("\\", "/")
+        raw = a.meta.get("last_review")
+        if att.sha is not None:
+            owed = att.created_by is not None and att.sha != att.created_by
+        elif att.tracked:
+            owed = True                  # an existing document, attested again and not yet committed
+        else:
+            created = parse_moment(a.meta.get("created"))
+            owed = created is None or created.date() != att.value.date()
+        if not owed:
+            continue
+        note = _normalized(a.meta.get("review_scope"))
+        if not note:
+            report.add("LC008", a.rel,
+                       f"attested {raw} and `review_scope` is empty: nothing says what the "
+                       "reading covered. A stamp with no sentence beside it is what a batch "
+                       "leaves behind, and what a reading leaves behind is one sentence per "
+                       "document -- the whole file, or which sections, and what was not read. "
+                       "`attest.py` writes both fields together; a note added later, in a "
+                       "commit that touches only these two fields, is not a change to the "
+                       "text.")
+            continue
+        if att.sha is None:
+            continue                     # not committed: which commit, and its parent, are unknown
+        groups.setdefault((att.sha, note.casefold()), []).append(a.rel)
+        parent = repo.blob(f"{att.sha}^", rel) if repo is not None else None
+        if parent is None:
+            continue
+        previous, _, err = parse_front_matter(parent)
+        if err or not previous:
+            continue
+        prior_note = _normalized(previous.get("review_scope"))
+        prior_value = parse_moment(previous.get("last_review"))
+        if (prior_note and prior_note.casefold() == note.casefold()
+                and prior_value is not None and prior_value != att.value):
+            report.add("LC008", a.rel,
+                       f"commit {att.sha[:12]} moved `last_review` from "
+                       f"{previous.get('last_review')} to {raw} and left `review_scope` as it "
+                       "was. The same sentence describes two readings, which is what copying "
+                       "the previous attestation forward looks like; a reading that covered "
+                       "the same parts still happened at a different time, over text that had "
+                       "a chance to change, and one clause saying so is what tells the two "
+                       "apart.")
+
+    for (sha, _), rels in sorted(groups.items()):
+        if len(rels) < 2:
+            continue
+        rels = sorted(rels)
+        report.add("LC008", rels[0],
+                   f"{len(rels)} living documents attested in commit {sha[:12]} carry the same "
+                   f"`review_scope`: {', '.join(rels)}. One sentence for several documents is "
+                   "the shape a batch takes, whether or not each was read: if they were, what "
+                   "each reading covered is the honest content of each note, and the notes "
+                   "differ; if one sentence was pasted, this is the only trace of it a check "
+                   "can hold. It is a proxy, and a sentence written to differ passes it.")
 
 
 def _gap_size(gap) -> str:
@@ -3295,6 +3684,9 @@ def main() -> int:
 
     report = Report(config)
     now = datetime.now()
+    # Before anything is scanned: a history that cannot be read is a run that must not
+    # report, and `Repository.open` says so with exit 2 rather than with a clean report.
+    repo = Repository.open(root)
 
     arts = discover(root, scan, registry, report)
     references = ReferenceIndex(arts, registry)
@@ -3315,12 +3707,14 @@ def main() -> int:
     unanswerable = check_unanswerable(arts, registry, report)
     unenforced = check_placement(arts, registry, report)
     check_product_of_the_directory(arts, registry, report)
-    uncommitted, gaps = check_review_gap(arts, root, report, changed_files)
+    attestations = read_attestations(arts, repo)
+    uncommitted, gaps = check_review_gap(attestations, repo, report, changed_files)
     check_pr_review(gaps, changed_files, report)
+    check_review_not_ahead(attestations, datetime.now().astimezone(), report)
     check_register_halves(arts, registry, report)
     check_body_repeats_a_field(arts, registry, report)
     check_key_typos(arts, registry, report)
-    check_review_batches(arts, report)
+    check_review_scope(attestations, repo, report)
     check_glossary_terms(arts, report)
     check_decisions_leave_open(arts, report)
     check_commitments_and_risks(arts, report)
@@ -3331,6 +3725,8 @@ def main() -> int:
     # cannot be joined until every check has finished producing them.
     if annotations_rel is not None:
         apply_annotations(report, annotations, require_all, annotations_rel)
+    if repo is not None:
+        repo.close()
 
     index_written: list[str] = []
     index_stale: list[str] = []
@@ -3413,6 +3809,10 @@ def main() -> int:
             # somebody else's file.
             "placement_not_enforced": unenforced,
             "uncommitted_living": uncommitted,
+            # Whether the history behind each attestation was read. `none` is a directory
+            # outside any repository: `LC007` compared with the clock and `LC006` did not
+            # run. A shallow or unreadable history never reaches this line: it exits 2.
+            "history": "read" if repo is not None else "none",
             "generated": index_written, "out_of_date": index_stale,
             "hand_maintained": index_protected,
             "findings": [f.as_json() for f in report.findings],
@@ -3436,6 +3836,10 @@ def main() -> int:
         if uncommitted:
             print(f"Living documents with uncommitted changes: {uncommitted}. The gaps below "
                   "exclude them, so where one applies the real gap is larger.")
+        if repo is None:
+            print("History: none. This directory is not inside a git repository, so LC006 and "
+                  "the history half of LC008 did not run, and LC007 compared every "
+                  "attestation with the current time.")
         if unenforced:
             print(f"Artifact types whose placement is not enforced: {unenforced}")
         if index_written:

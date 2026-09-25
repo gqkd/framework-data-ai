@@ -8,6 +8,9 @@ products: [product-a, product-b, product-c]
 owners: [NAME]
 created: YYYY-MM-DD HH:MM
 last_review: YYYY-MM-DD HH:MM
+# review_scope: written beside `last_review` by `attest.py`, after a person rereads a
+# document that already exists: what the reading covered and what it did not. Not on
+# day one, because a creation is not a reading.
 classification: internal
 # The repositories that serve more than one product. A product's own code stays in its
 # `product.yaml`; what several products sign in through belongs here, once. `XP004` reports

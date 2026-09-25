@@ -7,6 +7,9 @@ products: [product-a, product-b, product-c]
 owners: [NAME]
 created: YYYY-MM-DD HH:MM
 last_review: YYYY-MM-DD HH:MM
+# review_scope: written beside `last_review` by `attest.py`, after a person rereads a
+# document that already exists: what the reading covered and what it did not. Not on
+# day one, because a creation is not a reading.
 classification: internal
 # The two facts a check needs, per entry. The body below is where the reasoning goes: the
 # question, the alternatives and what the default costs are what somebody reads while

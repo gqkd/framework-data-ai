@@ -24,6 +24,10 @@
       "minItems": 1
     },
     "created": {},
+    "last_review": {},
+    "review_scope": {
+      "type": "string"
+    },
     "entries": {
       "type": "object",
       "minProperties": 0,

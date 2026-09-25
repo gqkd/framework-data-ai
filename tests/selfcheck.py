@@ -20,6 +20,7 @@ import collections
 import importlib.util
 import io
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -214,12 +215,24 @@ def _catalog_matches_code():
     catalogued = set(CHECKS["checks"])
     off = {c for c, s in CHECKS["checks"].items()
            if s.get("level") in ("off", False)}
+    # A RETIRED CODE IS THE THIRD STATE, AND IT IS NOT "OFF". Off is a check that cannot run
+    # yet and says what has to exist first; retired is a check that ran, stopped, and keeps
+    # its number so that no other failure is ever reported under it -- an annotation joins
+    # on the code. So it must not be emitted anywhere, and it must say when and why.
+    retired = {c for c, s in CHECKS["checks"].items() if s.get("level") == "retired"}
 
     problems = [f"{c}: emitted by the validator, absent from checks.yaml"
                 for c in sorted(emitted - catalogued)]
+    for c in sorted(emitted & retired):
+        problems.append(f"{c}: retired in {CHECKS['checks'][c].get('retired_in')} and still "
+                        "emitted somewhere. A retired number means one thing forever")
+    for c in sorted(retired):
+        if not (CHECKS["checks"][c].get("retired_in") and
+                CHECKS["checks"][c].get("retired_because")):
+            problems.append(f"{c}: retired without `retired_in` and `retired_because`")
     # A catalogued check that nothing emits is a promise the validator does not keep,
-    # unless it is switched off and says why.
-    for c in sorted(catalogued - emitted - off):
+    # unless it is switched off and says why, or retired.
+    for c in sorted(catalogued - emitted - off - retired):
         problems.append(f"{c}: in checks.yaml, never emitted, and not switched off")
     for c in sorted((catalogued - emitted) & off):
         if not CHECKS["checks"][c].get("blocked_by"):
@@ -1051,72 +1064,6 @@ def _references_with_a_second_end():
             problems.append("a decision leaving an entry open that no register declares was "
                             "not reported: the open half of a decision is only open if "
                             "somebody can find it")
-    return problems
-
-
-@check("a review of six documents in one minute is reported, and a day one set is not")
-def _review_batches():
-    # `last_review` attests a reading, and no check can verify one. What a check can see is
-    # the shape the false version takes, and it took it in a real repository: six living
-    # documents stamped with the same minute by a run, one of them carrying a notice at the
-    # top saying it still had to be reread in full. Both directions are asserted here,
-    # because the false positive is what would get this switched off -- `start` writes a
-    # whole day one set in one session and every document is born attesting itself.
-    fm = lambda **kw: "---\n" + "\n".join(f"{k}: {v}" for k, v in kw.items()) + "\n---\n\n"
-
-    def repo(n: int, review, created="2026-01-01 09:00") -> dict:
-        out = {"framework.yaml": f"framework_version: {REGISTRY['version']}\n"}
-        for i in range(n):
-            out[f"products/p{i}/PBR.md"] = fm(
-                schema="framework/product-brief/v1", artifact_type="product-brief",
-                lifecycle="living", status="active", products=f"[p{i}]", owners="[o]",
-                created=created,
-                last_review=review(i) if callable(review) else review) + "# Brief\n"
-        return out
-
-    problems = []
-    with tempfile.TemporaryDirectory() as tmp:
-        root = Path(tmp)
-
-        def codes(files) -> set[str]:
-            for stale in (root / "products").rglob("*.md"):
-                stale.unlink()
-            for rel, text in files.items():
-                f = root / rel
-                f.parent.mkdir(parents=True, exist_ok=True)
-                f.write_text(text)
-            r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(root),
-                                "--json"], capture_output=True, text=True)
-            return {f["code"] for f in json.loads(r.stdout)["findings"]}
-
-        if "LC005" not in codes(repo(3, "2026-08-01 09:00")):
-            problems.append("three living documents attesting the same minute were not "
-                            "reported: one minute is not a reading of three documents, and "
-                            "this is the only part of the claim a script can hold")
-        if "LC005" in codes(repo(2, "2026-08-01 09:00")):
-            problems.append("two documents finishing in the same minute were reported: that "
-                            "is a person, and a check that fires on it gets switched off")
-        if "LC005" in codes(repo(4, "2026-08-01 09:00", created="2026-08-01 09:00")):
-            problems.append("a day one set was reported: `start` writes the first documents "
-                            "in one session and each is born with `created` and "
-                            "`last_review` equal, which is a creation and not a reading")
-        # Midnight is an instant, and testing for it made the check blind to the one value
-        # a script would write. A full timestamp comes back a `datetime` rather than a
-        # string, which is the other half of the same discrimination.
-        if "LC005" not in codes(repo(3, "2026-08-01 00:00")):
-            problems.append("three documents attesting midnight were not reported: `00:00` is "
-                            "an instant, and the check was reading the clock instead of "
-                            "whether a time was stated at all")
-        if "LC005" not in codes(repo(3, "2026-08-01 09:00:00")):
-            problems.append("three documents attesting the same second were not reported: "
-                            "with seconds the value parses to a `datetime` and stopped being "
-                            "a string, which is not a fact about the review")
-        if "LC005" in codes(repo(4, "2026-08-01")):
-            problems.append("four documents carrying a bare date were reported: a date with "
-                            "no minute says nothing about how long the reading took")
-        if "LC005" in codes(repo(4, lambda i: f"2026-08-01 09:{10 + i * 7:02d}")):
-            problems.append("four documents each with their own instant were reported, so "
-                            "the check is counting documents rather than a shared minute")
     return problems
 
 
@@ -4569,6 +4516,627 @@ def _change_set_review():
         if len([f for f in out["findings"] if f["code"] == "LC006"]) != 2:
             problems.append("without the flag LC006 no longer reports both documents, so the "
                             "suppression is leaking into runs that have no change set")
+    return problems
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The attestations of rereading, and the history behind each line.
+#
+# THE BENCH IS A REPOSITORY BUILT IN THE TEST, ONE COMMIT AT A TIME, WITH DATES AND OFFSETS
+# SAID OUT LOUD. The fixtures under `evals/` have histories too, but each was planted for its
+# own story and none of them says "this value was written after its commit" or "this commit
+# was rebased": those are the cases here, and a case that can be said in one sentence is
+# written as one sentence of git. The framework's own checkout is never the subject, for the
+# reason `_shallow_checkout` gives: a clone carries the committed code, so a fix asserted
+# through one cannot fail until after it is committed.
+
+ATTEST = ROOT / "skills" / "audit" / "scripts" / "attest.py"
+
+
+def _fm(**kw) -> str:
+    return "---\n" + "\n".join(f"{k}: {v}" for k, v in kw.items()) + "\n---\n\n"
+
+
+def _brief(product: str, review: str, scope: str | None = None, body: str = "It does a thing.",
+           created: str = "2026-06-01 09:00", comment: str | None = None) -> str:
+    fields = dict(schema="framework/product-brief/v1", artifact_type="product-brief",
+                  lifecycle="living", status="active", products=f"[{product}]", owners="[o]",
+                  created=created, last_review=review)
+    if scope is not None:
+        fields["review_scope"] = scope
+    text = _fm(**fields)
+    if comment is not None:
+        # A YAML comment beside the stamp, at column zero: text, by the rule under test.
+        text = text.replace("\n---\n\n", f"\n# {comment}\n---\n\n", 1)
+    return text + f"# Brief\n\n<!-- section: what -->\n## What it does\n\n{body}\n"
+
+
+class _Repo:
+    """A git repository with dated commits, for the checks that read the history behind a line."""
+
+    def __init__(self, path: Path):
+        self.path = path
+        path.mkdir(parents=True, exist_ok=True)
+        self.git("init", "-q", "-b", "main")
+        self.git("config", "commit.gpgsign", "false")
+        self.write("framework.yaml", f"framework_version: {REGISTRY['version']}\n")
+
+    def git(self, *args: str, env: dict | None = None) -> str:
+        e = dict(os.environ, GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@example.com",
+                 GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@example.com")
+        e.update(env or {})
+        r = subprocess.run(["git", "-C", str(self.path), *args], capture_output=True,
+                           text=True, env=e)
+        if r.returncode:
+            raise RuntimeError(f"git {' '.join(args)} failed:\n{r.stderr}")
+        return r.stdout.strip()
+
+    def write(self, rel: str, text: str) -> None:
+        p = self.path / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(text, encoding="utf-8")
+
+    def commit(self, message: str, authored: str, committed: str | None = None) -> str:
+        self.git("add", "-A")
+        self.git("commit", "-q", "-m", message,
+                 env={"GIT_AUTHOR_DATE": authored, "GIT_COMMITTER_DATE": committed or authored})
+        return self.git("rev-parse", "HEAD")
+
+    def validate(self, *extra: str, env: dict | None = None):
+        """(exit code, parsed JSON or None, stderr)."""
+        r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(self.path), "--json",
+                            "--stale-days", "36500", *extra], capture_output=True, text=True,
+                           env={**os.environ, **(env or {})})
+        try:
+            out = json.loads(r.stdout) if r.stdout.strip() else None
+        except json.JSONDecodeError:
+            out = None
+        return r.returncode, out, r.stderr
+
+    def findings(self, code: str, env: dict | None = None) -> list[dict]:
+        rc, out, err = self.validate(env=env)
+        if out is None:
+            raise RuntimeError(f"the validator returned nothing readable (exit {rc}): {err}")
+        return [f for f in out["findings"] if f["code"] == code]
+
+    def attestation_codes(self, env: dict | None = None) -> set[str]:
+        rc, out, err = self.validate(env=env)
+        if out is None:
+            raise RuntimeError(f"the validator returned nothing readable (exit {rc}): {err}")
+        return {f["code"] for f in out["findings"]} & {"LC006", "LC007", "LC008"}
+
+
+@check("a last_review later than the commit that carries it is an error, compared at the minute in the commit's offset")
+def _review_not_ahead():
+    # THE CASE THIS IS FOR. Four living documents attested with instants after their own
+    # commits, chosen apart from each other so that the check on shared minutes stayed quiet,
+    # and nothing looked in that direction. `LC006` asks whether the text changed after the
+    # reading; this asks whether the reading is claimed before its own record.
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = _Repo(Path(tmp) / "r")
+        doc = "products/p/PBR.md"
+        repo.write(doc, _brief("p", "2026-06-01 09:00"))
+        repo.commit("first", "2026-06-01T09:00:00+02:00")
+
+        # 1. Written at 10:30, committed at 10:00:39: the line did not exist at 10:30.
+        repo.write(doc, _brief("p", "2026-06-02 10:30", scope="the whole file"))
+        repo.commit("attest ahead of the commit", "2026-06-02T10:00:39+02:00")
+        rc, out, _ = repo.validate()
+        found = [f for f in (out or {}).get("findings", []) if f["code"] == "LC007"]
+        if rc != 1 or len(found) != 1:
+            problems.append(f"a value thirty minutes after its own commit produced exit {rc} and "
+                            f"{len(found)} LC007: a date that cannot be true is an error, once")
+        elif "+02:00" not in found[0]["message"] or "commit" not in found[0]["message"]:
+            problems.append("the finding does not say in which offset it read the bare value, "
+                            "or which commit it compared with: a reader in another timezone "
+                            "cannot check it")
+        elif found[0]["level"] != "error":
+            problems.append(f"LC007 came out at {found[0]['level']!r}: it is an error, because "
+                            "there is no reading to redo")
+
+        # 2. Equality at the minute is not "after": 10:00 against a commit at 10:00:39 is the
+        # honest procedure, and reading the value as the end of its minute would report it.
+        repo.write(doc, _brief("p", "2026-06-02 10:00", scope="the whole file"))
+        repo.commit("attest in the same minute", "2026-06-02T10:00:39+02:00")
+        if repo.findings("LC007"):
+            problems.append("a value in the same minute as its commit was reported: the "
+                            "comparison is at the minute and equality is not after")
+
+        # 6. A bare value is read in the offset of the commit that carries it, wherever the
+        # validator runs from: 18:00 written at +09:00, checked from UTC, is not 09:00.
+        repo.write(doc, _brief("p", "2026-06-03 18:00", scope="the whole file, in Tokyo"))
+        repo.commit("attest at +09:00", "2026-06-03T18:00:20+09:00")
+        if repo.findings("LC007", env={"TZ": "UTC"}):
+            problems.append("a bare value equal to its commit's local time was reported when "
+                            "the validator ran at UTC: the value was read on the machine's "
+                            "clock instead of the commit's")
+        repo.write(doc, _brief("p", "2026-06-03 18:01", scope="the whole file, in Tokyo"))
+        repo.commit("attest one minute ahead at +09:00", "2026-06-03T18:00:20+09:00")
+        if not repo.findings("LC007", env={"TZ": "UTC"}):
+            problems.append("a bare value one minute after its commit at +09:00 was not "
+                            "reported from UTC: read on the machine's clock it looks nine "
+                            "hours early, which is the verdict moving with the machine")
+
+        # 5. A value with its own offset is an instant, and no clock reads it.
+        repo.write(doc, _brief("p", "2026-06-04 18:00 +09:00", scope="the whole file"))
+        repo.commit("attest with an offset", "2026-06-04T18:00:20+09:00")
+        if repo.findings("LC007", env={"TZ": "UTC"}):
+            problems.append("a value carrying its own offset, equal to its commit, was "
+                            "reported from UTC")
+        repo.write(doc, _brief("p", "2026-06-04 18:05 +09:00", scope="the whole file"))
+        repo.commit("attest ahead with an offset", "2026-06-04T18:00:20+09:00")
+        if not repo.findings("LC007", env={"TZ": "Asia/Tokyo"}):
+            problems.append("a value with an offset five minutes after its commit was not "
+                            "reported: the offset made the value an instant and the "
+                            "comparison did not use it")
+
+        # 12. A rebase moves the committer date forward and leaves the value where it was:
+        # the bound loosens, and a true value stays true. `--amend` is the smallest rebase.
+        repo.write(doc, _brief("p", "2026-06-05 10:00 +02:00", scope="the whole file"))
+        repo.commit("attest, then rebase", "2026-06-05T10:00:10+02:00")
+        repo.git("commit", "-q", "--amend", "--no-edit",
+                 env={"GIT_COMMITTER_DATE": "2026-06-20T08:00:00+02:00"})
+        if repo.findings("LC007"):
+            problems.append("a rebase that moved the committer date forward produced LC007: "
+                            "the value can only become further behind its commit")
+
+        # 3 and 4. A line not yet committed is compared with the clock, and the finding says
+        # so and names the machine's offset. 2099 rather than "now plus a minute": the test
+        # has to hold whatever the clock says.
+        repo.write(doc, _brief("p", "2099-01-01 09:00", scope="the whole file"))
+        found = repo.findings("LC007", env={"TZ": "UTC"})
+        if len(found) != 1:
+            problems.append(f"an uncommitted value in 2099 produced {len(found)} LC007: the "
+                            "reference for a line not yet committed is the current time")
+        elif "not committed" not in found[0]["message"] or "+00:00" not in found[0]["message"]:
+            problems.append("the finding on an uncommitted line does not say that it compared "
+                            "with the clock, in this machine's offset: the container case is "
+                            "then a mystery instead of a diagnosis")
+        repo.write(doc, _brief("p", "2026-06-05 10:00 +02:00", scope="the whole file"))
+        if repo.findings("LC007"):
+            problems.append("an uncommitted value in the past was reported")
+    return problems
+
+
+@check("a change to the attested text after the stamp is reported, an attestation alone is not, and a YAML comment is text")
+def _review_gap_on_the_block():
+    # THE BLOCK IS STRUCTURAL. `last_review` and `review_scope`, with their continuation
+    # lines, are what a reading may write; everything else is text, and a comment beside the
+    # stamp is text. In the repository that produced this version the comment was where the
+    # coverage of each reading was written, so every honest attestation reported itself, and
+    # the way out that was taken -- committing the comment first and the stamp after -- cost
+    # two commits per reading. The field costs none.
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = _Repo(Path(tmp) / "r")
+        doc = "products/p/PBR.md"
+        repo.write(doc, _brief("p", "2026-06-01 09:00"))
+        repo.commit("first", "2026-06-01T09:00:00+02:00")
+
+        # 8. The text changes and nobody rereads it.
+        repo.write(doc, _brief("p", "2026-06-01 09:00", body="It does two things."))
+        repo.commit("change the text", "2026-06-10T09:00:00+02:00")
+        found = repo.findings("LC006")
+        if len(found) != 1 or "9 day" not in found[0]["message"]:
+            problems.append(f"a text changed nine days after its stamp produced {found}: one "
+                            "LC006 stating the gap")
+
+        # 7. The honest procedure: content committed, then the stamp and the note alone.
+        repo.write(doc, _brief("p", "2026-06-10 10:00 +02:00", scope="the whole file",
+                               body="It does two things."))
+        repo.commit("attest", "2026-06-10T10:05:00+02:00")
+        if repo.attestation_codes():
+            problems.append(f"the honest procedure -- content committed, then the stamp and "
+                            f"the note in a commit of their own -- produced "
+                            f"{sorted(repo.attestation_codes())}: it has to produce nothing, or "
+                            "there is no honest way to attest")
+
+        # 9. A YAML comment edited after the reading is a change to text nobody reread.
+        repo.write(doc, _brief("p", "2026-06-10 10:00 +02:00", scope="the whole file",
+                               body="It does two things.", comment="covered §1 only"))
+        repo.commit("edit the comment", "2026-06-11T09:00:00+02:00")
+        found = repo.findings("LC006")
+        if len(found) != 1:
+            problems.append(f"a YAML comment added after the stamp produced {len(found)} LC006: "
+                            "a comment is text, because the check cannot tell a comment about "
+                            "the reading from a comment about the document")
+
+        # Reread after the comment, then 10: change the note alone. The walk steps over it.
+        repo.write(doc, _brief("p", "2026-06-11 12:00 +02:00", scope="the whole file",
+                               body="It does two things.", comment="covered §1 only"))
+        repo.commit("attest again", "2026-06-11T12:05:00+02:00")
+        repo.write(doc, _brief("p", "2026-06-11 12:00 +02:00",
+                               scope="the whole file, and §1 in particular",
+                               body="It does two things.", comment="covered §1 only"))
+        repo.commit("reword the note", "2026-06-12T09:00:00+02:00")
+        if repo.findings("LC006"):
+            problems.append("a commit that changed `review_scope` alone was counted as a change "
+                            "to the attested text: the field is the attestation block")
+        # 11. Two attestations in a row above old content: the walk has to take two steps.
+        # With a new sentence, or `LC008` correctly reports the note copied forward.
+        repo.write(doc, _brief("p", "2026-06-12 10:00 +02:00",
+                               scope="the whole file again, a day later",
+                               body="It does two things.", comment="covered §1 only"))
+        repo.commit("attest a third time", "2026-06-12T10:05:00+02:00")
+        if repo.attestation_codes():
+            problems.append(f"three attestation-only commits above one content commit produced "
+                            f"{sorted(repo.attestation_codes())}: the comparison steps back "
+                            "over every attestation, not only the newest")
+
+        # A commit that moves the stamp AND the text counts, and the finding says why.
+        repo.write(doc, _brief("p", "2026-06-13 08:00 +02:00",
+                               scope="the whole file, and §1 in particular",
+                               body="It does three things.", comment="covered §1 only"))
+        repo.commit("change and stamp together", "2026-06-13T09:00:00+02:00")
+        found = repo.findings("LC006")
+        if len(found) != 1 or "changed something else as well" not in found[0]["message"]:
+            problems.append("a commit that moved the stamp and changed the text was not "
+                            "reported with the sentence saying why it was not excluded")
+
+        # 12. A rebase: committer dates move past the stamp, author dates stay. Author date
+        # is what says when the text changed, and the test proves the other choice would fire.
+        repo.write(doc, _brief("p", "2026-06-13 08:00 +02:00", scope="the whole file",
+                               body="It does four things.", comment="covered §1 only"))
+        repo.commit("change the text", "2026-06-14T09:00:00+02:00")
+        repo.write(doc, _brief("p", "2026-06-14 10:00 +02:00", scope="the whole file, reread",
+                               body="It does four things.", comment="covered §1 only"))
+        repo.commit("attest", "2026-06-14T10:05:00+02:00")
+        repo.git("rebase", "-q", "-f", "HEAD~2", env={"GIT_COMMITTER_DATE": "2026-06-20T08:00:00+02:00"})
+        content_committed = repo.git("log", "-1", "--format=%cI", "HEAD~1")
+        if not content_committed.startswith("2026-06-20"):
+            problems.append(f"the rebase did not move the committer date ({content_committed}), "
+                            "so the case below proves nothing")
+        if repo.attestation_codes():
+            problems.append(f"a rebase after the attestation produced "
+                            f"{sorted(repo.attestation_codes())}: the committer dates moved and "
+                            "the author dates did not, and LC006 reads the author's while LC007 "
+                            "reads the committer's")
+
+        # 19. Adoption: the note arrives later, in a commit that moves nothing else.
+        repo.write(doc, _brief("p", "2026-06-14 10:00 +02:00", scope="the whole file, reread, "
+                               "written after the fact", body="It does four things.",
+                               comment="covered §1 only"))
+        repo.commit("add the note", "2026-06-21T09:00:00+02:00")
+        if repo.attestation_codes():
+            problems.append(f"adding `review_scope` without moving `last_review` produced "
+                            f"{sorted(repo.attestation_codes())}: the migration step has to be "
+                            "free of findings or nobody takes it")
+    return problems
+
+
+@check("several documents attested in one commit with their own notes produce nothing, and the same note produces one finding")
+def _honest_batch_and_the_pasted_note():
+    # PROPERTY 2, WITH SEVERAL DOCUMENTS. The old check on shared minutes made this impossible:
+    # three documents attested in one commit share an instant by construction. What separates
+    # a reading from a stamp now is the sentence, and this is the shape it takes.
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = _Repo(Path(tmp) / "r")
+        docs = [f"products/p{i}/PBR.md" for i in range(3)]
+        for i, d in enumerate(docs):
+            repo.write(d, _brief(f"p{i}", "2026-06-01 09:00"))
+        repo.commit("first", "2026-06-01T09:00:00+02:00")
+        for i, d in enumerate(docs):
+            repo.write(d, _brief(f"p{i}", "2026-06-01 09:00", body=f"It does thing {i}."))
+        repo.commit("change all three", "2026-06-10T09:00:00+02:00")
+        # 7. One commit, three stamps at the same instant, three sentences.
+        notes = ["§1 and the new line on thing 0", "the whole file", "§2 only; §1 not reread"]
+        for i, d in enumerate(docs):
+            repo.write(d, _brief(f"p{i}", "2026-06-10 10:00 +02:00", scope=notes[i],
+                                 body=f"It does thing {i}."))
+        repo.commit("attest all three", "2026-06-10T10:05:00+02:00")
+        if repo.attestation_codes():
+            problems.append(f"three documents attested honestly in one commit produced "
+                            f"{sorted(repo.attestation_codes())}: a shared minute is not a "
+                            "finding any more, the sentence is what is read")
+        # 16. One sentence pasted onto three documents: one finding, on the first path, naming
+        # the others, so that an annotation has one place to go.
+        for i, d in enumerate(docs):
+            repo.write(d, _brief(f"p{i}", "2026-06-11 10:00 +02:00", scope="reread",
+                                 body=f"It does thing {i}."))
+        repo.commit("attest all three with one sentence", "2026-06-11T10:05:00+02:00")
+        found = repo.findings("LC008")
+        if len(found) != 1 or found[0]["path"] != docs[0]:
+            problems.append(f"one sentence on three documents in one commit produced "
+                            f"{[(f['path']) for f in found]}: one finding, on the first path")
+        elif not all(d in found[0]["message"] for d in docs[1:]):
+            problems.append("the finding does not name the other documents sharing the sentence")
+        elif "proxy" not in found[0]["message"]:
+            problems.append("the finding does not say it is a proxy: what it cannot catch has "
+                            "to be said where it is read")
+    return problems
+
+
+@check("a review_scope that is empty after a reading, or copied forward, is reported, and day one is not")
+def _review_scope():
+    # `LC008` reads the sentence beside the stamp. Not owed on day one: `start` writes the
+    # whole first set in one session and every document is born attesting itself. In the
+    # history that is a stamp written by the commit that created the file; outside any
+    # history it is a stamp on the same day as `created`.
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = _Repo(Path(tmp) / "r")
+        doc = "products/p/PBR.md"
+        # 15. Day one: created and attested by the same commit, no note owed.
+        repo.write(doc, _brief("p", "2026-06-01 10:00", created="2026-06-01"))
+        repo.commit("first", "2026-06-01T10:00:30+02:00")
+        if repo.findings("LC008"):
+            problems.append("a document born attesting itself was asked for a note: a creation "
+                            "is not a reading, and this fires on every new repository")
+        # 14. Reread without a sentence.
+        repo.write(doc, _brief("p", "2026-06-05 10:00 +02:00", created="2026-06-01"))
+        repo.commit("attest without a note", "2026-06-05T10:05:00+02:00")
+        found = repo.findings("LC008")
+        if len(found) != 1 or "empty" not in found[0]["message"]:
+            problems.append(f"a stamp with no `review_scope` after a reading produced {found}: "
+                            "one finding saying the note is empty")
+        # 18. The note arrives for the first time: absent at the parent is not "unchanged".
+        repo.write(doc, _brief("p", "2026-06-06 10:00 +02:00", created="2026-06-01",
+                               scope="the whole file"))
+        repo.commit("attest with a note", "2026-06-06T10:05:00+02:00")
+        if repo.findings("LC008"):
+            problems.append("a note written for the first time was reported as copied forward")
+        # 17. The stamp moves and the sentence does not.
+        repo.write(doc, _brief("p", "2026-06-07 10:00 +02:00", created="2026-06-01",
+                               scope="the whole file"))
+        repo.commit("attest with the same note", "2026-06-07T10:05:00+02:00")
+        found = repo.findings("LC008")
+        if len(found) != 1 or "left `review_scope` as it was" not in found[0]["message"]:
+            problems.append(f"a stamp moved with its sentence unchanged produced {found}: one "
+                            "finding saying the note was copied forward")
+        # 18 again. A different sentence, and nothing to report.
+        repo.write(doc, _brief("p", "2026-06-08 10:00 +02:00", created="2026-06-01",
+                               scope="§1 only, after the change of the 7th"))
+        repo.commit("attest with a new note", "2026-06-08T10:05:00+02:00")
+        if repo.findings("LC008"):
+            problems.append("a stamp moved with a new sentence was reported")
+
+    # Outside any repository the history half cannot run and the empty note still can, with
+    # the day rule standing in for the creation commit.
+    with tempfile.TemporaryDirectory() as tmp:
+        outside = Path(tmp)
+        (outside / "framework.yaml").write_text(f"framework_version: {REGISTRY['version']}\n")
+
+        def codes(text: str) -> set[str]:
+            (outside / "products" / "p").mkdir(parents=True, exist_ok=True)
+            (outside / "products" / "p" / "PBR.md").write_text(text, encoding="utf-8")
+            r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(outside), "--json",
+                                "--stale-days", "36500"], capture_output=True, text=True)
+            return {f["code"] for f in json.loads(r.stdout)["findings"]}
+
+        if "LC008" not in codes(_brief("p", "2026-08-01 09:00", created="2026-01-01")):
+            problems.append("outside a repository a stamp months after `created` with no note "
+                            "was not reported: the empty note needs no history")
+        if "LC008" in codes(_brief("p", "2026-01-01 09:00", created="2026-01-01")):
+            problems.append("outside a repository a stamp on the day of `created` was reported: "
+                            "`created` is written as a day, and the finer rule would fire on "
+                            "every new repository")
+        if "LC008" in codes(_brief("p", "2026-08-01 09:00", created="2026-01-01",
+                                   scope="the whole file")):
+            problems.append("a stamp with a note was reported outside a repository")
+    return problems
+
+
+@check("a shallow clone stops the validator with exit 2 and the command that fetches, and reports nothing")
+def _shallow_clone_stops():
+    # `actions/checkout` clones one commit unless told otherwise, and in that clone the commit
+    # behind every attestation is absent. Reading that as "nothing to compare" would make the
+    # checks above pass exactly where they run for everybody. 2 and not 1: 1 is a repository
+    # with errors, and a caller reading the code has to tell the two apart.
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = _Repo(Path(tmp) / "origin")
+        repo.write("products/p/PBR.md", _brief("p", "2026-06-01 09:00"))
+        repo.commit("first", "2026-06-01T09:00:00+02:00")
+        repo.write("products/p/PBR.md", _brief("p", "2026-06-02 10:00 +02:00",
+                                              scope="the whole file"))
+        repo.commit("attest", "2026-06-02T10:05:00+02:00")
+        clone = Path(tmp) / "shallow"
+        r = subprocess.run(["git", "clone", "-q", "--depth", "1", f"file://{repo.path}",
+                            str(clone)], capture_output=True, text=True)
+        if r.returncode != 0:
+            return ["a shallow clone could not be made here, so the check is not running"]
+        r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(clone), "--json"],
+                           capture_output=True, text=True)
+        if r.returncode != 2:
+            problems.append(f"the validator exited {r.returncode} in a shallow clone: 2 is the "
+                            "code for a run that did not happen, and 1 would read as errors")
+        if r.stdout.strip():
+            problems.append("the validator printed a report in a shallow clone: a partial JSON "
+                            "gets parsed, and this one would say the attestations are fine")
+        if "fetch" not in r.stderr or "fetch-depth" not in r.stderr:
+            problems.append("the message does not say how to fetch the history, in the words "
+                            "the CI configuration uses")
+        # And the same clone made whole is a repository like any other.
+        subprocess.run(["git", "-C", str(clone), "fetch", "-q", "--unshallow"],
+                       capture_output=True, text=True)
+        r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(clone), "--json",
+                            "--stale-days", "36500"], capture_output=True, text=True)
+        if r.returncode not in (0, 1) or not r.stdout.strip():
+            problems.append("the validator did not run in the clone once its history was fetched")
+    return problems
+
+
+@check("attest.py stamps the instant it runs at with its offset, writes the note, commits nothing, and refuses what it must")
+def _attest_command():
+    # THE COMMAND IS THE HONEST PROCEDURE MADE ONE STEP. A person commits the content, runs
+    # this once per document reread, and commits the attestations. It writes the clock and
+    # not the content commit's date: the link to the text read is the commit that will carry
+    # the stamp and its parent, which `git blame` finds, and the content commit is printed so
+    # that the person knows what they are attesting.
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = _Repo(Path(tmp) / "r")
+        doc = "products/p/PBR.md"
+        repo.write(doc, _brief("p", "2026-06-01 09:00", comment="a comment that stays"))
+        repo.commit("first", "2026-06-01T09:00:00+02:00")
+        repo.write(doc, _brief("p", "2026-06-01 09:00", body="It does two things.",
+                               comment="a comment that stays"))
+        content = repo.commit("change the text", "2026-06-10T09:00:00+02:00")
+
+        def attest(rel: str, scope: str, env: dict | None = None):
+            return subprocess.run([sys.executable, str(ATTEST), "--root", str(repo.path), rel,
+                                   "--scope", scope], capture_output=True, text=True,
+                                  env={**os.environ, **(env or {})})
+
+        r = attest(doc, "the whole file: both things it does now", env={"TZ": "Asia/Tokyo"})
+        text = (repo.path / doc).read_text(encoding="utf-8")
+        meta, _, _ = _load(VALIDATE, "validate_for_attest").parse_front_matter(text)
+        stamp = str(meta.get("last_review"))
+        if r.returncode != 0:
+            problems.append(f"attest.py exited {r.returncode}: {r.stderr.strip()}")
+        elif not re.fullmatch(r"\d{4}-\d\d-\d\d \d\d:\d\d \+09:00", stamp):
+            problems.append(f"the stamp written is {stamp!r}: the instant the command ran at, "
+                            "to the minute, with the offset of the clock it read")
+        else:
+            written = datetime.strptime(stamp, "%Y-%m-%d %H:%M %z")
+            if abs((datetime.now().astimezone() - written).total_seconds()) > 180:
+                problems.append(f"the stamp {stamp} is not the moment the command ran")
+        if meta.get("review_scope") != "the whole file: both things it does now":
+            problems.append(f"`review_scope` reads {meta.get('review_scope')!r}: the sentence "
+                            "given, folded back whole")
+        if "# a comment that stays" not in text:
+            problems.append("a YAML comment in the front matter was lost: the command edits "
+                            "lines and does not reserialise")
+        order = [k for k in ("created", "last_review", "review_scope", "# a comment") if k in text]
+        if [text.index(k) for k in order] != sorted(text.index(k) for k in order):
+            problems.append("the attestation block did not land where `last_review` was")
+        if content[:12] not in r.stdout or "attests the text as of" not in r.stdout:
+            problems.append("the command does not print the commit whose text it attests")
+        if content[:12] in text:
+            problems.append("the content commit was written into the document: it is printed, "
+                            "and the attestation commit's parent carries it")
+        status = repo.git("status", "--porcelain")
+        if not status or "M " not in status and " M" not in status:
+            problems.append(f"after attesting, `git status` reads {status!r}: the command commits "
+                            "nothing and leaves the file modified")
+        if repo.attestation_codes():
+            problems.append(f"the working tree after attest.py reports "
+                            f"{sorted(repo.attestation_codes())}: the stamp is the clock and the "
+                            "line is not committed, so nothing is ahead and the note is there")
+        repo.commit("attest", datetime.now().astimezone().isoformat(timespec="seconds"))
+        if repo.attestation_codes():
+            problems.append(f"the attestation committed reports "
+                            f"{sorted(repo.attestation_codes())}: this is the honest procedure "
+                            "and it has to be free of findings")
+
+        # Refusals, each with exit 2 and the file untouched.
+        before = (repo.path / doc).read_text(encoding="utf-8")
+        r = attest(doc, "   ")
+        if r.returncode != 2 or "empty" not in r.stderr:
+            problems.append(f"an empty --scope was accepted (exit {r.returncode})")
+        repo.write(doc, before.replace("It does two things.", "It does three things."))
+        r = attest(doc, "the whole file")
+        if r.returncode != 2 or "differs from HEAD" not in r.stderr:
+            problems.append(f"uncommitted content was attested (exit {r.returncode}): the commit "
+                            "that follows would carry both the change and the stamp")
+        repo.write(doc, before)
+        repo.write("decisions/DEC-001-x.md", _fm(
+            schema="framework/decision-record/v1", id="DEC-001", artifact_type="decision-record",
+            lifecycle="immutable", status="accepted", scope="product", products="[p]",
+            owners="[o]", approvers="[o]", created="2026-06-01") + "# DEC-001\n")
+        repo.commit("a decision", "2026-06-12T09:00:00+02:00")
+        r = attest("decisions/DEC-001-x.md", "the whole file")
+        if r.returncode != 2 or "living" not in r.stderr:
+            problems.append(f"an immutable was attested (exit {r.returncode})")
+        repo.write("products/q/PBR.md", _brief("q", "2026-06-01 09:00"))
+        r = attest("products/q/PBR.md", "the whole file")
+        if r.returncode != 2 or "not tracked" not in r.stderr:
+            problems.append(f"an untracked file was attested (exit {r.returncode})")
+        if (repo.path / doc).read_text(encoding="utf-8") != before:
+            problems.append("a refused invocation changed the document")
+    return problems
+
+
+@check("a retired code is never emitted, stays documented, and an annotation or a pin on it is told so")
+def _retired_codes():
+    # A code that changed meaning under an annotation would make a reason written about one
+    # thing cover another, because the annotation joins on the code. So a code retires and its
+    # number is never reused; the catalog keeps the entry with the version and the reason.
+    problems = []
+    retired = {c: s for c, s in CHECKS["checks"].items() if s.get("level") == "retired"}
+    if "LC005" not in retired:
+        problems.append("LC005 is not retired in the catalog: 4.0.0 retired it")
+    for code, spec in retired.items():
+        if not spec.get("retired_in") or not spec.get("retired_because"):
+            problems.append(f"{code}: retired without `retired_in` and `retired_because`, so "
+                            "nobody can tell when or why")
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / "framework.yaml").write_text(f"framework_version: {REGISTRY['version']}\n")
+        (root / "products" / "p").mkdir(parents=True)
+        (root / "products" / "p" / "PBR.md").write_text(
+            _brief("p", "2026-01-01 09:00", created="2026-01-01"), encoding="utf-8")
+        (root / ".framework").mkdir()
+        (root / ".framework" / "expected-findings.yaml").write_text(
+            "expected:\n  - code: LC005\n    path: products/p/PBR.md\n"
+            "    reason: five documents shared a minute\n    clears_when: the framework repair\n")
+        r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(root), "--json",
+                            "--stale-days", "36500"], capture_output=True, text=True)
+        out = json.loads(r.stdout) if r.stdout.strip() else {"findings": []}
+        an = [f for f in out["findings"] if f["code"] == "AN001"]
+        if len(an) != 1 or "retired" not in an[0]["message"]:
+            problems.append(f"an annotation on LC005 produced {an}: one AN001 saying the code "
+                            "is retired, so that the adopter removes the line instead of "
+                            "looking for the finding")
+        (root / "framework.yaml").write_text(f"framework_version: {REGISTRY['version']}\n"
+                                             "checks:\n  LC005: warn\n")
+        r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(root), "--json"],
+                           capture_output=True, text=True)
+        if r.returncode == 0 or "retired" not in r.stderr:
+            problems.append(f"a framework.yaml pinning LC005 ran (exit {r.returncode}): a pin on "
+                            "a retired code switches nothing on and has to be said")
+        r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(root),
+                            "--list-checks"], capture_output=True, text=True)
+        (root / "framework.yaml").write_text(f"framework_version: {REGISTRY['version']}\n")
+        r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(root),
+                            "--list-checks"], capture_output=True, text=True)
+        if not re.search(r"^retired\s+LC005", r.stdout, re.M):
+            problems.append("--list-checks does not print LC005 as retired")
+    return problems
+
+
+@check("the attestation fields are declared once, in the registry, and the validator and the living schemas agree")
+def _attestation_fields_agree():
+    x = _load(VALIDATE, "validate_for_fields")
+    declared = tuple(REGISTRY.get("attestation_fields") or [])
+    problems = []
+    if declared != tuple(x.ATTESTATION_FIELDS):
+        problems.append(f"the registry declares {declared} and the validator reads "
+                        f"{x.ATTESTATION_FIELDS}: one authority, and the other reads it")
+    for name, spec in REGISTRY["types"].items():
+        schema = json.loads((ROOT / "schemas" / "framework" / name / "v1.json").read_text())
+        props = set(schema.get("properties", {}))
+        if spec["lifecycle"] == "living" and not set(declared) <= props:
+            problems.append(f"{name}: living, and its schema does not declare {declared}")
+        if spec["lifecycle"] != "living" and set(declared) & props:
+            problems.append(f"{name}: not living, and its schema declares an attestation field")
+    return problems
+
+
+@check("every checkout in the CI assets a project copies fetches the full history")
+def _ci_assets_fetch_history():
+    # `_ci_fetches_history` above asserts it for this framework's own suite. These are the
+    # workflows a project copies, and from 4.0.0 the validator stops in a clone without
+    # history: a project that copied the file before this line was written has a gate that
+    # exits 2 on every pull request, with a message about the clone. The assertion is here so
+    # that the file cannot lose the setting without this going red.
+    problems = []
+    for wf in sorted((ROOT / "ci").glob("*.yml")):
+        jobs = (yaml.safe_load(wf.read_text(encoding="utf-8")) or {}).get("jobs") or {}
+        for name, job in jobs.items():
+            for step in (job or {}).get("steps") or []:
+                if not str(step.get("uses", "")).startswith("actions/checkout"):
+                    continue
+                depth = (step.get("with") or {}).get("fetch-depth")
+                if depth != 0:
+                    what = step.get("with", {}).get("repository", "the project")
+                    problems.append(f"ci/{wf.name}, job {name}: checks out {what} with "
+                                    f"`fetch-depth: {depth!r}`. The validator reads the commit "
+                                    "behind every attestation and stops in a clone without it")
+    if not problems and not list((ROOT / "ci").glob("*.yml")):
+        problems.append("no workflow under ci/: the check is not running")
     return problems
 
 

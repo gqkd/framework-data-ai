@@ -406,7 +406,8 @@ scope: architecture             # DEC only
 owners: [first.last]
 approvers: [first.last]
 created: 2026-07-27
-last_review: 2026-07-29 18:40   # required only for lifecycle: living
+last_review: 2026-07-29 18:40 +02:00   # living only; written by attest.py, by a person
+review_scope: the whole file    # living only: what that reading covered
 derives_from: [HYP-001, EVD-003]
 supersedes: DEC-009
 verified_code:                  # one commit per repository in product.yaml#code
@@ -431,10 +432,26 @@ one: do not edit this, regenerate it.
 reviewed three times in the same afternoon, and without the time the third review is
 indistinguishable from the first: you lose the only thing the field exists to establish,
 that is whether the review came before or after the change it was supposed to take in. The
-format is `YYYY-MM-DD HH:MM`; the date alone is still accepted and counts as midnight. A
-half-filled value, `2026-07-29 HH:MM`, does **not** count as midnight: it is `LC004`,
-because letting it through would mean presenting a document that was never reviewed as
-reviewed today.
+format is `YYYY-MM-DD HH:MM +HH:MM`, and it is what `skills/audit/scripts/attest.py` writes:
+the moment a person ran it, with the offset of their clock, so that the value is an instant
+wherever it is read from. The two older forms are still accepted: `YYYY-MM-DD HH:MM` without
+an offset is read in the offset of the commit that carries the line, or in the validating
+machine's offset while the line is not committed, and the finding built on it says which;
+the date alone counts as midnight. A half-filled value, `2026-07-29 HH:MM`, does **not**
+count as midnight: it is `LC004`, because letting it through would mean presenting a
+document that was never reviewed as reviewed today.
+
+**`last_review` is never later than the commit that carries it, and that is `LC007`, an
+error.** A reading cannot be attested before its record exists, so a value ahead of the
+committer date of the commit that introduced it is not a reading to redo: it is a date that
+is false. Compared at the minute, with no tolerance, and equality is not after. And beside
+the instant goes **`review_scope`**, one sentence saying what the reading covered and what
+it did not. The two fields are the attestation block, written together by `attest.py` after
+the content is committed, and they are the only two fields a commit may change without
+`LC006` counting it as a change to the text; a YAML comment is text. `LC008` reports a note
+that is empty on a document attested after its creation, identical across the documents one
+commit attested, or unchanged from the previous attestation of the same document, and says
+of itself that it is a proxy: a sentence written to differ passes it.
 
 ### Traceability chain
 

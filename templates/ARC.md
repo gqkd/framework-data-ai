@@ -8,6 +8,9 @@ products: [product-a]
 owners: [NAME]
 created: YYYY-MM-DD HH:MM
 last_review: YYYY-MM-DD HH:MM
+# review_scope: written beside `last_review` by `attest.py`, after a person rereads a
+# document that already exists: what the reading covered and what it did not. Not on
+# day one, because a creation is not a reading.
 verified_code:                  # one commit per repository named in product.yaml#code
   product.backend: COMMIT_HASH
 classification: internal

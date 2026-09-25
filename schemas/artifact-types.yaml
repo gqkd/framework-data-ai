@@ -1182,11 +1182,14 @@
 #      lacks it.
 #   Bare `last_review` values stay valid; the command no longer writes them.
 #
-# MEASURED, ON ONE REPOSITORY OF ABOUT 150 COMMITS AND 26 LIVING DOCUMENTS. Reading the commit
-# behind each attested line costs a `git blame` per living document, about 20 ms each. The
-# validator's own fixtures were run under `LC007` before it shipped: six release fixtures carried
-# an attestation two days after the commit that introduced it, in a repository whose subject is
-# documents going out of date.
+# MEASURED, ON ONE REPOSITORY OF ABOUT 150 COMMITS, 170 TRACKED FILES AND 26 LIVING DOCUMENTS.
+# Reading the commit behind each attested line costs a `git blame` per living document, about
+# 20 ms each and half a second for all of them, where the single `git log` the previous
+# version read cost 17 ms. The validator as a whole went from 0.97 s to 0.8 s on the same
+# repository, because the contents `LC006` compares now come from one `git cat-file --batch`
+# instead of a `git show` per document. The validator's own fixtures were run under `LC007`
+# before it shipped: six release fixtures carried an attestation two days after the commit
+# that introduced it, in a repository whose subject is documents going out of date.
 version: "4.0.0"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
@@ -1254,6 +1257,19 @@ lifecycles: [living, immutable, append-only]
 # consistency the templates ask for, not a rule. Two timestamps in the same front matter
 # with different precision invite the reader to wonder which one is approximate.
 base_required: [schema, artifact_type, lifecycle, status, owners, created]
+
+# THE ATTESTATION BLOCK OF A LIVING DOCUMENT, AND NOTHING ELSE IS. `last_review` is the instant
+# a person finished reading it; `review_scope` is the sentence beside it saying what the reading
+# covered and what it did not. Both are written together by `attest.py`, by a person, after the
+# content is committed, and they are the only two fields a reading may write without the write
+# counting as a change to the text: `LC006` steps over a commit that touches them alone, and
+# counts everything else, YAML comments included. `LC007` reads the commit behind the first;
+# `LC008` reads the second. Declared here and projected into every living schema by
+# `generate.py`, untyped for `last_review` (see the generator's docstring on serialisation) and
+# as a string for `review_scope`, so that a misspelt key is measured against both by `FM006`.
+# Optional in the schema: whether the note is owed is `LC008`'s question, not the schema's, and
+# on day one it is not, because a creation is not a reading.
+attestation_fields: [last_review, review_scope]
 
 # ON `generated`. A type marked `generated: true` is written by a tool and not by a
 # person, and it swaps `owners` for `generated_by`, which names the tool. The swap is the

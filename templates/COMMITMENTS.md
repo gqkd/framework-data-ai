@@ -7,6 +7,9 @@ products: [product-a, product-b, product-c]
 owners: [NAME]
 created: YYYY-MM-DD HH:MM
 last_review: YYYY-MM-DD HH:MM
+# review_scope: written beside `last_review` by `attest.py`, after a person rereads a
+# document that already exists: what the reading covered and what it did not. Not on
+# day one, because a creation is not a reading.
 classification: confidential
 # One row per commitment, where a check can read it. The body below keeps the promise in the
 # words that were used, who said it and in what context, how binding the literal wording is,

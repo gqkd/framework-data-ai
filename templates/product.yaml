@@ -13,6 +13,9 @@ one_liner: What it does, for whom, in one line.
 owners: [NAME]
 created: YYYY-MM-DD HH:MM
 last_review: YYYY-MM-DD HH:MM
+# review_scope: written beside `last_review` by `attest.py`, after a person rereads a
+# document that already exists: what the reading covered and what it did not. Not on
+# day one, because a creation is not a reading.
 
 # Where the PRODUCT sits in the lifecycle. The field is called stage and not lifecycle
 # because lifecycle is already the artifact class, and the same name for two different

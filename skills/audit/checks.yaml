@@ -70,10 +70,12 @@
 # WHY ALMOST EVERYTHING STARTS AT `warn`. Twelve checks turned on before the artifacts
 # exist are a factory built before the product: they slow you down without having
 # prevented anything yet, and the predictable reaction is to turn them all off at once.
-# Two are `error` on day one: `FM001`, front matter that parses, and `FM002`, front matter
-# that means something. Everything a repository holds is read through those two, so a
-# document failing either is not being checked at all rather than being checked and found
-# wanting.
+# Three are `error` on day one: `FM001`, front matter that parses, `FM002`, front matter
+# that means something, and `LC007`, a `last_review` later than the commit that carries it.
+# Everything a repository holds is read through the first two, so a document failing either
+# is not being checked at all rather than being checked and found wanting; the third is a
+# value that cannot be what it says, which is a fact about a file and not a judgement about
+# a document.
 #
 # THAT SENTENCE USED TO CITE `SKILLS.md §9`, WHICH DOES NOT EXIST. That file has seven
 # sections and does not mention front matter anywhere. The reference had been here long
@@ -205,9 +207,9 @@ checks:
 
   LC003:
     level: warn
-    title: immutable document carrying last_review
+    title: immutable document carrying last_review or review_scope
     prevents: >
-      An immutable is not reviewed, it is superseded. The field suggests a maintenance
+      An immutable is not reviewed, it is superseded. Either field suggests a maintenance
       regime the document does not have, and invites the edit that breaks it.
 
   LC004:
@@ -216,46 +218,52 @@ checks:
     prevents: >
       A half filled `2026-07-29 HH:MM` presented as midnight would make a document that
       was never reviewed look reviewed. Also catches the template placeholder surviving
-      into a real repository.
+      into a real repository. The forms that parse are a day, a day with a minute, and
+      either with an offset such as `+02:00`, which is what `attest.py` writes.
 
   LC005:
-    level: warn
-    title: several living documents attest the same review instant
-    prevents: >
-      A batch of field edits reading as a review. `last_review` says a person read this
-      document and found it still true, and nothing can check a reading -- but the false
-      version has a shape: in one repository six living documents were stamped with the same
-      minute, and one of them opened with a notice, left standing by the same run, saying the
-      rest of it was still written against something superseded and had to be reread in full.
-      Three is the floor, because two documents finished in the same minute is a person and
-      three is a loop. Timed to the minute and not to the day: reading four documents on a
-      Tuesday is a Tuesday, reading four in one minute is a field edit. Documents carrying a
-      bare date are not counted -- no minute, nothing to say. Neither is a document whose
-      `created` and `last_review` are the same instant: `start` writes a whole day one set
-      in one session and every document is born attesting itself, which is a creation and
-      not a reading, and a check that fired on every new repository would be switched off in
-      a week.
+    level: retired
+    retired_in: "4.0.0"
+    title: several living documents attest the same review instant (retired)
+    retired_because: >
+      It reported three or more living documents stamped with one minute, which was the shape
+      a batch of field edits took while the instant was a thing somebody chose. From 4.0.0 the
+      instant is a thing that is read -- `attest.py` writes the moment it runs at, and `LC007`
+      reports a value ahead of the commit that carries it -- so several documents attested in
+      one commit share a minute honestly, by construction, and the shape stopped separating a
+      reading from a stamp. What still does is the sentence beside the stamp, and `LC008`
+      looks at that. THE CODE IS NOT REUSED, and the entry stays here rather than being
+      deleted: an annotation joins on the code, and a number that changed meaning under an
+      annotation would make a reason written about one thing cover another. An annotation
+      left on this code is what `AN001` reports, and a `framework.yaml` that pins it stops
+      the validator with a sentence saying so.
 
   LC006:
     level: warn
     title: a living document was changed after the instant it says somebody read it
     prevents: >
       Text nobody attested, read as current. `LC002` measures elapsed time and can only ever
-      guess when truth decays; `LC005` catches a batch of stamps written in one minute. Neither
-      compares the attested instant with when the document was last changed, and that
-      comparison is the one question `last_review` exists to answer: read and found still true,
-      or edited since and never reread. A document in the second state is silent to both, and
-      the field says a person confirmed it.
+      guess when truth decays; `LC007` catches an instant that cannot be true. Neither compares
+      the attested instant with when the document was last changed, and that comparison is the
+      one question `last_review` exists to answer: read and found still true, or edited since
+      and never reread. A document in the second state is silent to both, and the field says a
+      person confirmed it.
 
       REGISTERING THAT YOU HAVE READ SOMETHING IS NOT MODIFYING IT. A reading is written down
-      by editing the document, so a commit whose only change to a file is its `last_review`
-      line is the reading and not a change: the comparison steps back to the commit before it.
+      by editing the document, so a commit whose only change to a file is its attestation block
+      is the reading and not a change: the comparison steps back to the commit before it, and
+      keeps stepping back over attestations until it reaches a commit that changed the text.
       Without that, every honest review leaves a gap of the minutes between the stamp and the
       commit, and the report grows a tail of rows that are not the problem. The rows somebody
       learns to skip are how a check dies.
 
-      A commit that moves the stamp AND changes something else counts, and the finding says so
-      where it is read, because whoever sees it has to know why it was not excluded.
+      THE BLOCK IS STRUCTURAL: `last_review` and `review_scope`, with their continuation lines,
+      and nothing else. A YAML comment beside the stamp is text, and editing it after the
+      reading counts, because the check cannot tell a comment about the reading from a comment
+      about the document -- and in the repository that produced this version the comment was
+      where the coverage of each reading was written, so every honest attestation reported
+      itself. The sentence belongs in `review_scope` now, and a commit that moves the block
+      AND changes something else counts, with the finding saying so where it is read.
 
       AND THE COMMIT THAT INTRODUCES A FILE IS NOT A CHANGE TO IT. A repository whose history
       begins after its documents do -- which is every project that adopted git once the
@@ -268,20 +276,94 @@ checks:
       end of the case that produced this, where the gaps ran from 45 minutes to 21 days. What
       replaces it is the ordering: these findings come out largest first, because thirty sorted
       by size get read and thirty sorted by path do not. The author date and not the commit
-      date, because a rebase moves the second without anybody touching the document, which is
-      the same family as the rename this cannot see through.
+      date, because a rebase moves the second without anybody touching the document; the
+      opposite choice from `LC007`, and both are right, because the instant a text changed is
+      the author's and the instant a line could first exist is the committer's. A bare
+      `last_review` is read in the offset of the commit that carries it, the same rule as
+      `LC007`, so the comparison is between instants and the verdict does not move with the
+      machine that runs it.
 
-      Silent where there is no history to ask, which is a project distributed as an archive
-      rather than cloned: unverifiable is not the same claim as violated, the same position
-      `FW003` takes. An uncommitted change is not counted either, and the report says in a line
-      how many living documents carry one, because the gap measured then is smaller than the
-      real one. That is a note and not a finding: a finding that appeared and vanished with
-      every save would teach people to ignore this between saves.
+      Silent where there is no repository at all, which is a project distributed as an archive:
+      unverifiable is not the same claim as violated, the same position `FW003` takes, and the
+      report says so in a line. Not silent in a shallow clone: there the history exists and was
+      cut, so the validator stops with exit 2 and the command that fetches it. An uncommitted
+      change is compared against what is committed, and the report says in a line how many
+      living documents carry one, because the gap measured then is smaller than the real one.
+      That is a note and not a finding: a finding that appeared and vanished with every save
+      would teach people to ignore this between saves.
 
       WHAT ITS YIELD IS, WE DO NOT KNOW. Zero on every fixture in this repository before the
       bench for it was built, and two per repository on that bench, by construction. What a
       real repository shows depends on how much of it was edited without being reread, and
       there is no honest number for that until this runs against something nobody here wrote.
+
+  LC007:
+    level: error
+    title: last_review is later than the commit that carries it
+    prevents: >
+      A date that cannot be true, read as an attestation. `last_review` attests that a person
+      finished reading, and a value later than the commit that introduced it is not the instant
+      anybody finished anything: the line did not exist yet. In one repository four living
+      documents were attested with instants up to ninety minutes after their own commits,
+      chosen apart from each other so that the check on shared minutes stayed quiet, and
+      nothing looked in this direction. `LC006` asks whether the text changed after the
+      reading; this asks whether the reading is claimed before its own record, and it is an
+      `error` and not a warning, because there is no reading to redo -- the value is false.
+
+      THE COMMITTER DATE OF THE COMMIT THAT WROTE THE LINE, found with `git blame` on the
+      `last_review` line and not with the last commit that touched the file, which is in general
+      a different one. A rebase moves the committer date forward without touching the value, so
+      the bound only loosens: a true value stays true, and nothing a rebase does makes a false
+      one true. A line not yet committed is compared with the current time on the machine that
+      runs the validator.
+
+      PRECISION, TOLERANCE, AND WHICH CLOCK. Compared at the minute, because that is the
+      precision `last_review` is written at; no tolerance beyond it; equality is not "after". The
+      honest procedure writes the instant the command runs at and commits a minute later, and
+      reading the value as the end of its minute would have reported exactly those. A value with
+      an offset is an instant. A bare value is read in the offset of the commit that carries it,
+      which is by construction the writer's clock; for a line not yet committed it is read in
+      this machine's offset, and every finding says which of the two it used, so a validator run
+      in a container at UTC on a tree written at +02:00 produces a finding that names its own
+      assumption rather than a mystery.
+
+      ONE OF THREE ERRORS THAT NEED NO OPT-IN, with `FM001` and `FM002`. Those two are facts
+      about a file rather than judgements about a document, and so is this: a date after its
+      own record is not a document found wanting, it is a value that cannot be what it says.
+      Silent nowhere: outside any repository every line counts as not committed, and a shallow
+      clone stops the validator with exit 2 instead of a guess.
+
+  LC008:
+    level: warn
+    title: the review_scope beside a last_review is empty, shared across a batch, or copied forward
+    prevents: >
+      A stamp with nothing beside it that says what was read. `last_review` says a person read
+      the document and found it still true, and no check can verify a reading. Until 4.0.0 the
+      shape a false one took was several documents on one minute, and that shape stopped being
+      available the day the instant became a thing that is read from the history rather than
+      chosen: documents attested in one commit share a minute honestly. What a reading leaves
+      behind that a batch does not is a sentence saying what was read -- the whole file, or
+      which sections, and what was not read -- and `review_scope` is where it goes.
+
+      THREE SHAPES, ONE CODE. The note is empty on a document attested after its creation; the
+      note is identical across the documents one commit attested; the note is the same as at the
+      previous attestation of the same document, with only the instant moved. No threshold on
+      how many documents a commit may attest: three honest readings committed together are
+      three, and the number was never the fact.
+
+      IT IS A PROXY, AND THIS IS WHAT IT DOES NOT CATCH. A note written to be different passes
+      it. A batch that pastes three different sentences is invisible here. It reads a sentence
+      and not a reading, and the only thing it makes a stamp without a reading cost is the
+      invention of that sentence, which is the falsification made visible to whoever opens the
+      file next. A person who did read pays one sentence per document.
+
+      NOT OWED ON DAY ONE. `start` writes the whole first set in one session and every document
+      is born attesting itself; there was nothing to reread. In the history that is a
+      `last_review` written by the commit that created the file. Outside any repository, or on a
+      line not yet committed in a file not yet tracked, it is a `last_review` on the same day as
+      `created`, the coarser rule because `created` is written as a day. The two shapes that
+      need the history -- shared across a commit, copied forward -- do not run outside a
+      repository or on a line not yet committed, and the empty note does.
 
   # ── Identity and references ────────────────────────────────────────────────
   ID001:
