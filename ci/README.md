@@ -9,6 +9,8 @@ carries front matter, nothing here is validated, and this directory exists so th
 | `PULL_REQUEST_TEMPLATE.md` | `.github/PULL_REQUEST_TEMPLATE.md` | asks for the `CHG` the change set implements |
 | `pull-request.yml` | `.github/workflows/pull-request.yml` | runs the validator with the pull request context, which is what `PR001`–`PR004` need |
 
+Both checkouts in `pull-request.yml` fetch the full history, and it is not a preference: the validator reads the commit behind every attested `last_review` and stops, with exit 2, in a clone that lacks it. `tests/selfcheck.py` asserts the setting on every checkout step in this directory.
+
 The checks themselves live in `skills/audit/checks.yaml` like every other one, and a
 project turns one down or off in its own `framework.yaml` the same way:
 

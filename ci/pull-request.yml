@@ -28,7 +28,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # The base branch has to be there for the diff below.
+          # THE WHOLE HISTORY, FOR TWO REASONS. The base branch has to be there for the diff
+          # below. And from 4.0.0 the checks on `last_review` read the commit behind every
+          # attested line: in a one-commit clone that commit is absent, so the validator
+          # stops with exit 2 and a message saying to fetch, rather than guessing. On
+          # GitLab the same setting is `GIT_DEPTH: 0`, on Azure Pipelines `fetchDepth: 0`.
           fetch-depth: 0
           persist-credentials: false
 
@@ -48,6 +52,11 @@ jobs:
           # the commit form is the one that binds either way.
           ref: COMMIT_OR_TAG
           path: .framework
+          # The framework's history as well: `FW003` tells a pin that never existed from a
+          # checkout that moved by asking whether the commit is in it, and in a one-commit
+          # clone every commit is absent. `migrate.py` reconstructs the previous validator
+          # out of the same history.
+          fetch-depth: 0
           persist-credentials: false
 
       - uses: actions/setup-python@v5
