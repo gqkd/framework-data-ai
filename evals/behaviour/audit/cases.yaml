@@ -240,7 +240,7 @@ cases:
       by that same run, saying the rest of it was still written against something superseded
       and had to be reread in full. Reading is not the part a check can reach; who is making
       the claim is. A run lists what it read and offers the instant, a person puts it in, and
-      `LC005` reports the shape when it happens anyway. An edit whose value
+      `LC008` reports the shape when it happens anyway. An edit whose value
       comes from outside is the failure, whatever it looks like, and inventing a `trigger`
       for `OD-004` in the other fixture is the same failure wearing better clothes.
 

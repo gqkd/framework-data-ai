@@ -7,6 +7,7 @@ products: [store-ops]
 owners: [m.ferri]
 created: 2026-06-15
 last_review: 2026-07-30 08:15
+review_scope: the whole brief, still a draft, when the fixture was last rewritten
 classification: internal
 ---
 

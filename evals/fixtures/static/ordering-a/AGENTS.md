@@ -7,6 +7,7 @@ products: [retail-forecast, store-ops]
 owners: [g.quaglia]
 created: 2026-03-02
 last_review: 2026-07-30 09:45
+review_scope: the whole file, when the fixture was last rewritten
 classification: internal
 ---
 

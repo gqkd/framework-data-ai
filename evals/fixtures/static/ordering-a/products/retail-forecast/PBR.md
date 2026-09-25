@@ -7,6 +7,7 @@ products: [retail-forecast]
 owners: [g.quaglia]
 created: 2026-03-02
 last_review: 2026-07-29 16:10
+review_scope: the whole brief, when the fixture was last rewritten
 classification: internal
 ---
 

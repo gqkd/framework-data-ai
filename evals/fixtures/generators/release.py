@@ -25,7 +25,10 @@ lifecycle: living
 status: active
 owners: [g.quaglia]
 created: 2026-01-12
-last_review: 2026-07-30 09:15
+# Before the commit that imports the corpus, dated 2026-07-28 17:45. It used to be two
+# days after it, in six fixtures whose subject is documents going out of date, and
+# `LC007` found it the first time it ran here.
+last_review: 2026-07-28 09:15
 classification: internal
 ---
 
@@ -475,6 +478,7 @@ products: [atlas]
 owners: [g.quaglia]
 created: 2026-03-02
 last_review: {REVIEW}
+review_scope: {SCOPE}
 derives_from: [PBR]
 classification: internal
 ---
@@ -929,7 +933,8 @@ def build(name: str, evr_key: str, tamper: bool):
     write(root, "src/draft.py", SRC)
     write(root, "tools/hash_evp.py", HASH_TOOL)
 
-    evp_frozen = EVP_TMPL.format(ACC="0.85", HALL="0.020", REVIEW="2026-07-28 17:40")
+    evp_frozen = EVP_TMPL.format(ACC="0.85", HALL="0.020", REVIEW="2026-07-28 17:40",
+                                 SCOPE="the whole plan, before freezing it for the RC")
     write(root, "products/atlas/EVP.md", evp_frozen)
     frozen_hash = hashlib.sha256((root / "products/atlas/EVP.md").read_bytes()).hexdigest()
 
@@ -945,7 +950,8 @@ def build(name: str, evr_key: str, tamper: bool):
 
     # --- optional commit 3: somebody edits the frozen plan -------------------
     if tamper:
-        evp_tampered = EVP_TMPL.format(ACC="0.80", HALL="0.050", REVIEW="2026-08-05 16:20")
+        evp_tampered = EVP_TMPL.format(ACC="0.80", HALL="0.050", REVIEW="2026-08-05 16:20",
+                                       SCOPE="the two thresholds, aligned with the results")
         write(root, "products/atlas/EVP.md", evp_tampered)
         git("add", "-A")
         git("commit", "-q", "-m", "EVP: align thresholds with what the model can actually do",

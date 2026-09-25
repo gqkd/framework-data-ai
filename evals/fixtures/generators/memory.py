@@ -48,6 +48,9 @@ class Documents:
             ).strftime("%Y-%m-%d %H:%M")
             self.sequence += 1
         meta.update(fields)
+        # Reread on a day other than its creation, so `LC008` asks what the reading covered.
+        if lifecycle == "living" and "last_review" in meta:
+            meta.setdefault("review_scope", "the whole file")
         header = yaml.safe_dump(meta, sort_keys=False, allow_unicode=True)
         write(self.root, path, f"---\n{header}---\n\n{body.rstrip()}\n")
 

@@ -32,6 +32,13 @@ VERSION = re.search(r"^version:\s*[\"']?([\d.]+)", REGISTRY.read_text(encoding="
 
 
 def fm(**kw):
+    # A LIVING DOCUMENT REREAD ON A DAY OTHER THAN THE ONE IT WAS CREATED CARRIES THE
+    # SENTENCE `LC008` ASKS FOR, unless the fixture writes its own: the note is what a
+    # reading leaves behind, and a fixture that plants no defect there has to carry it or
+    # the finding it exists to produce arrives inside a list of unrelated ones.
+    if (kw.get("lifecycle") == "living" and "last_review" in kw and "review_scope" not in kw
+            and str(kw.get("created", ""))[:10] != str(kw.get("last_review", ""))[:10]):
+        kw["review_scope"] = "the whole file"
     return "---\n" + "\n".join(f"{k}: {v}" for k, v in kw.items()) + "\n---\n\n"
 
 
@@ -122,6 +129,7 @@ Run `validate.py --emit-index` to fill this in.
         "owners: [maria]\n"
         "created: 2026-01-01\n"
         "last_review: 2026-08-01 09:00\n"
+        "review_scope: the whole manifest\n"
         # Declared, so the commit the ARC attests resolves to a repository. Without it the
         # attestation names something no map knows and VER001 is right to say so.
         "code:\n"
@@ -380,7 +388,8 @@ each decision still matters, which no generator can produce.
         "products: [atlas]\n"
         "owners: [maria]\n"
         "created: 2026-01-01\n"
-        "last_review: 2026-08-01 09:00\n"),
+        "last_review: 2026-08-01 09:00\n"
+        "review_scope: the whole manifest\n"),
 
     # 3. FM002: PBR missing `owners`
     "products/atlas/PBR.md": fm(
