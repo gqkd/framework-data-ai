@@ -463,10 +463,24 @@ def load_config(project: dict) -> tuple[dict, int]:
                      "validator knows. A typo here switches nothing on, silently. "
                      "Run --list-checks for the catalog.")
         if checks[code]["level"] == RETIRED:
-            sys.exit(f"framework.yaml overrides {code!r}, which was retired in "
-                     f"{checks[code].get('retired_in', 'an earlier version')}: nothing emits "
-                     "it and no level brings it back. Remove the line; the catalog says what "
-                     "took its place.")
+            since = checks[code].get("retired_in", "an earlier version")
+            declared, gone = semver(project.get("framework_version")), semver(since)
+            if declared and gone and declared < gone:
+                # NOT WRONG YET. A project that still declares the version before the one
+                # that retired the code wrote the line when it was right, and is running this
+                # validator to see what the move asks of it -- `migrate.py` runs it exactly
+                # so. The line switches nothing on, which is said on stderr rather than in a
+                # finding, and `--adopt` removes it with the number. Once the project declares
+                # the version that retired the code, the same line stops the run below.
+                print(f"framework-data-ai: framework.yaml pins {code!r}, retired in {since}. "
+                      f"This repository declares {project.get('framework_version')}, so the "
+                      "line is ignored until it adopts, and `migrate.py --adopt` removes it.",
+                      file=sys.stderr)
+                continue
+            sys.exit(f"framework.yaml overrides {code!r}, which was retired in {since}: "
+                     "nothing emits it and no level brings it back. Remove the line; the "
+                     "catalog says what took its place, and `migrate.py --adopt` would have "
+                     "removed it with the number.")
         checks[code] = {**checks[code], **override}
     return checks, stale_days
 

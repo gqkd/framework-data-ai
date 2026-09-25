@@ -90,10 +90,15 @@ introduced it, and a field, `review_scope`, that says what a reading covered. Th
 is three steps and one preliminary, in this order, because each one is what unblocks the
 next. The check that recognises each step is named beside it.
 
-0. **Remove the annotations that explain nothing any more.** `LC005` is retired and never
-   fires again; `LC006` no longer counts a change to `review_scope` as a change. `AN001`
-   names every annotation in `.framework/expected-findings.yaml` whose finding is gone, and
-   `--adopt` refuses while one stands.
+0. **Remove the annotations that explain nothing any more, and the pin on `LC005`.**
+   `LC005` is retired and never fires again; `LC006` no longer counts a change to
+   `review_scope` as a change. `AN001` names every annotation in
+   `.framework/expected-findings.yaml` whose finding is gone, and `--adopt` refuses while one
+   stands. A `checks:` line in `framework.yaml` that pins `LC005` is listed by `migrate.py`
+   under GONE and removed by `--adopt` with the number; while the project still declares the
+   older version the validator ignores the line and says so on stderr, and once the project
+   declares `4.0.0` the same line **stops the validator** before any report. Do not write the
+   number by hand with the pin still there.
 1. **Correct the attestations that cannot be true.** `LC007` names every living document
    whose `last_review` is later than the commit that carries it. Reattest each one with
    `skills/audit/scripts/attest.py`, run by a person after the content is committed: it

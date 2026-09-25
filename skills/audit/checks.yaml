@@ -235,8 +235,11 @@ checks:
       looks at that. THE CODE IS NOT REUSED, and the entry stays here rather than being
       deleted: an annotation joins on the code, and a number that changed meaning under an
       annotation would make a reason written about one thing cover another. An annotation
-      left on this code is what `AN001` reports, and a `framework.yaml` that pins it stops
-      the validator with a sentence saying so.
+      left on this code is what `AN001` reports. A `framework.yaml` that pins it is ignored,
+      with a line on stderr, while the project still declares a version before 4.0.0, so that
+      `migrate.py` can run the comparison and file the pin under GONE; `--adopt` removes the
+      line with the number; and a project that declares 4.0.0 with the pin still there is
+      stopped with a sentence saying so.
 
   LC006:
     level: warn

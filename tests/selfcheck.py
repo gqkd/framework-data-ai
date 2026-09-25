@@ -4606,6 +4606,24 @@ class _Repo:
         return {f["code"] for f in out["findings"]} & {"LC006", "LC007", "LC008"}
 
 
+def _previous_version() -> str | None:
+    """The version declared before the current one, read out of the registry's history.
+
+    Never typed: a literal here is the line that goes wrong silently the day the framework
+    moves, and the check on version literals below this file's own rule would report it.
+    """
+    migrate = _load(ROOT / "skills" / "audit" / "scripts" / "migrate.py", "migrate_for_versions")
+    now = migrate.semver(REGISTRY["version"])
+    for sha in subprocess.run(["git", "-C", str(ROOT), "rev-list", "-60", "HEAD"],
+                              capture_output=True, text=True).stdout.split():
+        v = migrate.registry_version(subprocess.run(
+            ["git", "-C", str(ROOT), "show", f"{sha}:{migrate.REGISTRY_REL}"],
+            capture_output=True, text=True).stdout)
+        if v and migrate.semver(v) and now and migrate.semver(v) < now:
+            return v
+    return None
+
+
 @check("a last_review later than the commit that carries it is an error, compared at the minute in the commit's offset")
 def _review_not_ahead():
     # THE CASE THIS IS FOR. Four living documents attested with instants after their own
@@ -5084,9 +5102,27 @@ def _retired_codes():
                                              "checks:\n  LC005: warn\n")
         r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(root), "--json"],
                            capture_output=True, text=True)
-        if r.returncode == 0 or "retired" not in r.stderr:
-            problems.append(f"a framework.yaml pinning LC005 ran (exit {r.returncode}): a pin on "
-                            "a retired code switches nothing on and has to be said")
+        if r.returncode == 0 or "retired" not in r.stderr or r.stdout.strip():
+            problems.append(f"a framework.yaml declaring this version and pinning LC005 ran "
+                            f"(exit {r.returncode}): a pin on a retired code switches nothing "
+                            "on and has to be said")
+        # Declaring the version before the one that retired it, the same line is not wrong
+        # yet: the run goes on, says so on stderr, and `migrate.py` can compare.
+        previous = _previous_version()
+        if previous is None:
+            return problems + ["no earlier version in the last sixty commits: the case cannot "
+                               "be built"]
+        (root / "framework.yaml").write_text(f'framework_version: "{previous}"\n'
+                                             "checks:\n  LC005: warn\n")
+        r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(root), "--json",
+                            "--stale-days", "36500"], capture_output=True, text=True)
+        if r.returncode not in (0, 1) or not r.stdout.strip():
+            problems.append(f"a framework.yaml declaring 3.7.0 and pinning LC005 was stopped "
+                            f"(exit {r.returncode}): the project has not adopted the version "
+                            "that retired the code, and stopping it hides the migration")
+        elif "retired" not in r.stderr or "ignored" not in r.stderr:
+            problems.append("the ignored pin was not said on stderr: a line that switches "
+                            "nothing on has to be announced somewhere")
         r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(root),
                             "--list-checks"], capture_output=True, text=True)
         (root / "framework.yaml").write_text(f"framework_version: {REGISTRY['version']}\n")
@@ -5094,6 +5130,96 @@ def _retired_codes():
                             "--list-checks"], capture_output=True, text=True)
         if not re.search(r"^retired\s+LC005", r.stdout, re.M):
             problems.append("--list-checks does not print LC005 as retired")
+    return problems
+
+
+@check("migrate.py files a pin on a retired code under GONE and --adopt removes the line, instead of stopping")
+def _retired_pin_migrates():
+    # THE PROJECT THAT PINNED LC005 IS THE ONE THAT TOOK IT MOST SERIOUSLY, and the new
+    # validator stops on the pin once the project declares 4.0.0. A migration tool that
+    # stopped on the same line would leave that project no way to see what the move asks: its
+    # job is to say what changes, and the pin is one of the things that go.
+    migrate = _load(ROOT / "skills" / "audit" / "scripts" / "migrate.py", "migrate_for_pins")
+    problems = []
+    kept = migrate.without_pins('framework_version: N\n# kept\nchecks:\n'
+                                '  LC005: error   # bitten once\n  XP003: off\n', ["LC005"])
+    if "LC005" in kept or "# kept" not in kept or "XP003: off" not in kept:
+        problems.append(f"without_pins produced {kept!r}: the pinned line goes, the comment "
+                        "and the other pins stay")
+    kept = migrate.without_pins('checks:\n  LC005:\n    level: error\n  XP003: off\n',
+                                ["LC005"])
+    if "level" in kept or "XP003: off" not in kept:
+        problems.append(f"the long form left an orphan or took a neighbour: {kept!r}")
+
+    previous = _previous_version()
+    if previous is None:
+        return problems + ["no earlier version in the last sixty commits: the case cannot be built"]
+
+    def project(where: Path) -> Path:
+        where.mkdir(parents=True)
+        (where / "framework.yaml").write_text(
+            f'framework_version: "{previous}"\n# why the pin is here\nchecks:\n'
+            "  LC005: error   # bitten once\n", encoding="utf-8")
+        (where / "products" / "p").mkdir(parents=True)
+        (where / "products" / "p" / "PBR.md").write_text(
+            _brief("p", "2026-01-01 09:00", created="2026-01-01"), encoding="utf-8")
+        return where
+
+    with tempfile.TemporaryDirectory() as tmp:
+        proj = project(Path(tmp) / "project")
+        r = subprocess.run([sys.executable, str(ROOT / "skills/audit/scripts/migrate.py"),
+                            "--root", str(proj), "--framework", str(ROOT), "--json"],
+                           capture_output=True, text=True)
+        try:
+            out = json.loads(r.stdout)
+        except json.JSONDecodeError:
+            return problems + [f"migrate.py returned nothing readable: {r.stderr.strip()[-300:]}"]
+        if out["problems"]:
+            problems.append(f"migrate.py could not compare a project pinning LC005: "
+                            f"{out['problems']}")
+        pins = [g for g in out["gone"] if g["code"] == "LC005" and g["path"] == "framework.yaml"]
+        if len(pins) != 1 or "--adopt" not in pins[0]["message"]:
+            problems.append(f"the pin is not under GONE with what removes it: {pins}")
+        if any(g["code"] == "LC005" for g in out["new"]):
+            problems.append("LC005 appeared under NEW: a retired code is not migration work")
+
+        # `--adopt` needs a clean committed framework to bind the pin to, like the check on
+        # the migration being executable: an isolated clone of what is committed here.
+        dirty = subprocess.run(["git", "-C", str(ROOT), "status", "--porcelain"],
+                               capture_output=True, text=True).stdout.strip()
+        if dirty:
+            problems.append("NOT RUN: the working tree is dirty, so `--adopt` against a clone "
+                            "of it would test committed bytes that are not these. Commit and "
+                            "run again")
+            return problems
+        clone = Path(tmp) / "trusted"
+        c = subprocess.run(["git", "clone", "-q", "--local", "--no-hardlinks", str(ROOT),
+                            str(clone)], capture_output=True, text=True)
+        if c.returncode:
+            return problems + ["could not clone the framework for the adoption: " + c.stderr]
+        proj2 = project(Path(tmp) / "project-adopting")
+        r = subprocess.run([sys.executable, str(ROOT / "skills/audit/scripts/migrate.py"),
+                            "--root", str(proj2), "--framework", str(clone), "--adopt",
+                            "--json"], capture_output=True, text=True)
+        after = (proj2 / "framework.yaml").read_text(encoding="utf-8")
+        if REGISTRY["version"] not in after:
+            problems.append(f"the project pinning LC005 could not adopt: {r.stdout[-400:]}")
+        if "LC005" in after:
+            problems.append("`--adopt` wrote the number and left the pin, which stops the "
+                            "validator of the version just adopted")
+        if "# why the pin is here" not in after:
+            problems.append("`--adopt` dropped a comment from framework.yaml")
+        v = subprocess.run([sys.executable, str(VALIDATE), "--root", str(proj2), "--json",
+                            "--stale-days", "36500"], capture_output=True, text=True)
+        if v.returncode not in (0, 1) or not v.stdout.strip():
+            problems.append(f"after adopting, the validator does not run on the project "
+                            f"(exit {v.returncode}): {v.stderr.strip()[-200:]}")
+    # And the adoption note names the pin where it names the annotations.
+    note = (ROOT / "references" / "adoption.md").read_text(encoding="utf-8")
+    step0 = note[note.find("0. **Remove"):note.find("1. **Correct")]
+    if "pin" not in step0 or "stops the validator" not in step0:
+        problems.append("adoption.md step 0 does not say that a pin on LC005 stops the "
+                        "validator once the project declares 4.0.0")
     return problems
 
 

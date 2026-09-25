@@ -1168,7 +1168,10 @@
 # ADOPTION, IN THIS ORDER. The order is forced, and for one step it is the reverse of the rule
 # written further up in this file.
 #   0. `AN001` names every annotation left on `LC005`, and every `LC006` annotation whose finding
-#      is gone. Remove them: `--adopt` refuses while they stand.
+#      is gone. Remove them: `--adopt` refuses while they stand. A `checks:` line pinning `LC005`
+#      is filed by `migrate.py` under GONE and removed by `--adopt`; ignored, with a line on
+#      stderr, while the project still declares the older version; a stop once it declares
+#      this one. Writing the number by hand with the pin in place is how to meet that stop.
 #   1. `LC007` names every attestation later than its own commit. Reattest those documents with
 #      the command, which writes the offset. An `error` is not annotatable and blocks `--adopt`,
 #      so this repair comes before adopting -- the one place where "adopt first, write the field

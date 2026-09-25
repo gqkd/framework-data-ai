@@ -305,6 +305,72 @@ def previous_framework(args, declared, root, framework):
                                                 "commit": sha, "commit_verified": True}
 
 
+def retired_pins(root: Path, framework: Path) -> list[dict]:
+    """The `checks:` lines of the project that pin a code the new catalog has retired.
+
+    A RETIRED CODE IS THE ONE THING A PIN CANNOT SURVIVE, and the project that pinned it is
+    the project that took the check most seriously. The new validator ignores the line while
+    the project still declares the older version and stops on it once the project declares
+    the new one -- so a project that adopted by writing the number would be stopped before
+    seeing any migration. This tool's job is to say what changes, not to refuse: the pin is
+    filed under GONE, because the move is what makes it meaningless, and `--adopt` removes
+    the line with the number so that nothing is left for the validator to stop on.
+    """
+    cfg = root / "framework.yaml"
+    if not cfg.exists():
+        return []
+    try:
+        settings = yaml.safe_load(cfg.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError:
+        return []
+    pins = settings.get("checks") if isinstance(settings, dict) else None
+    if not isinstance(pins, dict):
+        return []
+    catalog = yaml.safe_load((framework / "skills/audit/checks.yaml")
+                             .read_text(encoding="utf-8")).get("checks") or {}
+    out = []
+    for code, override in pins.items():
+        spec = catalog.get(code) or {}
+        if spec.get("level") != "retired":
+            continue
+        level = override.get("level") if isinstance(override, dict) else override
+        out.append({"code": code, "path": "framework.yaml", "level": "retired",
+                    "message": (f"pinned at {level!r} in framework.yaml, and retired in "
+                                f"{spec.get('retired_in', 'this version')}: the line switches "
+                                "nothing on, and the validator of the new version stops on it "
+                                "once the project declares that version. `--adopt` removes "
+                                "the line with the number.")})
+    return out
+
+
+PIN_LINE = re.compile(r"^([ \t]+)([A-Z]{2,3}\d{3})\s*:")
+
+
+def without_pins(text: str, codes) -> str:
+    """`framework.yaml` without the `checks:` lines pinning `codes`, comments and all else kept.
+
+    Line based, like `adopt`, for the reason given there. The long form -- a key with a
+    nested `level:` under it -- goes with its nested lines, or the file would be left with an
+    indented orphan that no longer parses.
+    """
+    codes = set(codes)
+    lines = text.split("\n")
+    kept: list[str] = []
+    i = 0
+    while i < len(lines):
+        m = PIN_LINE.match(lines[i])
+        if m and m.group(2) in codes:
+            indent = len(m.group(1))
+            i += 1
+            while (i < len(lines) and lines[i].strip()
+                   and len(lines[i]) - len(lines[i].lstrip()) > indent):
+                i += 1
+            continue
+        kept.append(lines[i])
+        i += 1
+    return "\n".join(kept)
+
+
 def adoption_problem(root, framework, current):
     """Never write a Git pin for a dirty/different tree or preserve a stale package pin."""
     cfg = yaml.safe_load((root / "framework.yaml").read_text(encoding="utf-8")) if (root / "framework.yaml").exists() else {}
@@ -320,8 +386,8 @@ def adoption_problem(root, framework, current):
     return None
 
 
-def adopt(cfg: Path, version: str, commit: str | None) -> None:
-    """Write the new number, and the pinned commit beside it when there is one.
+def adopt(cfg: Path, version: str, commit: str | None, drop=()) -> None:
+    """Write the new number, the pinned commit beside it when there is one, and no retired pin.
 
     Both or neither, and that is the point of doing it here. A project that pins moves two
     facts at once; a migration that moved one of them would leave the pin naming the version
@@ -347,6 +413,10 @@ def adopt(cfg: Path, version: str, commit: str | None) -> None:
     pin = re.compile(r"^framework_commit:.*$", re.M)
     if commit and pin.search(text):
         text = pin.sub(f'framework_commit: "{commit}"', text, count=1)
+    # A `checks:` line on a code this version retired: filed under GONE by the comparison,
+    # removed here with the number, or the validator of the version just adopted stops on it.
+    if drop:
+        text = without_pins(text, drop)
     cfg.write_text(text, encoding="utf-8")
 
 
@@ -448,6 +518,10 @@ def main() -> int:
                 new = findings(framework / VALIDATE_REL, root)
                 if origin.get("commit"):
                     report["commit"] = origin["commit"][:12]
+                # The pins on codes the move retires. Not a finding of either validator: the
+                # old one applied the line, the new one ignores it and says so on stderr. It
+                # is filed here, under GONE, because that is what the move does to it.
+                report["gone"].extend(retired_pins(root, framework))
                 for k in sorted(set(old) | set(new)):
                     f = new.get(k) or old[k]
                     # `FW001` and `FW002` are about the number this tool exists to move.
@@ -512,7 +586,7 @@ def main() -> int:
             top = git(["rev-parse", "--show-toplevel"], framework)
             commit = (head.stdout.strip() if head.returncode == 0 and top.returncode == 0
                       and Path(top.stdout.strip()).resolve() == framework else None)
-            adopt(cfg, current, commit)
+            adopt(cfg, current, commit, drop=[p["code"] for p in retired_pins(root, framework)])
             report["adopted"] = current
 
     if args.json:
