@@ -99,11 +99,14 @@ evidence document into a decoration and passes every check.
 **You do not write `last_review`. You propose it.** It is the fastest way to make a
 validator green and the only one that makes the whole framework useless: the field is not a
 fact about the file, it is somebody's claim that they read the document and found it still
-true. A run can say which documents it read and offer the new instant for each; a person
-puts it in. The rule used to read "never without having read the document", and an agent
-that had read was authorised -- which is how six living documents in one repository came to
-attest the same minute, one of them carrying a notice at the top saying it still had to be
-reread in full.
+true. A run can say which documents it read and offer, for each, the sentence that belongs in
+`review_scope`; a person attests, with `skills/audit/scripts/attest.py`, which writes the
+instant it runs at and the sentence, and commits nothing. **You do not run that command
+either**, and the rule in `routing-table.md §5` about values the repository already contains
+does not reach it: the clock is in the repository, the reading is not. The rule used to read
+"never without having read the document", and an agent that had read was authorised -- which
+is how six living documents in one repository came to attest the same minute, one of them
+carrying a notice at the top saying it still had to be reread in full.
 
 ## How to propose a write
 

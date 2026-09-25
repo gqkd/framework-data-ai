@@ -67,12 +67,22 @@ the same minute, and one of them opened with a notice -- left standing by that s
 saying the rest of it was still written against something superseded and had to be reread in
 full. Reading is not the part that can be checked; who is making the claim is.
 
-So: list the documents you read, offer the instant for each, and let the person put it in.
-A proposal costs them one keystroke per document and leaves the attestation attached to
-somebody who can be asked about it. If `LC002` fires, the work is still to read the
-document. If you are not going to read it, leave the warning standing: it is doing its job.
-`LC005` reports several living documents attesting the same instant, which is the shape this
-failure takes when it happens anyway.
+So: list the documents you read, offer for each the sentence that would go in
+`review_scope` -- what the reading covered and what it did not -- and let the person attest.
+The person does it with `scripts/attest.py`, once per document, after the content is
+committed: it writes `last_review` as the instant it runs at, with its offset, writes the
+sentence beside it, prints the commit whose text is being attested, and commits nothing.
+**You do not run it.** The instant it writes is "already in the repository" only in the
+sense that a clock is; the fact it records is that a named person finished reading, and
+that is the fact no run can supply. This is the one place where the rule of *Fix directly,
+or propose* below does not decide, and it is said here so that it is not derived. If
+`LC002` fires, the work is still to read the document. If you are not going to read it,
+leave the warning standing: it is doing its job. `LC007` reports a `last_review` later than
+the commit that carries it, which is a value that was chosen rather than read, and it is an
+error; `LC008` reports a `review_scope` that is empty, shared across a batch, or copied
+forward from the previous attestation, which is the shape this failure takes when it happens
+anyway. `LC005` used to report several documents on one minute and is retired: documents
+attested in one commit share a minute honestly now.
 
 ## Fix directly, or propose
 

@@ -122,8 +122,9 @@ their being switched back on.
 **`references/preamble.md`** — read `AGENTS.md`, the open registers that bind the work
 (`products/<p>/OPEN.md`, `platform/OPEN.md`, and the root one) and the `product.yaml`
 first; the
-class rules; never invent a field that attests something; propose `last_review` to a person,
-never write it automatically because a run read the document.
+class rules; never invent a field that attests something; propose `last_review` and the
+`review_scope` sentence to a person, never write them because a run read the document, and
+never run `attest.py`, which is how the person writes them.
 
 **`references/operational-memory.md`** — the operating modes and their boundaries, why a
 `CHG` that calls itself approved is not authority, and the discipline that separates

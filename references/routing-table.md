@@ -87,7 +87,7 @@ A correction is the most delicate operation, because the class of the document d
 
 | Class of the document | Allowed operation |
 |---|---|
-| **living** | edit in place. `last_review` is proposed and not written: it attests a reading, and the instant goes in the proposal (`YYYY-MM-DD HH:MM`, not the date alone: it can happen more than once in a day) |
+| **living** | edit in place. `last_review` and `review_scope` are proposed and not written: they attest a reading, and the proposal carries the sentence for `review_scope` (what the reading covered, what it did not). The person writes both with `skills/audit/scripts/attest.py`, which stamps the instant it runs at, with its offset |
 | **immutable** | **never edit.** Create a new document with `supersedes`, and move the old one to `status: superseded` |
 | **append-only** | **never rewrite a line.** Add a linked event (`ANA-NNN` on `SIG-NNN`) |
 
@@ -168,6 +168,12 @@ destination, close an open decision or satisfy a cascade obligation.
 no conflict. In practice that is recording a `SIG` in `LOG`, or an entry in the parking lot
 in `§3` of the root `OPEN.md`. These destroy nothing, and asking would only make them
 annoying.
+
+**One write is excluded from this whatever shape it takes:** `last_review` and
+`review_scope`, and `skills/audit/scripts/attest.py`, which is how a person writes them. The
+instant that command stamps is "already in the repository" only in the sense that a clock
+is; the fact it records is that a named person finished reading, and no run supplies that
+fact. A run proposes the sentence for `review_scope` and stops. It does not run the command.
 
 **Propose and wait** in every other case, and in particular: the cascade touches more than
 one file · an immutable is involved · you detected a conflict · the classification was

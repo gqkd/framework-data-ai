@@ -6,6 +6,9 @@ status: active
 owners: [NAME]
 created: YYYY-MM-DD HH:MM
 last_review: YYYY-MM-DD HH:MM
+# review_scope: written beside `last_review` by `attest.py`, after a person rereads a
+# document that already exists: what the reading covered and what it did not. Not on
+# day one, because a creation is not a reading.
 classification: internal
 ---
 
@@ -72,7 +75,7 @@ here.
 5. **Respect the artifact class.**
    - `immutable` → do not modify it; create a new one with `supersedes`
    - `append-only` → do not rewrite lines; add a linked event
-   - `living` → modify it in place; propose `last_review` to a person, never auto-attest a review
+   - `living` → modify it in place; propose `last_review` and the `review_scope` sentence to a person, who attests with `attest.py`; never auto-attest a review and never run that command
 6. **If a fact is not documented, say so.** Absence is information. Prefer "it is not
    documented where this data lives" to an invented answer.
 
