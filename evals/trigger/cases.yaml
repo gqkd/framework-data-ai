@@ -378,3 +378,36 @@ cases:
   expect: none
   why: 'trap: simple language, but the reader is inside the team — that is the README reading
     order, and no skill owns onboarding'
+# Added with `presentation` in 4.0.1 and not yet run. `unmeasured: true` keeps them out of the
+# denominators of the tables in evals/README.md, which were measured on the set without them;
+# the first run that scores them removes the key and adds the rows.
+- prompt: mi fai una presentazione del prodotto per il cliente? niente di tecnico, cosa fa oggi e
+    cosa manca
+  expect: presentation
+  why: a customer-facing explanation of the product, done and to do
+  unmeasured: true
+- prompt: devo spiegare atlas al commerciale e a due clienti la settimana prossima, mi prepari delle
+    slide semplici
+  expect: presentation
+  why: non-technical readers outside development, slides as the output
+  unmeasured: true
+- prompt: can you turn our docs into a short PowerPoint the client can understand, with a roadmap
+  expect: presentation
+  unmeasured: true
+- prompt: serve una versione semplificata della documentazione per il business, in ppt, con uno schema
+    di come funziona
+  expect: presentation
+  unmeasured: true
+- prompt: ho il deck del cliente con l'offerta, mettilo dentro e tira fuori i requisiti
+  expect: start
+  why: 'trap: a deck handed over is a corpus to ingest, not one to produce'
+  unmeasured: true
+- prompt: per lo steering di giovedì mi serve il SAL con cosa devono decidere gli altri uffici, anche
+    in slide se vuoi
+  expect: business
+  why: 'trap: slides mentioned, but the reader acts on the project and the content is the SAL'
+  unmeasured: true
+- prompt: fammi le slide per il talk al meetup su come abbiamo usato dbt per il layer silver
+  expect: none
+  why: 'trap: slides and a non-specialist audience, but about engineering, not the product'
+  unmeasured: true

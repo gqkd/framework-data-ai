@@ -336,6 +336,9 @@ def wrote_by_framework(path: Path) -> bool:
     return head.startswith("---") and "schema: framework/" in head
 
 
+FRAMEWORK_OUTPUT = ("_meta/extract", "_meta/business", "_meta/presentation")
+
+
 def find_corpus(root: Path) -> list[tuple[str, int, int]]:
     """Directories holding documents somebody handed over, most likely first.
 
@@ -362,9 +365,12 @@ def find_corpus(root: Path) -> list[tuple[str, int, int]]:
                for x in parts[:-1]):
             continue
         rel_dir = "/".join(parts[:-1])
-        # This framework's own output, not somebody's documents. Named as a path so a
-        # project keeping an ETL step in `extract/` is not quietly skipped over.
-        if rel_dir == "_meta/extract" or rel_dir.startswith("_meta/extract/"):
+        # This framework's own output, not somebody's documents. Named as paths so a
+        # project keeping an ETL step in `extract/` is not quietly skipped over. The
+        # presentation is the one that matters most: it is a `.pptx`, the format a corpus is
+        # made of, and grouped with `_meta/corpus` it would come back in as a document the
+        # customer wrote.
+        if any(rel_dir == d or rel_dir.startswith(d + "/") for d in FRAMEWORK_OUTPUT):
             continue
         if suffix in {".md", ".txt"} and wrote_by_framework(p):
             continue

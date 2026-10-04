@@ -60,6 +60,7 @@ is being exercised.
 | P-12 | Adopting a version of the framework | runnable | ADMIN | `framework.yaml`, the migrated artifacts, the indices | `audit`: `scripts/migrate.py`, `--emit-index` |
 | P-13 | Superseding a decision | manual | whoever writes the new `DEC`, `ADMIN` where the cascade reaches the substrate | the new `DEC`, the superseded one's `status`, the entries that depended on it | `requirement` or `resolve` writes it, `audit` reports what stayed behind |
 | P-14 | Weekly business status | runnable | ADMIN assembles; business actors decide or act where requested | `_meta/business/SAL-NNN`, and nothing else: it writes no artifact | `business` |
+| P-15 | Presenting the product outside the project | runnable | ADMIN assembles; UB hands it over | `_meta/presentation/PRS-NNN/`, and nothing else: it writes no artifact | `presentation` |
 
 ## How they feed each other
 
@@ -959,6 +960,46 @@ now holds it.
 contradict each other launders drift into a sentence somebody repeats in a meeting, which is
 worse than no update at all.
 
+## P-15 · Presenting the product outside the project
+
+**Status:** runnable.
+
+### Trigger
+
+Somebody outside the project — a customer, a sponsor, a salesperson — needs to understand what
+the product is, what it does today and how far along it is, without reading anything technical.
+
+### Actors
+
+- `ADMIN`: assembles the presentation from authoritative sources; it has no owner and
+  introduces no claim.
+- `UB`: says which customer it is for, if any, and hands it over.
+
+### How it runs
+
+```mermaid
+flowchart LR
+  gate["Validator first:<br/>errors, stale indices"] --> read["The artifacts, per the<br/>slide-to-source table"]
+  read --> filter["What a customer may see:<br/>no risks, no promises,<br/>no other customers"]
+  filter --> outline["outline.yaml,<br/>checked by render.py"]
+  outline --> deck(["PRS-NNN .pptx, dated,<br/>in _meta/presentation/"])
+```
+
+**It is P-14 with the inside taken out.** The same sources, retold for a reader who will not
+act on the project but repeat it, so what is left out is the process as much as what goes in:
+risks, open decisions, commitments, anything about another customer. The roadmap says what is
+done and what is left and never when, and what is `conditional` is not on it at all, because
+an item shown to a customer with a caveat is remembered without the caveat.
+
+If a sentence appears on a slide first, it does not belong there: it goes back through `P-02`
+or `P-04` like a fact first written in a SAL.
+
+### Skill
+
+`presentation`. `skills/presentation/scripts/render.py --check` refuses an outline that would
+hand a customer an identifier, a date on the roadmap or a slide with no source, before anything
+is rendered.
+
 ## Skill coverage
 
 | Skill | Processes |
@@ -970,9 +1011,11 @@ worse than no update at all.
 | `release` | P-08, shipping the fix from P-09 |
 | `audit` | P-02 and P-11 (second pass), P-07 (pull request mode), P-10 (the documents half of it), P-12 (`migrate.py`) |
 | `business` | P-14 |
+| `presentation` | P-15 |
 
-One skill arrived after this table was first written, and it is `business`: P-14 has a
-reader nobody else here writes for. Nothing else is missing, and what is left are
+Two skills arrived after this table was first written, `business` and `presentation`: P-14
+and P-15 have readers nobody else here writes for, the people who steer the project and the
+people it is shown to. Nothing else is missing, and what is left are
 deterministic integrations and prose: the connectors
 towards the issue tracker and support (`P-03`), coordinated access to the state of the
 repositories and the deploys (`P-10`), the emergency protocol (`P-09`).

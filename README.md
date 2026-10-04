@@ -16,7 +16,7 @@ decisions, products, initiatives and corpus, live in that project's repository, 
 | `framework-flow.mermaid.md` | The lifecycle with its gates, drawn. It renders where you are reading it; the fence is what makes that happen, and the diagram inside it is importable into draw.io: *Arrange → Insert → Advanced → Mermaid* |
 | `Framework.drawio` | Where the layout came from, and not a second copy of the truth. The mermaid file is the one kept current; this one has not been redrawn since 2026-08-06 and is not maintained. Import the mermaid if you want a draw.io view of today |
 | `SKILLS.md` | The skills that operate the framework, and where their boundaries fall |
-| `PROCESSES.md` | The fourteen operating processes: who does what, what each one leaves written, and which of them the tooling actually carries today. Diagrammed, one per process |
+| `PROCESSES.md` | The operating processes: who does what, what each one leaves written, and which of them the tooling actually carries today. Diagrammed, one per process |
 | `templates/` | One template per artifact, each with its anti-patterns at the bottom |
 | `schemas/` | The artifact catalog and what each type is allowed to be. `artifact-types.yaml` is the source; `generate.py` projects it into the JSON Schemas, into `FRAMEWORK.md §7` and into `templates/README.md` |
 | `skills/` | The skills themselves. `audit/` also carries the gate: `scripts/validate.py`, `scripts/migrate.py`, `scripts/attest.py` (how a person attests a reading) and `checks.yaml` |
@@ -64,7 +64,7 @@ There are three separate things here, and only the last one is public.
 
 ```bash
 ln -s $PWD ~/.claude/skills/framework-data-ai
-claude plugin details framework-data-ai        # should list all seven
+claude plugin details framework-data-ai        # should list every skill in skills/
 ```
 
 Use this while you are still changing the skills. Edit a skill and the change is live in
@@ -139,7 +139,7 @@ marketplace by URL. Nothing above requires this.
 <!-- generated: cost -->
 *Generated from the skills themselves. Edit those, not this line.*
 
-**7 skills**, whose names and descriptions are about 6,501 characters, so roughly **1,625 tokens** loaded into every session at four characters each, whether or not a skill runs. Each one costs another two to three thousand when it does.
+**8 skills**, whose names and descriptions are about 7,407 characters, so roughly **1,852 tokens** loaded into every session at four characters each, whether or not a skill runs. Each one costs another two to three thousand when it does.
 <!-- /generated -->
 
 ### If you have client documents to read
@@ -172,6 +172,8 @@ understand Italian and English equally.
 | Choosing what to build next | *"what do we build this cycle?"* | `cycle` |
 | A release candidate is ready | *"can we ship 1.7?"* | `release` |
 | Before you merge, or CI is failing | *"check the docs"* | `audit` |
+| The steering meeting is this week | *"let's do the weekly SAL"* | `business` |
+| A customer needs to understand the product | *"make a presentation of the product for the client"* | `presentation` |
 
 ### A first session
 

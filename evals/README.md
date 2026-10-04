@@ -7,8 +7,15 @@ here, and it needs a model to run, which is why it is not in CI.
 
 ## Triggering
 
-`trigger/cases.yaml` holds 118 prompts, each labelled with the one skill that should
+`trigger/cases.yaml` holds 125 prompts, each labelled with the one skill that should
 answer, or `none`.
+
+**Seven of them are marked `unmeasured: true`, and the mark is the lesson of the paragraph
+below.** `presentation` arrived in 4.0.1 with four cases of its own and three traps, one each
+toward `start`, `business` and `none`. None of them has been run, and the tables further down
+were measured on the 118 without them: the mark keeps those seven out of the denominators the
+self check compares, so a score is never read against a set it was not measured on. The run that
+scores them removes the mark and adds its own table.
 
 **Six of them have never been run, and for four days none of them could be.** `business`
 arrived in 2.8.11 with four cases of its own, one more for `audit` and one more negative,
@@ -19,7 +26,7 @@ quoting is fixed; the six new cases are still unmeasured, and the table below is
 a 118 row set.
 
 Naming the expected skill rather than asking a yes/no per skill is the whole design. The
-seven overlap, and a prompt going to the wrong sibling is worse than a prompt going nowhere:
+skills overlap, and a prompt going to the wrong sibling is worse than a prompt going nowhere:
 the wrong skill will confidently do something. One run scores both questions, and the
 confusion between siblings comes out as a matrix instead of as an impression.
 
@@ -45,7 +52,7 @@ the way they will in front of a user:
 
 ```bash
 ln -s $PWD ~/.claude/skills/framework-data-ai
-claude plugin details framework-data-ai        # should list all seven
+claude plugin details framework-data-ai        # should list every skill in skills/
 ```
 
 ## Where it stands

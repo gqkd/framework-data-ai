@@ -5,12 +5,12 @@ description: >
   product does today, what is left to do, where it is going and what the target is, and which
   needs and difficulties have to be faced — including the decisions or actions required from
   people outside development. Non-technical register for sponsors,
-  product owners, operations, commercial teams, management and steering meetings. Triggers on
+  product owners, operations, management and steering meetings. Triggers on
   "SAL settimanale", "aggiornamento settimanale", "stato avanzamento lavori", "dove siamo
   con il progetto", "aggiornamento per il management", "azioni richieste al business",
   "weekly status update", "steering update", "project status for management", "what changed
-  this week". Also use for a non-technical product update that must distinguish current state,
-  direction and target. Do not use for engineering cycle planning or release approval.
+  this week". Do not use for engineering cycle planning, release approval, or a presentation
+  of the product for customers, which is `presentation`.
 ---
 
 # business

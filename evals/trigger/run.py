@@ -25,7 +25,7 @@ numbers were low for reasons that had nothing to do with the descriptions. Insta
 plugin first, from a checkout:
 
     ln -s $PWD ~/.claude/skills/framework-data-ai      # loads as framework-data-ai@skills-dir
-    claude plugin details framework-data-ai            # should list all seven
+    claude plugin details framework-data-ai            # should list every skill in skills/
 
 WHY NOT `claude plugin eval`. Because it is in early access and refuses to run on this
 account. It is the right tool the day it opens: it reads `evals/**/case.yaml`, resolves

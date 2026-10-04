@@ -44,6 +44,11 @@ fixtures:
   # state, movement and actions grounded in sources.
   business: evals/fixtures/build/requirement/seed
 
+  # The same fixture again, for the same reason: a `PBR`, an `ARC` with both sections and a
+  # roadmap are what a presentation retells. It has no `REL`, so "what it does today" rests on
+  # the `PBR` alone there -- which changes what the skill writes, not whether it should fire.
+  presentation: evals/fixtures/build/requirement/seed
+
   # A project with business documents and no framework in it, which is the only state
   # `start` is written for. Measuring it in a documented repository asks it to set up
   # something that is already set up.

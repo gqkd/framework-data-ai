@@ -1193,7 +1193,38 @@
 # instead of a `git show` per document. The validator's own fixtures were run under `LC007`
 # before it shipped: six release fixtures carried an attestation two days after the commit
 # that introduced it, in a repository whose subject is documents going out of date.
-version: "4.0.0"
+# 4.0.0 -> 4.0.1. An eighth skill, `presentation`, and one line in `scan.skip_dirs` so that
+# what it writes is legal in a repository. PATCH, as `business` was in 2.8.11: no type, field
+# or check moves, and a project that never invokes the skill never sees the directory.
+#
+# WHAT IT ANSWERS. What the product is, what it does today and how far along it is, told to
+# somebody outside the project -- a customer, a sponsor, a salesperson -- in six to ten slides
+# they can repeat, one presentation per product. The SAL of `business` is written for the people who steer and act, and half
+# of it is what a customer must not be handed: risks, open decisions, requests to the business.
+# So it is not a variant of the SAL. It is the SAL's opposite on every axis that matters here:
+# occasional, a `.pptx`, and customer-safe with no internal mode.
+#
+# WHAT IT REFUSES, AND WHERE. The rules about what reaches a customer are checked on the outline
+# before anything is drawn, by `skills/presentation/scripts/render.py --check`: no identifier
+# or repository path on a slide, no date, month, duration or percentage on the roadmap, no
+# slide without the sources it was taken from, and no roadmap label but "planned". `conditional`
+# increments and `pitched` capabilities are kept off the roadmap by the skill, because no
+# script can tell from a sentence what state the item behind it is in.
+#
+# WHAT MOVES AROUND IT. `python-pptx` becomes the third entry in `requirements.txt`, so CI
+# renders what the skill renders. `extract.py --find` no longer reports `_meta/business` or
+# `_meta/presentation` as a corpus: a deck this framework generated, found by the extractor
+# beside `_meta/corpus/`, would have come back in as a document the customer wrote. The
+# description of `business` stops claiming commercial teams and "a non-technical product update",
+# which are now the other skill's readers and sentence. The trigger cases added for it are marked
+# `unmeasured` until a run scores them, so the tables in `evals/README.md` keep the denominators
+# they were measured on.
+#
+# ADOPTION. Nothing to do. A project whose CI pins the validator at a 4.0.0 commit through
+# `framework_commit` does not have the new exclusion until the pin moves: it adds
+# `_meta/presentation` to its own `scan.skip_dirs` before the first presentation, or moves the
+# pin first.
+version: "4.0.1"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of
@@ -1447,6 +1478,11 @@ scan:
   # than typed. A path and not a bare name, for the reason `extract` carries two paragraphs
   # up: a Data/AI project may perfectly well keep a `business/` directory of its own, and an
   # exclusion that protects the framework's convenience is paid for by everyone using it.
+  #
+  # `_meta/presentation` is the `presentation` skill's output, for the same reason and in the
+  # same form: a customer-safe retelling, not a source. Its `outline.yaml` is what makes the
+  # exclusion necessary rather than tidy -- `.yaml` is a format the scan reads, and without
+  # this line the first outline written is an `FM001`, which is an error.
 
   # `evals` is deliberately NOT here, and was for a day. Excluding it fixed the same
   # symptom by charging every real project a silent exclusion of a directory name a Data/AI
@@ -1462,7 +1498,7 @@ scan:
   # otherwise turn that file into an `FM001`, which is an error, on the very run it exists
   # to inform.
   skip_dirs: [templates, skills, schemas, references, corpus,
-              "_meta/extract", "_meta/business", ingest-out,
+              "_meta/extract", "_meta/business", "_meta/presentation", ingest-out,
               build, node_modules, __pycache__, ".framework"]
 
   # Documents that speak *about* the framework rather than being produced *by* it.

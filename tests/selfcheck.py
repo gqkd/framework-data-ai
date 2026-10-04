@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import atexit
 import collections
+import contextlib
 import importlib.util
 import io
 import json
@@ -1909,6 +1910,8 @@ def _skips_are_scoped():
         (("business",), False, "a project's own business directory at the root"),
         (("products", "alpha", "business"), False, "the same name under a product, which no "
                                                    "skill writes and nothing may hide"),
+        (("_meta", "presentation"), True, "where the `presentation` skill writes its decks"),
+        (("presentation",), False, "a project's own presentation directory at the root"),
         (("_meta", "corpus"), True, "the corpus under _meta"),
         (("products", "alpha", "corpus"), True, "a corpus left where older repos keep it"),
         (("_meta",), False, "_meta itself, which can hold artifacts and must be scanned"),
@@ -2897,6 +2900,161 @@ def _extract_keeps_provenance():
 
 
 
+
+@check("the extractor does not take the framework's own output for a corpus")
+def _extract_skips_own_output():
+    # A presentation is a `.pptx`, which is the format a corpus is made of, and it sits under
+    # `_meta/` beside `_meta/corpus/`, which `group_corpus` gathers by first component. Found
+    # there, the deck this framework generated would come back in as a document the customer
+    # wrote: the one loop every other rule in the framework exists to prevent.
+    x = _load(EXTRACT, "extract")
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        for rel in ("_meta/corpus/offerta.pptx",
+                    "_meta/presentation/PRS-001-atlas-2026-10-02/PRS-001-atlas-2026-10-02.pptx",
+                    "_meta/business/SAL-001-atlas-2026-10-02.md",
+                    "_meta/extract/offerta/blocks.md",
+                    "presentation/deck-del-cliente.pptx"):
+            (root / rel).parent.mkdir(parents=True, exist_ok=True)
+            (root / rel).write_bytes(b"x")
+        found = {d for d, _, _ in x.find_corpus(root)}
+    problems = []
+    for d in ("_meta/presentation/PRS-001-atlas-2026-10-02", "_meta/business", "_meta/extract/offerta"):
+        if d in found:
+            problems.append(f"{d} was reported as a corpus: it is this framework's own output")
+    for d in ("_meta/corpus", "presentation"):
+        if d not in found:
+            problems.append(f"{d} was not reported: an exclusion of the framework's output "
+                            "must not hide a project's own documents")
+    return problems
+
+
+RENDER = ROOT / "skills" / "presentation" / "scripts" / "render.py"
+
+
+def _outline(**over) -> dict:
+    o = {"lang": "it", "title": "Atlas", "subtitle": "Riconcilia i movimenti bancari",
+         "customer": None, "sources": ["PBR §One line"],
+         "slides": [
+             {"kind": "bullets", "title": "Che cosa fa oggi",
+              "bullets": ["Abbina i movimenti alle scritture"],
+              "sources": ["PBR §Current capabilities"]},
+             {"kind": "roadmap", "title": "A che punto siamo",
+              "done": ["Abbinamento automatico"],
+              "todo": ["Chiusura guidata", {"text": "Più banche", "planned": True}],
+              "sources": ["PBR §Current capabilities", "RMP §Increments"]}]}
+    o.update(over)
+    return o
+
+
+@check("a presentation outline refuses what a customer must not be handed")
+def _presentation_outline_refuses():
+    # The checks are pure and need PyYAML alone, so they run whatever is installed. Each
+    # mutation below is one of the rules `skills/presentation/SKILL.md` states, and each must
+    # be refused by itself: an outline that passes with one of them in it hands it to a customer.
+    x = _load(RENDER, "render")
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        base = Path(tmp)
+        if x.check(_outline(), base):
+            problems.append(f"a clean outline was refused: {x.check(_outline(), base)}")
+        road = lambda **kw: _outline(slides=[_outline()["slides"][0],
+                                             {**_outline()["slides"][1], **kw}])
+        bullets = lambda b: _outline(slides=[{**_outline()["slides"][0], "bullets": b},
+                                             _outline()["slides"][1]])
+        for what, o in [
+            ("an identifier on a slide", bullets(["Deciso in DEC-012"])),
+            ("a repository path on a slide", bullets(["Vedi products/atlas/PBR.md"])),
+            ("a backtick on a slide", bullets(["Usa `dbt`"])),
+            ("a week on the roadmap", road(todo=["Chiusura guidata entro due settimane"])),
+            ("a quarter on the roadmap", road(todo=["Più banche in Q3"])),
+            ("a month on the roadmap", road(done=["Abbinamento, rilasciato a marzo"])),
+            ("a percentage on the roadmap", road(done=["Abbinamento al 60%"])),
+            ("an ISO date on the roadmap", road(todo=["Chiusura 2026-11-30"])),
+            ("a label other than planned", road(todo=[{"text": "Più banche",
+                                                        "conditional": True}])),
+            ("planned in the done column", road(done=[{"text": "Abbinamento",
+                                                        "planned": True}])),
+            ("a slide without sources", road(sources=[])),
+            ("a title slide without sources", _outline(sources=None)),
+            ("no roadmap", _outline(slides=[_outline()["slides"][0]])),
+            ("six bullets", bullets([f"Punto {i}" for i in range(6)])),
+            ("eleven slides", _outline(slides=[_outline()["slides"][0]] * 9
+                                       + [_outline()["slides"][1]])),
+            ("an image that is not there", _outline(slides=[
+                {"kind": "image", "title": "Come funziona", "image": "diagrams/x.png",
+                 "sources": ["ARC#current"]}, _outline()["slides"][1]])),
+            ("an unknown key", _outline(audience="interno")),
+            ("one card", _outline(slides=[{"kind": "cards", "title": "Per chi",
+                                           "cards": [{"title": "CFO", "text": "Firma"}],
+                                           "sources": ["PBR §Actors"]},
+                                          _outline()["slides"][1]])),
+            ("a flow whose focal step does not exist", _outline(slides=[
+                {"kind": "flow", "title": "Come funziona", "focal": 3,
+                 "steps": [{"title": "Riceve"}, {"title": "Abbina"}],
+                 "sources": ["ARC#current"]}, _outline()["slides"][1]])),
+            ("an identifier inside a card", _outline(slides=[
+                {"kind": "cards", "title": "Per chi", "sources": ["PBR §Actors"],
+                 "cards": [{"title": "CFO", "text": "Come da DEC-012"},
+                           {"title": "AFC", "text": "Chiude"}]}, _outline()["slides"][1]])),
+            ("lanes beside done and todo", road(lanes=[{"name": "Atlas", "done": [],
+                                                        "todo": []}])),
+            ("a colour that is not one", _outline(theme={"accent": "blue"})),
+        ]:
+            if not x.check(o, base):
+                problems.append(f"{what} was accepted")
+        lanes = road(lanes=[{"name": "Atlas", "done": ["Abbinamento"], "todo": []},
+                            {"name": "Borea", "done": [],
+                             "todo": [{"text": "Prima consegna", "planned": True}]}])
+        for k in ("done", "todo"):
+            lanes["slides"][1].pop(k)
+        if x.check(lanes, base):
+            problems.append(f"a roadmap with a row per product was refused: {x.check(lanes, base)}")
+        lanes["slides"][1]["lanes"][1]["todo"] = ["Prima consegna a giugno"]
+        if not any("a month" in p for p in x.check(lanes, base)):
+            problems.append("a month inside a product's row of the roadmap was accepted")
+        # "Il report di fine mese" is a capability, not a deadline: time words are refused on
+        # the roadmap only, and refusing them elsewhere teaches the outline to blur the product.
+        if x.check(bullets(["Prepara il report di fine mese"]), base):
+            problems.append("a month mentioned outside the roadmap was refused: it is a "
+                            "capability there, not a date")
+    return problems
+
+
+@check("a checked outline renders to a .pptx with no source on it")
+def _presentation_renders():
+    # python-pptx is in requirements.txt so that this runs in CI rather than printing `ok`
+    # over a renderer nobody ran. What it asserts is the part the outline check cannot see:
+    # the sources and the customer filter stay in the outline, and the file -- notes included,
+    # since notes travel with it -- carries the slide text and nothing else.
+    x = _load(RENDER, "render")
+    from pptx import Presentation
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        base = Path(tmp) / "PRS-001-atlas-2026-10-02"
+        base.mkdir()
+        (base / "outline.yaml").write_text(yaml.safe_dump(_outline(), allow_unicode=True),
+                                           encoding="utf-8")
+        with contextlib.redirect_stdout(io.StringIO()):
+            rc = x.main([str(base / "outline.yaml")])
+        out = base / "PRS-001-atlas-2026-10-02.pptx"
+        if rc != 0 or not out.is_file():
+            return [f"render.py exited {rc} and wrote {'a' if out.is_file() else 'no'} file"]
+        prs = Presentation(str(out))
+        if len(prs.slides) != 3:
+            problems.append(f"{len(prs.slides)} slides for a title and two: expected 3")
+        text = " ".join(sh.text_frame.text for sl in prs.slides for sh in sl.shapes
+                        if sh.has_text_frame)
+        notes = " ".join(sl.notes_slide.notes_text_frame.text for sl in prs.slides
+                         if sl.has_notes_slide)
+        for want in ("Atlas", "Fatto", "Da fare", "Più banche", "previsto"):
+            if want not in text:
+                problems.append(f"{want!r} is not on any slide")
+        for leak in ("PBR", "RMP", "§"):
+            if leak in text or leak in notes:
+                problems.append(f"{leak!r} reached the .pptx: sources stay in the outline")
+    return problems
+
 @check("a count of findings written in prose is the count the fixture produces")
 def _fixture_counts_are_measured():
     # Three times the number of findings in `audit/dirty-repo` was written into prose and
@@ -3602,7 +3760,9 @@ def _eval_cases_load():
     # The denominator of each row of the results table is that skill's case count. A row
     # whose denominator has drifted is a score being read against a set that no longer
     # exists, which is how 112 survived a set of 118.
-    per_skill = collections.Counter(c.get("expect") for c in cases)
+    # A case marked `unmeasured` has not been run, so no table can have scored it: it counts
+    # in the set and in no denominator, until the run that scores it removes the mark.
+    per_skill = collections.Counter(c.get("expect") for c in cases if not c.get("unmeasured"))
     for label, expect in [(r"`(\w+)`", None), (r"negatives", "none")]:
         for m in re.finditer(r"^\| " + label + r" \| (\d+)/(\d+) \|", readme, re.M):
             skill = expect or m.group(1)
@@ -4606,14 +4766,17 @@ class _Repo:
         return {f["code"] for f in out["findings"]} & {"LC006", "LC007", "LC008"}
 
 
-def _previous_version() -> str | None:
+def _previous_version(before: str | None = None) -> str | None:
     """The version declared before the current one, read out of the registry's history.
 
     Never typed: a literal here is the line that goes wrong silently the day the framework
     moves, and the check on version literals below this file's own rule would report it.
+    `before` asks for the version declared before another one instead: a case about the
+    version that retired a code needs the one before *that*, which stops being the previous
+    one the first time a patch ships on top of it -- as 4.0.1 did.
     """
     migrate = _load(ROOT / "skills" / "audit" / "scripts" / "migrate.py", "migrate_for_versions")
-    now = migrate.semver(REGISTRY["version"])
+    now = migrate.semver(before or REGISTRY["version"])
     for sha in subprocess.run(["git", "-C", str(ROOT), "rev-list", "-60", "HEAD"],
                               capture_output=True, text=True).stdout.split():
         v = migrate.registry_version(subprocess.run(
@@ -5262,7 +5425,7 @@ def _retired_codes():
                             "on, and the stop is a run that did not happen, which is exit 2")
         # Declaring the version before the one that retired it, the same line is not wrong
         # yet: the run goes on, says so on stderr, and `migrate.py` can compare.
-        previous = _previous_version()
+        previous = _previous_version(before=retired["LC005"]["retired_in"])
         if previous is None:
             return problems + ["no earlier version in the last sixty commits: the case cannot "
                                "be built"]
@@ -5320,7 +5483,7 @@ def _retired_pin_migrates():
         if cfg.read_text(encoding="utf-8") != flow:
             problems.append("--adopt wrote framework.yaml although it could not remove the pin")
 
-    previous = _previous_version()
+    previous = _previous_version(before=CHECKS["checks"]["LC005"]["retired_in"])
     if previous is None:
         return problems + ["no earlier version in the last sixty commits: the case cannot be built"]
 
