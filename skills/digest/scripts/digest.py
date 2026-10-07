@@ -115,8 +115,8 @@ JARGON = [(re.compile(r"\b[A-Z]{2,4}-\d{2,}\b"), "an identifier"),
           (re.compile(r"\b[a-z]+_[a-z_]+\b"), "a field name")]
 DASHES = re.compile(r"[—–]")
 SENTENCE_END = re.compile(r"[.!?](?:\s|$)")
-# Never broken across two lines: the size with its range, and a range with its unit.
-UNBREAKABLE = [re.compile(r"taglia (?:S|M|L|XL) \(\d+ a \d+ h\)[.,;]?"),
+# Never broken across two lines: the size with its hours, and a range with its unit.
+UNBREAKABLE = [re.compile(r"[Tt]aglia (?:S|M|L|XL)(?:: \d+(?:,\d+)? h)?[.,;]?"),
                re.compile(r"\d+(?:,\d+)? a \d+(?:,\d+)? h[.,;)]?"),
                re.compile(r"dal \d{2}/\d{2} al \d{2}/\d{2}[.,;]?")]
 
@@ -1242,7 +1242,7 @@ def render(ctx: Context, n: Numbers) -> str:
         target = ctx.alias.get(k, k)
         period_hours[target] = period_hours.get(target, Fraction(0)) + h
     if total or closed_now or new_in or g["uscite"]:
-        body.append(f"{hours(total)} h reali: {hours(per['perimeter_hours'])} sul perimetro, "
+        body.append(f"{hours(total)} h: {hours(per['perimeter_hours'])} sul perimetro, "
                     f"{hours(per['outside_hours'])} fuori registro")
         if per["other_hours"]:
             on = [i for i in period_hours if items[i].scope != rel and period_hours[i]]
@@ -1258,7 +1258,7 @@ def render(ctx: Context, n: Numbers) -> str:
                 closer = f" con {it.closer}" if it.closer else ""
                 body.append(f"- {it.id}, {title(it.id)}. Chiusa{closer}.")
                 body.append(what(it.id))
-                body.append(f"  Taglia {it.size} ({span(it.rng())}), reali "
+                body.append(f"  Taglia {it.size}: "
                             f"{hours(period_hours.get(it.id, Fraction(0)))} h.")
         if per["outside"]:
             body.append("Fuori registro")
@@ -1299,7 +1299,7 @@ def render(ctx: Context, n: Numbers) -> str:
         if h and it.state == "open" and it.scope == rel and not it.excluded:
             add({"where": f"2 · sotto {THEMES.get(it.theme, '?')}",
                  "text": f"- {i}, {title(i)}. In corso.\n{what(i)}\n"
-                         f"  Taglia {it.size} ({span(it.rng())}), reali {hours(h)} h."})
+                         f"  Taglia {it.size}: {hours(h)} h."})
     for i in sorted(g["closed_now"], key=sort_id):
         it = items[i]
         if i not in in_scope_closed and not it.excluded:
@@ -1341,7 +1341,7 @@ def render(ctx: Context, n: Numbers) -> str:
                      "text": f"- {i}, {title(i)}. {tema(i)}, fuori perimetro."})
                 continue
             cont = ", prosecuzione" if number == 4 and i in [str(x) for x in plan.get(when) or []] else ""
-            L.append(f"- {i}, {title(i)}{cont}. {tema(i)}, taglia {it.size} ({span(it.rng())}).")
+            L.append(f"- {i}, {title(i)}{cont}. {tema(i)}, taglia {it.size}.")
             L.append(what(i))
             for wt in blockers.get(i, []):
                 L.append(f"  Dipende da: {lower_first(str(wt['what']))}, {wt['owner']}.")

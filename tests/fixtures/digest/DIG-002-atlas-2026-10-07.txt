@@ -33,25 +33,25 @@ Condizioni della stima
 Fuori perimetro: 4 voci aperte, non stimate.
 
 2. ATTIVITÀ 06/10/2026, a consuntivo
-11 h reali: 9,5 sul perimetro, 1,5 fuori registro
+11 h: 9,5 sul perimetro, 1,5 fuori registro
 Architettura
 - OD-114, come il sistema capisce quale indicatore gli viene chiesto.
   Chiusa con DEC-026.
   Cos'è: la regola con cui una domanda in linguaggio naturale viene
   ricondotta a un indicatore definito, da cui dipende che il numero in
   risposta sia quello giusto.
-  Taglia S (1 a 2 h), reali 5 h.
+  Taglia S: 5 h.
 Sviluppo
 - CHG-017, scambio del permesso di accesso al login. Chiusa.
   Cos'è: dopo il login il sistema rilascia un proprio permesso che indica
   a quale cliente appartiene l'utente, ed è ciò che impedisce a un cliente
   di vedere i dati di un altro.
-  Taglia M (3 a 5 h), reali 3 h.
+  Taglia M: 3 h.
 Infrastruttura
 - CHG-019, flusso di rilascio. Chiusa.
   Cos'è: la sequenza fissa di passi con cui una versione del codice arriva
   in un ambiente, senza interventi manuali che cambiano ogni volta.
-  Taglia S (1 a 2 h), reali 1,5 h.
+  Taglia S: 1,5 h.
 Fuori registro
 - Riunioni di stato: 1 h.
 - Formazione di un junior: 0,5 h.
@@ -64,21 +64,21 @@ Voci nuove emerse
   quali dettagli tecnici restano solo nei log.
 
 3. ATTIVITÀ 07/10/2026, in programma
-- CHG-018, isolamento dei dati per cliente. Sviluppo, taglia L (6 a 12 h).
+- CHG-018, isolamento dei dati per cliente. Sviluppo, taglia L.
   Cos'è: ogni cliente ha un archivio dati separato e il sistema apre solo
   quello indicato dal permesso di accesso dell'utente.
 - CHG-022, etichette di versione per il rilascio. Infrastruttura,
-  taglia S (1 a 2 h).
+  taglia S.
   Cos'è: l'etichetta di versione che fa partire in automatico la
   costruzione e il rilascio in un ambiente.
   Dipende da: risposta sul registro delle immagini, team infrastruttura.
 
 4. ATTIVITÀ 08/10/2026, in programma
 - CHG-018, isolamento dei dati per cliente, prosecuzione. Sviluppo,
-  taglia L (6 a 12 h).
+  taglia L.
   Cos'è: ogni cliente ha un archivio dati separato e il sistema apre solo
   quello indicato dal permesso di accesso dell'utente.
-- CHG-021, avviso di caricamento in corso. Sviluppo, taglia M (3 a 5 h).
+- CHG-021, avviso di caricamento in corso. Sviluppo, taglia M.
   Cos'è: quando un caricamento dati è in corso la richiesta attende per un
   tempo limitato e poi avvisa l'utente di riprovare, invece di restituire
   dati incompleti.
