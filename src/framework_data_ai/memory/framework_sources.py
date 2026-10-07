@@ -13,7 +13,8 @@ from ..workspace import MemoryInputError, no_symlink_ancestors, read_mapping
 from .code_sources import git
 from .models import FRAMEWORK, canonical, digest
 
-SKILLS = ("start", "requirement", "resolve", "cycle", "audit", "release", "business", "presentation")
+SKILLS = ("start", "requirement", "resolve", "cycle", "audit", "release", "business", "presentation",
+          "digest")
 BASE = ("FRAMEWORK.md", "references/preamble.md", "references/routing-table.md")
 MAX_BYTES = 2_000_000
 

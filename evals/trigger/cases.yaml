@@ -411,3 +411,50 @@ cases:
   expect: none
   why: 'trap: slides and a non-specialist audience, but about engineering, not the product'
   unmeasured: true
+# Added with `digest` in 4.1.0 and not yet run, `unmeasured` for the reason the block above
+# gives. Five of them claim the skill; six are traps, and one of those is about a word the
+# measured set already uses: "image digest" belongs to `release`.
+- prompt: prepara il digest di atlas di oggi, ieri ho chiuso lo scambio del token e devo mandarlo al
+    responsabile entro le nove
+  expect: digest
+  why: the daily digest named, with the reader it is sent to
+  unmeasured: true
+- prompt: fammi il digest giornaliero del prodotto, come ogni mattina
+  expect: digest
+  unmeasured: true
+- prompt: prepare today's digest for the forecasting product, same format as yesterday
+  expect: digest
+  unmeasured: true
+- prompt: daily digest please, I worked on the tenant isolation most of yesterday
+  expect: digest
+  unmeasured: true
+- prompt: consuntivo di ieri e cosa ho in programma oggi e domani, nel formato del digest
+  expect: digest
+  why: the period worked and the plan of the next two days are the digest's sections
+  unmeasured: true
+- prompt: registra che oggi ho fatto tre ore di riunioni e mezz'ora di formazione al nuovo junior
+  expect: digest
+  why: 'trap toward `requirement`: hours worked are declared in the digest state, never written
+    into an artifact'
+  unmeasured: true
+- prompt: facciamo il SAL settimanale per lo steering, con il consuntivo della settimana e cosa serve
+    dagli altri uffici
+  expect: business
+  why: 'trap: "consuntivo", but weekly, for the people who steer'
+  unmeasured: true
+- prompt: cosa costruiamo domani? apriamo il ciclo con i due incrementi pronti nel roadmap
+  expect: cycle
+  why: 'trap: tomorrow''s work, but the question is what to authorize'
+  unmeasured: true
+- prompt: the image digest of rc.3 is in the CI log and the eval passed, can we ship 1.8 of atlas?
+  expect: release
+  why: 'trap: "digest" is the container image here, and the question is the release gate'
+  unmeasured: true
+- prompt: fammi un digest delle pull request mergiate questa settimana sul repo del backend
+  expect: none
+  why: 'trap: a digest of pull requests, not of a product''s registers'
+  unmeasured: true
+- prompt: riassumimi i commit di ieri sul repo del frontend, in due righe
+  expect: none
+  why: 'trap: yesterday''s work, read from git alone, with no register in it'
+  unmeasured: true

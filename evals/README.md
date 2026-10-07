@@ -7,15 +7,19 @@ here, and it needs a model to run, which is why it is not in CI.
 
 ## Triggering
 
-`trigger/cases.yaml` holds 125 prompts, each labelled with the one skill that should
+`trigger/cases.yaml` holds 136 prompts, each labelled with the one skill that should
 answer, or `none`.
 
-**Seven of them are marked `unmeasured: true`, and the mark is the lesson of the paragraph
+**Eighteen of them are marked `unmeasured: true`, and the mark is the lesson of the paragraph
 below.** `presentation` arrived in 4.0.1 with four cases of its own and three traps, one each
-toward `start`, `business` and `none`. None of them has been run, and the tables further down
-were measured on the 118 without them: the mark keeps those seven out of the denominators the
-self check compares, so a score is never read against a set it was not measured on. The run that
-scores them removes the mark and adds its own table.
+toward `start`, `business` and `none`; `digest` arrived in 4.1.0 with six of its own, one of
+them a trap that `requirement` must not take, and five traps toward `business`, `cycle`,
+`release` and `none`. None of them has been run, and the tables further down were measured on
+the 118 without them: the mark keeps those eighteen out of the denominators the self check
+compares, so a score is never read against a set it was not measured on. The run that scores
+them removes the mark and adds its own table. One measured case is at risk from the second
+batch and no mark protects it: *the image digest is in the CI log* is scored for `release`,
+and a skill whose description says "digest" is the first thing that could pull it away.
 
 **Six of them have never been run, and for four days none of them could be.** `business`
 arrived in 2.8.11 with four cases of its own, one more for `audit` and one more negative,
@@ -282,10 +286,10 @@ fires, one skill at a time, against the repositories in `fixtures/`:
 
 ```bash
 python evals/fixtures/make.py          # build the repositories first
-python evals/behaviour/run.py release  # or audit, cycle, requirement, resolve, start
+python evals/behaviour/run.py release  # or audit, cycle, requirement, resolve, start, digest
 ```
 
-All six have a run. Every one of them found something, and in four cases the defect was in
+All six above have a run; `digest` has a case and no run yet. Every one of them found something, and in four cases the defect was in
 this repository rather than in the skill: a gate rule that blocked on metrics the plan
 declares non-blocking, a fixture claiming a coverage it did not have, a measurement that
 could not reach the validator the skill is told to run first, and a truncated transcript

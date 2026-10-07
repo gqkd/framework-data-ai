@@ -21,7 +21,7 @@ document they mean nothing else. `G4` in particular is the gate at the end of F4
 product, the architecture and the plan defined enough to start the build?*
 
 The groups in Part II are `GP1` … `GP6`, *group of processes*. The processes are `P-01` …
-`P-12`.
+`P-16`.
 
 ## Actors
 
@@ -61,6 +61,7 @@ is being exercised.
 | P-13 | Superseding a decision | manual | whoever writes the new `DEC`, `ADMIN` where the cascade reaches the substrate | the new `DEC`, the superseded one's `status`, the entries that depended on it | `requirement` or `resolve` writes it, `audit` reports what stayed behind |
 | P-14 | Weekly business status | runnable | ADMIN assembles; business actors decide or act where requested | `_meta/business/SAL-NNN`, and nothing else: it writes no artifact | `business` |
 | P-15 | Presenting the product outside the project | runnable | ADMIN assembles; UB hands it over | `_meta/presentation/PRS-NNN/`, and nothing else: it writes no artifact | `presentation` |
+| P-16 | Daily digest | runnable | DEV or ADMIN declares and sends; whoever they report to reads | `_meta/digest/`, a private repository of its own, and nothing else: it writes no artifact | `digest` |
 
 ## How they feed each other
 
@@ -1000,6 +1001,53 @@ or `P-04` like a fact first written in a SAL.
 hand a customer an identifier, a date on the roadmap or a slide with no source, before anything
 is rendered.
 
+## P-16 · Daily digest
+
+**Status:** runnable.
+
+### Trigger
+
+The working day starts, and somebody expects to know where the work on a product stands: what
+closed since yesterday and in how many hours, what is left, when it can be delivered, and what
+that waits on.
+
+### Actors
+
+- `DEV` or `ADMIN`, whoever does the work: declares what only they know, the hours, the sizes,
+  the waits and the plan, reads the digest and sends it.
+- Whoever they report to: reads it, and answers the decisions it asks for.
+
+### How it runs
+
+```mermaid
+flowchart LR
+  reg["The registers:<br/>OD, KI, DEC, CHG, INC, EVR"] --> inv["--inventory: new, changed,<br/>closed, worked since the last one"]
+  inv --> ask["Questions: hours, activities outside<br/>the register, waits, plan, decisions"]
+  ask --> state["state-&lt;p&gt;.yaml"]
+  state --> check["--check"]
+  check --> dig(["DIG-NNN, dated,<br/>pushed to a private repository"])
+```
+
+**The person declares, the script computes.** Hours, sizes, the perimeter of a release and
+what was asked of whom have no source among the artifacts and must not acquire one there:
+they live in a state file outside the artifact set, in a clone of a private repository the
+documentation repository ignores. Everything else in the digest is derived: what closed and
+what is new comes from the registers compared with the previous snapshot, the remaining hours
+from the sizes, the reconciliation from one digest to the next is computed and has to add up,
+and the delivery dates follow from the pace. The script refuses to print while an item is
+unclassified or a classified one has left the registers without closing.
+
+What a `CHG` must be to count as closed is the framework's: `verified`. A product with no
+environment to verify in closes nothing, and the digest says so rather than counting merges.
+
+If a fact appears in the digest first, it does not belong there: it goes back through `P-02`
+or `P-04`, as a fact first written in a SAL does.
+
+### Skill
+
+`digest`. `skills/digest/scripts/digest.py --check` refuses a state file the registers do not
+agree with, before anything is written or pushed.
+
 ## Skill coverage
 
 | Skill | Processes |
@@ -1012,10 +1060,12 @@ is rendered.
 | `audit` | P-02 and P-11 (second pass), P-07 (pull request mode), P-10 (the documents half of it), P-12 (`migrate.py`) |
 | `business` | P-14 |
 | `presentation` | P-15 |
+| `digest` | P-16 |
 
-Two skills arrived after this table was first written, `business` and `presentation`: P-14
-and P-15 have readers nobody else here writes for, the people who steer the project and the
-people it is shown to. Nothing else is missing, and what is left are
+Three skills arrived after this table was first written, `business`, `presentation` and
+`digest`: P-14 and P-15 have readers nobody else here writes for, the people who steer the
+project and the people it is shown to, and P-16 holds what no artifact may hold, the hours of
+the people doing the work. Nothing else is missing, and what is left are
 deterministic integrations and prose: the connectors
 towards the issue tracker and support (`P-03`), coordinated access to the state of the
 repositories and the deploys (`P-10`), the emergency protocol (`P-09`).
@@ -1332,14 +1382,14 @@ flowchart LR
 
 ## What actually holds today
 
-Twelve processes, and not all of them supported the same way. In order of how much the
+Sixteen processes, and not all of them supported the same way. In order of how much the
 framework really carries them:
 
 | | Processes |
 |---|---|
-| Skills, artifacts and checks exist | P-01, P-02, P-04, P-06, P-07, P-08, P-11, P-12 |
+| Skills, artifacts and checks exist | P-01, P-02, P-04, P-06, P-07, P-08, P-11, P-12, P-14, P-15, P-16 |
 | The process holds, an integration is named and absent | P-03, P-05, P-09 |
-| The framework says what to do, nothing assists it | P-10 |
+| The framework says what to do, nothing assists it | P-10, P-13 |
 
 None of this is a commitment to run all of them every week. They are written down so that
 when one of them is needed, the question *who does what, and what has to stay written* has

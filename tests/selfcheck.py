@@ -1912,6 +1912,9 @@ def _skips_are_scoped():
                                                    "skill writes and nothing may hide"),
         (("_meta", "presentation"), True, "where the `presentation` skill writes its decks"),
         (("presentation",), False, "a project's own presentation directory at the root"),
+        (("_meta", "digest"), True, "the clone where the `digest` skill keeps its state"),
+        (("_meta", "digest", "DIG-001-atlas-2026-10-06"), True, "a snapshot inside it"),
+        (("digest",), False, "a project's own digest directory at the root"),
         (("_meta", "corpus"), True, "the corpus under _meta"),
         (("products", "alpha", "corpus"), True, "a corpus left where older repos keep it"),
         (("_meta",), False, "_meta itself, which can hold artifacts and must be scanned"),
@@ -2913,13 +2916,15 @@ def _extract_skips_own_output():
         for rel in ("_meta/corpus/offerta.pptx",
                     "_meta/presentation/PRS-001-atlas-2026-10-02/PRS-001-atlas-2026-10-02.pptx",
                     "_meta/business/SAL-001-atlas-2026-10-02.md",
+                    "_meta/digest/DIG-002-atlas-2026-10-07/DIG-002-atlas-2026-10-07.txt",
                     "_meta/extract/offerta/blocks.md",
                     "presentation/deck-del-cliente.pptx"):
             (root / rel).parent.mkdir(parents=True, exist_ok=True)
             (root / rel).write_bytes(b"x")
         found = {d for d, _, _ in x.find_corpus(root)}
     problems = []
-    for d in ("_meta/presentation/PRS-001-atlas-2026-10-02", "_meta/business", "_meta/extract/offerta"):
+    for d in ("_meta/presentation/PRS-001-atlas-2026-10-02", "_meta/business", "_meta/extract/offerta",
+              "_meta/digest/DIG-002-atlas-2026-10-07"):
         if d in found:
             problems.append(f"{d} was reported as a corpus: it is this framework's own output")
     for d in ("_meta/corpus", "presentation"):
@@ -3054,6 +3059,378 @@ def _presentation_renders():
             if leak in text or leak in notes:
                 problems.append(f"{leak!r} reached the .pptx: sources stay in the outline")
     return problems
+
+DIGEST = ROOT / "skills" / "digest" / "scripts" / "digest.py"
+CANONICAL = ROOT / "tests" / "fixtures" / "digest" / "DIG-002-atlas-2026-10-07.txt"
+_GIT_ID = {"GIT_AUTHOR_NAME": "lead", "GIT_AUTHOR_EMAIL": "lead@example.com",
+           "GIT_COMMITTER_NAME": "lead", "GIT_COMMITTER_EMAIL": "lead@example.com"}
+
+
+def _digest_copy(tmp: str, which: str = "atlas") -> Path | None:
+    """A private copy of the digest fixture: rendering commits and pushes, so never the build."""
+    src = built("digest")
+    if src is None:
+        return None
+    dst = Path(tmp) / "fixture"
+    shutil.copytree(src, dst, symlinks=True)
+    return dst / which
+
+
+def _digest(root: Path, *args: str) -> tuple[int, str]:
+    r = subprocess.run([sys.executable, str(DIGEST), "--root", str(root), "--product", "atlas",
+                        *args], capture_output=True, text=True)
+    return r.returncode, r.stdout + r.stderr
+
+
+def _edit(path: Path, old: str, new: str) -> None:
+    text = path.read_text(encoding="utf-8")
+    if old not in text:
+        raise AssertionError(f"{path.name} no longer contains {old[:50]!r}: the fixture moved")
+    path.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+
+@check("the digest of the fixture is the canonical example, character for character")
+def _digest_reproduces_the_canonical():
+    # THE FORMAT IS FIXED, AND THIS IS WHERE IT IS FIXED. The person who reads the digest every
+    # morning wrote the example by hand before a line of code existed; every section, label,
+    # number and line break of it has to come out of the script from a register and a state
+    # file, and nothing else. A change to the format is a change to that file first.
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _digest_copy(tmp)
+        if root is None:
+            return ["the digest fixture could not be built: evals/fixtures/generators/digest.py"]
+        rc, out = _digest(root, "--date", "2026-10-07")
+        snap = root / "_meta" / "digest" / "DIG-002-atlas-2026-10-07"
+        txt = snap / "DIG-002-atlas-2026-10-07.txt"
+        if rc != 0 or not txt.is_file():
+            return [f"digest.py exited {rc} and wrote {'a' if txt.is_file() else 'no'} digest:"
+                    f" {out.strip()[-400:]}"]
+        problems = []
+        want, got = CANONICAL.read_text(encoding="utf-8"), txt.read_text(encoding="utf-8")
+        if got != want:
+            diff = [f"line {n}: expected {a!r}, got {b!r}"
+                    for n, (a, b) in enumerate(zip(want.splitlines(), got.splitlines()), 1)
+                    if a != b][:5]
+            problems.append("the digest differs from tests/fixtures/digest: "
+                            + ("; ".join(diff) or f"{len(want)} against {len(got)} characters"))
+        frozen = yaml.safe_load((snap / "frozen.yaml").read_text(encoding="utf-8"))
+        if frozen.get("additions") or frozen.get("provisional"):
+            problems.append("the canonical day needs no line outside the format, and the script "
+                            f"listed some: {frozen.get('additions')} {frozen.get('provisional')}")
+        remote = root / ".remote" / "digest.git"
+        log = subprocess.run(["git", "-C", str(remote), "log", "--format=%s"],
+                             capture_output=True, text=True).stdout.split()
+        if "DIG-002-atlas-2026-10-07" not in log:
+            problems.append(f"the snapshot was not pushed to the private store: {log}")
+        if any(len(line) > 74 for line in got.splitlines()):
+            problems.append("a line of the digest is longer than 74 characters")
+    return problems
+
+
+@check("a new entry in the register stops the digest until it is classified")
+def _digest_refuses_the_unclassified():
+    # NO ITEM ENTERS THE COUNT IN SILENCE. An entry the state file does not know has no size,
+    # so the hours left would be computed without it and the digest would print a number that
+    # is wrong by an amount nobody can see. The refusal names it; the classification lifts it.
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _digest_copy(tmp)
+        if root is None:
+            return ["the digest fixture could not be built"]
+        register = root / "products" / "atlas" / "OPEN.md"
+        _edit(register, "entries:\n", "entries:\n  KI-099:\n    status: open\n")
+        _edit(register, "# §3 · Parking lot",
+              "### KI-099 · Exports stop at one year\n\n- An export of more than a year "
+              "stops.\n\n# §3 · Parking lot")
+        problems = []
+        rc, out = _digest(root, "--date", "2026-10-07", "--check")
+        if rc != 1 or "KI-099" not in out:
+            problems.append(f"an unclassified entry did not stop the digest (exit {rc}): "
+                            f"{out.strip()[:200]}")
+        rc, out = _digest(root, "--date", "2026-10-07")
+        if rc == 0 or (root / "_meta/digest/DIG-002-atlas-2026-10-07").exists():
+            problems.append("the digest was written with an entry nobody classified")
+        state = root / "_meta" / "digest" / "state-atlas.yaml"
+        _edit(state, "items:\n", "items:\n  KI-099:\n    title: esportazioni oltre un anno\n"
+                                 "    what: un'esportazione di più di un anno di dati si ferma "
+                                 "prima della fine.\n    theme: sviluppo\n    scope: out\n"
+                                 "    seen: Exports stop at one year\n")
+        rc, out = _digest(root, "--date", "2026-10-07", "--check")
+        if rc != 0:
+            problems.append(f"classified, it still does not pass: {out.strip()[:300]}")
+    return problems
+
+
+@check("the digest refuses every way a number could enter or leave it unseen")
+def _digest_refusals():
+    # One mutation each, on a fresh copy, and each must be refused by itself with a sentence
+    # that names it: a check that passes with one of these in it prints a count somebody sends.
+    cases = [
+        ("an open item gone from the register without closing",
+         lambda r: (_edit(r / "products/atlas/OPEN.md",
+                          "  OD-109:\n    status: open\n    cost_to_reverse: low\n"
+                          "    default_in_force: a question with no defined metric gets no "
+                          "answer\n    trigger: the metric glossary arriving from the "
+                          "functional team\n", ""),
+                    _edit(r / "products/atlas/OPEN.md",
+                          "### OD-109 · How to answer a question no metric covers", "### Gone")),
+         "OD-109"),
+        ("a register title changed after the confirmation",
+         lambda r: _edit(r / "products/atlas/OPEN.md", "### OD-098 · Keep or replace",
+                         "### OD-098 · Keep, extend or replace"), "confirm its classification"),
+        ("a change in draft planned for today",
+         lambda r: _edit(next((r / "products/atlas/changes").glob("CHG-018-*.md")),
+                         "status: approved", "status: draft"), "draft"),
+        ("a register status the digest does not map",
+         lambda r: _edit(next((r / "products/atlas/changes").glob("CHG-021-*.md")),
+                         "status: approved", "status: paused"), "does not map"),
+        ("an item closed in the perimeter with no hours",
+         lambda r: _edit(r / "_meta/digest/state-atlas.yaml", "    hours_before: 14\n", ""),
+         "DEC-019"),
+        ("an identifier inside a description",
+         lambda r: _edit(r / "_meta/digest/state-atlas.yaml",
+                         "quali dettagli tecnici\n      restano solo nei log.",
+                         "quali dettagli tecnici\n      restano solo nei log, come in DEC-026."),
+         "an identifier"),
+        ("a long dash in a title",
+         lambda r: _edit(r / "_meta/digest/state-atlas.yaml",
+                         "title: repository unica", "title: repository unica — monorepo"),
+         "long dash"),
+        ("the hours of one item declared in two products",
+         lambda r: (r / "_meta/digest/state-borea.yaml").write_text(
+             "product: borea\nperiods:\n  2026-10-06:\n    hours:\n      OD-114: 2\n",
+             encoding="utf-8"), "declared once"),
+        ("a decision asked of somebody that is not an open entry",
+         lambda r: _edit(r / "_meta/digest/state-atlas.yaml", "requests:\n  OD-116:",
+                         "requests:\n  OD-114:"), "open `OD`"),
+    ]
+    problems = []
+    for what, mutate, says in cases:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = _digest_copy(tmp)
+            if root is None:
+                return ["the digest fixture could not be built"]
+            mutate(root)
+            rc, out = _digest(root, "--date", "2026-10-07", "--check")
+            if rc != 1 or says not in out:
+                problems.append(f"{what}: exit {rc}, and the refusal does not say {says!r}: "
+                                f"{out.strip()[:200]}")
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _digest_copy(tmp)
+        rc, out = _digest(root, "--date", "2026-10-10", "--check")
+        if rc != 1 or "Saturday" not in out:
+            problems.append(f"a digest dated on a Saturday was not refused: {out.strip()[:200]}")
+    return problems
+
+
+def _digest_second_day(root: Path, *, two_parents: bool = False) -> None:
+    """07/10 and 08/10 worked: a split, a re-estimate, an item out, a known issue closed."""
+    register = root / "products" / "atlas" / "OPEN.md"
+    _edit(register, "  KI-013:\n    status: open", "  KI-013:\n    status: decided\n"
+                                                    "    closed_by: CHG-018")
+    _edit(register, "entries:\n",
+          "entries:\n  OD-120:\n    status: open\n    cost_to_reverse: medium\n"
+          "    default_in_force: the loader reads the two current formats\n"
+          "    trigger: the first source in a new format\n  OD-121:\n    status: open\n"
+          "    cost_to_reverse: medium\n    default_in_force: loads run nightly\n"
+          "    trigger: a customer asking for fresher data\n")
+    _edit(register, "### OD-076 ·", "### OD-120 · Input formats the loader must read\n\n"
+                                    "### OD-121 · How often the loader runs\n\n### OD-076 ·")
+    env = {**os.environ, **_GIT_ID, "GIT_AUTHOR_DATE": "2026-10-08T12:00:00+02:00",
+           "GIT_COMMITTER_DATE": "2026-10-08T12:00:00+02:00"}
+    subprocess.run(["git", "commit", "-qam", "OD-098 split; KI-013 fixed"], cwd=root, env=env,
+                   check=True)
+    state = root / "_meta" / "digest" / "state-atlas.yaml"
+    _edit(state, "    seen: Keep or replace the data loading tool\n",
+          "    seen: Keep or replace the data loading tool\n    split_into: [OD-120, OD-121]\n")
+    _edit(state, "    size: M\n    seen: How to answer a question no metric covers\n",
+          "    size: L\n    seen: How to answer a question no metric covers\n"
+          + ("    split_into: [OD-121]\n" if two_parents else ""))
+    _edit(state, '    scope: "1.0"\n    size: M\n    seen: Loading-in-progress notice\n',
+          "    scope: out\n    size: M\n    seen: Loading-in-progress notice\n")
+    _edit(state, "items:\n", "items:\n"
+          "  OD-120:\n    title: formati dei dati in ingresso\n    what: quali formati di file "
+          "lo strumento di caricamento deve saper leggere.\n    theme: architettura\n"
+          '    scope: "1.0"\n    size: L\n    seen: Input formats the loader must read\n'
+          "  OD-121:\n    title: frequenza dei caricamenti\n    what: ogni quanto vengono "
+          "caricati i dati dei clienti, e quindi quanto sono recenti.\n    theme: architettura\n"
+          '    scope: "1.0"\n    size: L\n    seen: How often the loader runs\n')
+    _edit(state, "  2026-10-08: [CHG-018, CHG-021]\n",
+          "  2026-10-08: [CHG-018, CHG-021]\n  2026-10-09: [CHG-018]\n  2026-10-12: [OD-120]\n")
+    with state.open("a", encoding="utf-8") as f:
+        f.write("  2026-10-07:\n    hours:\n      CHG-018: 4\n      KI-013: 2\n      OD-076: 1\n"
+                "    outside:\n      Riunioni di stato: 1\n")
+
+
+@check("a second day computes what the canonical one cannot show, and keeps the rest out")
+def _digest_second_day_check():
+    # The example is one day with nothing in progress, so it says nothing about a window of
+    # several periods, a split, a re-estimate going two ways at once, or an item leaving the
+    # perimeter. The numbers below were computed by hand before the script printed them:
+    # 33 to 76 less 3 to 5 closed, less 3 to 5 out, less 1 to 16 split, plus 3 to 7
+    # re-estimated is 29 to 57; 15,5 h in three working days is 5,2 a day.
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _digest_copy(tmp)
+        if root is None:
+            return ["the digest fixture could not be built"]
+        rc, out = _digest(root, "--date", "2026-10-07")
+        _digest_second_day(root)
+        rc, out = _digest(root, "--date", "2026-10-09")
+        txt = root / "_meta/digest/DIG-003-atlas-2026-10-09/DIG-003-atlas-2026-10-09.txt"
+        if rc != 0 or not txt.is_file():
+            return [f"the second day was refused (exit {rc}): {out.strip()[:400]}"]
+        got = txt.read_text(encoding="utf-8")
+        problems = [f"the second day does not say {line!r}" for line in (
+            "  Rimasto al 07/10: 33 a 76 h",
+            "  Chiuse: 1 voce, meno 3 a 5 h",
+            "  Uscite senza chiusura: 1 voce, meno 3 a 5 h",
+            "  Ristimate o spezzate: 2 voci, minimo più 2 h, massimo meno 9 h",
+            "  Rimasto al 09/10: 29 a 57 h",
+            "  a ritmo attuale (5,2 h/giorno): tra il 16/10 e il 26/10",
+            "  a orario normale (7,2 h/giorno): tra il 15/10 e il 20/10",
+            "2. ATTIVITÀ DAL 07/10/2026 AL 08/10/2026, a consuntivo",
+            "- KI-013, tempo massimo superato sulle domande lunghe. Chiusa con CHG-018.",
+            "- CHG-021, avviso di caricamento in corso. Tolta dal perimetro.",
+            "4. ATTIVITÀ 12/10/2026, in programma") if line not in got.splitlines()]
+        if "In corso" in got:
+            problems.append("an item in progress reached the digest: the format has no line "
+                            "for it, so it is listed after the digest instead")
+        frozen = yaml.safe_load((txt.parent / "frozen.yaml").read_text(encoding="utf-8"))
+        where = {a["where"] for a in frozen.get("additions") or []}
+        for want in ("2 · sotto Sviluppo", "2 · Voci ristimate o spezzate",
+                     "2 · la riga delle ore"):
+            if want not in where:
+                problems.append(f"nothing listed for {want!r} outside the digest: {where}")
+        if not frozen.get("provisional"):
+            problems.append("the forms the example does not show were not listed")
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _digest_copy(tmp)
+        _digest(root, "--date", "2026-10-07")
+        _digest_second_day(root, two_parents=True)
+        rc, out = _digest(root, "--date", "2026-10-09")
+        if rc != 1 or "does not add up" not in out:
+            problems.append("one item split out of two parents was counted twice and printed: "
+                            "the reconciliation must stop it")
+    return problems
+
+
+@check("a past period and an earlier snapshot cannot be edited under the next digest")
+def _digest_history_is_frozen():
+    problems = []
+    for what, mutate, says in [
+        ("the hours of a period already printed",
+         lambda r: _edit(r / "_meta/digest/state-atlas.yaml", "      OD-114: 5\n",
+                         "      OD-114: 7\n"), "not the ones DIG-002-atlas-2026-10-07 froze"),
+        ("an earlier snapshot",
+         lambda r: _edit(next((r / "_meta/digest").glob("DIG-001-*/frozen.yaml")),
+                         "remaining:\n- '34'", "remaining:\n- '35'"), "no longer matches"),
+    ]:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = _digest_copy(tmp)
+            if root is None:
+                return ["the digest fixture could not be built"]
+            _digest(root, "--date", "2026-10-07")
+            mutate(root)
+            rc, out = _digest(root, "--date", "2026-10-08", "--check")
+            if rc != 1 or says not in out:
+                problems.append(f"{what} was edited and nothing said so: {out.strip()[:300]}")
+    return problems
+
+
+@check("every status the registry declares for what the digest reads is mapped")
+def _digest_maps_every_status():
+    # The registry says which statuses exist and not which of them are done, so the reading
+    # lives in the script; this is what stops a status added there from being read as nothing.
+    x = _load(DIGEST, "digest_states")
+    types = REGISTRY["types"]
+    declared = {
+        "open-register": types["open-register"]["maps"]["entries"]["fields"]["enums"]["status"],
+        "decision-record": types["decision-record"]["status"],
+        "change-contract": types["change-contract"]["status"],
+        "evaluation-report": types["evaluation-report"]["status"],
+    }
+    problems = []
+    for t, statuses in declared.items():
+        if set(statuses) != set(x.STATES.get(t, {})):
+            problems.append(f"{t}: the registry declares {sorted(statuses)} and the digest maps "
+                            f"{sorted(x.STATES.get(t, {}))}")
+    if x.STATES["change-contract"]["verified"] != "closed" or any(
+            v == "closed" for k, v in x.STATES["change-contract"].items() if k != "verified"):
+        problems.append("a change is closed at `verified` and at nothing else: the Definition "
+                        "of Done of templates/AGENTS.md")
+    return problems
+
+
+@check("the items a commit names are proposed as worked on, and a regenerated index is not")
+def _digest_reads_the_history():
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _digest_copy(tmp)
+        if root is None:
+            return ["the digest fixture could not be built"]
+        rc, out = _digest(root, "--date", "2026-10-07", "--inventory")
+        inv = yaml.safe_load(out) if rc == 0 else {}
+    worked = set((inv or {}).get("worked") or {})
+    problems = []
+    for want in ("OD-114", "OD-115", "KI-013", "CHG-017", "CHG-019"):
+        if want not in worked:
+            problems.append(f"{want} changed on 06/10 and is not proposed as worked on")
+    for noise in ("OD-076", "CHG-021", "CHG-024"):
+        if noise in worked:
+            problems.append(f"{noise} is proposed as worked on because a regenerated index "
+                            "names it")
+    if (inv or {}).get("aliases") != {"DEC-026": "OD-114"}:
+        problems.append(f"DEC-026 decides OD-114 and is one item with it: {inv.get('aliases')}")
+    return problems
+
+
+@check("the store is pushed only where it is private, and never into the documents")
+def _digest_store_stays_private():
+    x = _load(DIGEST, "digest_store")
+    problems = []
+    if not x.private("../../.remote/digest.git")[0]:
+        problems.append("a local path was refused as a remote: nothing leaves the machine")
+    with tempfile.TemporaryDirectory() as tmp:
+        fake = Path(tmp) / "gh"
+        fake.write_text("#!/bin/sh\necho false\n", encoding="utf-8")
+        fake.chmod(0o755)
+        old = os.environ.get("PATH", "")
+        os.environ["PATH"] = f"{tmp}{os.pathsep}{old}"
+        try:
+            ok, why = x.private("git@github.com:somebody/atlas-digest.git")
+        finally:
+            os.environ["PATH"] = old
+        if ok:
+            problems.append(f"a GitHub remote that is not private was accepted: {why}")
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _digest_copy(tmp)
+        if root is None:
+            return problems + ["the digest fixture could not be built"]
+        (root / ".gitignore").write_text(".remote/\n", encoding="utf-8")
+        rc, out = _digest(root, "--date", "2026-10-07")
+        if rc != 1 or "not ignored" not in out:
+            problems.append("the store was written while the documentation repository would "
+                            f"have committed it: {out.strip()[:200]}")
+    return problems
+
+
+@check("the digest fixtures validate with nothing to report")
+def _digest_fixtures_validate():
+    src = built("digest")
+    if src is None:
+        return ["the digest fixture could not be built"]
+    problems = []
+    for name in ("atlas", "atlas-asks"):
+        r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(src / name), "--json",
+                            "--stale-days", "36500"], capture_output=True, text=True)
+        try:
+            found = [(f["code"], f["path"]) for f in json.loads(r.stdout)["findings"]
+                     if f["level"] in ("error", "warn")]
+        except (ValueError, KeyError):
+            problems.append(f"{name}: the validator did not run: {r.stderr.strip()[-200:]}")
+            continue
+        if found:
+            problems.append(f"{name}: {found}")
+    return problems
+
 
 @check("a count of findings written in prose is the count the fixture produces")
 def _fixture_counts_are_measured():
@@ -3230,7 +3607,7 @@ def _pull_request_binding():
 
 @check("the migration tool reconstructs the version a project pins")
 def _migration_is_executable():
-    # `P-16` is a procedure nobody can execute unless the old validator can be got hold of.
+    # `P-12` is a procedure nobody can execute unless the old validator can be got hold of.
     # It is not kept anywhere: it is rebuilt from this repository's history, at the commit
     # where the registry last declared the version the project pinned. So what this asserts
     # is the one thing that would silently stop being true -- that every version this

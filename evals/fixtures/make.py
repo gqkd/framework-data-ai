@@ -42,6 +42,7 @@ GENERATED = {
     "review": ("review.py", "review/gap"),
     "coherence": ("coherence.py", "coherence/contradiction"),
     "memory": ("memory.py", "memory"),
+    "digest": ("digest.py", "digest"),       # writes two: atlas and atlas-asks
 }
 STATIC = {
     "resolve/ordering-a": "ordering-a",

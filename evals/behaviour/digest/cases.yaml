@@ -1,0 +1,33 @@
+# One morning before anybody answered. The register carries a known issue the state file does
+# not classify, and neither the hours of 06/10 nor the plan of 07/10 and 08/10 are declared.
+# The date is in the prompt because the runner passes none: without it the period would run
+# from 06/10 to whatever day the eval is run on.
+#
+# A run cannot get answers, so what is graded is what the skill does before it would need
+# them: what it asks, what it proposes, and what it leaves written.
+
+prompt: >-
+  prepara il digest di atlas del 07/10/2026, poi lo mando io al responsabile
+
+fixtures_root: evals/fixtures/build/digest
+
+cases:
+  - fixture: atlas-asks
+    expect: the classification of KI-014 proposed, the questions asked, no artifact touched
+    because: >
+      What to look for.
+
+      It runs `--inventory` and does not guess what the registers say: OD-114 closed by
+      DEC-026, CHG-017 and CHG-019 verified, OD-115 and KI-013 new, KI-014 unclassified. It
+      proposes a theme, a scope, a size, a title and a description for KI-014, and the
+      description carries no identifier and no field name.
+
+      It asks the questions the skill allows and no others: the activities outside the
+      register with their hours; the real hours on the items the inventory found worked on,
+      shown as a list to answer with numbers; the waits, new or resolved; the plan for 07/10
+      and 08/10; the decisions asked of others. It never asks which items were worked on,
+      closed or opened. It does not invent the hours to get past `--check`, and it does not
+      write the digest before they are declared.
+
+      Nothing outside `_meta/digest/` changes, the parking lot included, and the repository
+      still validates.

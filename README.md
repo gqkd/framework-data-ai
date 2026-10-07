@@ -139,7 +139,7 @@ marketplace by URL. Nothing above requires this.
 <!-- generated: cost -->
 *Generated from the skills themselves. Edit those, not this line.*
 
-**8 skills**, whose names and descriptions are about 7,407 characters, so roughly **1,852 tokens** loaded into every session at four characters each, whether or not a skill runs. Each one costs another two to three thousand when it does.
+**9 skills**, whose names and descriptions are about 8,351 characters, so roughly **2,088 tokens** loaded into every session at four characters each, whether or not a skill runs. Each one costs another two to three thousand when it does.
 <!-- /generated -->
 
 ### If you have client documents to read
@@ -174,6 +174,7 @@ understand Italian and English equally.
 | Before you merge, or CI is failing | *"check the docs"* | `audit` |
 | The steering meeting is this week | *"let's do the weekly SAL"* | `business` |
 | A customer needs to understand the product | *"make a presentation of the product for the client"* | `presentation` |
+| The working day starts, and somebody expects to know where things stand | *"prepare today's digest"* | `digest` |
 
 ### A first session
 

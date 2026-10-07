@@ -49,6 +49,11 @@ fixtures:
   # the `PBR` alone there -- which changes what the skill writes, not whether it should fire.
   presentation: evals/fixtures/build/requirement/seed
 
+  # One product with a dated history, a register in several states and the digest's store set
+  # up, the morning a digest is due: the state where "prepara il digest" has something to
+  # compute and something to ask.
+  digest: evals/fixtures/build/digest/atlas
+
   # A project with business documents and no framework in it, which is the only state
   # `start` is written for. Measuring it in a documented repository asks it to set up
   # something that is already set up.

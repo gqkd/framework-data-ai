@@ -25,6 +25,15 @@ checked in.
 `static/` holds the three with no generator and no history: two open registers and a
 project with a corpus and no framework in it.
 
+`digest/` is generated for the release fixtures' reason and one more. The worked-on list the
+skill proposes comes from `git log`, and the baseline of the digest is the digest script's own
+output, so it is produced by the script at build time instead of being copied in and left
+behind the first time its format moves. It writes two repositories: `atlas`, ready to render
+the digest of 07/10/2026 that `tests/fixtures/digest/` holds character for character, and
+`atlas-asks`, the same morning before anybody answered, which is where the behaviour case
+runs. Each carries its store as a repository of its own, pushing to a bare one in `.remote/`
+by a relative path, so a copy pushes into its own copy.
+
 ## What each one is for
 
 | | |

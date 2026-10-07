@@ -40,8 +40,10 @@ guessing a structure.
 **Then ask who owns what you are about to write, and ask it before the first artifact write
 of the session.** One question, plainly, and the answer goes into `owners`. A generated
 non-artifact snapshot that has no `owners` field, such as the weekly SAL produced by
-`business` or the presentation produced by `presentation`, does not acquire an owner and does
-not trigger this question.
+`business`, the presentation produced by `presentation` or the daily digest produced by
+`digest`, does not acquire an owner and does not trigger this question; nor does the digest's
+state file, which records what one person declares about their own work and is not an
+artifact either.
 
 Do not deduce it. Not from the git config, not from the email address, not from the corpus,
 not from whoever the last document happened to name. `owners` is who to go to when the

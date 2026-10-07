@@ -1224,7 +1224,51 @@
 # `framework_commit` does not have the new exclusion until the pin moves: it adds
 # `_meta/presentation` to its own `scan.skip_dirs` before the first presentation, or moves the
 # pin first.
-version: "4.0.1"
+# 4.0.1 -> 4.1.0. A ninth skill, `digest`, and one line in `scan.skip_dirs` so that what it
+# writes is legal in a repository. MINOR, and the reason is the rule at the top of this file
+# rather than the precedent: something arrived and nothing broke. 4.0.1 shipped the eighth
+# skill as a PATCH by citing 2.8.11, and 2.8.11 was a patch because MINOR was frozen at the
+# time; the freeze ended at 3.1.0, so 4.0.1 should have been 4.1.0 and the citation was the
+# error. This one does not repeat it, and what that costs a project is under adoption below.
+#
+# WHAT IT ANSWERS. Where the work on one product stands today, for the person doing it and for
+# whoever they report to: what closed since the last digest and in how many hours, what is
+# left in the perimeter of the current release as a range of hours, when it can be delivered
+# at the pace of the last days and at a normal day's, and what that date waits on from
+# somebody else. The registers know what exists and in which state. They do not know hours,
+# sizes, the perimeter of a release or what was asked of whom, and none of that belongs in an
+# artifact -- a date or an estimate in `RMP` is the anti-pattern its template names. So the
+# person declares it in a state file outside the artifact set, and the digest is what follows
+# from the two: every number in it comes from a register, from that file or from an earlier
+# snapshot, and the reconciliation from one digest to the next is computed, never written.
+#
+# WHERE IT LIVES, AND WHY NOT IN THE DOCUMENTATION REPOSITORY. `_meta/digest/` is a clone of a
+# private repository, ignored by the documentation repository: the hours somebody works are
+# not documentation, a repository of documents is often read by people who should not see
+# them, and the series must not be lost with one laptop. Rendering commits and pushes the
+# clone, and does not push to a GitHub remote that does not report itself private.
+#
+# WHAT IT REFUSES, AND WHERE. `skills/digest/scripts/digest.py --check`, before anything is
+# written: an identifier in the registers the state file does not classify; a classified one
+# gone from the registers without having been closed; a reconciliation that does not add up;
+# the hours of a past period edited after they were frozen, or a snapshot whose hash no longer
+# matches the record the next one kept of it; a registry status the script does not map,
+# which `tests/selfcheck.py` asserts from this side too. What "closed" means is read there and
+# not here, because this file declares which statuses exist and not which of them are done: a
+# `CHG` is closed at `verified`, the Definition of Done of `templates/AGENTS.md`.
+#
+# WHAT MOVES AROUND IT. `extract.py --find` does not report `_meta/digest` as a corpus.
+# `framework.yaml` gains no key: the themes and sizes belong to the format and live in the
+# script, the hours of a normal day in the state file, because a new key there stops every
+# older validator `migrate.py` rebuilds. The trigger cases added for it are `unmeasured` until
+# a run scores them.
+#
+# ADOPTION. `FW001` reports the new number at `warn` in every repository that declares 4.0.x,
+# and `migrate.py` finds no finding that moved: update `framework_version`, and nothing else.
+# A project whose CI pins the validator through `framework_commit` at an earlier commit adds
+# `_meta/digest` to its own `scan.skip_dirs` before the first digest, or moves the pin first.
+# The store is set up once per documentation repository, with `digest.py --init-store <url>`.
+version: "4.1.0"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of
@@ -1483,6 +1527,13 @@ scan:
   # same form: a customer-safe retelling, not a source. Its `outline.yaml` is what makes the
   # exclusion necessary rather than tidy -- `.yaml` is a format the scan reads, and without
   # this line the first outline written is an `FM001`, which is an error.
+  #
+  # `_meta/digest` is the `digest` skill's store, and the one exclusion here that holds what no
+  # artifact may hold rather than a retelling of what one does: the hours, sizes and perimeter a
+  # person declared, and the snapshots computed from them. It is a clone of a private
+  # repository and the documentation repository ignores it, so on most checkouts the line
+  # changes nothing; it is here for the checkout that has the clone, where its `.yaml` files
+  # would otherwise be an `FM001` each, the first time anybody ran the validator.
 
   # `evals` is deliberately NOT here, and was for a day. Excluding it fixed the same
   # symptom by charging every real project a silent exclusion of a directory name a Data/AI
@@ -1498,7 +1549,8 @@ scan:
   # otherwise turn that file into an `FM001`, which is an error, on the very run it exists
   # to inform.
   skip_dirs: [templates, skills, schemas, references, corpus,
-              "_meta/extract", "_meta/business", "_meta/presentation", ingest-out,
+              "_meta/extract", "_meta/business", "_meta/presentation", "_meta/digest",
+              ingest-out,
               build, node_modules, __pycache__, ".framework"]
 
   # Documents that speak *about* the framework rather than being produced *by* it.

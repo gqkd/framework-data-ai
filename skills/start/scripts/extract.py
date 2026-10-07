@@ -336,7 +336,7 @@ def wrote_by_framework(path: Path) -> bool:
     return head.startswith("---") and "schema: framework/" in head
 
 
-FRAMEWORK_OUTPUT = ("_meta/extract", "_meta/business", "_meta/presentation")
+FRAMEWORK_OUTPUT = ("_meta/extract", "_meta/business", "_meta/presentation", "_meta/digest")
 
 
 def find_corpus(root: Path) -> list[tuple[str, int, int]]:
