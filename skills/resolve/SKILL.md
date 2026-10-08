@@ -118,7 +118,7 @@ self-checking.
 
 | `scope` | The decision is about | And you must also update |
 |---|---|---|
-| `product` | what we build, for whom, with what priority | `PBR`, and `RMP` if it moves an increment |
+| `product` | what we build, for whom, with what priority | `PBR`, and `RMP` if it moves an increment: its row in `increments:` too, when the roadmap has one |
 | `architecture` | how the system is built | `ARC#current` if it is already built, `#target` if it moves the destination, `#delta` either way |
 | `platform` | what constrains every product | every product listed in `products`, and `PLATFORM.md` if one exists |
 

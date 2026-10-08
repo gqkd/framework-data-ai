@@ -105,8 +105,10 @@ surfaces.
 ## What you must not do
 
 **Do not turn a request into a mandate.** "The customer wants Excel export" is a `SIG` in
-`LOG`, and at most a conditional increment in `RMP`. It does not become a `CHG` and does not
-get built. That path runs through intake, triage and the `ICG`, which is the `cycle` skill.
+`LOG`, and at most a conditional increment in `RMP`, with its row in `increments:` when the
+roadmap has one (`RMP001` reports a heading without a row). Placing it in a stage is not
+this skill's: the stages are kept by `cycle`, at the next opening of a cycle. It does not
+become a `CHG` and does not get built. That path runs through intake, triage and the `ICG`, which is the `cycle` skill.
 Skipping it is how a product becomes the sum of the last things anyone asked for.
 
 **Do not close an `OPEN.md` entry as a side effect.** If the information you were given

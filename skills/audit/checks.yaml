@@ -1365,6 +1365,56 @@ checks:
     title: mandatory execution evidence is missing or failed
     prevents: Fast-cycle selection or an empty graph removing mandatory tests.
 
+  # The order of a roadmap. Five checks arrived together, against the rule at the top of this
+  # file, and the reason is the reader: the stages and increments of `RMP.md` are what the
+  # daily digest draws its timeline from, and a hole in them does not show as an error
+  # anywhere -- it shows as a Gantt with an increment missing, a stage with less work than
+  # it has, or a delivery date earlier than the plan allows. All five warn and none blocks:
+  # the timeline is drawn with the hole, and the hole is named here.
+  RMP001:
+    level: warn
+    title: a stage, an increment and the body of the roadmap do not agree on who belongs where
+    prevents: >
+      An increment planned in a stage and declared nowhere, one placed in two stages, one
+      declared and placed in none, or a row of `increments:` with no `### INC-` heading and
+      the reverse. Each one moves work in or out of the timeline without anybody deciding it:
+      the digest puts an increment in the first stage that names it and draws an increment
+      in no stage after all of them, so the plan it shows is not the one written.
+  RMP002:
+    level: warn
+    title: the sequence of stages or increments cannot be followed
+    prevents: >
+      A stage after one that does not exist, stages or increments waiting for each other in
+      a circle, or an increment depending on one placed in a later stage. The order is the
+      thing the digest reads the roadmap for, and an order that cannot be honoured is drawn
+      in the order the file happens to list it, which is a sequence nobody chose.
+  RMP003:
+    level: warn
+    title: what composes an increment cannot be found, or is counted twice
+    prevents: >
+      An increment that requires an `OD` or a `KI` no register of the product declares, or
+      lists a `CHG` that does not exist, belongs to another product, sits under two
+      increments, or already names its increment in its own `derives_from`. An increment is
+      worth the sum of what composes it, so a component that resolves to nothing makes it
+      cheaper than it is, and one counted twice makes it dearer; and the `CHG` is where its
+      increment is written first, so `changes:` disagreeing with it is two answers to one
+      question.
+  RMP004:
+    level: warn
+    title: an increment is delivered while part of it is still open
+    prevents: >
+      `state: delivered` on an increment whose required decisions or issues are still open,
+      or whose changes are not verified. The presentation and the business update retell the
+      roadmap, and would show as done what the registers say is not.
+  RMP005:
+    level: warn
+    title: the name of a stage or of its milestone carries a date
+    prevents: >
+      A date in the one document that has none by design. A milestone called "demo on 15/10"
+      puts a term of time in the roadmap that no field records and nothing reports going
+      stale, while the date the digest draws is the one declared in its state: two dates for
+      one milestone, and the one in the roadmap is the one people read.
+
 # ON THE PROSE COUPLED CHECKS. There are none left. REG002 and REG003 used to read the body
 # of `OPEN.md` -- the `### OD-NNN` headings and the "Cost to reverse" and "Default in force"
 # lines inside each entry -- which is the fragility the section markers removed, one level

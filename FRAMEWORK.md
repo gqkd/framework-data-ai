@@ -346,9 +346,10 @@ the choice of a database, and often more expensive. Separate registers would mea
 cross-product decisions, the most expensive ones, have no home and end up in the register
 of whichever product you were working on that day.
 
-**`RMP` ≠ `IMP`.** `RMP` answers *which future increments we hypothesize and which
-evidence they depend on*: it is living, it looks forward, and it is an **input** to the
-change intake. `IMP` answers *how we execute the approved change contracts in this cycle*:
+**`RMP` ≠ `IMP`.** `RMP` answers *which increments we hypothesize, in which order they are
+delivered, and which evidence and decisions they depend on*: it is living, it looks forward,
+and it is an **input** to the change intake. Its stages order the increments across cycles,
+in front matter a script can read. `IMP` answers *how we execute the approved change contracts in this cycle*:
 it is replaced every cycle, and it is an **output** of the reshaping.
 
 **`SD` → `ARC`.** `SD` is the immutable snapshot of the design at gate G4. `ARC` is the

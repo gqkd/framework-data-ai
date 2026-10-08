@@ -134,10 +134,13 @@ each item is named by what it lets somebody do.
 
 | Column | What goes in it |
 |---|---|
-| **Done** | `PBR` capabilities with `status: live`. A row with no status is done only if `ARC#current` has the component that does it; a row that says `live` and also says it is unverified is not |
+| **Done** | `RMP` increments `delivered`. `PBR` capabilities with `status: live`. A row with no status is done only if `ARC#current` has the component that does it; a row that says `live` and also says it is unverified is not |
 | **To do** | `PBR` capabilities `in-build`; `RMP` increments `committed`, in dependency order; the first delivery a perimeter `DEC` decides |
 | **To do, marked "planned"** | `RMP` increments and `PBR` capabilities `shaped`: defined, not decided |
 | *nowhere* | `RMP` increments `conditional`; `PBR` capabilities `pitched`; `RMP §Not in roadmap`; any state the table does not name |
+
+The state of an increment is the one in the roadmap's `increments:` when it has them, and
+the body table otherwise; the dependency order is the sequence of its `delivery_stages`.
 
 A `conditional` increment shown to a customer, however it is labelled, is the moment a
 promise is born: the label is forgotten and the item is remembered. A `shaped` one carries its

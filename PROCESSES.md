@@ -433,6 +433,13 @@ flowchart LR
 An increment with no evidence and no decision behind it stays in the `RMP`: it does not
 enter the `IMP`.
 
+"RMP reordered" and "Dependencies updated" are fields when the roadmap declares its
+`delivery_stages` and `increments`: the stages in their sequence, each increment with the
+increments it depends on, the `OD` and `KI` it requires and its state. The daily digest
+(`P-16`) draws its Gantt from them, an increment being worth the sum of what composes it, so
+the review also asks which increments of the next stages have nothing under them yet. Each
+change written in the cycle names its increment in its own `derives_from`.
+
 ### Data contracts
 
 > **If the change touches data or a schema, the `DC` for it is updated and versioned, and

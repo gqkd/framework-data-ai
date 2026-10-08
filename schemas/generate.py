@@ -199,11 +199,25 @@ def build(name: str, spec: dict, registry: dict) -> dict:
             # A field of the record that holds several values. `used_by` needs it: a shared
             # repository serves more than one product, and a scalar there would force the
             # one thing the map exists to record into a comma separated string.
+            #
+            # Two refinements a list can opt into, and only the roadmap's do. `list_items`
+            # gives the shape of what the list holds, because a list of identifiers that
+            # accepts any string accepts `CHG-18`, and the join it exists for then finds
+            # nothing. `empty_lists` says that an empty list is an answer: `depends_on: []`
+            # on an increment is "depends on nothing", which is a fact somebody checked, and
+            # demanding at least one item would make the honest value an error.
+            items = f.get("list_items") or {}
+            empty = set(f.get("empty_lists") or [])
+            for k in list(items) + sorted(empty):
+                if k not in (f.get("lists") or []):
+                    raise SystemExit(f"{name}.maps.{field}: {k!r} is refined but not in `lists`")
             for k in (f.get("lists") or []):
                 if k not in props:
                     raise SystemExit(f"{name}.maps.{field}.lists: {k!r} is not a field")
-                props[k] = {"type": "array", "items": {"type": "string", "minLength": 1},
-                            "minItems": 1}
+                item = {"type": "string", "minLength": 1}
+                if k in items:
+                    item = {"type": "string", "pattern": items[k]}
+                props[k] = {"type": "array", "items": item, "minItems": 0 if k in empty else 1}
             # New nested fields opt into the memory contract; old record shapes stay intact.
             for k, definition in (f.get("typed") or {}).items():
                 if k in props or k == "unanswerable":

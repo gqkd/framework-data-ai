@@ -27,6 +27,138 @@
     "last_review": {},
     "review_scope": {
       "type": "string"
+    },
+    "delivery_stages": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_-]{0,23}$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "milestone": {
+            "type": "string",
+            "minLength": 1
+          },
+          "after": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]{0,23}$"
+            },
+            "minItems": 0
+          },
+          "increments": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^INC-(\\d{3,}|NNN)$"
+            },
+            "minItems": 1
+          },
+          "unanswerable": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "settled_by": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "reason",
+                "settled_by"
+              ],
+              "additionalProperties": false
+            },
+            "minProperties": 1
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "increments": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^INC-(\\d{3,}|NNN)$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "enum": [
+              "committed",
+              "shaped",
+              "conditional",
+              "delivered"
+            ]
+          },
+          "depends_on": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^INC-(\\d{3,}|NNN)$"
+            },
+            "minItems": 0
+          },
+          "requires": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^(OD|KI)-(\\d{3,}|NNN)$"
+            },
+            "minItems": 0
+          },
+          "changes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^CHG-(\\d{3,}|NNN)$"
+            },
+            "minItems": 0
+          },
+          "unanswerable": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "settled_by": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "reason",
+                "settled_by"
+              ],
+              "additionalProperties": false
+            },
+            "minProperties": 1
+          }
+        },
+        "required": [
+          "state"
+        ],
+        "additionalProperties": false
+      }
     }
   },
   "required": [

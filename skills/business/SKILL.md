@@ -99,7 +99,9 @@ names or assign personal accountability.
 
 ## 4 · Translate the roadmap
 
-- Keep phases in dependency order and name each by the business outcome it unlocks.
+- Keep phases in dependency order and name each by the business outcome it unlocks. When
+  the roadmap declares `delivery_stages`, those are the phases and their sequence, and the
+  state of each increment is the one in `increments:`; an increment `delivered` is done.
 - Distinguish the first release from what follows it.
 - Preserve maturity: committed, shaped and conditional must not read as equally certain.
 - Use dates only when an authoritative plan or commitment carries them. Never create a

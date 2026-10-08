@@ -155,12 +155,52 @@ works" but what is observed, measured or asserted.
 A `CHG` starts at `status: draft` and becomes `approved` when the user approves it. Only an
 approved one authorizes anything.
 
+**The increment it realises.** When the roadmap declares `increments:`, ask which increment
+the change belongs to, proposing the one whose decisions or issues it derives from, and
+write it in the change's own `derives_from` beside the rest: a `CHG` cannot be edited after
+approval, so this is the one moment its place in the plan can be written where it belongs.
+A change that belongs to no increment is legal, and the digest places it after every stage;
+say so when the person chooses it.
+
 ## Step 5 · The cycle plan
 
 `IMP` says how the approved contracts get executed this cycle. It is living and replaced
 each cycle, and it is an output of the reshaping, never an input. Include what is
 **excluded** this cycle: a plan that lists only what is in is one somebody will read as
 open-ended.
+
+## Step 5b · The stages of the roadmap
+
+This skill keeps the order of delivery in `RMP.md`: the `delivery_stages` and the
+`increments` of its front matter, which the daily digest draws its Gantt from. The template
+says what each field means; what follows is when to touch them.
+
+- **At the opening of every cycle**, read them back to the person in one compact view:
+  the stages in their sequence, the increments of each with their state, and under each
+  increment what composes it, open and closed. Ask whether the sequence still holds. An
+  increment with nothing under it is worth zero hours in the digest's estimate: name the
+  ones in the stages that come next, and propose breaking them down, into the `OD` and `KI`
+  they require and into `CHG` in draft.
+- **When a change of the cycle is written**, it names its increment itself (Step 4). Only a
+  change written before the roadmap had `increments:` goes in that increment's `changes`.
+- **When every component of an increment is closed**, propose `state: delivered`. `RMP004`
+  reports an increment marked delivered with work still open.
+- **The first time**, on a roadmap that has no `delivery_stages` yet:
+  1. If its body already orders the increments, in a table of phases or in prose, propose
+     the two maps from it, and quote the lines each stage and each dependency comes from.
+     Ids of stages are short lowercase slugs: a phase called «0b» becomes `t0b`.
+  2. List the existing changes, decisions and issues that no increment can be read from,
+     in one table, with the increment you propose for each and an empty cell where you
+     cannot tell. The person fills the table; do not infer what the documents do not say.
+  3. Say what the digest will show the day after: increments that were estimated with a
+     size of their own become the sum of what composes them, so one with nothing under it
+     leaves the estimate, and the expected delivery moves earlier with no work done.
+  4. Write the maps on the person's confirmation, and run the validator: `RMP001`-`RMP005`
+     report what does not agree.
+
+Every change to `RMP.md` is a change to a living document: the person rereads it and
+attests it, as for any other (`LC006`). That is the reason to touch the stages at the pace
+of the cycles, and not every day.
 
 ## Step 6 · The agent brief
 

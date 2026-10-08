@@ -3440,6 +3440,238 @@ def check_cross_product(arts: list[Artifact], report: Report) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# The order of a roadmap
+
+INC_HEADING = re.compile(r"^#{2,4}\s+[`*]*(INC-\d{3,})\b")
+# A day and a month, the way a date is written in a milestone's name. Slash only: a dot
+# would read the release in "the 1.0 demo" as a date.
+DAY_MONTH = re.compile(r"(?<!\d)\d{1,2}/\d{1,2}(?![\d/])")
+
+
+def _sequence(nodes: list[str], before: dict[str, list[str]]) -> tuple[list[str], set[str]]:
+    """`nodes` in an order where each comes after everything in its `before`, and the cycles.
+
+    Ties go to the order the document wrote them in, so a plan with no dependency at all
+    reads back exactly as written. A node caught in a cycle cannot be placed after its
+    predecessors; it goes where it was written, and the caller reports the cycle.
+    """
+    known = set(nodes)
+    waiting = {n: {p for p in before.get(n, []) if p in known and p != n} for n in nodes}
+    out: list[str] = []
+    while len(out) < len(nodes):
+        ready = [n for n in nodes if n not in out and not (waiting[n] - set(out))]
+        if not ready:
+            stuck = [n for n in nodes if n not in out]
+            return out + stuck, set(stuck)
+        out.append(ready[0])
+    return out, set()
+
+
+def roadmap_plan(meta: dict) -> dict:
+    """The stages of a roadmap in their sequence, and the increments of each in theirs.
+
+    One implementation, read by the validator to report and by the digest to draw: two
+    copies of an ordering rule give two answers the day one of them is edited. The digest
+    imports this module for discovery already.
+    """
+    stages = {str(k): v for k, v in as_map(meta.get("delivery_stages")).items()
+              if isinstance(v, dict)}
+    increments = {str(k): v for k, v in as_map(meta.get("increments")).items()
+                  if isinstance(v, dict)}
+    order, stage_cycle = _sequence(list(stages),
+                                   {k: [str(x) for x in as_list(v.get("after"))]
+                                    for k, v in stages.items()})
+    where: dict[str, str] = {}
+    for s in order:
+        for inc in as_list(stages[s].get("increments")):
+            where.setdefault(str(inc), s)
+    rank = {s: n for n, s in enumerate(order)}
+    deps = {i: [str(x) for x in as_list(v.get("depends_on"))] for i, v in increments.items()}
+    per_stage: dict[str, list[str]] = {}
+    inc_cycle: set[str] = set()
+    for s in order:
+        mine = [str(i) for i in as_list(stages[s].get("increments")) if where.get(str(i)) == s]
+        seq, stuck = _sequence(mine, deps)
+        per_stage[s] = seq
+        inc_cycle |= stuck
+    return {"stages": stages, "increments": increments, "order": order,
+            "per_stage": per_stage, "stage_of": where, "rank": rank,
+            "stage_cycle": stage_cycle, "increment_cycle": inc_cycle}
+
+
+def check_roadmap(arts: list[Artifact], report: Report) -> None:
+    """A roadmap's stages and increments against themselves and against the registers.
+
+    Only a roadmap that declares the maps is read; one that does not is the roadmap of
+    4.2.0 and has nothing to agree with. Every finding is a warning: the plan is what the
+    digest draws from, and a plan with a hole in it should be drawn with the hole, not stop
+    the morning's workbook.
+    """
+    dirs = product_dirs(arts)
+    entries: dict[str, list[tuple[str, dict, str | None]]] = {}
+    for o in arts:
+        if o.type != "open-register":
+            continue
+        scope = dirs.get(o.path.parent, (None, None))[0]
+        for key, row in as_map(o.meta.get("entries")).items():
+            if isinstance(row, dict):
+                entries.setdefault(str(key), []).append((o.rel, row, scope))
+    changes = {a.id: a for a in arts if a.type == "change-contract" and a.id}
+
+    def bare(ref) -> str:
+        return str(ref).split(":", 1)[-1].strip()
+
+    for a in arts:
+        if a.type != "roadmap" or not (a.meta.get("delivery_stages")
+                                       or a.meta.get("increments")):
+            continue
+        prod = dirs.get(a.path.parent, (None, None))[0] or next(
+            iter(as_list(a.meta.get("products"))), None)
+        plan = roadmap_plan(a.meta)
+        stages, increments = plan["stages"], plan["increments"]
+        headings: list[str] = []
+        fenced = False
+        for line in a.body.splitlines():
+            if line.lstrip().startswith(("```", "~~~")):
+                fenced = not fenced
+            elif not fenced and (m := INC_HEADING.match(line)):
+                headings.append(m.group(1))
+        declared = set(increments) if increments else set(headings)
+
+        # RMP001: who belongs where, and the two halves of the document.
+        seen: dict[str, str] = {}
+        for s, row in stages.items():
+            for inc in (str(x) for x in as_list(row.get("increments"))):
+                if inc not in declared:
+                    report.add("RMP001", a.rel,
+                               f"stage {s!r} names {inc}, which this roadmap does not "
+                               "declare: the stage plans an increment nobody wrote, and the "
+                               "digest has nothing to put under it")
+                elif inc in seen and seen[inc] != s:
+                    report.add("RMP001", a.rel,
+                               f"{inc} is in stage {seen[inc]!r} and in stage {s!r}. An "
+                               "increment is delivered once; the digest places it in the "
+                               "first and the second reads as a stage with less work than "
+                               "it has")
+                seen.setdefault(inc, s)
+        if increments:
+            for inc in sorted(set(increments) - set(headings)):
+                report.add("RMP001", a.rel,
+                           f"{inc} is in `increments:` and has no `### {inc}` heading: the "
+                           "row says it exists and nothing says what it is or why")
+            for inc in sorted(set(headings) - set(increments)):
+                report.add("RMP001", a.rel,
+                           f"`### {inc}` has no row in `increments:`, so no state, no "
+                           "dependency and no component of it can be read, and the digest "
+                           "draws it as an increment with nothing in it")
+            if stages:
+                for inc in sorted(set(increments) - set(seen)):
+                    report.add("RMP001", a.rel,
+                               f"{inc} is in no stage: the timeline has no place for it, "
+                               "and it falls after every stage that does")
+
+        # RMP002: the sequence.
+        for s, row in stages.items():
+            for p in (str(x) for x in as_list(row.get("after"))):
+                if p not in stages:
+                    report.add("RMP002", a.rel,
+                               f"stage {s!r} comes after {p!r}, which is not a stage of this "
+                               "roadmap: the sequence starts from nothing")
+        if plan["stage_cycle"]:
+            report.add("RMP002", a.rel,
+                       "the stages " + ", ".join(sorted(plan["stage_cycle"])) + " wait for "
+                       "each other in a circle, so none of them can come first; they are "
+                       "drawn in the order they are written")
+        later: dict[str, set[str]] = {}
+        for s in plan["order"]:
+            later[s] = set()
+        for s in reversed(plan["order"]):
+            for t, row in stages.items():
+                if s in (str(x) for x in as_list(row.get("after"))):
+                    later[s] |= {t} | later.get(t, set())
+        for inc, row in increments.items():
+            for d in (str(x) for x in as_list(row.get("depends_on"))):
+                if d not in declared:
+                    report.add("RMP002", a.rel,
+                               f"{inc} depends on {d}, which this roadmap does not declare")
+                    continue
+                si, sd = plan["stage_of"].get(inc), plan["stage_of"].get(d)
+                if si and sd and sd in later.get(si, set()):
+                    report.add("RMP002", a.rel,
+                               f"{inc} is in stage {si!r} and depends on {d}, which is in "
+                               f"{sd!r}, a stage that comes after it. Either the dependency "
+                               "or the stage is wrong, and the timeline cannot honour both")
+        if plan["increment_cycle"]:
+            report.add("RMP002", a.rel,
+                       "the increments " + ", ".join(sorted(plan["increment_cycle"]))
+                       + " depend on each other in a circle")
+
+        # RMP003: what composes an increment.
+        listed: dict[str, str] = {}
+        for inc, row in increments.items():
+            for r in (str(x) for x in as_list(row.get("requires"))):
+                hits = entries.get(r, [])
+                if not any(prod is None or binds(prod, e, scope) for _, e, scope in hits):
+                    report.add("RMP003", a.rel,
+                               f"{inc} requires {r}, which no open register of "
+                               f"{prod or 'this product'} declares: a prerequisite nobody "
+                               "can find is one that never blocks anything")
+            for c in (str(x) for x in as_list(row.get("changes"))):
+                chg = changes.get(c)
+                if chg is None:
+                    report.add("RMP003", a.rel, f"{inc} lists {c}, which does not exist")
+                    continue
+                if prod and prod not in as_list(chg.meta.get("products")):
+                    report.add("RMP003", a.rel,
+                               f"{inc} lists {c}, a change of "
+                               f"{', '.join(map(str, as_list(chg.meta.get('products'))))}")
+                own = [bare(x) for x in as_list(chg.meta.get("derives_from"))
+                       if bare(x).startswith("INC-")]
+                if own:
+                    report.add("RMP003", a.rel,
+                               f"{inc} lists {c}, which names {', '.join(own)} in its own "
+                               "`derives_from`. The change says where it belongs, and "
+                               "`changes:` is only for the ones that do not: "
+                               + ("the two agree, so the row repeats it"
+                                  if own == [inc] else "the two disagree"))
+                if c in listed and listed[c] != inc:
+                    report.add("RMP003", a.rel,
+                               f"{c} is listed under {listed[c]} and under {inc}: its hours "
+                               "would be counted twice")
+                listed.setdefault(c, inc)
+
+        # RMP004: delivered, with work still open.
+        for inc, row in increments.items():
+            if row.get("state") != "delivered":
+                continue
+            still = []
+            for r in (str(x) for x in as_list(row.get("requires"))):
+                if any(e.get("status") in ("open", "parked") for _, e, _ in entries.get(r, [])):
+                    still.append(r)
+            mine = [c for c, chg in changes.items()
+                    if inc in (bare(x) for x in as_list(chg.meta.get("derives_from")))
+                    or c in (str(x) for x in as_list(row.get("changes")))]
+            still += [c for c in sorted(mine)
+                      if changes[c].meta.get("status") in ("draft", "approved", "implemented")]
+            if still:
+                report.add("RMP004", a.rel,
+                           f"{inc} is `delivered` and {', '.join(still)} "
+                           f"{'is' if len(still) == 1 else 'are'} still open. Whatever "
+                           "retells the roadmap shows it as done while its work is not")
+
+        # RMP005: a date in the plan.
+        for s, row in stages.items():
+            for what in ("name", "milestone"):
+                text = str(row.get(what) or "")
+                if DATE_IN_TEXT.search(text) or DAY_MONTH.search(text):
+                    report.add("RMP005", a.rel,
+                               f"the {what} of stage {s!r} carries a date: {text!r}. The "
+                               "roadmap has no dates by design; the date of a milestone "
+                               "lives in the digest's state, where it is a declaration "
+                               "about the work and not a fact about the product")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Generated indices
 
 # The line that says a file at one of these paths was produced here. It is also the
@@ -3792,6 +4024,7 @@ def main() -> int:
     check_triage(arts, report, references=references)
     check_stack(arts, report)
     check_cross_product(arts, report)
+    check_roadmap(arts, report)
     # Last, and it has to be: an annotation is a statement about the set of findings, so it
     # cannot be joined until every check has finished producing them.
     if annotations_rel is not None:

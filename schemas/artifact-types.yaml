@@ -1307,7 +1307,41 @@
 # the first digest rebuilt in bulk, the closing dates and sizes of the items done, the order of
 # the lists, the plan with its hours and the milestones. The snapshots of 4.1.0 stay as they
 # are and still anchor the chain of hashes.
-version: "4.2.0"
+#
+# 4.2.0 -> 4.3.0. The roadmap says the order of delivery in front matter, and the digest draws
+# its Gantt from it. MINOR: two optional maps, five checks at warn, no document that stops
+# validating and nothing to migrate in a project that does not want them.
+#
+# WHAT IT ANSWERS. A roadmap in use had grown, in prose, a table of phases: which increments
+# come first, which wait for which, a milestone named at the end of one of them. The digest
+# needed exactly that and could not read a table, so the person kept the same order a second
+# time, by hand, in the digest's state. `delivery_stages` is that table as fields: stages in a
+# sequence (`after`), the increments of each, the name of a milestone and never its date.
+# `increments` gives each increment its state, the increments it depends on, the `OD` and `KI`
+# it requires, and the older `CHG` that do not name it themselves.
+#
+# AN INCREMENT HAS NO SIZE. It is worth the sum of what composes it: the decisions and issues
+# it requires, which come first, and the changes that realise it. One with nothing under it
+# is worth zero, and the digest says it is still to be broken down. A `CHG` names its
+# increment in its own `derives_from`, at the one moment that can be written, because a `CHG`
+# is immutable after approval; `changes` is only for the ones written before.
+#
+# `delivered` IS THE FOURTH STATE, and the one the body table never had. Without it every
+# finished increment read as still to do to whatever retells the roadmap.
+#
+# NAMES. `delivery_stages` and not `stages`: `product.yaml` carries `stage:`, the framework
+# phase of the product, one letter away, and `FM006` would have reported it in every
+# manifest. And not phases: F1-F6 are the framework's.
+#
+# WHO WRITES IT. `cycle`, at the opening of a cycle, and the first time from the prose the
+# roadmap already has, with a table the person fills for every change, decision and issue
+# whose increment no document says. `requirement` and `resolve` add the row of an increment
+# they create or move; the stages stay with `cycle`. The roadmap is a living document, so
+# each change to it is reread and attested: the stages move at the pace of the cycles.
+#
+# ADOPTION. `FW001` reports the new number at `warn`: update `framework_version`. The maps
+# are optional, and a project that does not declare them sees nothing new.
+version: "4.3.0"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of
@@ -2340,6 +2374,55 @@ types:
     path: [products/<p>/RMP.md]
     lifecycle: living
     status: [active]
+    # THE ORDER OF THE INCREMENTS, WHERE A SCRIPT CAN READ IT. A roadmap in use grew a
+    # table of phases in prose: which increments come first, which wait for which, and a
+    # milestone named at the end of one of them. The daily digest needed exactly that to
+    # draw a timeline, and could not read a table, so the person kept a second copy of the
+    # order by hand in the digest's state. Same move as `OPEN.md` and the commitments: the
+    # facts a machine joins on go into the front matter, and the body keeps the argument.
+    #
+    # Both maps are optional. A roadmap without them is the roadmap of 4.2.0 and nothing
+    # reports it; one with them is checked by `RMP001`-`RMP005`, at warn, so that an
+    # inconsistency in the plan never stops a morning's digest.
+    #
+    # `delivery_stages` and not `stages`: `product.yaml` carries `stage:`, the framework
+    # phase of the product, one letter away, and `FM006` reports a key one letter from a
+    # field something reads. The stages are the order of delivery, and the name says so.
+    # Their ids are short lowercase slugs, `t0`, `t0a`, `t1`, which a YAML reader keeps as
+    # strings: a bare `0` would become a number.
+    #
+    # No dates, here or anywhere in this document: the date of a milestone lives in the
+    # digest's state, beside the hours and the sizes. An increment has no size either: it
+    # is worth the sum of what composes it -- the `OD` and `KI` it `requires`, which come
+    # first, and the `CHG` that realise it. A `CHG` names its increment in its own
+    # `derives_from`; `changes` is only for the older ones that do not, because a `CHG` is
+    # immutable and cannot be made to name it afterwards.
+    maps:
+      delivery_stages:
+        keys: "^[a-z][a-z0-9_-]{0,23}$"
+        fields:
+          required: [name]
+          optional: [milestone]
+          lists: [after, increments]
+          list_items:
+            after: "^[a-z][a-z0-9_-]{0,23}$"
+            increments: "^INC-(\\d{3,}|NNN)$"
+          empty_lists: [after]
+      increments:
+        keys: "^INC-(\\d{3,}|NNN)$"
+        fields:
+          required: [state]
+          lists: [depends_on, requires, changes]
+          enums:
+            # The three maturities of the body table, and the one state the body never had:
+            # done. Without it every finished increment reads as still to do to whatever
+            # retells the roadmap, the presentation first.
+            state: [committed, shaped, conditional, delivered]
+          list_items:
+            depends_on: "^INC-(\\d{3,}|NNN)$"
+            requires: "^(OD|KI)-(\\d{3,}|NNN)$"
+            changes: "^CHG-(\\d{3,}|NNN)$"
+          empty_lists: [depends_on, requires, changes]
 
   impact-classification:
     id: ICG

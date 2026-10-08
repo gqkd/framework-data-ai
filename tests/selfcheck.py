@@ -1477,7 +1477,7 @@ def _maps_are_constrained():
                 continue
 
             pattern = rule.get("keys")
-            candidates = ["SIG-001", "OD-001", "CMT-001", "RSK-001", "frontend",
+            candidates = ["SIG-001", "OD-001", "CMT-001", "RSK-001", "INC-001", "frontend",
                           "query-engine", "product.backend", "platform.access"]
             if pattern:
                 accepted = [k for k in candidates if re.match(pattern, k)]
@@ -2902,6 +2902,121 @@ def _extract_keeps_provenance():
     return problems
 
 
+
+
+@check("the stages and increments of a roadmap agree with themselves and with the registers")
+def _roadmap_stages():
+    # The order of delivery is what the daily digest draws its Gantt from, and a hole in it
+    # shows nowhere as an error: it shows as an increment missing from the timeline, a stage
+    # with less work than it has, a delivery earlier than the plan allows. Each code is
+    # asserted by one mutation of a clean repository, and the clean one reports none of them.
+    fm = lambda **kw: "---\n" + "".join(f"{k}: {v}\n" for k, v in kw.items()) + "---\n\n"
+    rmp = lambda stages, incs, body="": (
+        fm(schema="framework/roadmap/v1", artifact_type="roadmap", lifecycle="living",
+           status="active", version="1.0.0", products="[p]", owners="[o]",
+           created="2026-01-01 09:00", last_review="2026-01-01 09:00")
+        .replace("---\n\n", f"delivery_stages:\n{stages}increments:\n{incs}---\n\n", 1)
+        + "# Roadmap\n\n## Increments\n\n### INC-001 · First\n\n### INC-002 · Second\n\n"
+          "### INC-003 · Third\n" + body)
+    stages = ("  t2:\n    name: Second\n    after: [t1]\n    increments: [INC-002, INC-003]\n"
+              "  t1:\n    name: First\n    increments: [INC-001]\n"
+              "    milestone: Two customers apart\n")
+    incs = ("  INC-001:\n    state: committed\n    requires: [OD-001]\n"
+            "  INC-003:\n    state: conditional\n    depends_on: [INC-002]\n"
+            "  INC-002:\n    state: shaped\n    depends_on: [INC-001]\n"
+            "    requires: [KI-002]\n    changes: [CHG-002]\n")
+    chg = lambda cid, derives: fm(
+        schema="framework/change-contract/v1", artifact_type="change-contract",
+        lifecycle="immutable", status="draft", id=cid, products="[p]", owners="[o]",
+        approvers="[o]", created="2026-01-01 09:00", derives_from=derives,
+        verified_by="null") + f"# {cid}\n"
+    base = {
+        "framework.yaml": f"framework_version: {REGISTRY['version']}\n",
+        "OPEN.md": fm(schema="framework/open-register/v1", artifact_type="open-register",
+                      lifecycle="living", status="active", owners="[o]",
+                      created="2026-01-01 09:00", last_review="2026-01-01 09:00")
+        + "\n<!-- generated: open-union -->\nx\n<!-- /generated -->\n",
+        "products/p/product.yaml": (
+            "schema: framework/product-manifest/v1\nartifact_type: product-manifest\n"
+            "lifecycle: living\nstatus: active\nproducts: [p]\nname: p\none_liner: A thing.\n"
+            "owners: [o]\ncreated: 2026-01-01 09:00\nlast_review: 2026-01-01 09:00\n"),
+        "products/p/OPEN.md": fm(
+            schema="framework/open-register/v1", artifact_type="open-register",
+            lifecycle="living", status="active", owners="[o]", created="2026-01-01 09:00",
+            last_review="2026-01-01 09:00",
+            entries="\n  OD-001:\n    status: open\n    cost_to_reverse: low\n"
+                    "    default_in_force: one store\n  KI-002:\n    status: open")
+        + "# Open\n\n### OD-001 · A choice\n\n### KI-002 · An issue\n",
+        "products/p/changes/CHG-001.md": chg("CHG-001", "[INC-001]"),
+        "products/p/changes/CHG-002.md": chg("CHG-002", "[KI-002]"),
+        "products/p/RMP.md": rmp(stages, incs),
+    }
+    cases = [
+        ("RMP001", "a stage naming an increment nobody declared",
+         lambda t: t.replace("increments: [INC-001]", "increments: [INC-001, INC-009]")),
+        ("RMP001", "a heading with no row", lambda t: t + "\n### INC-004 · Fourth\n"),
+        ("RMP001", "an increment in two stages",
+         lambda t: t.replace("increments: [INC-001]", "increments: [INC-001, INC-002]")),
+        ("RMP002", "a stage after one that does not exist",
+         lambda t: t.replace("after: [t1]", "after: [t9]")),
+        ("RMP002", "two stages waiting for each other",
+         lambda t: t.replace("    name: First\n", "    name: First\n    after: [t2]\n")),
+        ("RMP002", "an increment depending on one of a later stage",
+         lambda t: t.replace("    requires: [OD-001]\n",
+                             "    requires: [OD-001]\n    depends_on: [INC-003]\n")),
+        ("RMP003", "a prerequisite no register declares",
+         lambda t: t.replace("requires: [OD-001]", "requires: [OD-099]")),
+        ("RMP003", "a change that names its increment itself, listed again",
+         lambda t: t.replace("changes: [CHG-002]", "changes: [CHG-002, CHG-001]")),
+        ("RMP004", "delivered while its decision is open",
+         lambda t: t.replace("state: committed", "state: delivered")),
+        ("RMP005", "a date in a milestone",
+         lambda t: t.replace("Two customers apart", "Two customers apart, by 15/10")),
+    ]
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        for rel, text in base.items():
+            f = root / rel
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_text(text)
+        target = root / "products" / "p" / "RMP.md"
+
+        def codes():
+            r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(root), "--json",
+                                "--stale-days", "36500"], capture_output=True, text=True)
+            try:
+                found = json.loads(r.stdout)["findings"]
+            except ValueError:
+                return None, r.stderr.strip()[-300:]
+            return [f["code"] for f in found if f["code"].startswith("RMP")
+                    or (f["code"].startswith("FM") and f["path"].endswith("RMP.md"))], found
+
+        got, found = codes()
+        if got is None:
+            return [f"the validator did not run: {found}"]
+        if got:
+            problems.append(f"the clean roadmap was reported: "
+                            f"{[(f['code'], f['message'][:80]) for f in found if f['code'] in got]}")
+        clean = target.read_text()
+        for code, what, mutate in cases:
+            target.write_text(mutate(clean))
+            got, _ = codes()
+            if code not in (got or []):
+                problems.append(f"{what}: {code} was not reported ({got})")
+        target.write_text(clean)
+
+    v = _load(VALIDATE, "validate_roadmap")
+    plan = v.roadmap_plan(yaml.safe_load(base["products/p/RMP.md"].split("---\n")[1]))
+    if plan["order"] != ["t1", "t2"] or plan["per_stage"]["t2"] != ["INC-002", "INC-003"]:
+        problems.append(f"the sequence is not the one the stages and dependencies give: "
+                        f"{plan['order']} {plan['per_stage']}")
+    tie = v.roadmap_plan({"delivery_stages": {"b": {"name": "B", "increments": ["INC-002"]},
+                                              "a": {"name": "A", "increments": ["INC-001"]}}})
+    if tie["order"] != ["b", "a"]:
+        problems.append(f"stages with no dependency are not read in the order written: "
+                        f"{tie['order']}")
+    return problems
 
 
 @check("the extractor does not take the framework's own output for a corpus")
