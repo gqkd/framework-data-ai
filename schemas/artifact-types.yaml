@@ -1354,9 +1354,13 @@
 # column with the hours of each row. A project without stages sees the Gantt of 4.2.0 with
 # that column added, and every number of the reference workbook unchanged.
 #
+# THE TWO PIES ARE GONE from the summary, on the request of the person who sends the file:
+# the table of section 5 says the same in five rows, and the Gantt is the picture the readers
+# asked for. The cells of the reference are unchanged; only its two charts are not drawn.
+#
 # ADOPTION. `FW001` reports the new number at `warn`: update `framework_version`. The maps
 # are optional, and a project that does not declare them sees nothing new but the column of
-# hours. One that declares them through `cycle` sees, the next morning, its increments turn
+# hours and a summary without pies. One that declares them through `cycle` sees, the next morning, its increments turn
 # from items with a size into the sum of what composes them: those with nothing under it
 # leave the estimate, and the expected delivery moves earlier with no work done, which the
 # conversation says. Then it declares the date of each stage milestone, once.

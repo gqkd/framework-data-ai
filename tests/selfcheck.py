@@ -3345,8 +3345,10 @@ def _digest_reproduces_the_reference():
         if not any("$J$12>0" in str(f) for f in conditional.get("B6:J6", [])) or \
                 not any("J12>0" in str(f) for f in conditional.get("J12", [])):
             problems.append(f"the delay is not red through a conditional format: {conditional}")
-        if len(got["Riepilogo"]._charts) != 2:
-            problems.append("the summary has not the two pies of the reference, and no other")
+        # The reference has two pies under section 5; the person who sends the file asked
+        # for them to go in 4.3.0, and the summary has no chart at all.
+        if got["Riepilogo"]._charts:
+            problems.append("the summary carries a chart: the pies were taken out on request")
         if not (Path(tmp) / "copy" / xlsx.name).is_file():
             problems.append("--copy-to did not leave a copy where it was asked")
         if "Consegna prevista oggi: il 23/10" not in out \

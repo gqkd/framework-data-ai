@@ -19,7 +19,6 @@ from fractions import Fraction
 import xlsxwriter
 
 NAVY, GREY_BORDER = "#1F3864", "#BFBFBF"
-PIE = ["#2A78D6", "#1BAF7A", "#EDA100", "#4A3AA7", "#EB6834"]
 CL = "'Come leggerlo'!"
 OL = "'Ore lavorate'!"
 AT = "Attività!"
@@ -684,29 +683,14 @@ def summary_sheet(wb, ws, S, m, F, at: dict):
     ws.write_formula(t - 1, 2, f"=SUM(C{s5 + 2}:C{s5 + 6})", S.total(num_format="0%"),
                      number(sum(F["optimal"], Fraction(0))))
     ws.write_blank(t - 1, 3, None, S.cell(bg_color="#D9E1F2"))
-    for rr in range(s5 + 2, s5 + 10):
+    for rr in range(s5 + 2, s5 + 8):
         ws.set_row(rr - 1, 15.75)
     ws.conditional_format(f"D{s5 + 2}:D{s5 + 6}",
                           {"type": "formula", "criteria": f"=$D{s5 + 2}<-0.05",
                            "format": wb.add_format({"bold": True, "font_color": "#C00000"})})
-    for k, (col, title) in enumerate((("B", "Oggi (media ultimi 7 giorni)"),
-                                      ("C", f"Ottimale per consegnare il {dm(m.delivery)}"))):
-        ch = wb.add_chart({"type": "pie"})
-        ch.add_series({
-            "name": f"=Riepilogo!${col}${s5 + 1}",
-            "categories": f"=Riepilogo!$A${s5 + 2}:$A${s5 + 6}",
-            "values": f"=Riepilogo!${col}${s5 + 2}:${col}${s5 + 6}",
-            "points": [{"fill": {"color": c}, "border": {"color": "#FFFFFF"}} for c in PIE],
-            "data_labels": {"percentage": True, "position": "best_fit", "separator": "\n",
-                            "font": {"name": "Arial", "size": 10}},
-        })
-        ch.set_title({"name": title, "name_font": {"name": "Arial", "size": 18, "bold": True}})
-        ch.set_legend({"position": "right", "font": {"name": "Arial", "size": 10}})
-        ch.set_chartarea({"fill": {"color": "#FFFFFF"},
-                          "border": {"color": "#D9D9D9", "width": 0.75}})
-        ch.set_plotarea({"fill": {"none": True}, "border": {"none": True}})
-        ch.set_size({"width": 472, "height": 283})
-        ws.insert_chart(f"{'AE'[k]}{s5 + 12}", ch)
+    # No charts. The reference had two pies under this table, and the person who sends the
+    # file asked for them to go: the table says the same in five rows, and the Gantt is the
+    # one picture the readers asked for.
 
 
 # ─────────────────────────────────────────────────────────────────────────────

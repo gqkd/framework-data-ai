@@ -302,8 +302,8 @@ workbook prints its top, and the estimate is one row instead of a best and a wor
 1. **Riepilogo**, the sheet most readers stop at: where the release stands (agreed delivery,
    delivery expected today, delay, what the forecast depends on, where the time goes), how the
    estimate is computed, what is needed from others, progress by theme, how the hours of the
-   project are split today and how they should be to deliver on the agreed date, with the two
-   pies.
+   project are split today and how they should be to deliver on the agreed date. No charts:
+   the reference had two pies there, taken out on the person's request.
 2. **Gantt**: one row per item and per milestone, one column per working day, and the hours
    of each row. Every item done on the days it was worked; every item to do in the order of
    «Da fare», for the top of its size, at the pace of the estimate, so the last one ends on
