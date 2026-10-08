@@ -3389,7 +3389,7 @@ def _digest_draws_the_gantt():
     while d <= _dt.date(2026, 10, 23):
         calendar += [d] if d.weekday() < 5 else []
         d += _dt.timedelta(days=1)
-    header = [ws.cell(4, 6 + k).value for k in range(len(calendar) + 1)]
+    header = [ws.cell(4, 7 + k).value for k in range(len(calendar) + 1)]
     if [h.date() if h else None for h in header] != calendar + [None]:
         problems.append(f"the columns are not the working days from 22/09 to 23/10: {header}")
     rows = {ws.cell(r, 1).value or ws.cell(r, 2).value: r for r in range(5, ws.max_row + 1)}
@@ -3415,16 +3415,16 @@ def _digest_draws_the_gantt():
                         f"{formulas['D13'].value!r}")
     for label, on in (("Demo al team funzionale", "15/10"), ("Consegna concordata", "13/10")):
         r = rows.get(label)
-        marks = [calendar[k] for k in range(len(calendar)) if r and ws.cell(r, 6 + k).value == "◆"]
+        marks = [calendar[k] for k in range(len(calendar)) if r and ws.cell(r, 7 + k).value == "◆"]
         if marks != [day(on)]:
             problems.append(f"the milestone {label!r} is marked on {marks}, not on {on}")
     rules = {str(c.sqref): [x.formula[0] for x in c.rules] for c in formulas.conditional_formatting}
-    bars = next((v for k, v in rules.items() if k.startswith("F5:")), [])
+    bars = next((v for k, v in rules.items() if k.startswith("G5:")), [])
     if len(bars) != 4 or "'Come leggerlo'!$B$4" not in bars[-1]:
         problems.append(f"the bars and the column of today are not conditional formats: {rules}")
     if "OD-098" in rows or "CHG-021" in rows:
         problems.append("an item split or out of the perimeter is on the Gantt")
-    if formulas.freeze_panes != "F5":
+    if formulas.freeze_panes != "G5":
         problems.append(f"the names and the days do not stay in view: {formulas.freeze_panes}")
     return problems
 
@@ -3718,14 +3718,158 @@ def _digest_store_stays_private():
     return problems
 
 
+def _stages_copy(tmp: str) -> Path | None:
+    """A private copy of the fixture with a roadmap in stages."""
+    src = built("digest-stages")
+    if src is None:
+        return None
+    dst = Path(tmp) / "stages"
+    shutil.copytree(src, dst, symlinks=True)
+    return dst / "borea"
+
+
+def _borea(root: Path, *args: str) -> tuple[int, str]:
+    r = subprocess.run([sys.executable, str(DIGEST), "--root", str(root), "--product", "borea",
+                        *args], capture_output=True, text=True)
+    return r.returncode, r.stdout + r.stderr
+
+
+@check("with a roadmap in stages, the digest takes its order and its Gantt from the roadmap")
+def _digest_reads_the_stages():
+    # Computed by hand from the fixture, at 3 hours a day for the release from 07/10 (15 hours
+    # in the last three working days, 2 a day outside the product). Every item counts for the
+    # top of its size and the items to do follow the stages: CHG-302 (12, started 06/10) to
+    # 12/10; OD-201 (12, blocked, so last in its increment, worked 06/10) to 16/10; OD-202 (2)
+    # on 19/10; CHG-303 (5) 19/10 to 21/10; CHG-304 (5, of a conditional increment, counted)
+    # 21/10 to 22/10; KI-021 (2, in no increment) on 23/10, the expected delivery. INC-101 is
+    # worth 4 + 6 + 12 + 12 = 34 hours, its done half included; INC-104 has nothing under it.
+    import datetime as _dt
+    import openpyxl
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _stages_copy(tmp)
+        if root is None:
+            return ["the stages fixture could not be built: "
+                    "evals/fixtures/generators/digest_stages.py"]
+        rc, out = _borea(root, "--date", "2026-10-07", "--now", "2026-10-07T08:30:00+02:00")
+        xlsx = root / "_meta/digest/DIG-002-borea-2026-10-07/DIG-002-borea-2026-10-07.xlsx"
+        if rc != 0:
+            return [f"the digest of 07/10 was refused: {out.strip()[:400]}"]
+        book = openpyxl.load_workbook(xlsx, data_only=True)
+        formulas = openpyxl.load_workbook(xlsx)["Gantt"]
+        frozen = yaml.safe_load((xlsx.parent / "frozen.yaml").read_text(encoding="utf-8"))
+    problems = []
+    want = ["CHG-302", "OD-201", "OD-202", "CHG-303", "CHG-304", "KI-021"]
+    if frozen.get("order") != want:
+        problems.append(f"the order of «Da fare» is {frozen.get('order')}, not {want}")
+    if not (frozen.get("roadmap") or {}).get("sha256"):
+        problems.append("the snapshot does not record which roadmap it was computed from")
+    ws = book["Gantt"]
+    rows = {}
+    for r in range(5, ws.max_row + 1):
+        key = ws.cell(r, 1).value or ws.cell(r, 2).value
+        if key:
+            rows.setdefault(str(key), r)
+
+    def at(key: str) -> tuple:
+        r = rows.get(key)
+        vals = [ws.cell(r, c).value for c in range(3, 7)] if r else [None] * 4
+        return tuple(v.date() if isinstance(v, _dt.datetime) else v for v in vals)
+
+    d = lambda dd, mm: _dt.date(2026, mm, dd)
+    for key, expected in (
+            ("INC-101", ("in corso", d(1, 10), d(16, 10), 34)),
+            ("CHG-302", ("in corso", d(6, 10), d(12, 10), 12)),
+            ("OD-201", ("bloccata", d(6, 10), d(16, 10), 12)),
+            ("INC-103", ("da fare, condizionale", d(21, 10), d(22, 10), 5)),
+            ("KI-021", ("da fare", d(23, 10), d(23, 10), 2)),
+            ("Prova con la squadra pilota", ("a rischio", d(14, 10), d(14, 10), None)),
+            ("Primo avviso inviato a un cliente", ("in tempo", d(23, 10), d(23, 10), None)),
+            ("App in prova sul campo", ("incompleta", d(30, 10), d(30, 10), None))):
+        if at(key) != expected:
+            problems.append(f"{key} reads {at(key)} in the Gantt, not {expected}")
+    if not str(ws.cell(rows.get("INC-104", 1), 3).value).startswith("da scomporre"):
+        problems.append("an increment with nothing under it is not «da scomporre»")
+    r101 = rows.get("INC-101")
+    if r101 and not (str(formulas.cell(r101, 4).value).startswith("=IF(COUNT(")
+                     and "MAX(" in str(formulas.cell(r101, 5).value)
+                     and str(formulas.cell(r101, 6).value).startswith("=SUM(")):
+        problems.append("the row of an increment is not the MIN, MAX and SUM of what composes it")
+    if "Tappa t1" not in rows or rows["Tappa t1"] > rows.get("INC-101", 0):
+        problems.append("the stages do not head their increments")
+    b7 = str(book["Riepilogo"]["B7"].value)
+    if "Non conta 1 incremento ancora da scomporre" not in b7:
+        problems.append(f"the summary does not say what the delivery leaves out: {b7}")
+    for line in ("Consegna prevista oggi: il 23/10",
+                 "Milestone «Prova con la squadra pilota» (tappa t1, 14/10): a rischio, "
+                 "la tappa finisce il 16/10",
+                 "Da scomporre, fuori dalla stima: INC-104"):
+        if line not in out:
+            problems.append(f"the conversation does not say {line!r}")
+    return problems
+
+
+@check("a stage milestone needs its date, and the stages place what `order.todo` no longer must")
+def _digest_stage_refusals():
+    problems = []
+    cases = [
+        ("a stage milestone with no date",
+         lambda s: s["milestones"].pop(2), 1, "has no date"),
+        ("a date for a stage the roadmap does not have",
+         lambda s: s["milestones"].append({"stage": "t9", "date": "2026-11-02"}), 1,
+         "no such stage"),
+        ("a pinned item that is not open",
+         lambda s: s["order"].__setitem__("first", ["CHG-301"]), 1, "`order.first`"),
+        ("an item the stages place still listed by hand",
+         lambda s: s["order"]["todo"].insert(0, "CHG-302"), 0, "now place"),
+    ]
+    for what, change, rc_want, says in cases:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = _stages_copy(tmp)
+            if root is None:
+                return ["the stages fixture could not be built"]
+            path = root / "_meta" / "digest" / "state-borea.yaml"
+            data = yaml.safe_load(path.read_text(encoding="utf-8"))
+            change(data)
+            path.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False),
+                            encoding="utf-8")
+            args = ("--check",) if rc_want else ("--inventory",)
+            rc, out = _borea(root, "--date", "2026-10-07", *args)
+            if rc != rc_want or says not in out:
+                problems.append(f"{what}: exit {rc}, and it does not say {says!r}: "
+                                f"{out.strip()[:300]}")
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _stages_copy(tmp)
+        rmp = root / "products" / "borea" / "RMP.md"
+        rmp.write_text(rmp.read_text(encoding="utf-8").replace(
+            "increments: [INC-102, INC-103]", "increments: [INC-103, INC-102]"),
+            encoding="utf-8")
+        env = {**os.environ, **_GIT_ID, "GIT_AUTHOR_DATE": "2026-10-06T16:00:00+02:00",
+               "GIT_COMMITTER_DATE": "2026-10-06T16:00:00+02:00"}
+        subprocess.run(["git", "commit", "-qam", "stages reordered"], cwd=root, env=env)
+        rc, out = _borea(root, "--date", "2026-10-07", "--inventory")
+        inv = yaml.safe_load(out) if rc == 0 else {}
+        worked = (inv.get("worked_by_day") or {}).get("2026-10-06") or {}
+        if "INC-102" in worked or "INC-103" in worked:
+            problems.append("reordering the stages was proposed as work on the increments: "
+                            f"{sorted(worked)}")
+        if inv.get("increments_to_break_down") != ["INC-104"]:
+            problems.append(f"the inventory does not name the increment still to break down: "
+                            f"{inv.get('increments_to_break_down')}")
+    return problems
+
+
 @check("the digest fixtures validate with nothing to report")
 def _digest_fixtures_validate():
     src = built("digest")
     if src is None:
         return ["the digest fixture could not be built"]
+    stages = built("digest-stages")
+    if stages is None:
+        return ["the stages fixture could not be built"]
     problems = []
-    for name in ("atlas", "atlas-asks"):
-        r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(src / name), "--json",
+    for name, where in (("atlas", src / "atlas"), ("atlas-asks", src / "atlas-asks"),
+                        ("borea", stages / "borea")):
+        r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(where), "--json",
                             "--stale-days", "36500"], capture_output=True, text=True)
         try:
             found = [(f["code"], f["path"]) for f in json.loads(r.stdout)["findings"]

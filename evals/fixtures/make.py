@@ -43,6 +43,7 @@ GENERATED = {
     "coherence": ("coherence.py", "coherence/contradiction"),
     "memory": ("memory.py", "memory"),
     "digest": ("digest.py", "digest"),       # writes two: atlas and atlas-asks
+    "digest-stages": ("digest_stages.py", "digest-stages"),   # writes borea
 }
 STATIC = {
     "resolve/ordering-a": "ordering-a",

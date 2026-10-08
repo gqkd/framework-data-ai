@@ -115,8 +115,9 @@ items:
   OD-098: {split_into: [OD-120, OD-121]}   # beside its other fields, once it is split
   KI-022: {excluded: "a security issue, kept out of anything sent"}
 order:                             # the rows of the two lists, in the order shown
-  todo: [CHG-018, OD-120, OD-121, OD-109, OD-115, CHG-022, CHG-024]
-  out: [CHG-021, OD-076, INC-040, INC-041]
+  todo: [CHG-018, OD-120, OD-121, OD-109, OD-115, CHG-022, CHG-024]   # with stages: only the
+  out: [CHG-021, OD-076, INC-040, INC-041]                            # items in none of them
+  first: []                        # items put before everything, urgent or already started
 days:
   2026-09-25:                      # before the first digest: rebuilt in bulk, by column
     themes: {architettura: 3}
@@ -139,7 +140,19 @@ plan:                              # today and the next working day
   2026-10-12: [{item: CHG-018, hours: 2, closes: true}, {item: OD-120, hours: 3}]
 milestones:
   - {name: Demo al team funzionale, date: 2026-10-15}
+  - {stage: t1, date: 2026-10-14}  # the milestone a stage of the roadmap names: the date only
 ```
+
+**When the roadmap orders its increments in stages** (`delivery_stages` in `RMP.md`, kept by
+`cycle`), the digest takes the order from there and not from `order.todo`. The stages in their
+sequence; in each one the increments, those that others depend on first; in each increment
+the decisions and issues it requires, then its changes, and the items blocked by a wait at
+the end of their increment. Pinned items come before everything, and items in no stage after
+everything, in `order.todo`, which then holds only those. An increment is not a piece of work
+here: it has a title in the state file and no theme, scope or size, because it is worth the
+sum of what composes it. One with nothing under it is «da scomporre», worth zero hours, and
+both the summary and the conversation say that the expected delivery leaves it out. A
+conditional increment is counted like the others, and labelled.
 
 The hours outside the product go in five categories and no others: `supporto` (support to the
 demo and to production), `reportistica` (reports and status presentations), `riunioni`,
@@ -174,7 +187,8 @@ junior). The hours of an excluded item count as out of the perimeter, without it
    the script refuses until they do.
 6. **The waits** already open, as in §4, and the order of the two lists: the items to do in
    the perimeter, then the items outside it. Propose an order: what is in progress first,
-   then what unblocks the most.
+   then what unblocks the most. With stages in the roadmap, only the items in no stage are
+   ordered here.
 7. **The baseline:** `--baseline`. It freezes the state and prints a summary that is not
    sent. The first workbook is the next working day's.
 
@@ -191,8 +205,10 @@ junior). The hours of an excluded item count as out of the perimeter, without it
    whether the milestones were ever declared, and whether the store is set up.
 3. **Propose, then write.** One compact table: each new or changed item with the theme, scope,
    size, title and description proposed, each item closed with its proposed closing date,
-   where each new item goes in its list (at the end, unless the person says otherwise), and
-   every other change to the state file. Write nothing before the person agrees or corrects.
+   where each new item goes in its list (at the end, unless the person says otherwise; with
+   stages, only for an item in none of them), and every other change to the state file. A
+   change in no increment of a roadmap in stages is worth naming: its increment is assigned
+   through `cycle`, since this skill writes no artifact. Write nothing before the person agrees or corrects.
 4. **Ask** the questions of §4, all of them in one message.
 5. **Write the state file**, then `--check`. Fix what it reports in the state file, never by
    loosening a sentence to get past it.
@@ -215,9 +231,9 @@ and reused unchanged until the person changes it.
 - **Theme**: `architettura` for what decides how the system is built, `sviluppo` for what
   builds it, `deploy` for what takes it into an environment and runs it there.
 - **Scope**: the current release or `out`. Start from the changes the `IMP` selects for the
-  cycle and the perimeter `DEC`, and say where the state file and the `IMP` disagree. Never
-  propose an `INC` that the `RMP` marks `conditional`: a conditional increment inside a
-  dated estimate is the plan with dates the roadmap template forbids. An open `KI` in the
+  cycle and the perimeter `DEC`, and say where the state file and the `IMP` disagree. A
+  conditional increment is counted like any other, by the person's choice: the roadmap has
+  no date for it, and the date the digest computes says it is conditional. An open `KI` in the
   perimeter means its fix is in this release, which the framework would write as a `CHG`;
   say so when proposing it. An item outside the perimeter needs `out_reason`, the why the
   workbook prints.
@@ -265,7 +281,9 @@ What the commits and the registers say is never asked. Ask, in one message:
    each, and whether that day closes it. Proposed from what is in progress, what was planned
    and not done, and the order of the list.
 5. **The milestones**, name and date: at the first workbook, which is the first Gantt, and
-   afterwards only when the person says they want to change them. Never every day.
+   afterwards only when the person says they want to change them. Never every day. A
+   milestone a stage of the roadmap names needs only its date, asked the first time the stage
+   appears; until then the script refuses, and says which.
 
 The agreed delivery date is asked at the first run and when the release changes. If it was
 promised to a customer, it is a commitment: name the `CMT` in `release.commitment` and say
@@ -286,11 +304,15 @@ workbook prints its top, and the estimate is one row instead of a best and a wor
    estimate is computed, what is needed from others, progress by theme, how the hours of the
    project are split today and how they should be to deliver on the agreed date, with the two
    pies.
-2. **Gantt**: one row per item and per milestone, one column per working day. Every item done
-   on the days it was worked; every item to do in the order of «Da fare», for the top of its
-   size, at the pace of the estimate, so the last one ends on the expected delivery; the
-   milestones and the agreed delivery as diamonds; today's column in yellow. The first and
-   last day of an item to do are formulas, and the bars conditional formats on them.
+2. **Gantt**: one row per item and per milestone, one column per working day, and the hours
+   of each row. Every item done on the days it was worked; every item to do in the order of
+   «Da fare», for the top of its size, at the pace of the estimate, so the last one ends on
+   the expected delivery; the milestones and the agreed delivery as diamonds; today's column
+   in yellow. The first and last day of an item to do are formulas, and the bars conditional
+   formats on them. With stages, the rows are grouped by stage and by increment: the row of
+   an increment is the sum, the earliest start and the latest end of what composes it, and
+   the milestone that closes a stage says by formula whether it is «in tempo», «a rischio» or
+   «incompleta».
 3. **Attività**: the next days, what is left in the perimeter, what was done in it since the
    start, what is outside it. Every item, nothing cut short.
 4. **Ore lavorate**: the hours by period, as shares, outside the product by category, and day

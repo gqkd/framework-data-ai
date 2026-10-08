@@ -1046,6 +1046,11 @@ and every derived cell is a formula. A day already sent is frozen in the snapsho
 it. The script refuses to write while an item is unclassified or a classified one has left the
 registers without closing.
 
+When the roadmap orders its increments in stages (`P-06`), the workbook takes its order and
+its Gantt from them: every item in the stage and increment it belongs to, every increment
+worth the sum of what composes it, and the milestone of each stage in time, at risk, or
+incomplete while an increment of the stage is still to be broken down.
+
 What a `CHG` must be to count as closed is the framework's: `verified`. A product with no
 environment to verify in closes nothing, and the digest says so rather than counting merges.
 

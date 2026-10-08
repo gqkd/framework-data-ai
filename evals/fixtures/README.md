@@ -32,7 +32,9 @@ behind the first time its format moves; so is the workbook of 07/10, which the o
 compares itself with. It writes two repositories: `atlas`, ready to render the workbook of
 09/10/2026 that `tests/fixtures/digest/` holds and the self check compares cell by cell, and
 `atlas-asks`, the same morning before anybody answered, which is where the behaviour case
-runs. Each carries its store as a repository of its own, pushing to a bare one in `.remote/`
+runs. `digest-stages/` is a second product, `borea`, whose roadmap orders its increments in
+stages: the case for the order and the Gantt the digest takes from the roadmap, built from
+its first commit with the stages in place. Each carries its store as a repository of its own, pushing to a bare one in `.remote/`
 by a relative path, so a copy pushes into its own copy.
 
 ## What each one is for

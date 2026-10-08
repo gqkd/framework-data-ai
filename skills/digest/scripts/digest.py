@@ -42,7 +42,13 @@ THE STATE FILE, FORMAT 2:
     waits: [{what, owner, asked, needed_by, without, missing, blocks, slows, resolved}]
     plan: {2026-10-09: [{item: CHG-018, hours: 5}], 2026-10-12: [{item: CHG-018, hours: 2,
            closes: true}]}
-    milestones: [{name: Demo al team funzionale, date: 2026-10-15}]
+    milestones: [{name: Demo al team funzionale, date: 2026-10-15}, {stage: t1, date: 2026-10-14}]
+
+WITH A ROADMAP IN STAGES. When the product's `RMP.md` declares `delivery_stages`, the order of
+«Da fare» is computed from them through the validator's `roadmap_plan`, so the two cannot
+disagree: pinned items (`order.first`), then the stages, then items in no stage, which are
+all `order.todo` still holds. An increment is a group worth the sum of what composes it, and
+the milestone a stage names takes its date from `{stage, date}` in `milestones`.
 
 WHAT IS REFUSED, BEFORE ANYTHING IS WRITTEN. `--check` lists every reason, and rendering runs it
 first: an identifier the state file does not classify; a classified one gone from the registers
@@ -52,9 +58,11 @@ day not yet over or before the project started; hours on an item of the perimete
 a category that is not one of the five; a day already frozen edited after the fact; an earlier
 snapshot whose hash no longer matches; the days rebuilt in bulk not adding up, theme by theme,
 to the hours declared on the items; a planned item closed, excluded, without hours or a `CHG` in
-`draft`; the two lists not holding exactly the open items; a description with the register's
-jargon or more than two sentences; a long dash; a status this file does not map; a date on a
-weekend. Fix the state file or the registers, never this file to get past it.
+`draft`; the two lists not holding exactly the open items, or `order.first` naming one that is
+not; the milestone of a stage of the roadmap without its date, or a date for a stage the roadmap
+does not have; a description with the register's jargon or more than two sentences; a long dash;
+a status this file does not map; a date on a weekend. Fix the state file or the registers, never
+this file to get past it.
 
 Exit codes: 0 done, 1 refused, 2 cannot run, 3 written and committed but not pushed.
 Needs PyYAML, jsonschema (the registers are read through the validator), XlsxWriter and `git`;
@@ -123,8 +131,8 @@ WAIT_KEYS = {"what", "owner", "asked", "needed_by", "without", "missing", "block
              "resolved"}
 DAY_KEYS = {"hours", "outside", "themes"}
 PLAN_KEYS = {"item", "hours", "closes"}
-MILESTONE_KEYS = {"name", "date"}
-ORDER_KEYS = {"todo", "out"}
+MILESTONE_KEYS = {"name", "stage", "date"}
+ORDER_KEYS = {"todo", "out", "first"}
 
 SNAPSHOT = re.compile(r"^DIG-(\d{3,})-(.+)-(\d{4}-\d{2}-\d{2})$")
 HEADING_ID = re.compile(r"^#{1,6}\s+\**([A-Z]{2,4}-\d{3,})\**\s*[·:\-–—]?\s*(.*?)\s*$")
@@ -284,6 +292,7 @@ class Voce:
     closer: str | None = None        # the record that closed it, printed beside it
     aliases: list = field(default_factory=list)
     children: list = field(default_factory=list)
+    derives_from: list = field(default_factory=list)
 
 
 def heading_titles(body: str) -> dict[str, str]:
@@ -426,7 +435,8 @@ def build_voci(reg: Registers, known: set[str]) -> tuple[dict[str, Voce], dict[s
             unknown.append(f"{k} has status {e.status!r} in {e.file}")
             continue
         closer = e.closed_by if e.kind == "KI" and e.closed_by in E else None
-        voci[k] = Voce(k, e.kind, st, e.status, e.title, e.file, closer=closer)
+        voci[k] = Voce(k, e.kind, st, e.status, e.title, e.file, closer=closer,
+                       derives_from=list(e.derives_from))
     return voci, alias, unknown, disagree
 
 
@@ -546,6 +556,8 @@ class Item:
     hours: Fraction = Fraction(0)        # all declared: before the detail and in every day
     before: Fraction = Fraction(0)
     first_day: date | None = None
+    derives_from: list = field(default_factory=list)
+    group: bool = False                  # an increment of the roadmap's stages: not work
 
     def top(self) -> Fraction:
         """The hours the estimate counts for this item: the top of its size."""
@@ -557,12 +569,13 @@ class Item:
             else self.id
 
 
-def _item(i, kind, st, row, closer, children, aliases) -> Item:
+def _item(i, kind, st, row, closer, children, aliases, derives_from=()) -> Item:
     return Item(i, kind, st, None if row.get("scope") is None else str(row.get("scope")),
                 row.get("theme"), row.get("size"), row.get("title"), row.get("what"),
                 bool(row.get("excluded")), closer,
                 list(children) + list(row.get("split_into") or []), list(aliases),
-                closed_on=as_date(row.get("closed_on")), out_reason=row.get("out_reason"))
+                closed_on=as_date(row.get("closed_on")), out_reason=row.get("out_reason"),
+                derives_from=[bare(x) for x in derives_from])
 
 
 def split_parent(it: Item) -> bool:
@@ -589,6 +602,9 @@ class Context:
     items: dict = field(default_factory=dict)
     days: dict = field(default_factory=dict)
     now: datetime | None = None
+    roadmap: dict | None = None          # the plan of the roadmap's stages, when it has them
+    roadmap_file: Path | None = None
+    staging: "Staging | None" = None
 
 
 def prepare(root: Path, product: str | None, when: date, baseline: bool) -> Context:
@@ -614,6 +630,14 @@ def prepare(root: Path, product: str | None, when: date, baseline: bool) -> Cont
     voci, alias, unknown, disagree = build_voci(reg, known)
     ctx = Context(root, product, when, reg.product_name, reg, voci, alias, state, snaps, prev,
                   baseline, notes=disagree)
+    # The roadmap of the product, when it orders its increments in stages. The one beside the
+    # product first, which is where the registry puts it.
+    roadmaps = sorted((a for a in arts if a.type == "roadmap"
+                       and product in v.as_list(a.meta.get("products"))),
+                      key=lambda a: (a.path.parent.name != product, a.rel))
+    if roadmaps and roadmaps[0].meta.get("delivery_stages"):
+        ctx.roadmap = v.roadmap_plan(roadmaps[0].meta)
+        ctx.roadmap_file = roadmaps[0].path
     ctx.problems += [f"front matter that does not parse, so its entries cannot be read: {b}"
                      for b in reg.broken]
     ctx.problems += reg.duplicated
@@ -621,6 +645,73 @@ def prepare(root: Path, product: str | None, when: date, baseline: bool) -> Cont
     if err:
         ctx.problems.append(err)
     return ctx
+
+
+@dataclass
+class Staging:
+    """The roadmap's stages read against the items of the digest.
+
+    An increment is a group and not a piece of work: it is worth the sum of what composes it,
+    the `OD` and `KI` it requires, which come first, and the `CHG` that realise it. Each item
+    belongs to the first increment that names it in the order of the stages, so it is
+    scheduled and counted once.
+    """
+    stages: list                 # [(id, name, milestone, [increment ids])]
+    components: dict             # increment -> [item ids], requires first, then changes
+    groups: set                  # the increments of the stages that are items here
+    pinned: list                 # open items the person put before everything
+    placed: list                 # the open items of the perimeter, in the order of the stages
+    owner: dict                  # item id -> (stage id, increment id)
+    states: dict                 # increment -> the state the roadmap gives it
+    titles: dict                 # increment -> its title, as the state file confirmed it
+
+
+def staging(ctx: Context, items: dict, todo: set, pinned: list, waits: list) -> Staging:
+    plan = ctx.roadmap
+    rows = plan["increments"]
+    blocked = {str(i) for w in waits if isinstance(w, dict) and not w.get("resolved")
+               for i in w.get("blocks") or []}
+
+    def expand(i: str, seen: set) -> list[str]:
+        """An entry decided by a `DEC` is the entry; one split is the entries it became."""
+        i = ctx.alias.get(i, i)
+        it = items.get(i)
+        if it is None or i in seen:
+            return []
+        seen.add(i)
+        if split_parent(it) and it.children:
+            return [x for c in it.children for x in expand(str(c), seen)]
+        return [i]
+
+    stages, components, owner = [], {}, {}
+    groups = {i for i in (set(rows) | set(plan["stage_of"])) if i in items}
+    for sid in plan["order"]:
+        row = plan["stages"][sid]
+        stages.append((sid, str(row.get("name") or sid),
+                       str(row["milestone"]) if row.get("milestone") else None,
+                       plan["per_stage"][sid]))
+        for inc in plan["per_stage"][sid]:
+            spec = rows.get(inc) or {}
+            mine: list[str] = []
+            for r in spec.get("requires") or []:
+                mine += expand(str(r), set())
+            chgs = {i for i, it in items.items() if it.kind == "CHG" and inc in it.derives_from}
+            chgs |= {str(c) for c in spec.get("changes") or [] if str(c) in items}
+            mine += sorted(chgs, key=sort_id)
+            components[inc] = []
+            for i in mine:
+                if i not in owner and i not in groups:
+                    owner[i] = (sid, inc)
+                    components[inc].append(i)
+    pinned = [i for i in pinned if i in todo]
+    placed = list(pinned)
+    for sid, _, _, incs in stages:
+        for inc in incs:
+            free = [i for i in components.get(inc, []) if i in todo and i not in placed]
+            placed += [i for i in free if i not in blocked] + [i for i in free if i in blocked]
+    return Staging(stages, components, groups, pinned, placed, owner,
+                   {i: (rows.get(i) or {}).get("state") for i in components},
+                   {i: (items[i].title if i in items else None) or i for i in components})
 
 
 def check(ctx: Context) -> list[str]:
@@ -689,7 +780,8 @@ def check(ctx: Context) -> list[str]:
             continue
         if not isinstance(row, dict):
             continue
-        items[vid] = _item(vid, vo.kind, vo.state, row, vo.closer, vo.children, vo.aliases)
+        items[vid] = _item(vid, vo.kind, vo.state, row, vo.closer, vo.children, vo.aliases,
+                           vo.derives_from)
     for i, row in rows.items():
         if i in ctx.voci or i in ctx.alias or not isinstance(row, dict):
             continue
@@ -852,10 +944,23 @@ def check(ctx: Context) -> list[str]:
                 P.append(f"day {d}: hours on {i} in this state file and in {p.name}; the hours "
                          "of one item on one day are declared once")
 
+    # The increments of the roadmap's stages are groups: worth what composes them, and not a
+    # piece of work with a theme, a scope and a size of its own.
+    if ctx.roadmap:
+        for i in set(ctx.roadmap["increments"]) | set(ctx.roadmap["stage_of"]):
+            if i in items:
+                items[i].group = True
+
     # What every item needs, for what the workbook prints about it.
     for i, it in items.items():
         row = rows.get(i) if isinstance(rows.get(i), dict) else {}
         if it.excluded:
+            continue
+        if it.group:
+            if not row.get("title"):
+                P.append(f"{i}: no `title`, and the Gantt prints it above what composes it")
+            elif DASHES.search(str(row["title"])):
+                P.append(f"{i}: a long dash in `title`; use a comma")
             continue
         if row.get("theme") is not None and row.get("theme") not in THEMES:
             P.append(f"{i}: theme {row.get('theme')!r} is one of {', '.join(THEMES)}")
@@ -907,26 +1012,43 @@ def check(ctx: Context) -> list[str]:
 
     # The two lists hold exactly the open items, in the order the person chose.
     todo = {i for i, it in items.items() if it.state == "open" and it.scope == rel
-            and not it.excluded and not split_parent(it)}
+            and not it.excluded and not split_parent(it) and not it.group}
     out = {i for i, it in items.items() if it.state == "open" and it.scope == OUT
-           and not it.excluded and not split_parent(it)}
+           and not it.excluded and not split_parent(it) and not it.group}
     order = state.get("order") or {}
     if not isinstance(order, dict):
         P.append("`order` holds `todo` and `out`, the rows of the two lists in order")
         order = {}
     for k in sorted(set(order) - ORDER_KEYS):
         P.append(f"unknown key {k!r} under `order`")
-    for key, expected in (("todo", todo), ("out", out)):
+    first = [str(x) for x in (order.get("first") or [])]
+    for i in first:
+        if i not in todo:
+            P.append(f"`order.first` names {i}, which is not an open item of the perimeter")
+    # With stages, the roadmap places every item it names, and `order.todo` holds only the
+    # rest. An item it still lists and the stages now place is ignored, and said so: a state
+    # file written before the stages is otherwise refused for being right a day ago.
+    placed: set = set(first)
+    if ctx.roadmap:
+        ctx.staging = staging(ctx, items, todo, first,
+                              state.get("waits") if isinstance(state.get("waits"), list)
+                              else [])
+        placed = set(ctx.staging.placed)
+    for key, expected in (("todo", todo - placed), ("out", out)):
         listed = [str(x) for x in (order.get(key) or [])]
         if len(set(listed)) != len(listed):
             P.append(f"`order.{key}` names an item twice")
         missing = sorted(expected - set(listed), key=sort_id)
-        extra = [x for x in listed if x not in expected]
+        moved = [x for x in listed if key == "todo" and x in placed]
+        extra = [x for x in listed if x not in expected and x not in moved]
         if missing:
             P.append(f"`order.{key}` does not list {', '.join(missing)}: add them where they "
                      "belong, at the end if nobody said otherwise")
         if extra:
             P.append(f"`order.{key}` lists {', '.join(extra)}, which no longer belong there")
+        if moved:
+            ctx.notes.append(f"`order.todo` still lists {', '.join(moved)}, which the stages "
+                             "of the roadmap now place: take them out of it")
 
     if not ctx.baseline:
         nxt = next_working(when)
@@ -967,14 +1089,29 @@ def check(ctx: Context) -> list[str]:
             P.append("no `milestones`: the Gantt shows them; declare them, `[]` if there are "
                      "none")
         elif not isinstance(milestones, list):
-            P.append("`milestones` is a list of {name, date}")
+            P.append("`milestones` is a list of {name, date}, or {stage, date} for the "
+                     "milestone of a stage of the roadmap")
         else:
+            named = {sid: ms for sid, _, ms, _ in (ctx.staging.stages if ctx.staging else [])
+                     if ms}
+            dated_stages = set()
             for m in milestones:
-                if not isinstance(m, dict) or set(m) - MILESTONE_KEYS or not m.get("name") \
-                        or as_date(m.get("date")) is None:
-                    P.append(f"milestone {m!r} is {{name, date}}")
+                if not isinstance(m, dict) or set(m) - MILESTONE_KEYS \
+                        or as_date(m.get("date")) is None \
+                        or bool(m.get("name")) == bool(m.get("stage")):
+                    P.append(f"milestone {m!r} is {{name, date}}, or {{stage, date}} for the "
+                             "milestone a stage of the roadmap names")
+                elif m.get("stage"):
+                    if str(m["stage"]) not in named:
+                        P.append(f"a date for the milestone of stage {m['stage']!r}, and the "
+                                 "roadmap has no such stage with a milestone: was it renamed?")
+                    dated_stages.add(str(m["stage"]))
                 elif DASHES.search(str(m["name"])):
                     P.append(f"milestone {m['name']!r}: a long dash")
+            for sid, ms in named.items():
+                if sid not in dated_stages:
+                    P.append(f"the milestone of stage {sid!r}, «{ms}», has no date: declare it "
+                             f"as {{stage: {sid}, date: YYYY-MM-DD}}")
 
     waits = state.get("waits") or []
     if not isinstance(waits, list):
@@ -1033,6 +1170,8 @@ class Model:
     table: list
     milestones: list
     changes: list
+    staging: Staging | None = None
+    stage_dates: dict = field(default_factory=dict)   # stage id -> the date of its milestone
 
 
 def period_label(a: date, b: date) -> str:
@@ -1075,7 +1214,10 @@ def build_model(ctx: Context) -> Model:
     order = state.get("order") or {}
     waits = sorted((w for w in state.get("waits") or [] if not w.get("resolved")),
                    key=lambda w: (as_date(w["needed_by"]), str(w["what"])))
-    todo = [items[str(i)] for i in order.get("todo") or []]
+    listed = [str(i) for i in order.get("todo") or []]
+    first = [str(i) for i in order.get("first") or []]
+    head = ctx.staging.placed if ctx.staging else first
+    todo = [items[i] for i in head + [i for i in listed if i not in head]]
     out = [items[str(i)] for i in order.get("out") or []]
     theme_rank = list(THEMES)
     done = sorted((it for it in items.values() if it.state == "closed" and it.scope == rel
@@ -1171,7 +1313,8 @@ def build_model(ctx: Context) -> Model:
                            if (prev_voci.get(it.id) or {}).get("state") != "closed")
     prev_open = by_theme(frozen_theme(v) for v in prev_voci.values()
                          if v.get("state") == "open" and str(v.get("scope")) == p_rel
-                         and not v.get("excluded") and not v.get("split"))
+                         and not v.get("excluded") and not v.get("split")
+                         and not v.get("group"))
 
     frozen_table = {}
     if pf.get("format") == FORMAT:
@@ -1184,7 +1327,10 @@ def build_model(ctx: Context) -> Model:
         d += timedelta(days=1)
 
     milestones = sorted(((str(m["name"]), as_date(m["date"]))
-                         for m in state.get("milestones") or []), key=lambda x: (x[1], x[0]))
+                         for m in state.get("milestones") or [] if m.get("name")),
+                        key=lambda x: (x[1], x[0]))
+    stage_dates = {str(m["stage"]): as_date(m["date"])
+                   for m in state.get("milestones") or [] if m.get("stage")}
 
     changes = []
     for it in items.values():
@@ -1194,7 +1340,7 @@ def build_model(ctx: Context) -> Model:
             continue
         if it.state == "closed" and before.get("state") != "closed" and it.scope == rel:
             changes.append(f"chiusa: {it.shown_id}")
-        if split_parent(it) and not before.get("split"):
+        if split_parent(it) and not before.get("split") and not it.group:
             changes.append(f"spezzata: {it.id} in {', '.join(it.children)}")
         if it.state == "open" and before.get("state") == "open" and it.size and \
                 before.get("size") and it.size != before.get("size"):
@@ -1207,7 +1353,7 @@ def build_model(ctx: Context) -> Model:
     return Model(ctx.name, when, prev_date, delivery, start, nxt, rel, prev_label, this_label,
                  plan_rows,
                  todo, done, out, status, waits, prev_closed, this_closed, prev_open, table,
-                 milestones, sorted(changes))
+                 milestones, sorted(changes), ctx.staging, stage_dates)
 
 
 def figures(m: Model) -> dict:
@@ -1302,27 +1448,94 @@ def figures(m: Model) -> dict:
 
     # The Gantt: what is done where it happened, what is left in a row at the estimate's pace,
     # each item for the top of its size, so the last one ends on the date of point 2.
-    gantt = []
-    for it in m.done:
-        gantt.append({"kind": "done", "item": it, "start": it.first_day or it.closed_on,
-                      "end": it.closed_on})
+    sched: dict = {}
     cum = Fraction(0)
     for it in m.todo:
         if G > 0:
-            sched = workday(when - timedelta(days=1), math.floor(excel_round(cum / G, 9)) + 1)
+            begin = workday(when - timedelta(days=1), math.floor(excel_round(cum / G, 9)) + 1)
             end = workday(when - timedelta(days=1),
                           max(1, math.ceil(excel_round((cum + it.top()) / G, 9))))
         else:
-            sched = end = None
+            begin = end = None
         started = it.first_day if it.first_day and it.first_day < when else None
-        gantt.append({"kind": "todo", "item": it, "start": started or sched, "end": end,
-                      "started": started is not None})
+        sched[it.id] = {"kind": "todo", "item": it, "start": started or begin, "end": end,
+                        "started": started is not None}
         cum += it.top()
+
+    def done_row(it: Item) -> dict:
+        return {"kind": "done", "item": it, "start": it.first_day or it.closed_on,
+                "end": it.closed_on}
+
+    gantt = []
+    st = m.staging
+    if st is None:
+        gantt += [done_row(it) for it in m.done] + [sched[it.id] for it in m.todo]
+    else:
+        done_ids = {it.id: it for it in m.done}
+        if st.pinned:
+            gantt.append({"kind": "group", "name": "Prima di tutto"})
+            gantt += [sched[i] for i in st.pinned]
+        for sid, name, milestone, incs in st.stages:
+            stage = {"kind": "stage", "id": sid, "name": name, "incs": []}
+            gantt.append(stage)
+            in_stage: list = []
+            for inc in incs:
+                comps = [c for c in st.components.get(inc, []) if c not in st.pinned]
+                rows = ([done_row(done_ids[c]) for c in sorted(
+                            (c for c in comps if c in done_ids),
+                            key=lambda c: (done_ids[c].closed_on, sort_id(c)))]
+                        + [sched[it.id] for it in m.todo if it.id in comps])
+                hours_ = sum((r["item"].hours if r["kind"] == "done" else r["item"].top()
+                              for r in rows), Fraction(0))
+                if not st.components.get(inc):
+                    status = "da scomporre"
+                elif not rows:
+                    status = "fuori perimetro"
+                elif all(r["kind"] == "done" for r in rows):
+                    status = "fatto"
+                elif any(r["kind"] == "done" or r["item"].hours for r in rows):
+                    status = "in corso"
+                else:
+                    status = "da fare"
+                if st.states.get(inc) == "conditional":
+                    status += ", condizionale"
+                starts = [r["start"] for r in rows if r["start"]]
+                ends = [r["end"] for r in rows]
+                head = {"kind": "inc", "id": inc, "title": st.titles.get(inc, inc),
+                        "status": status, "hours": hours_, "rows": rows,
+                        "start": min(starts) if starts else None,
+                        "end": (None if not ends or any(e is None for e in ends)
+                                else max(ends))}
+                stage["incs"].append(head)
+                gantt.append(head)
+                gantt += rows
+                in_stage.append(head)
+            if milestone:
+                d = m.stage_dates.get(sid)
+                ends = [r["end"] for h in in_stage for r in h["rows"]]
+                if any(e is None for e in ends):
+                    verdict = "non stimabile"
+                elif any(h["status"].startswith("da scomporre") for h in in_stage) or not ends:
+                    verdict = "incompleta"
+                elif max(ends) > d:
+                    verdict = "a rischio"
+                else:
+                    verdict = "in tempo"
+                gantt.append({"kind": "stage_milestone", "stage": sid, "name": milestone,
+                              "date": d, "status": verdict,
+                              "end": max(ends) if ends and None not in ends else None})
+        loose = ([done_row(it) for it in m.done if it.id not in st.owner]
+                 + [sched[it.id] for it in m.todo
+                    if it.id not in st.owner and it.id not in st.pinned])
+        if loose:
+            gantt.append({"kind": "group", "name": "Fuori dalle tappe"})
+            gantt += loose
     for name, d in m.milestones:
         gantt.append({"kind": "milestone", "name": name, "date": d})
     gantt.append({"kind": "delivery", "name": "Consegna concordata", "date": m.delivery})
     ends = [g["end"] for g in gantt if g["kind"] in ("todo", "done") and g["end"]]
-    ends += [g["date"] for g in gantt if g["kind"] in ("milestone", "delivery")]
+    ends += [g["date"] for g in gantt if g["kind"] in ("milestone", "delivery",
+                                                       "stage_milestone") and g.get("date")]
     first = workday(start - timedelta(days=1), 1)
     last = max(ends + [when])
     cols = []
@@ -1332,6 +1545,13 @@ def figures(m: Model) -> dict:
         d = workday(d, 1)
     F["gantt"] = gantt
     F["gantt_days"] = cols
+    # What the expected delivery does not count, said where the readers stop: the summary.
+    F["undecomposed"] = [g["id"] for g in gantt if g["kind"] == "inc"
+                         and g["status"].startswith("da scomporre")]
+    if m.staging and F["undecomposed"]:
+        n = len(F["undecomposed"])
+        what = "incremento" if n == 1 else "incrementi"
+        F["B7"] += f" Non conta {n} {what} ancora da scomporre (vedi Gantt)."
     return F
 
 
@@ -1343,6 +1563,14 @@ def summary(m: Model, F: dict) -> str:
              f"Ritardo: {F['B6']}",
              f"La previsione vale solo se {F['B7']}",
              f"Dove va il tempo: {F['B8']}"]
+    for g in F["gantt"]:
+        if g["kind"] == "stage_milestone":
+            tail = (f", la tappa finisce il {dm(g['end'])}"
+                    if g["end"] and g["status"] in ("a rischio", "in tempo") else "")
+            lines.append(f"Milestone «{g['name']}» (tappa {g['stage']}, {dm(g['date'])}): "
+                         f"{g['status']}{tail}")
+    if F.get("undecomposed"):
+        lines.append("Da scomporre, fuori dalla stima: " + ", ".join(F["undecomposed"]))
     if m.changes:
         lines.append("Cambiato dall'aggiornamento precedente:")
         lines += [f"- {c}" for c in m.changes]
@@ -1426,6 +1654,7 @@ def freeze(ctx: Context, m: Model | None, path: Path, number: int) -> None:
         "voci": {i: {"kind": it.kind, "state": it.state, "scope": it.scope, "theme": it.theme,
                      "size": it.size, "excluded": it.excluded, "split": split_parent(it),
                      "closer": it.closer, "children": it.children, "hours": plain(it.hours),
+                     "group": it.group,
                      "closed_on": it.closed_on.isoformat() if it.closed_on else None}
                  for i, it in sorted(items.items(), key=lambda x: sort_id(x[0]))},
         "days": {d.isoformat(): canonical_day(e)
@@ -1436,6 +1665,12 @@ def freeze(ctx: Context, m: Model | None, path: Path, number: int) -> None:
         for d in (as_date(ctx.state["release"]["start"]) + timedelta(days=k)
                   for k in range((ctx.when - as_date(ctx.state["release"]["start"])).days))]
     frozen["table"] = [[r[0].isoformat()] + [plain(x) for x in r[1:]] for r in table]
+    if ctx.roadmap_file is not None:
+        frozen["roadmap"] = {
+            "file": ctx.roadmap_file.relative_to(ctx.root).as_posix(),
+            "sha256": hashlib.sha256(ctx.roadmap_file.read_bytes()).hexdigest()}
+    if m is not None:
+        frozen["order"] = [it.id for it in m.todo]
     frozen["sources_disagree"] = ctx.notes
     (path / "frozen.yaml").write_text(
         "# Written by skills/digest/scripts/digest.py. Never edited: the next digest checks "
@@ -1570,6 +1805,16 @@ def generated_lines(repo: Path, rev: str, path: str) -> set[int]:
     return out
 
 
+def front_matter_lines(repo: Path, rev: str, path: str) -> set[int]:
+    """The line numbers of the front matter of `path` at `rev`, fences included."""
+    r = git("show", f"{rev}:{path}", cwd=repo)
+    lines = r.stdout.splitlines() if r.returncode == 0 else []
+    if not lines or lines[0].strip() != "---":
+        return set()
+    end = next((n for n, line in enumerate(lines[1:], 2) if line.strip() == "---"), 0)
+    return set(range(1, end + 1))
+
+
 def changed_text(repo: Path, sha: str, diff: str, skip: set[str]) -> str:
     """The lines a commit added or removed in the documents, without what a generator wrote.
 
@@ -1588,6 +1833,11 @@ def changed_text(repo: Path, sha: str, diff: str, skip: set[str]) -> str:
                 continue
             gen_old = generated_lines(repo, f"{sha}^", path)
             gen_new = generated_lines(repo, sha, path)
+            if Path(path).name == "RMP.md":
+                # The stages and increments of a roadmap name every item they place, and a
+                # commit that reorders them is planning, not work on each one.
+                gen_old |= front_matter_lines(repo, f"{sha}^", path)
+                gen_new |= front_matter_lines(repo, sha, path)
             continue
         if path is None:
             continue
@@ -1704,6 +1954,21 @@ def inventory(ctx: Context) -> dict:
                           "status": wait_status(w, ctx.when)
                           if as_date(w.get("needed_by")) else None} for w in waits]
     out["milestones_declared"] = state.get("milestones") is not None
+    if ctx.roadmap and state.get("format") == FORMAT:
+        check(ctx)                       # builds the items and reads the stages against them
+        st = ctx.staging
+        if st is not None:
+            have = {str(m.get("stage")) for m in state.get("milestones") or []
+                    if isinstance(m, dict) and m.get("stage")}
+            out["stages"] = [{"stage": sid, "name": name, "milestone": ms,
+                              "milestone_date_declared": sid in have if ms else None,
+                              "increments": incs} for sid, name, ms, incs in st.stages]
+            out["increments_to_break_down"] = sorted(
+                (i for i, c in st.components.items() if not c), key=sort_id)
+            rel = str((state.get("release") or {}).get("name"))
+            out["changes_in_no_increment"] = sorted(
+                (i for i, it in ctx.items.items() if it.kind == "CHG" and it.state == "open"
+                 and it.scope == rel and i not in st.owner), key=sort_id)
     out["store"] = store_status(ctx.root)
     return out
 
