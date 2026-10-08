@@ -3067,15 +3067,56 @@ _GIT_ID = {"GIT_AUTHOR_NAME": "lead", "GIT_AUTHOR_EMAIL": "lead@example.com",
            "GIT_COMMITTER_NAME": "lead", "GIT_COMMITTER_EMAIL": "lead@example.com"}
 # WHERE THE WORKBOOK OF THE FIXTURE MAY DIFFER FROM THE REFERENCE, AND WHY. Everything else has
 # to be equal, value by value and style by style, in every cell the reference fills.
+#
+# Since 4.2.0 every item counts for the top of its size, by the person's choice: one estimate
+# instead of a best and a worst case. So where the reference prints a range the workbook prints
+# its top, the one row of the estimate is the reference's worst case, and the optimal split
+# follows: delivering 57 hours by 13/10 takes every hour of the week, given to the themes in
+# proportion to their hours, 38, 12 and 7 of 57, and none left outside the release.
 _DIGEST_DIFFERS = {
     # D9: in the fixture OD-116 is closed by a decision instead of left without an answer, so
     # nothing leaves the workbook in silence; the reason printed for CHG-021 says so.
     ("Attività", "H36"): "Fuori perimetro dal 09/10: decisione presa su OD-116, passa al "
                          "rilascio successivo",
+    ("Riepilogo", "A12"): "Ogni voce al massimo della sua taglia",
+    ("Come leggerlo", "B18"): "da 1 a 2 ore; nella stima conta 2 ore.",
+    ("Come leggerlo", "B19"): "da 3 a 5 ore; nella stima conta 5 ore.",
+    ("Come leggerlo", "B20"): "da 6 a 12 ore; nella stima conta 12 ore.",
+    ("Come leggerlo", "B21"): "da 13 a 40 ore; nella stima conta 40 ore. Troppo grande per "
+                              "essere stimata bene: va spezzata in voci più piccole.",
+    ("Come leggerlo", "B38"): "Ogni voce conta per il massimo della sua taglia: la stima è "
+                              "prudente, e la consegna prevista è una data sola.",
+    **{("Riepilogo", f"C{r}"): v for r, v in ((32, 38 / 57), (33, 12 / 57), (34, 7 / 57),
+                                              (35, 0), (36, 0))},
 }
 # D11 c: the delay is red when there is one, through a conditional format; in the reference it
 # was red by hand, and stayed red at zero.
-_DIGEST_RED_WHEN_LATE = {("Riepilogo", "B6"), ("Riepilogo", "J12"), ("Riepilogo", "J13")}
+_DIGEST_RED_WHEN_LATE = {("Riepilogo", "B6"), ("Riepilogo", "J12")}
+
+
+def _digest_expected(ref) -> dict:
+    """The value every cell of the reference is expected to have in the generated workbook."""
+    import re as _re
+    out = {}
+    for name in ref.sheetnames:
+        ws = ref[name]
+        for row in ws.iter_rows():
+            for c in row:
+                v = c.value
+                if isinstance(v, str):
+                    v = _re.sub(r"^tra \d+ e (\d+) ore$", r"\1 ore", v)
+                    v = _re.sub(r"^tra il \S+ e il (\S+)$", r"il \1", v)
+                    v = _re.sub(r"^da \d+ a (\d+ giorni lavorativi)$", r"\1", v)
+                out[(name, c.coordinate)] = v
+    summary = ref["Riepilogo"]
+    for col in "BCDEFGHIJ":
+        out[("Riepilogo", f"{col}12")] = summary[f"{col}13"].value
+        out[("Riepilogo", f"{col}13")] = None
+    out[("Riepilogo", "A13")] = None
+    out.update(_DIGEST_DIFFERS)
+    for r in range(32, 37):
+        out[("Riepilogo", f"D{r}")] = out[("Riepilogo", f"C{r}")] - summary[f"B{r}"].value
+    return out
 
 
 def _digest_copy(tmp: str, which: str = "atlas") -> Path | None:
@@ -3150,18 +3191,20 @@ def _digest_reproduces_the_reference():
         problems = []
         ref = openpyxl.load_workbook(REFERENCE, data_only=True)
         got = openpyxl.load_workbook(xlsx, data_only=True)
-        if ref.sheetnames != got.sheetnames:
-            return [f"the sheets are {got.sheetnames}, the reference has {ref.sheetnames}"]
+        want_sheets = ref.sheetnames[:1] + ["Gantt"] + ref.sheetnames[1:]
+        if got.sheetnames != want_sheets:
+            return [f"the sheets are {got.sheetnames}, not {want_sheets}"]
+        expected = _digest_expected(ref)
         for name in ref.sheetnames:
             r, g = ref[name], got[name]
             for row in r.iter_rows():
                 for c in row:
                     other = g[c.coordinate]
-                    want = _DIGEST_DIFFERS.get((name, c.coordinate), c.value)
+                    want = expected[(name, c.coordinate)]
                     if not _same_value(want, other.value):
-                        problems.append(f"{name}!{c.coordinate} is {other.value!r}, the reference "
-                                        f"says {c.value!r}")
-                    if c.value is None:
+                        problems.append(f"{name}!{c.coordinate} is {other.value!r}, expected "
+                                        f"{want!r}; the reference says {c.value!r}")
+                    if c.value is None or want is None:
                         continue
                     a, b = _cell_style(c), _cell_style(other)
                     if (name, c.coordinate) in _DIGEST_RED_WHEN_LATE:
@@ -3184,14 +3227,14 @@ def _digest_reproduces_the_reference():
         conditional = {str(rng.sqref): [rule.formula for rule in rng.rules]
                        for rng in openpyxl.load_workbook(xlsx)["Riepilogo"]
                        .conditional_formatting}
-        if not any("$J$13>0" in str(f) for f in conditional.get("B6:J6", [])) or \
-                not any("J12>0" in str(f) for f in conditional.get("J12:J13", [])):
+        if not any("$J$12>0" in str(f) for f in conditional.get("B6:J6", [])) or \
+                not any("J12>0" in str(f) for f in conditional.get("J12", [])):
             problems.append(f"the delay is not red through a conditional format: {conditional}")
         if len(got["Riepilogo"]._charts) != 2:
             problems.append("the summary has not the two pies of the reference, and no other")
         if not (Path(tmp) / "copy" / xlsx.name).is_file():
             problems.append("--copy-to did not leave a copy where it was asked")
-        if "Consegna prevista oggi: tra il 16/10 e il 23/10" not in out \
+        if "Consegna prevista oggi: il 23/10" not in out \
                 or "spezzata: OD-098 in OD-120, OD-121" not in out:
             problems.append(f"the conversation does not get the summary and the changes: {out}")
         remote = root / ".remote" / "digest.git"
@@ -3202,12 +3245,14 @@ def _digest_reproduces_the_reference():
     return problems[:12]
 
 
-@check("the calendar on the first sheet places every item, the milestones and today")
-def _digest_draws_the_calendar():
-    # The calendar is the one part of the first sheet the reference does not have, so it is
-    # checked against the plan of the fixture: the done items on the day they closed, the
-    # items to do one after the other at the pace of the estimate, ending where the estimate
-    # ends, and each milestone on its day. A day is three characters of a fixed-width font.
+@check("the Gantt sheet places every item, the milestones and today, one column per day")
+def _digest_draws_the_gantt():
+    # The Gantt is the one sheet the reference does not have, so it is checked against the plan
+    # of the fixture, computed by hand at 5,2 hours a day from 09/10 with every item at the top
+    # of its size: CHG-018 12 hours from the day it started, 08/10, to the third working day,
+    # 13/10; OD-120 from 24/5,2 to 4,6 days, so from the third to the fifth; and so on to
+    # CHG-024, whose 57th hour falls on 23/10, the date of point 2 of the summary.
+    import datetime as _dt
     import openpyxl
     with tempfile.TemporaryDirectory() as tmp:
         root = _digest_copy(tmp)
@@ -3217,45 +3262,55 @@ def _digest_draws_the_calendar():
         xlsx = root / "_meta/digest/DIG-003-atlas-2026-10-09/DIG-003-atlas-2026-10-09.xlsx"
         if rc != 0:
             return [f"the digest of 09/10 was refused: {out.strip()[:300]}"]
-        ws = openpyxl.load_workbook(xlsx)["Riepilogo"]
-    rows = {str(ws.cell(r, 1).value or ""): str(ws.cell(r, 2).value or "")
-            for r in range(58, ws.max_row + 1)}
+        book = openpyxl.load_workbook(xlsx, data_only=True)
+        formulas = openpyxl.load_workbook(xlsx)["Gantt"]
     problems = []
-    if str(ws["A58"].value) != "6. Calendario delle attività":
-        problems.append(f"section 6 is not below the pies: A58 is {ws['A58'].value!r}")
-    import datetime as _dt
+    if book.sheetnames[1] != "Gantt":
+        return [f"the Gantt is not the second sheet: {book.sheetnames}"]
+    ws = book["Gantt"]
+    if book["Riepilogo"].max_row > 40:
+        problems.append("the summary still carries a calendar below the pies")
     calendar, d = [], _dt.date(2026, 9, 22)
     while d <= _dt.date(2026, 10, 23):
         calendar += [d] if d.weekday() < 5 else []
         d += _dt.timedelta(days=1)
-    header = rows.get("Attività", "")
-    if header.split() != [f"{x.day:02d}" for x in calendar]:
-        problems.append(f"the days run from the first day of the project to the latest end, "
-                        f"working days only: {header!r}")
+    header = [ws.cell(4, 6 + k).value for k in range(len(calendar) + 1)]
+    if [h.date() if h else None for h in header] != calendar + [None]:
+        problems.append(f"the columns are not the working days from 22/09 to 23/10: {header}")
+    rows = {ws.cell(r, 1).value or ws.cell(r, 2).value: r for r in range(5, ws.max_row + 1)}
 
-    def slot(day: str) -> int:
-        dd, mm = map(int, day.split("/"))
-        return calendar.index(_dt.date(2026, mm, dd))
+    def day(text: str) -> _dt.date:
+        dd, mm = map(int, text.split("/"))
+        return _dt.date(2026, mm, dd)
 
-    def span(label: str) -> tuple[int, int]:
-        line = next((v for k, v in rows.items() if k.startswith(label)), "")
-        cells = [k // 3 for k, ch in enumerate(line) if ch == "█"]
-        return (cells[0], cells[-1]) if cells else (-1, -1)
-
-    for label, first, last in (("CHG-012", "24/09", "24/09"), ("DEC-026", "06/10", "06/10"),
-                               ("KI-013", "07/10", "07/10"), ("CHG-018", "08/10", "13/10"),
-                               ("OD-120", "12/10", "15/10"), ("CHG-024", "16/10", "23/10")):
-        if span(label) != (slot(first), slot(last)):
-            problems.append(f"{label} is drawn on {span(label)}, not from {first} to {last}")
-    for label, day in (("Demo al team funzionale", "15/10"), ("Consegna concordata", "13/10")):
-        line = next((v for k, v in rows.items() if k.startswith(label)), "")
-        if "♦" not in line or line.index("♦") // 3 != slot(day):
-            problems.append(f"the milestone {label!r} is not on {day}")
-    done = next((v for k, v in rows.items() if k.startswith("CHG-012")), "")
-    if len(done) <= slot("09/10") * 3 + 1 or done[slot("09/10") * 3 + 1] != "│":
-        problems.append("today is not marked where nothing else is drawn")
-    if "OD-098" in "".join(rows) or "CHG-021" in "".join(rows):
-        problems.append("an item split or out of the perimeter is on the calendar")
+    for label, state, first, last in (
+            ("CHG-012", "fatta", "24/09", "24/09"), ("DEC-026", "fatta", "06/10", "06/10"),
+            ("KI-013", "fatta", "07/10", "07/10"), ("CHG-018", "in corso", "08/10", "13/10"),
+            ("OD-120", "da fare", "13/10", "15/10"), ("OD-121", "da fare", "15/10", "19/10"),
+            ("OD-109", "rallentata", "19/10", "22/10"), ("CHG-022", "bloccata", "22/10", "22/10"),
+            ("CHG-024", "bloccata", "23/10", "23/10")):
+        r = rows.get(label)
+        got = (ws.cell(r, 3).value, ws.cell(r, 4).value, ws.cell(r, 5).value) if r else None
+        if got is None or got[0] != state or got[1].date() != day(first) \
+                or got[2].date() != day(last):
+            problems.append(f"{label} is {got}, not {state} from {first} to {last}")
+    if "Attività!$E$" not in str(formulas["D13"].value) or "Riepilogo!$G$12" \
+            not in str(formulas["E13"].value):
+        problems.append("an item to do is not placed by formulas on its size and on the pace: "
+                        f"{formulas['D13'].value!r}")
+    for label, on in (("Demo al team funzionale", "15/10"), ("Consegna concordata", "13/10")):
+        r = rows.get(label)
+        marks = [calendar[k] for k in range(len(calendar)) if r and ws.cell(r, 6 + k).value == "◆"]
+        if marks != [day(on)]:
+            problems.append(f"the milestone {label!r} is marked on {marks}, not on {on}")
+    rules = {str(c.sqref): [x.formula[0] for x in c.rules] for c in formulas.conditional_formatting}
+    bars = next((v for k, v in rules.items() if k.startswith("F5:")), [])
+    if len(bars) != 4 or "'Come leggerlo'!$B$4" not in bars[-1]:
+        problems.append(f"the bars and the column of today are not conditional formats: {rules}")
+    if "OD-098" in rows or "CHG-021" in rows:
+        problems.append("an item split or out of the perimeter is on the Gantt")
+    if formulas.freeze_panes != "F5":
+        problems.append(f"the names and the days do not stay in view: {formulas.freeze_panes}")
     return problems
 
 
@@ -3407,13 +3462,15 @@ def _digest_edge_cases():
                 {t: 0 for t in x.THEMES}, {t: 0 for t in x.THEMES}, table, [], [])
     F = x.figures(m)
     problems = []
-    if F["B5"] != "non stimabile" or F["cases"][0]["H"] != "non stimabile":
+    if F["B5"] != "non stimabile" or F["case"]["H"] != "non stimabile":
         problems.append(f"no hours on the release gave a date: {F['B5']!r}")
     with tempfile.TemporaryDirectory() as tmp:
         out = Path(tmp) / "edge.xlsx"
         _load(WORKBOOK, "digest_edges_workbook").write(m, F, out, x.datetime(2026, 10, 9, 8, 30))
         wb = openpyxl.load_workbook(out, data_only=True)
     s, a = wb["Riepilogo"], wb["Attività"]
+    if [wb["Gantt"].cell(r, 3).value for r in (5, 6)] != ["consegna", None]:
+        problems.append("a Gantt with nothing to do does not hold the agreed delivery alone")
     for cell, want in (("B5", "non stimabile"), ("B6", "non stimabile"), ("I12", "non stimabile"),
                        ("B7", "non dipende da richieste ad altri."), ("B12", 0),
                        ("A17", "Nessuna.")):

@@ -4,7 +4,7 @@ description: >
   Prepare the daily status workbook of one product, an Excel file for people who will not
   open the registers: when the release can be delivered against the agreed date and why,
   what waits on other people, progress by theme, where the hours go, every item to do, done
-  and out of the perimeter, the hours day by day, and a calendar with the milestones.
+  and out of the perimeter, the hours day by day, and a Gantt with the milestones.
   Computed from the registers and from a state file the person fills through this skill;
   the person sends it, never the skill. Triggers on "prepara il digest", "digest
   giornaliero", "digest di oggi", "fammi il digest di atlas", "consuntivo di ieri", "daily
@@ -83,7 +83,7 @@ items:
       quali formati di file lo strumento di caricamento deve saper leggere.
     theme: architettura            # architettura | sviluppo | deploy
     scope: "1.0"                   # the release name, or out
-    size: L                        # S 1-2 h, M 3-5, L 6-12, XL 13-40
+    size: L                        # S 1-2 h, M 3-5, L 6-12, XL 13-40: counted at the top
     seen: Which file formats the loader reads   # the register's title, confirmed
   KI-013:
     title: tempo massimo superato sulle domande lunghe
@@ -221,9 +221,10 @@ and reused unchanged until the person changes it.
   perimeter means its fix is in this release, which the framework would write as a `CHG`;
   say so when proposing it. An item outside the perimeter needs `out_reason`, the why the
   workbook prints.
-- **Size**, for every item in the perimeter, open or closed. An `XL` is counted with its
-  whole range and flagged to be split; when it is split, `split_into` names the items that
-  replace it.
+- **Size**, for every item in the perimeter, open or closed. The estimate counts every item
+  at the top of its size, S 2 hours, M 5, L 12, XL 40: one number, on the side of caution,
+  and one delivery date. An `XL` is flagged to be split; when it is split, `split_into` names
+  the items that replace it.
 - **Closing date** (`closed_on`), for every item closed in the perimeter: proposed from the
   commit that closed it in the register, confirmed by the person. A commit that came late
   gives a late date, which is why it is confirmed.
@@ -263,7 +264,7 @@ What the commits and the registers say is never asked. Ask, in one message:
 4. **The plan** for the digest's day and the next working day: which items, how many hours
    each, and whether that day closes it. Proposed from what is in progress, what was planned
    and not done, and the order of the list.
-5. **The milestones**, name and date: at the first workbook, which is the first calendar, and
+5. **The milestones**, name and date: at the first workbook, which is the first Gantt, and
    afterwards only when the person says they want to change them. Never every day.
 
 The agreed delivery date is asked at the first run and when the release changes. If it was
@@ -277,20 +278,24 @@ Never ask which items were worked on, closed or opened.
 Fixed. Sheets, sections, positions, formulas, colours and fonts are those of the reference
 workbook the script is tested against, `tests/fixtures/digest/DIG-003-atlas-2026-10-09.xlsx`
 in the framework's repository; `tests/selfcheck.py` lists the few cells allowed to differ and
-why.
+why: every item counts for the top of its size, so where the reference prints a range the
+workbook prints its top, and the estimate is one row instead of a best and a worst case.
 
 1. **Riepilogo**, the sheet most readers stop at: where the release stands (agreed delivery,
    delivery expected today, delay, what the forecast depends on, where the time goes), how the
-   estimate is computed in the best and the worst case, what is needed from others, progress
-   by theme, how the hours of the project are split today and how they should be to deliver
-   on the agreed date, with the two pies, and the calendar: every item done on the days it was
-   worked, every item to do in the order of the list at the pace of the estimate, the
-   milestones and the agreed delivery.
-2. **Attività**: the next days, what is left in the perimeter, what was done in it since the
+   estimate is computed, what is needed from others, progress by theme, how the hours of the
+   project are split today and how they should be to deliver on the agreed date, with the two
+   pies.
+2. **Gantt**: one row per item and per milestone, one column per working day. Every item done
+   on the days it was worked; every item to do in the order of «Da fare», for the top of its
+   size, at the pace of the estimate, so the last one ends on the expected delivery; the
+   milestones and the agreed delivery as diamonds; today's column in yellow. The first and
+   last day of an item to do are formulas, and the bars conditional formats on them.
+3. **Attività**: the next days, what is left in the perimeter, what was done in it since the
    start, what is outside it. Every item, nothing cut short.
-3. **Ore lavorate**: the hours by period, as shares, outside the product by category, and day
+4. **Ore lavorate**: the hours by period, as shares, outside the product by category, and day
    by day from the start. Every other number follows from the last table.
-4. **Come leggerlo**: the dates every formula starts from, in yellow, and the legend.
+5. **Come leggerlo**: the dates every formula starts from, in yellow, and the legend.
 
 Every derived cell is a formula, written with the value the script computed for it, so the
 file reads the same in a preview and in a spreadsheet. The sheets are protected without a

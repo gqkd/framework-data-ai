@@ -1,4 +1,4 @@
-"""The workbook of the digest: four sheets, every derived cell a formula with its value beside it.
+"""The workbook of the digest: five sheets, every derived cell a formula with its value beside it.
 
 Loaded by `digest.py` by path, never run on its own. It receives what `digest.py` computed, the
 model of the day and its figures, and lays them out: where a cell follows from other cells it
@@ -13,7 +13,7 @@ every call.
 
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from fractions import Fraction
 
 import xlsxwriter
@@ -28,14 +28,11 @@ SIZE_RANGE = {"S": (1, 2), "M": (3, 5), "L": (6, 12), "XL": (13, 40)}
 PREFIX_LABEL = [("OD-", "Decisione da prendere"), ("DEC-", "Decisione presa"),
                 ("CHG-", "Modifica al prodotto"), ("KI-", "Problema noto"),
                 ("INC-", "Evoluzione futura"), ("EVR-", "Valutazione")]
-MONTHS = ("gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic")
-# The bars of the calendar are characters of a fixed-width font, so that a day is as wide in
-# every row and in the header above them. Courier New is on every Windows machine, and
-# LibreOffice draws it with Liberation Mono, which has the same widths.
-MONO = "Courier New"
-GANTT_CHARS = 105          # what fits in columns B to J at 10 points
-GANTT_COLOURS = {"done": "#7F7F7F", "best": "#2A78D6", "worst": "#9DC3E6",
-                 "milestone": "#EB6834", "delivery": "#C00000", "today": "#EDA100"}
+MONTHS = ("gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto",
+          "settembre", "ottobre", "novembre", "dicembre")
+# The bars of the Gantt, by the status of the row; a milestone is a diamond in its day.
+BAR = {"fatta": "#BFBFBF", "da fare": "#2A78D6", "bloccata": "#F4B183"}
+TODO_STATES = ("da fare", "in corso", "rallentata")
 
 
 def number(x):
@@ -43,6 +40,16 @@ def number(x):
     if isinstance(x, Fraction):
         return int(x) if x.denominator == 1 else float(x)
     return x
+
+
+def col_name(c: int) -> str:
+    """A column's letters, from its index counted from 0."""
+    out = ""
+    c += 1
+    while c:
+        c, rem = divmod(c - 1, 26)
+        out = chr(65 + rem) + out
+    return out
 
 
 def dt(d: date) -> datetime:
@@ -66,9 +73,9 @@ def dmy_f(ref: str) -> str:
     return f'{dd(ref)}&"/"&YEAR({ref})'
 
 
-def size_sum(rng: str, which: int) -> str:
-    """The minimum (0) or maximum (1) of the sizes in a range of the Taglia column."""
-    return "(" + "+".join(f'({rng}="{s}")*{r[which]}' for s, r in SIZE_RANGE.items()) + ")"
+def size_top(rng: str) -> str:
+    """The hours the estimate counts for the sizes of a range: the top of each one."""
+    return "(" + "+".join(f'({rng}="{s}")*{hi}' for s, (_, hi) in SIZE_RANGE.items()) + ")"
 
 
 def kind_formula(cell: str) -> str:
@@ -84,16 +91,13 @@ def kind_value(i: str) -> str:
 
 def estimate_formula(cell: str) -> str:
     out = '"da stimare"'
-    for s, (lo, hi) in reversed(SIZE_RANGE.items()):
-        out = f'IF({cell}="{s}","tra {lo} e {hi} ore",{out})'
+    for s, (_, hi) in reversed(SIZE_RANGE.items()):
+        out = f'IF({cell}="{s}","{hi} ore",{out})'
     return "=" + out
 
 
 def estimate_value(size: str | None) -> str:
-    if size in SIZE_RANGE:
-        lo, hi = SIZE_RANGE[size]
-        return f"tra {lo} e {hi} ore"
-    return "da stimare"
+    return f"{SIZE_RANGE[size][1]} ore" if size in SIZE_RANGE else "da stimare"
 
 
 class Styles:
@@ -229,9 +233,8 @@ def activities(wb, S, m, F) -> dict:
     ws.write_string(t - 1, 1, "Totale", S.total())
     for c in (2, 3, 4, 6, 7, 8):
         ws.write_blank(t - 1, c, None, S.total())
-    ws.write_formula(t - 1, 5, f'="tra "&ROUND(SUMPRODUCT({size_sum(rng, 0)}),1)&" e "&'
-                               f'ROUND(SUMPRODUCT({size_sum(rng, 1)}),1)&" ore"',
-                     S.total(), F["est_total"])
+    ws.write_formula(t - 1, 5, f'=ROUND(SUMPRODUCT({size_top(rng)}),1)&" ore"', S.total(),
+                     F["est_total"])
     r = t + 3
 
     done = [(it, m.status[it.shown_id], True) for it in m.done]
@@ -390,11 +393,11 @@ LEGEND = [
         ("Evoluzione futura (INC)", "Una capacità prevista per dopo questo rilascio."),
     ]),
     ("Taglie (stima delle ore per una voce)", [
-        ("S", "da 1 a 2 ore"),
-        ("M", "da 3 a 5 ore"),
-        ("L", "da 6 a 12 ore"),
-        ("XL", "da 13 a 40 ore. Troppo grande per essere stimata bene: va spezzata in voci più "
-               "piccole."),
+        ("S", "da 1 a 2 ore; nella stima conta 2 ore."),
+        ("M", "da 3 a 5 ore; nella stima conta 5 ore."),
+        ("L", "da 6 a 12 ore; nella stima conta 12 ore."),
+        ("XL", "da 13 a 40 ore; nella stima conta 40 ore. Troppo grande per essere stimata bene: "
+               "va spezzata in voci più piccole."),
     ]),
     ("Stati di una voce da fare", [
         ("Da iniziare", "Pronta, aspetta il suo turno."),
@@ -417,8 +420,8 @@ LEGEND = [
     ("Regole dei numeri", [
         ("Perimetro", "Ciò che deve esserci nel rilascio concordato. Le voci fuori perimetro sono "
                       "elencate ma non entrano nella stima."),
-        ("Ore stimate", "Sono sempre un intervallo, dalla somma delle taglie più piccole a quella "
-                        "delle più grandi."),
+        ("Ore stimate", "Ogni voce conta per il massimo della sua taglia: la stima è prudente, e "
+                        "la consegna prevista è una data sola."),
         ("Voci in corso", "Una voce resta stimata per intero finché non si chiude. Le ore già "
                           "spese sono indicate a parte."),
         ("Stima di consegna", "Spiegata nel Riepilogo, al punto 2."),
@@ -481,17 +484,19 @@ def summary_sheet(wb, ws, S, m, F, at: dict):
     w_first = 17
     w_last = w_first + max(len(waits), 1) - 1
     stat = f"$F${w_first}:$F${w_last}"
+    late_n = f'(COUNTIF({stat},"SCADUTA*")+COUNTIF({stat},"Scade oggi"))'
     rows = [
         ("Consegna concordata", f"={dmy_f(B6)}", F["B4"], big, 24),
         ("Consegna prevista oggi",
-         f'=IF(AND(ISNUMBER(I12),ISNUMBER(I13)),"tra il "&{dd("I12")}&" e il "&{dd("I13")},'
-         f'"non stimabile")', F["B5"], big, 24),
-        ("Ritardo", '=IF(NOT(ISNUMBER(J13)),"non stimabile",IF(J13=0,"nessuno",'
-                    '"da "&J12&" a "&J13&" giorni lavorativi"))', F["B6"], big, 24),
+         f'=IF(ISNUMBER(I12),"il "&{dd("I12")},"non stimabile")', F["B5"], big, 24),
+        ("Ritardo", '=IF(NOT(ISNUMBER(J12)),"non stimabile",IF(J12=0,"nessuno",'
+                    'J12&IF(J12=1," giorno lavorativo"," giorni lavorativi")))', F["B6"], big, 24),
         ("La previsione vale solo se",
-         (f'="arrivano in tempo le "&ROWS({stat})&" cose richieste ad altri (punto 3). Oggi "&'
-          f'(COUNTIF({stat},"SCADUTA*")+COUNTIF({stat},"Scade oggi"))&'
-          f'" sono scadute o scadono oggi."') if waits else None, F["B7"], small, 30),
+         (f'="arriva"&IF(ROWS({stat})=1," in tempo l\'unica cosa richiesta","no in tempo le "&'
+          f'ROWS({stat})&" cose richieste")&" ad altri (punto 3). Oggi "&IF({late_n}=0,'
+          f'"nessuna è scaduta.",IF({late_n}=1,"1 è scaduta o scade oggi.",'
+          f'{late_n}&" sono scadute o scadono oggi."))') if waits else None, F["B7"], small,
+         30),
         ("Dove va il tempo", None, F["B8"], small, 30),
     ]
     r8 = (f'="Dall\'inizio del progetto "&(ROUND({OL}E8,0)+ROUND({OL}F8,0)+ROUND({OL}G8,0)+'
@@ -512,7 +517,7 @@ def summary_sheet(wb, ws, S, m, F, at: dict):
         ws.set_row(r - 1, height)
     late = {"type": "formula", "format": wb.add_format({"bold": True, "font_color": "#C00000",
                                                         "bg_color": "#F8CBAD"})}
-    ws.conditional_format("B6:J6", dict(late, criteria="=AND(ISNUMBER($J$13),$J$13>0)"))
+    ws.conditional_format("B6:J6", dict(late, criteria="=AND(ISNUMBER($J$12),$J$12>0)"))
 
     # 2. Calcolo stima consegna
     ws.write_string(9, 0, "2. Calcolo stima consegna", S.section())
@@ -523,31 +528,32 @@ def summary_sheet(wb, ws, S, m, F, at: dict):
                        "Ritardo sulla consegna concordata"), 43.5)
     rng = f"{AT}$E${a}:$E${b}"
     nd3 = f"NETWORKDAYS({OL}$B$5,{OL}$C$5)"
-    for k, (label, case) in enumerate(zip(("Caso migliore", "Caso peggiore"), F["cases"])):
-        r = 12 + k
-        ws.write_string(r - 1, 0, label, S.cell(bold=True))
-        if m.todo:
-            ws.write_formula(r - 1, 1, f"=COUNTA({AT}$A${a}:$A${b})", S.cell(num_format="0"),
-                             case["B"])
-        else:
-            ws.write_number(r - 1, 1, 0, S.cell(num_format="0"))
-        ws.write_formula(r - 1, 2, f"=SUMPRODUCT({size_sum(rng, k)})", S.cell(num_format=HOURS),
-                         number(case["C"]))
-        for c, (src, key) in enumerate((("D", "D"), ("H", "E"), ("I", "F"))):
-            ws.write_formula(r - 1, 3 + c, f"=ROUND({OL}${src}$5/{nd3},1)",
-                             S.cell(num_format="0.0"), number(case[key]))
-        ws.write_formula(r - 1, 6, f"=D{r}-E{r}-F{r}", S.cell(num_format="0.0", bold=True),
-                         number(case["G"]))
-        ws.write_formula(r - 1, 7, f'=IF(G{r}<=0,"non stimabile",ROUNDUP(ROUND(C{r}/G{r},9),0))',
-                         S.cell(num_format="0", bold=True), case["H"])
-        ws.write_formula(r - 1, 8, f'=IF(ISNUMBER(H{r}),WORKDAY({B4}-1,MAX(1,H{r})),'
-                                   f'"non stimabile")',
-                         S.cell(num_format=DATE, bold=True, bg_color="#FFF2CC"),
-                         serial(case["I"]) if isinstance(case["I"], date) else case["I"])
-        ws.write_formula(r - 1, 9, f'=IF(ISNUMBER(I{r}),IF(I{r}>{B6},NETWORKDAYS({B6}+1,I{r}),0),'
-                                   f'"non stimabile")',
-                         S.cell(num_format='0" giorni lavorativi"', bold=True), case["J"])
-    ws.conditional_format("J12:J13", dict(late, criteria="=AND(ISNUMBER(J12),J12>0)"))
+    # One row: every item at the top of its size. Row 13 stays empty, so that every section
+    # below sits where the reference workbook has it.
+    case, r = F["case"], 12
+    ws.write_string(r - 1, 0, "Ogni voce al massimo della sua taglia", S.cell(bold=True))
+    if m.todo:
+        ws.write_formula(r - 1, 1, f"=COUNTA({AT}$A${a}:$A${b})", S.cell(num_format="0"),
+                         case["B"])
+    else:
+        ws.write_number(r - 1, 1, 0, S.cell(num_format="0"))
+    ws.write_formula(r - 1, 2, f"=SUMPRODUCT({size_top(rng)})", S.cell(num_format=HOURS),
+                     number(case["C"]))
+    for c, (src, key) in enumerate((("D", "D"), ("H", "E"), ("I", "F"))):
+        ws.write_formula(r - 1, 3 + c, f"=ROUND({OL}${src}$5/{nd3},1)",
+                         S.cell(num_format="0.0"), number(case[key]))
+    ws.write_formula(r - 1, 6, f"=D{r}-E{r}-F{r}", S.cell(num_format="0.0", bold=True),
+                     number(case["G"]))
+    ws.write_formula(r - 1, 7, f'=IF(G{r}<=0,"non stimabile",ROUNDUP(ROUND(C{r}/G{r},9),0))',
+                     S.cell(num_format="0", bold=True), case["H"])
+    ws.write_formula(r - 1, 8, f'=IF(ISNUMBER(H{r}),WORKDAY({B4}-1,MAX(1,H{r})),'
+                               f'"non stimabile")',
+                     S.cell(num_format=DATE, bold=True, bg_color="#FFF2CC"),
+                     serial(case["I"]) if isinstance(case["I"], date) else case["I"])
+    ws.write_formula(r - 1, 9, f'=IF(ISNUMBER(I{r}),IF(I{r}>{B6},NETWORKDAYS({B6}+1,I{r}),0),'
+                               f'"non stimabile")',
+                     S.cell(num_format='0" giorni lavorativi"', bold=True), case["J"])
+    ws.conditional_format("J12", dict(late, criteria="=AND(ISNUMBER(J12),J12>0)"))
 
     # 3. Cosa serve da altri
     ws.write_string(14, 0, "3. Cosa serve da altri", S.section())
@@ -621,8 +627,7 @@ def summary_sheet(wb, ws, S, m, F, at: dict):
         ws.write_formula(r - 1, 5, f"=E{r}-{t['todo'] - t['delta']}",
                          S.cell(num_format=SIGNED, **yellow), t["delta"])
         sel = f"({AT}$C${a}:$C${b}=A{r})"
-        ws.write_formula(r - 1, 6, f'="tra "&ROUND(SUMPRODUCT({sel}*{size_sum(rng, 0)}),1)&" e "&'
-                                   f'ROUND(SUMPRODUCT({sel}*{size_sum(rng, 1)}),1)&" ore"',
+        ws.write_formula(r - 1, 6, f'=ROUND(SUMPRODUCT({sel}*{size_top(rng)}),1)&" ore"',
                          S.cell(), t["est"])
     r = h2 + 4
     first, last = h2 + 1, h2 + 3
@@ -632,9 +637,8 @@ def summary_sheet(wb, ws, S, m, F, at: dict):
     for c, (letter, v) in enumerate(zip("BCDEF", sums)):
         ws.write_formula(r - 1, 1 + c, f"=SUM({letter}{first}:{letter}{last})",
                          S.total(num_format=SIGNED if letter == "F" else "0"), v)
-    ws.write_formula(r - 1, 6, f'="tra "&ROUND(SUMPRODUCT({size_sum(rng, 0)}),1)&" e "&'
-                               f'ROUND(SUMPRODUCT({size_sum(rng, 1)}),1)&" ore"',
-                     S.total(), F["est_total"])
+    ws.write_formula(r - 1, 6, f'=ROUND(SUMPRODUCT({size_top(rng)}),1)&" ore"', S.total(),
+                     F["est_total"])
 
     # 5. Ripartizione delle ore di progetto, on a page of its own
     s5 = r + 2
@@ -644,9 +648,9 @@ def summary_sheet(wb, ws, S, m, F, at: dict):
                            f"Ottimale per consegnare il {dm(m.delivery)}", "Differenza"), 43.5)
     ws.write_formula(s5, 2, f'="Ottimale per consegnare il "&{dd(B6)}', S.head(),
                      f"Ottimale per consegnare il {dm(m.delivery)}")
-    smin = f"SUMPRODUCT({size_sum(rng, 0)})"
+    stop = f"SUMPRODUCT({size_top(rng)})"
     rate7 = f"({OL}$D$6/NETWORKDAYS({OL}$B$6,{OL}$C$6))"
-    share = f"MIN(1,({smin}/MAX(1,NETWORKDAYS({B4},{B6})))/{rate7})"
+    share = f"MIN(1,({stop}/MAX(1,NETWORKDAYS({B4},{B6})))/{rate7})"
     labels = (*THEME_LABELS, "Fuori perimetro", "Fuori dal prodotto")
     for k, label in enumerate(labels):
         r = s5 + 2 + k
@@ -654,8 +658,8 @@ def summary_sheet(wb, ws, S, m, F, at: dict):
         ws.write_formula(r - 1, 1, f"={OL}${'EFGHI'[k]}$13", S.cell(num_format="0%"),
                          number(F["now_share"][k]))
         if k < 3:
-            f = (f'=IF(OR({smin}=0,{OL}$D$6=0),0,{share}*SUMPRODUCT(({AT}$C${a}:$C${b}='
-                 f'"{label}")*{size_sum(rng, 0)})/{smin})')
+            f = (f'=IF(OR({stop}=0,{OL}$D$6=0),0,{share}*SUMPRODUCT(({AT}$C${a}:$C${b}='
+                 f'"{label}")*{size_top(rng)})/{stop})')
         else:
             mine = f"{OL}${'HI'[k - 3]}$13"
             both = f"({OL}$H$13+{OL}$I$13)"
@@ -694,132 +698,153 @@ def summary_sheet(wb, ws, S, m, F, at: dict):
         ch.set_size({"width": 472, "height": 283})
         ws.insert_chart(f"{'AE'[k]}{s5 + 12}", ch)
 
-    # 6. Calendario: on a page of its own, after the pies
-    s6 = s5 + 28
-    ws.set_h_pagebreaks([s5 - 1, s6 - 1])
-    gantt(wb, ws, S, m, F, s6)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Gantt
+
+def short_status(text: str) -> str:
+    """The status of a row of «Da fare», in the one word the Gantt has room for."""
+    for word in ("Bloccata", "Rallentata", "In corso"):
+        if text.startswith(word):
+            return word.lower()
+    return "da fare"
 
 
-def gantt(wb, ws, S, m, F, s6: int):
-    """The calendar, in columns B to J: one row per item and per milestone, one slot per day.
+def gantt_sheet(wb, ws, S, m, F, at: dict) -> None:
+    """One row per item and per milestone, one column per working day.
 
-    Columns of a spreadsheet cannot be days here, because sections 1 to 5 fix their widths; the
-    days are slots of characters in a fixed-width font, so every day has the same width.
+    The items done sit on the days they were worked; the items to do follow one another in the
+    order of «Da fare», each for the top of its size, at the hours per day of the estimate, so
+    the last one ends on the date of point 2 of the summary. Their first and last day are
+    formulas on the sizes in Attività and on that pace; the bars are conditional formats on
+    those two dates, so a recalculation moves them.
     """
     days: list[date] = F["gantt_days"]
-    cpd = 3 if len(days) * 3 <= GANTT_CHARS else 2 if len(days) * 2 <= GANTT_CHARS else 1
-    if len(days) > GANTT_CHARS:
-        days = days[-GANTT_CHARS:]
-    index = {d: k for k, d in enumerate(days)}
+    first = 5                                      # column F, the first day
+    last = first + len(days) - 1
+    widths = {"A": 10, "B": 36, "C": 11, "D": 11, "E": 11}
+    setup(ws, widths, (4, 5))
+    ws.set_column(first, last, 3.6)
+    ws.write_string(0, 0, "Gantt", S.title())
 
-    def slot(d: date | None) -> int | None:
-        if d is None:
-            return None
-        while d not in index and d >= days[0]:
-            d -= timedelta(days=1)          # a weekend counts on the Friday before it
-        return index.get(d, 0 if d < days[0] else None)
-
-    mono = {k: wb.add_format({"font_name": MONO, "font_size": 10, "font_color": c})
-            for k, c in GANTT_COLOURS.items()}
-    mono["plain"] = wb.add_format({"font_name": MONO, "font_size": 10})
-    head_mono = wb.add_format({"font_name": MONO, "font_size": 10, "font_color": "#FFFFFF"})
-    head_today = wb.add_format({"font_name": MONO, "font_size": 10, "bold": True,
-                                "font_color": "#FFC000"})
-    bar_cell = S(font_name=MONO, valign="vcenter", border=1, border_color=GREY_BORDER)
-    head_cell = S(font_name=MONO, bg_color=NAVY, font_color="#FFFFFF", valign="vcenter",
-                  border=1, border_color=GREY_BORDER)
-    today = slot(m.when)
-
-    def runs(chars: list[tuple[str, str]]) -> list:
-        """Adjacent characters of one colour joined, as XlsxWriter's rich string wants them."""
-        out: list = []
-        for fmt, ch in chars:
-            if out and out[-2] is fmt:
-                out[-1] += ch
-            else:
-                out += [fmt, ch]
-        return out
-
-    def write_runs(r: int, parts: list, cell_fmt):
-        ws.merge_range(r - 1, 1, r - 1, 9, "", cell_fmt)
-        while len(parts) > 2 and parts[-1].strip() == "":
-            parts = parts[:-2]
-        if len(parts) <= 2:
-            ws.write_string(r - 1, 1, parts[1] if parts else "", cell_fmt)
-        else:
-            ws.write_rich_string(r - 1, 1, *parts, cell_fmt)
-
-    def bar_row(r: int, label: str, segments: list[tuple[int, int, str]], marks=()):
-        line = [(mono["plain"], " ") for _ in range(len(days) * cpd)]
-        if today is not None:
-            mid = today * cpd + (cpd - 1) // 2
-            line[mid] = (mono["today"], "│")
-        for a, b, colour in segments:
-            for k in range(a * cpd, (b + 1) * cpd):
-                line[k] = (mono[colour], "█")
-        for k, colour in marks:
-            line[k * cpd + (cpd - 1) // 2] = (mono[colour], "♦")
-        ws.write_string(r - 1, 0, label, S(text_wrap=False, shrink=True, valign="vcenter",
-                                           border=1, border_color=GREY_BORDER))
-        write_runs(r, runs(line), bar_cell)
-
-    ws.write_string(s6 - 1, 0, "6. Calendario delle attività", S.section())
-    months = [" "] * (len(days) * cpd)
-    numbers: list[tuple] = [(head_mono, " ")] * (len(days) * cpd)
-    previous = None
+    head = S.head(align="center", text_wrap=False)
+    for c in range(5):
+        ws.write_blank(2, c, None, S.cell(bg_color=NAVY))
+    k = 0
+    while k < len(days):
+        j = k
+        while j + 1 < len(days) and days[j + 1].month == days[k].month:
+            j += 1
+        formula = (f"=CHOOSE(MONTH({col_name(first + k)}4),"
+                   + ",".join(f'"{x}"' for x in MONTHS) + ")")
+        if j > k:
+            ws.merge_range(2, first + k, 2, first + j, "", head)
+        ws.write_formula(2, first + k, formula, head, MONTHS[days[k].month - 1])
+        k = j + 1
+    for c, label in enumerate(("Voce", "Titolo", "Stato", "Inizio", "Fine")):
+        ws.write_string(3, c, label, S.head())
+    day_head = S.head(align="center", text_wrap=False, num_format="dd")
     for k, d in enumerate(days):
-        if d.month != previous:
-            for j, ch in enumerate(MONTHS[d.month - 1]):
-                if k * cpd + j < len(months):
-                    months[k * cpd + j] = ch
-            previous = d.month
-        if cpd == 3 or d.weekday() == 0 or k == today:
-            fmt = head_today if k == today else head_mono
-            for j, ch in enumerate(f"{d.day:02d}"):
-                if k * cpd + j < len(numbers) and (cpd == 3 or numbers[k * cpd + j][1] == " "):
-                    numbers[k * cpd + j] = (fmt, ch)
-    ws.write_blank(s6, 0, None, S.head())
-    ws.merge_range(s6, 1, s6, 9, "".join(months).rstrip(), head_cell)
-    ws.write_string(s6 + 1, 0, "Attività", S.head())
-    write_runs(s6 + 2, runs(numbers), head_cell)
+        formula = (f"=WORKDAY({CL}$B$7-1,1)" if k == 0
+                   else f"=WORKDAY({col_name(first + k - 1)}4,1)")
+        ws.write_formula(3, first + k, formula, day_head, serial(d))
+    ws.set_row(3, 21.75)
+    today = f"{CL}$B$4"
+    ws.conditional_format(3, first, 3, last,
+                          {"type": "formula", "criteria": f"={col_name(first)}$4={today}",
+                           "format": wb.add_format({"bg_color": "#FFC000",
+                                                    "font_color": NAVY})})
 
-    r = s6 + 3
+    grid = S(border=1, border_color="#E7E6E6")
+    when = S.cell(num_format=DATE)
+    a, _ = at["todo"]
+    G = "Riepilogo!$G$12"
+    r = 5
+    todo_k = 0
+    rows_first = r
     unknown_start = False
     for g in F["gantt"]:
-        if g["kind"] == "done":
+        if g["kind"] in ("done", "todo"):
             it = g["item"]
-            unknown_start |= it.first_day is None
-            bar_row(r, f"{it.shown_id} {it.title}",
-                    [(slot(g["start"]), slot(g["end"]), "done")])
-        elif g["kind"] == "todo":
-            it = g["item"]
-            if g["end"] is None:
-                ws.write_string(r - 1, 0, f"{it.id} {it.title}", S(text_wrap=False, shrink=True,
-                                                                    border=1,
-                                                                    border_color=GREY_BORDER))
-                ws.merge_range(r - 1, 1, r - 1, 9, "non stimabile", S.cell(italic=True))
+            ws.write_string(r - 1, 0, it.shown_id, S.cell(bold=True))
+            ws.write_string(r - 1, 1, str(it.title or ""), S.cell())
+            if g["kind"] == "done":
+                unknown_start |= it.first_day is None
+                ws.write_string(r - 1, 2, "fatta", S.cell())
+                ws.write_datetime(r - 1, 3, dt(g["start"]), when)
+                ws.write_datetime(r - 1, 4, dt(g["end"]), when)
             else:
-                segs = [(slot(g["start"]), slot(g["end"]), "best")]
-                if g["worst"] and g["worst"] > g["end"]:
-                    segs.append((slot(g["end"]) + 1, slot(g["worst"]), "worst"))
-                bar_row(r, f"{it.id} {it.title}", segs)
+                ws.write_string(r - 1, 2, short_status(m.status[it.id]), S.cell())
+                row = a + todo_k
+                cum = ("0" if todo_k == 0 else
+                       f"SUMPRODUCT({size_top(f'{AT}$E${a}:$E${row - 1}')})")
+                own = size_top(f"{AT}$E${row}")
+                cached = (lambda d: serial(d) if isinstance(d, date) else "non stimabile")
+                if g["started"]:
+                    ws.write_datetime(r - 1, 3, dt(g["start"]), when)
+                else:
+                    ws.write_formula(r - 1, 3, f'=IF({G}<=0,"non stimabile",WORKDAY({today}-1,'
+                                               f'ROUNDDOWN(ROUND({cum}/{G},9),0)+1))',
+                                     when, cached(g["start"]))
+                ws.write_formula(r - 1, 4, f'=IF({G}<=0,"non stimabile",WORKDAY({today}-1,'
+                                           f'MAX(1,ROUNDUP(ROUND(({cum}+{own})/{G},9),0))))',
+                                 when, cached(g["end"]))
+                todo_k += 1
+            for c in range(first, last + 1):
+                ws.write_blank(r - 1, c, None, grid)
         else:
-            colour = "delivery" if g["kind"] == "delivery" else "milestone"
-            bar_row(r, f"{g['name']} ({dm(g['date'])})", [], [(slot(g["date"]), colour)])
+            delivery = g["kind"] == "delivery"
+            ws.write_blank(r - 1, 0, None, S.cell())
+            ws.write_string(r - 1, 1, g["name"], S.cell(bold=True))
+            ws.write_string(r - 1, 2, "consegna" if delivery else "milestone", S.cell())
+            if delivery:
+                ws.write_formula(r - 1, 3, f"={CL}$B$6", when, serial(g["date"]))
+            else:
+                ws.write_datetime(r - 1, 3, dt(g["date"]), when)
+            ws.write_formula(r - 1, 4, f"=D{r}", when, serial(g["date"]))
+            mark = S(bold=True, align="center", border=1, border_color="#E7E6E6",
+                     font_color="#C00000" if delivery else "#EB6834")
+            # A milestone on a Saturday or a Sunday is marked on the Friday before it.
+            shown = max((d for d in days if d <= g["date"]), default=None)
+            for k, d in enumerate(days):
+                c = col_name(first + k)
+                ws.write_formula(r - 1, first + k, f'=IF(WORKDAY($D{r}+1,-1)={c}$4,"◆","")',
+                                 mark, "◆" if d == shown else "")
         r += 1
-    note = wb.add_format({"font_name": "Arial", "font_size": 9, "italic": True,
-                          "font_color": "#555555"})
-    parts = [note, "Legenda: ", mono["done"], "█", note, " fatta, ", mono["best"], "█", note,
-             " da fare nel caso migliore, ", mono["worst"], "█", note,
-             " in più nel caso peggiore, ", mono["today"], "│", note, " oggi, ", mono["milestone"],
-             "♦", note, " milestone, ", mono["delivery"], "♦", note, " consegna concordata."]
-    ws.write_rich_string(r, 0, *parts, note)
-    text = ("Le voci da fare sono in fila nell'ordine della tabella «Da fare», al ritmo della "
-            "stima del punto 2.")
+    rows_last = r - 1
+
+    if rows_last >= rows_first:
+        span = (rows_first - 1, first, rows_last - 1, last)
+        f0 = f"{col_name(first)}$4"
+        inside = f"ISNUMBER($D{rows_first}),{f0}>=$D{rows_first},{f0}<=$E{rows_first}"
+        for state, colour in (("fatta", BAR["fatta"]), ("bloccata", BAR["bloccata"])):
+            ws.conditional_format(*span, {"type": "formula",
+                                          "criteria": f'=AND($C{rows_first}="{state}",{inside})',
+                                          "format": wb.add_format({"bg_color": colour})})
+        todo = ",".join(f'$C{rows_first}="{x}"' for x in TODO_STATES)
+        ws.conditional_format(*span, {"type": "formula", "criteria": f"=AND(OR({todo}),{inside})",
+                                      "format": wb.add_format({"bg_color": BAR["da fare"]})})
+        ws.conditional_format(*span, {"type": "formula", "criteria": f"={f0}={today}",
+                                      "format": wb.add_format({"bg_color": "#FFF2CC"})})
+        ws.conditional_format(rows_first - 1, 2, rows_last - 1, 2,
+                              {"type": "formula", "criteria": f'=$C{rows_first}="bloccata"',
+                               "format": wb.add_format({"bold": True, "font_color": "#9C0006",
+                                                        "bg_color": "#F8CBAD"})})
+        ws.conditional_format(rows_first - 1, 2, rows_last - 1, 2,
+                              {"type": "formula", "criteria": f'=$C{rows_first}="rallentata"',
+                               "format": wb.add_format({"bg_color": "#FCE4D6"})})
+
+    notes = ["In grigio le voci fatte, nei giorni in cui ci si è lavorato. In blu le voci da "
+             "fare, in arancione chiaro quelle bloccate. In giallo la colonna di oggi.",
+             "Le voci da fare sono in fila nell'ordine della tabella «Da fare» del foglio "
+             "Attività, ognuna con le ore massime della sua taglia, al ritmo della stima del "
+             "Riepilogo (punto 2): l'ultima finisce il giorno della consegna prevista.",
+             "◆ arancione: milestone. ◆ rosso: consegna concordata."]
     if unknown_start:
-        text += " Delle voci chiuse prima del dettaglio giorno per giorno si vede solo il giorno " \
-                "di chiusura."
-    ws.write_string(r + 1, 0, text, S.note())
+        notes.append("Delle voci chiuse prima del dettaglio giorno per giorno si vede solo il "
+                     "giorno di chiusura.")
+    for k, text in enumerate(notes):
+        ws.write_string(r + k, 0, text, S.note())
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -830,13 +855,16 @@ def write(m, F, path, now: datetime) -> None:
     wb.set_properties({"title": f"{m.name} · stato del rilascio al {m.when.strftime('%d/%m/%Y')}",
                        "created": now.replace(tzinfo=None)})
     S = Styles(wb)
-    # The summary is the first sheet, and its formulas name the others: XlsxWriter writes the
-    # sheets in the order they are added, so the summary is added first and filled last.
+    # The summary and the Gantt are the first two sheets, and their formulas name the others:
+    # XlsxWriter writes the sheets in the order they are added, so those two are added first
+    # and filled last.
     summary = wb.add_worksheet("Riepilogo")
+    gantt = wb.add_worksheet("Gantt")
     at = activities(wb, S, m, F)
     hours_sheet(wb, S, m, F)
     shown = [p["item"].shown_id for p in m.plan_rows] + [it.shown_id for it in
                                                          m.todo + m.done + m.out]
     legend_sheet(wb, S, m, shown)
     summary_sheet(wb, summary, S, m, F, at)
+    gantt_sheet(wb, gantt, S, m, F, at)
     wb.close()

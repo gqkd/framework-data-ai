@@ -89,7 +89,10 @@ FORMAT = 2
 THEMES = {"architettura": "Architettura", "sviluppo": "Sviluppo", "deploy": "Deploy"}
 # What a snapshot written before 4.2.0 calls a theme, read as what it is called now.
 OLD_THEMES = {"infrastruttura": "deploy"}
-SIZES = {"S": (1, 2), "M": (3, 5), "L": (6, 12), "XL": (13, 40)}
+# A size is a range of hours, S 1 to 2, M 3 to 5, L 6 to 12, XL 13 to 40, and the estimate counts
+# every item at the top of its range: one number, on the side of caution, the same in every
+# cell and on the Gantt.
+SIZES = {"S": 2, "M": 5, "L": 12, "XL": 40}
 # The hours outside the product, in five categories and in this order, which is the order of
 # the columns of the day-by-day table. Their labels are the workbook's, in `workbook.py`.
 CATEGORIES = ("supporto", "reportistica", "riunioni", "solleciti", "formazione")
@@ -544,9 +547,9 @@ class Item:
     before: Fraction = Fraction(0)
     first_day: date | None = None
 
-    def rng(self) -> tuple[Fraction, Fraction]:
-        lo, hi = SIZES[self.size]
-        return Fraction(lo), Fraction(hi)
+    def top(self) -> Fraction:
+        """The hours the estimate counts for this item: the top of its size."""
+        return Fraction(SIZES[self.size])
 
     @property
     def shown_id(self) -> str:
@@ -1239,36 +1242,32 @@ def figures(m: Model) -> dict:
     E = excel_round(w3["out"] / nd3, 1) if nd3 else Fraction(0)
     Fo = excel_round(w3["outside"] / nd3, 1) if nd3 else Fraction(0)
     G = excel_round(D - E - Fo, 1)
-    cmin = sum((it.rng()[0] for it in m.todo), Fraction(0))
-    cmax = sum((it.rng()[1] for it in m.todo), Fraction(0))
-    cases = []
-    for C in (cmin, cmax):
-        if G <= 0:
-            H = I = J = "non stimabile"
-        else:
-            H = math.ceil(excel_round(C / G, 9))
-            I = workday(when - timedelta(days=1), max(1, H))
-            J = networkdays(m.delivery + timedelta(days=1), I) if I > m.delivery else 0
-        cases.append({"B": len(m.todo), "C": C, "D": D, "E": E, "F": Fo, "G": G,
-                      "H": H, "I": I, "J": J})
-    F["cases"] = cases
-    best, worst = cases
-    estimable = isinstance(best["I"], date) and isinstance(worst["I"], date)
+    C = sum((it.top() for it in m.todo), Fraction(0))
+    if G <= 0:
+        H = I = J = "non stimabile"
+    else:
+        H = math.ceil(excel_round(C / G, 9))
+        I = workday(when - timedelta(days=1), max(1, H))
+        J = networkdays(m.delivery + timedelta(days=1), I) if I > m.delivery else 0
+    F["case"] = {"B": len(m.todo), "C": C, "D": D, "E": E, "F": Fo, "G": G, "H": H, "I": I,
+                 "J": J}
     F["B4"] = dmy(m.delivery)
-    F["B5"] = (f"tra il {dm(best['I'])} e il {dm(worst['I'])}" if estimable
-               else "non stimabile")
-    if not isinstance(worst["J"], int):
+    F["B5"] = f"il {dm(I)}" if isinstance(I, date) else "non stimabile"
+    if not isinstance(J, int):
         F["B6"] = "non stimabile"
-    elif worst["J"] == 0:
+    elif J == 0:
         F["B6"] = "nessuno"
     else:
-        F["B6"] = f"da {best['J']} a {worst['J']} giorni lavorativi"
+        F["B6"] = f"{J} {'giorno lavorativo' if J == 1 else 'giorni lavorativi'}"
     statuses = [wait_status(w, when) for w in m.waits]
     late = sum(1 for s in statuses if s.startswith("SCADUTA") or s == "Scade oggi")
     F["wait_status"] = statuses
-    F["B7"] = ("non dipende da richieste ad altri." if not m.waits else
-               f"arrivano in tempo le {len(m.waits)} cose richieste ad altri (punto 3). Oggi "
-               f"{late} sono scadute o scadono oggi.")
+    n = len(m.waits)
+    F["B7"] = ("non dipende da richieste ad altri." if not n else
+               ("arriva in tempo l'unica cosa richiesta" if n == 1 else
+                f"arrivano in tempo le {n} cose richieste") + " ad altri (punto 3). Oggi "
+               + ("nessuna è scaduta." if late == 0 else "1 è scaduta o scade oggi."
+                  if late == 1 else f"{late} sono scadute o scadono oggi."))
     r0 = [excel_round(x, 0) for x in (w0["arch"], w0["svil"], w0["dep"], w0["out"],
                                       w0["outside"])]
     pct0 = excel_round(w0["pct"][4] * 100, 0)
@@ -1280,58 +1279,50 @@ def figures(m: Model) -> dict:
     F["themes"] = {}
     for t in THEMES:
         lst = [it for it in m.todo if it.theme == t]
-        lo = sum((it.rng()[0] for it in lst), Fraction(0))
-        hi = sum((it.rng()[1] for it in lst), Fraction(0))
+        top = sum((it.top() for it in lst), Fraction(0))
         F["themes"][t] = {"done": sum(1 for it in m.done if it.theme == t),
                           "prev_closed": m.prev_closed[t], "this_closed": m.this_closed[t],
                           "todo": len(lst), "delta": len(lst) - m.prev_open[t],
-                          "est": f"tra {hours(lo)} e {hours(hi)} ore", "min": lo}
-    F["est_total"] = f"tra {hours(cmin)} e {hours(cmax)} ore"
+                          "est": f"{hours(top)} ore", "top": top}
+    F["est_total"] = f"{hours(C)} ore"
 
     nd_deliv = max(1, networkdays(when, m.delivery))
     nd7 = networkdays(w7["from"], w7["to"])
     rate7 = w7["tot"] / nd7 if nd7 else Fraction(0)
-    if cmin == 0 or rate7 == 0:
-        share = Fraction(0)
-    else:
-        share = min(Fraction(1), (cmin / nd_deliv) / rate7)
-    optimal = [share * F["themes"][t]["min"] / cmin if cmin and rate7 else Fraction(0)
+    share = min(Fraction(1), (C / nd_deliv) / rate7) if C and rate7 else Fraction(0)
+    optimal = [share * F["themes"][t]["top"] / C if C and rate7 else Fraction(0)
                for t in THEMES]
     o7, x7 = w7["pct"][3], w7["pct"][4]
-    rest = Fraction(1) - (min(Fraction(1), (cmin / nd_deliv) / rate7) if rate7 else 0)
+    rest = Fraction(1) - (min(Fraction(1), (C / nd_deliv) / rate7) if rate7 else 0)
     optimal += [rest * o7 / (o7 + x7) if (o7 + x7) else Fraction(0),
                 rest * x7 / (o7 + x7) if (o7 + x7) else Fraction(0)]
     F["now_share"] = list(w7["pct"])
     F["optimal"] = optimal
     F["share_release"] = share
 
-    # The Gantt: what is done where it happened, what is left in a row at the estimate's pace.
+    # The Gantt: what is done where it happened, what is left in a row at the estimate's pace,
+    # each item for the top of its size, so the last one ends on the date of point 2.
     gantt = []
     for it in m.done:
         gantt.append({"kind": "done", "item": it, "start": it.first_day or it.closed_on,
-                      "end": it.closed_on, "worst": None})
-    cum_lo = cum_hi = Fraction(0)
+                      "end": it.closed_on})
+    cum = Fraction(0)
     for it in m.todo:
-        lo, hi = it.rng()
         if G > 0:
-            s_idx = math.floor(excel_round(cum_lo / G, 9)) + 1
-            sched = workday(when - timedelta(days=1), s_idx)
-            end = workday(when - timedelta(days=1), math.ceil(excel_round((cum_lo + lo) / G, 9)))
-            worst_end = workday(when - timedelta(days=1),
-                                math.ceil(excel_round((cum_hi + hi) / G, 9)))
+            sched = workday(when - timedelta(days=1), math.floor(excel_round(cum / G, 9)) + 1)
+            end = workday(when - timedelta(days=1),
+                          max(1, math.ceil(excel_round((cum + it.top()) / G, 9))))
         else:
-            sched = end = worst_end = None
+            sched = end = None
         started = it.first_day if it.first_day and it.first_day < when else None
         gantt.append({"kind": "todo", "item": it, "start": started or sched, "end": end,
-                      "worst": worst_end, "fixed_start": started is not None})
-        cum_lo += lo
-        cum_hi += hi
+                      "started": started is not None})
+        cum += it.top()
     for name, d in m.milestones:
         gantt.append({"kind": "milestone", "name": name, "date": d})
     gantt.append({"kind": "delivery", "name": "Consegna concordata", "date": m.delivery})
-    ends = [g["worst"] or g["end"] for g in gantt if g["kind"] == "todo" and g["end"]]
+    ends = [g["end"] for g in gantt if g["kind"] in ("todo", "done") and g["end"]]
     ends += [g["date"] for g in gantt if g["kind"] in ("milestone", "delivery")]
-    ends += [g["end"] for g in gantt if g["kind"] == "done"]
     first = workday(start - timedelta(days=1), 1)
     last = max(ends + [when])
     cols = []
@@ -1896,11 +1887,10 @@ def main(argv: list[str] | None = None) -> int:
         rel = str(ctx.state["release"]["name"])
         rest = [it for it in ctx.items.values() if it.state == "open" and it.scope == rel
                 and not it.excluded and not split_parent(it)]
-        lo = sum((it.rng()[0] for it in rest), Fraction(0))
-        hi = sum((it.rng()[1] for it in rest), Fraction(0))
+        top = sum((it.top() for it in rest), Fraction(0))
         text = (f"{ctx.name.upper()}, linea di base del {dmy(ctx.when)}\n"
                 "Non si invia: il primo aggiornamento è quello del prossimo giorno lavorativo.\n"
-                f"Voci da fare nel perimetro: {len(rest)}, tra {hours(lo)} e {hours(hi)} ore\n")
+                f"Voci da fare nel perimetro: {len(rest)}, {hours(top)} ore\n")
         freeze(ctx, None, path, number)
         out_file = None
     else:

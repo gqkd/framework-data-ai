@@ -1277,24 +1277,25 @@
 # the command that converts it. A project that does not use the digest has nothing to migrate.
 #
 # WHAT THE NOTE OF 4.1.0 SAYS AND IS NO LONGER TRUE. There is no reconciliation from one digest
-# to the next and no delivery date at a normal day's hours: `standard_hours` is gone. The
-# estimate is the hours left by size over the hours per working day of the last three working
-# days, net of the hours out of the perimeter and outside the product, each rounded to one
+# to the next, no range of hours and no delivery date at a normal day's hours:
+# `standard_hours` is gone. Every item counts for the top of its size, S 2 hours, M 5, L 12,
+# XL 40, so the estimate is one number and one date, on the side of caution. It is those hours
+# over the hours per working day of the last three working days, net of the hours out of the perimeter and outside the product, each rounded to one
 # decimal before the subtraction, because that is what the reference workbook does and its
 # readers check it by hand. The hours are declared per item and per day, not per period, and a
 # snapshot freezes every day up to the day before its date. The themes are `architettura`,
 # `sviluppo` and `deploy`, which `infrastruttura` became; the hours outside the product fall in
 # five fixed categories; a decision asked of somebody is a wait like any other.
 #
-# WHAT IT IS. Four sheets: a summary with the delivery, the estimate in the best and the worst
-# case, what is needed from others, progress by theme, how the hours are split today and how
-# they should be, and a calendar of every item with the milestones; the four lists of items;
-# the hours by period and day by day; how to read it. Every derived cell is a formula,
+# WHAT IT IS. Five sheets: a summary with the delivery, the estimate, what is needed from
+# others, progress by theme, how the hours are split today and how they should be; a Gantt of
+# every item with the milestones, one column per working day; the four lists of items; the
+# hours by period and day by day; how to read it. Every derived cell is a formula,
 # written by XlsxWriter with the value the script computed beside it, so the file reads the
 # same in a preview that does not recalculate. The format is the reference workbook in
 # `tests/fixtures/digest/`, made and computed by a spreadsheet before the code existed, and
 # `tests/selfcheck.py` renders the fixture's day and compares the two cell by cell, value and
-# style, listing the few cells allowed to differ and why.
+# style, with the rules by which the two may differ and why: the top of each range, first.
 #
 # WHAT MOVES AROUND IT. `requirements.txt` names XlsxWriter, which `python-pptx` already
 # brought in, and openpyxl, which the tests read the workbook with. Nothing in the scan, in

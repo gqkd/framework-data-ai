@@ -139,7 +139,7 @@ marketplace by URL. Nothing above requires this.
 <!-- generated: cost -->
 *Generated from the skills themselves. Edit those, not this line.*
 
-**9 skills**, whose names and descriptions are about 8,366 characters, so roughly **2,092 tokens** loaded into every session at four characters each, whether or not a skill runs. Each one costs another two to three thousand when it does.
+**9 skills**, whose names and descriptions are about 8,363 characters, so roughly **2,091 tokens** loaded into every session at four characters each, whether or not a skill runs. Each one costs another two to three thousand when it does.
 <!-- /generated -->
 
 ### If you have client documents to read

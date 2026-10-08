@@ -23,7 +23,7 @@ covers both. They are examples of what somebody types, not a syntax.
 | **`audit`** | *"è tutto a posto?"* · *"check the docs are consistent"* | runs the validator, judges what to do with each finding, and on request reads both ends of the pairs that have to agree |
 | **`business`** | *"facciamo il SAL settimanale"*, *"dove siamo col progetto per il management"* · *"weekly steering update"* | a dated business SAL, one per product or for the suite: movement since the previous update, current state, direction, target, challenges and actions required outside development |
 | **`presentation`** | *"fammi una presentazione del prodotto per il cliente"* · *"slides for the business"* | a customer-safe `.pptx` per product, of six to ten slides: what the product is for, what it does today, how it works in one diagram, and a roadmap of what is done and what is left, with no dates |
-| **`digest`** | *"prepara il digest"*, *"digest giornaliero"* · *"daily digest"* | the daily status workbook of one product, an Excel file computed from the registers and from what the person declares: when it can be delivered against the agreed date and what that waits on from others, every item to do, done and out of the perimeter, the hours day by day, and a calendar with the milestones |
+| **`digest`** | *"prepara il digest"*, *"digest giornaliero"* · *"daily digest"* | the daily status workbook of one product, an Excel file computed from the registers and from what the person declares: when it can be delivered against the agreed date and what that waits on from others, every item to do, done and out of the perimeter, the hours day by day, and a Gantt with the milestones |
 
 ---
 
