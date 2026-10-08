@@ -1,51 +1,63 @@
 #!/usr/bin/env python3
-"""Compute one product's daily digest from the registers and the state file, and print it.
+"""Compute one product's daily status from the registers and the state file, as an Excel file.
 
     python3 digest.py --root <project> --product atlas --inventory
     python3 digest.py --root <project> --product atlas --check
-    python3 digest.py --root <project> --product atlas
+    python3 digest.py --root <project> --product atlas [--copy-to <dir>]
     python3 digest.py --root <project> --product atlas --baseline
+    python3 digest.py --root <project> --product atlas --migrate
     python3 digest.py --root <project> --init-store git@github.com:<owner>/<name>.git
 
-THE REGISTERS SAY WHAT EXISTS, THE STATE FILE SAYS WHAT A PERSON DECLARED, THE DIGEST IS WHAT
-FOLLOWS FROM THE TWO. Hours, sizes, themes, the perimeter of a release, waits on other people
-and the plan for tomorrow have no source among the artifacts and must not acquire one there,
-so they live in a file the person fills through the `digest` skill. Every number printed
-comes from the registers, from that file, or from an earlier snapshot; none is composed.
+THE REGISTERS SAY WHAT EXISTS, THE STATE FILE SAYS WHAT A PERSON DECLARED, THE WORKBOOK IS WHAT
+FOLLOWS FROM THE TWO. Hours, sizes, themes, the perimeter of a release, closing dates, waits on
+other people, the plan of the next days and the milestones have no source among the artifacts
+and must not acquire one there, so they live in a file the person fills through the `digest`
+skill. This script computes every number the workbook shows and writes it beside the formula
+that derives it, so the file reads the same in a preview that does not recalculate and in a
+spreadsheet that does.
 
 WHERE THINGS LIVE. `_meta/digest/` is a clone of a private repository, kept out of the
-documentation repository by its `.gitignore`: the hours somebody works are not documentation,
-and the series must not be lost with one laptop. It holds
+documentation repository by its `.gitignore`. It holds
 
     state-<product>.yaml                    what the person declared, one file per product
     DIG-NNN-<product>-YYYY-MM-DD/
-        DIG-NNN-<product>-YYYY-MM-DD.txt    the digest, as it is sent
+        DIG-NNN-<product>-YYYY-MM-DD.xlsx   the workbook, as it is sent
         frozen.yaml                         what it was computed from, for the next one
 
-NNN is one sequence across the products, as `PRS` and `SAL` are. A snapshot is never edited:
-each one carries the hash of the one before it, and a second digest on the same date takes a
-new number and replaces the first as the digest of the day. Rendering commits and pushes the
-store, and refuses to push to a remote GitHub does not report as private.
+NNN is one sequence across the products. A snapshot is never edited: each one carries the hash
+of the one before it, and freezes every day up to the day before its date, both as declared and
+as counted, so a classification changed today never rewrites the hours of a day already sent.
 
-WHAT IS REFUSED, BEFORE ANYTHING IS WRITTEN. `--check` lists every reason, and rendering runs
-it first: an identifier in the registers that the state file does not classify; a classified
-one that left the registers without being closed; an open item whose title in the register
-changed since it was confirmed; a field the digest would have to print and nobody declared;
-the hours of the period, or the plan of a day it prints, not declared; a planned item that is
-closed, excluded, or a `CHG` still in `draft`; the hours of a past period edited after they
-were frozen; an earlier snapshot whose hash no longer matches; a description carrying the
-register's jargon or more than two sentences; a long dash anywhere; a register status this
-file does not map; a digest dated on a weekend. Fix the state file or the registers, never
-this file to get past it.
+THE STATE FILE, FORMAT 2:
 
-WHAT THE CANONICAL FORMAT DOES NOT SHOW STAYS OUT OF THE DIGEST. An item worked and not
-closed, hours on items outside the perimeter, an item re-estimated or split: the digest
-prints only the lines the canonical example has, and the lines it would need for these are
-listed after it, ready to paste, together with every value it printed in a form the example
-does not show. They are recorded in `frozen.yaml` as `additions` and `provisional`.
+    format: 2
+    product: atlas
+    release: {name: "1.0", delivery: 2026-10-13, start: 2026-09-22, commitment: null}
+    items:                      # per identifier: title, what, theme, scope, size, seen,
+      CHG-018: {...}            # closed_on, out_reason, hours_before, excluded, split_into, gone
+    order: {todo: [...], out: [...]}        # the rows of the two lists, in the order shown
+    days:                       # per date: hours per item and per category outside the product,
+      2026-10-08: {hours: {CHG-018: 4}, outside: {riunioni: 1}}
+      2026-09-22: {themes: {sviluppo: 4}, outside: {riunioni: 2}}   # a day rebuilt in bulk
+    waits: [{what, owner, asked, needed_by, without, missing, blocks, slows, resolved}]
+    plan: {2026-10-09: [{item: CHG-018, hours: 5}], 2026-10-12: [{item: CHG-018, hours: 2,
+           closes: true}]}
+    milestones: [{name: Demo al team funzionale, date: 2026-10-15}]
+
+WHAT IS REFUSED, BEFORE ANYTHING IS WRITTEN. `--check` lists every reason, and rendering runs it
+first: an identifier the state file does not classify; a classified one gone from the registers
+without closing; an open item whose title changed since it was confirmed; a field the workbook
+prints and nobody declared; a working day of the period with no hours declared, or hours on a
+day not yet over or before the project started; hours on an item of the perimeter with no theme;
+a category that is not one of the five; a day already frozen edited after the fact; an earlier
+snapshot whose hash no longer matches; the days rebuilt in bulk not adding up, theme by theme,
+to the hours declared on the items; a planned item closed, excluded, without hours or a `CHG` in
+`draft`; the two lists not holding exactly the open items; a description with the register's
+jargon or more than two sentences; a long dash; a status this file does not map; a date on a
+weekend. Fix the state file or the registers, never this file to get past it.
 
 Exit codes: 0 done, 1 refused, 2 cannot run, 3 written and committed but not pushed.
-Needs PyYAML and jsonschema (it reads the registers through the validator) and `git`;
+Needs PyYAML, jsonschema (the registers are read through the validator), XlsxWriter and `git`;
 `gh` only to verify that a GitHub remote is private.
 """
 
@@ -56,6 +68,7 @@ import hashlib
 import importlib.util
 import math
 import re
+import shutil
 import subprocess
 import sys
 from dataclasses import dataclass, field
@@ -68,13 +81,20 @@ import yaml
 
 FRAMEWORK = Path(__file__).resolve().parents[3]
 VALIDATE = FRAMEWORK / "skills" / "audit" / "scripts" / "validate.py"
+WORKBOOK = Path(__file__).resolve().parent / "workbook.py"
 STORE = Path("_meta") / "digest"
-WIDTH = 74                      # the width the canonical example wraps at, measured on it
 OUT = "out"
+FORMAT = 2
 
-THEMES = {"architettura": "Architettura", "sviluppo": "Sviluppo",
-          "infrastruttura": "Infrastruttura"}
+THEMES = {"architettura": "Architettura", "sviluppo": "Sviluppo", "deploy": "Deploy"}
+# What a snapshot written before 4.2.0 calls a theme, read as what it is called now.
+OLD_THEMES = {"infrastruttura": "deploy"}
 SIZES = {"S": (1, 2), "M": (3, 5), "L": (6, 12), "XL": (13, 40)}
+# The hours outside the product, in five categories and in this order, which is the order of
+# the columns of the day-by-day table. Their labels are the workbook's, in `workbook.py`.
+CATEGORIES = ("supporto", "reportistica", "riunioni", "solleciti", "formazione")
+# A day rebuilt in bulk declares its hours by column, not by item.
+BULK_KEYS = {"architettura", "sviluppo", "deploy", OUT}
 
 # WHAT EACH REGISTER STATUS MEANS FOR THE DIGEST. The registry declares which statuses exist
 # and not which of them mean done, so the reading lives here, and `tests/selfcheck.py`
@@ -90,19 +110,18 @@ STATES = {
                         "verified": "closed", "rolled-back": "gone"},
     "evaluation-report": {"active": "closed"},
 }
-KIND_ORDER = {"DEC": 0, "OD": 0, "CHG": 1, "KI": 2, "EVR": 3}
-DONE_LABEL = {0: "decisioni prese", 1: "implementazioni fatte", 2: "problemi risolti",
-              3: "valutazioni fatte"}
 
-STATE_KEYS = {"product", "standard_hours", "release", "items", "waits", "requests", "plan",
-              "periods"}
-RELEASE_KEYS = {"name", "delivery", "commitment"}
-ITEM_KEYS = {"title", "what", "theme", "scope", "size", "seen", "hours_before", "excluded",
-             "split_into", "gone"}
+STATE_KEYS = {"format", "product", "release", "items", "order", "days", "waits", "plan",
+              "milestones"}
+RELEASE_KEYS = {"name", "delivery", "start", "commitment"}
+ITEM_KEYS = {"title", "what", "theme", "scope", "size", "seen", "closed_on", "out_reason",
+             "hours_before", "excluded", "split_into", "gone"}
 WAIT_KEYS = {"what", "owner", "asked", "needed_by", "without", "missing", "blocks", "slows",
-             "note", "resolved"}
-REQUEST_KEYS = {"to", "by", "fallback"}
-PERIOD_KEYS = {"hours", "outside"}
+             "resolved"}
+DAY_KEYS = {"hours", "outside", "themes"}
+PLAN_KEYS = {"item", "hours", "closes"}
+MILESTONE_KEYS = {"name", "date"}
+ORDER_KEYS = {"todo", "out"}
 
 SNAPSHOT = re.compile(r"^DIG-(\d{3,})-(.+)-(\d{4}-\d{2}-\d{2})$")
 HEADING_ID = re.compile(r"^#{1,6}\s+\**([A-Z]{2,4}-\d{3,})\**\s*[·:\-–—]?\s*(.*?)\s*$")
@@ -115,10 +134,6 @@ JARGON = [(re.compile(r"\b[A-Z]{2,4}-\d{2,}\b"), "an identifier"),
           (re.compile(r"\b[a-z]+_[a-z_]+\b"), "a field name")]
 DASHES = re.compile(r"[—–]")
 SENTENCE_END = re.compile(r"[.!?](?:\s|$)")
-# Never broken across two lines: the size with its hours, and a range with its unit.
-UNBREAKABLE = [re.compile(r"[Tt]aglia (?:S|M|L|XL)(?:: \d+(?:,\d+)? h)?[.,;]?"),
-               re.compile(r"\d+(?:,\d+)? a \d+(?:,\d+)? h[.,;)]?"),
-               re.compile(r"dal \d{2}/\d{2} al \d{2}/\d{2}[.,;]?")]
 
 
 class Refusal(Exception):
@@ -128,7 +143,7 @@ class Refusal(Exception):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Numbers, dates and lines
+# Numbers and dates, with the spreadsheet's own rules
 
 def num(v) -> Fraction:
     """A number of hours as declared: 5, 1.5, "1,5". Never a float, so 76/9,5 stays exact."""
@@ -145,22 +160,27 @@ def dec(x: Fraction) -> Decimal:
 
 def plain(x: Fraction) -> str:
     """For frozen.yaml: exact, with a dot."""
-    s = format(dec(x).normalize(), "f")
-    return s
+    return format(dec(x).normalize(), "f")
 
 
 def hours(x: Fraction) -> str:
-    """For the digest: a decimal comma, and decimals only when there are some."""
+    """For a sentence: a decimal comma, and decimals only when there are some."""
     return plain(x).replace(".", ",")
 
 
-def one_decimal(x: Fraction) -> str:
-    d = dec(x).quantize(Decimal("0.1"), rounding=ROUND_HALF_UP)
-    return format(d.normalize(), "f").replace(".", ",")
+def ore(x: Fraction, past: str = "") -> str:
+    """«5 ore», «1 ora», «1,5 ore»; with `past`, «1 ora già lavorata»."""
+    if x == 1:
+        return "1 ora" + (f" già {past}a" if past else "")
+    return f"{hours(x)} ore" + (f" già {past}e" if past else "")
 
 
-def span(r: tuple[Fraction, Fraction]) -> str:
-    return f"{hours(r[0])} a {hours(r[1])} h"
+def excel_round(x: Fraction, digits: int) -> Fraction:
+    """ROUND as a spreadsheet does it: half away from zero, on the decimal value."""
+    q = Decimal(1).scaleb(-digits)
+    return Fraction(dec(x).quantize(q, rounding=ROUND_HALF_UP))
+
+
 
 
 def as_date(v) -> date | None:
@@ -184,6 +204,8 @@ def dmy(d: date) -> str:
     return d.strftime("%d/%m/%Y")
 
 
+
+
 def working_day(d: date) -> bool:
     return d.weekday() < 5
 
@@ -195,73 +217,30 @@ def next_working(d: date) -> date:
     return d
 
 
-def nth_working(start: date, n: int) -> date:
-    """The n-th working day counting `start` as the first, or `start` when n is 0."""
-    d, count = start, 1
-    while count < n:
-        d = next_working(d)
-        count += 1
+def workday(start: date, n: int) -> date:
+    """WORKDAY(start, n): the n-th working day after `start`, or before it when n < 0."""
+    d, step, left = start, (1 if n >= 0 else -1), abs(n)
+    while left:
+        d += timedelta(days=step)
+        if working_day(d):
+            left -= 1
     return d
 
 
-def working_days(a: date, b: date) -> int:
+def networkdays(a: date, b: date) -> int:
+    """NETWORKDAYS(a, b): working days from a to b, both included, negative when b < a."""
+    if b < a:
+        return -networkdays(b, a)
     return sum(1 for i in range((b - a).days + 1) if working_day(a + timedelta(days=i)))
 
 
-def voci(n: int) -> str:
-    return "1 voce" if n == 1 else f"{n} voci"
-
-
-def agree(n: int, singular: str, plural: str) -> str:
-    return f"{n} {singular if n == 1 else plural}"
-
-
-def lower_first(s: str) -> str:
-    """`Ambiente preprod` -> `ambiente preprod`, but `API esterne` stays as it is."""
-    return s[0].lower() + s[1:] if len(s) > 1 and s[1].islower() else s
-
-
-def tokens(s: str) -> list[str]:
-    out, i = [], 0
-    while i < len(s):
-        for rx in UNBREAKABLE:
-            m = rx.match(s, i)
-            if m and (m.end() == len(s) or s[m.end()] == " "):
-                out.append(m.group())
-                i = m.end()
-                break
-        else:
-            j = s.find(" ", i)
-            j = len(s) if j == -1 else j
-            out.append(s[i:j])
-            i = j
-        while i < len(s) and s[i] == " ":
-            i += 1
-    return out
-
-
-def wrap(line: str) -> list[str]:
-    """Greedy, at WIDTH, continuing under a two-space indent: the canonical example's own rule."""
-    if len(line) <= WIDTH:
-        return [line]
-    lead = "- " if line.startswith("- ") else "  " if line.startswith("  ") else ""
-    parts = tokens(line[len(lead):])
-    out = [lead + parts[0]]
-    for t in parts[1:]:
-        if len(out[-1]) + 1 + len(t) <= WIDTH:
-            out[-1] += " " + t
-        else:
-            out.append("  " + t)
-    return out
-
-
-def text_of(lines: list[str]) -> str:
-    return "\n".join(w for line in lines for w in wrap(line)) + "\n"
 
 
 def sort_id(i: str) -> tuple[str, int]:
     prefix, _, n = i.partition("-")
     return prefix, int(n) if n.isdigit() else 0
+
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -448,6 +427,7 @@ def build_voci(reg: Registers, known: set[str]) -> tuple[dict[str, Voce], dict[s
     return voci, alias, unknown, disagree
 
 
+
 # ─────────────────────────────────────────────────────────────────────────────
 # The store: the state file and the snapshots
 
@@ -470,14 +450,16 @@ class Snap:
                 (self.path / "frozen.yaml").read_text(encoding="utf-8")) or {}
         return self._frozen
 
-    @property
-    def txt(self) -> Path:
-        return self.path / f"{self.path.name}.txt"
+    def sent(self) -> list[Path]:
+        """The file that was sent: a text before 4.2.0, a workbook after."""
+        return [p for p in (self.path / f"{self.name}.txt", self.path / f"{self.name}.xlsx")
+                if p.exists()]
 
     def digest(self) -> str:
         h = hashlib.sha256((self.path / "frozen.yaml").read_bytes())
         h.update(b"\n\0\n")
-        h.update(self.txt.read_bytes() if self.txt.exists() else b"")
+        for p in self.sent():
+            h.update(p.read_bytes())
         return h.hexdigest()
 
 
@@ -492,7 +474,7 @@ def snapshots(store: Path) -> list[Snap]:
 
 
 def previous_of(snaps: list[Snap], product: str, when: date) -> Snap | None:
-    """The digest of the latest earlier day: a later number on one date replaces an earlier one."""
+    """The snapshot of the latest earlier day: a later number on one date replaces an earlier."""
     mine = [s for s in snaps if s.product == product and s.date < when]
     return max(mine, key=lambda s: (s.date, s.number)) if mine else None
 
@@ -505,6 +487,11 @@ def chain(snaps: list[Snap], start: Snap | None) -> list[Snap]:
         prev = (s.frozen.get("previous") or {}).get("dir")
         s = by_name.get(prev) if prev else None
     return out
+
+
+def frozen_theme(v: dict) -> str | None:
+    t = v.get("theme")
+    return OLD_THEMES.get(t, t)
 
 
 def read_state(store: Path, product: str) -> tuple[dict | None, str | None]:
@@ -520,36 +507,25 @@ def read_state(store: Path, product: str) -> tuple[dict | None, str | None]:
     return data, None
 
 
-def periods_of(state: dict) -> dict[date, dict]:
-    return {as_date(k): v for k, v in (state.get("periods") or {}).items()
-            if as_date(k) is not None}
+def dated(mapping) -> dict:
+    return {as_date(k): v for k, v in (mapping or {}).items() if as_date(k) is not None}
 
 
-def plan_of(state: dict) -> dict[date, list]:
-    return {as_date(k): v for k, v in (state.get("plan") or {}).items()
-            if as_date(k) is not None}
-
-
-def hours_map(block) -> dict[str, Fraction]:
+def canonical_day(entry) -> dict:
+    """A day as declared, in one spelling, so a frozen day and a declared one compare."""
     out = {}
-    for k, val in ((block or {}).get("hours") or {}).items():
-        out[str(k)] = num(val)
-    return out
-
-
-def outside_map(block) -> dict[str, Fraction]:
-    out = {}
-    for k, val in ((block or {}).get("outside") or {}).items():
-        out[str(k)] = num(val)
+    for k in ("hours", "outside", "themes"):
+        m = (entry or {}).get(k) or {}
+        if m:
+            out[k] = {str(i): plain(num(h)) for i, h in sorted(m.items(), key=lambda x: str(x[0]))}
     return out
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# The computation
+# The items, as of the digest's date
 
 @dataclass
 class Item:
-    """One item as it stands on the digest's date, read from the registers and the state."""
     id: str
     kind: str
     state: str
@@ -562,11 +538,34 @@ class Item:
     closer: str | None
     children: list
     aliases: list
-    hours: Fraction = Fraction(0)      # all declared, before and in every period
+    closed_on: date | None = None
+    out_reason: str | None = None
+    hours: Fraction = Fraction(0)        # all declared: before the detail and in every day
+    before: Fraction = Fraction(0)
+    first_day: date | None = None
 
     def rng(self) -> tuple[Fraction, Fraction]:
         lo, hi = SIZES[self.size]
         return Fraction(lo), Fraction(hi)
+
+    @property
+    def shown_id(self) -> str:
+        return self.closer if self.kind == "OD" and self.closer and self.state == "closed" \
+            else self.id
+
+
+def _item(i, kind, st, row, closer, children, aliases) -> Item:
+    return Item(i, kind, st, None if row.get("scope") is None else str(row.get("scope")),
+                row.get("theme"), row.get("size"), row.get("title"), row.get("what"),
+                bool(row.get("excluded")), closer,
+                list(children) + list(row.get("split_into") or []), list(aliases),
+                closed_on=as_date(row.get("closed_on")), out_reason=row.get("out_reason"))
+
+
+def split_parent(it: Item) -> bool:
+    """An item that other items took the place of: an `INC` a `CHG` derives from, or an entry
+    split in two, whether the register still has it open or already superseded it."""
+    return it.state == "replaced" or bool(it.children and it.state in ("open", "gone"))
 
 
 @dataclass
@@ -585,8 +584,7 @@ class Context:
     problems: list = field(default_factory=list)
     notes: list = field(default_factory=list)      # disagreements between sources
     items: dict = field(default_factory=dict)
-    additions: list = field(default_factory=list)
-    provisional: list = field(default_factory=list)
+    days: dict = field(default_factory=dict)
     now: datetime | None = None
 
 
@@ -623,7 +621,7 @@ def prepare(root: Path, product: str | None, when: date, baseline: bool) -> Cont
 
 
 def check(ctx: Context) -> list[str]:
-    """Every reason not to print. Empty means the digest can be computed and written."""
+    """Every reason not to write the workbook. Empty means it can be computed and written."""
     P = ctx.problems
     when = ctx.when
     if not working_day(when):
@@ -631,15 +629,14 @@ def check(ctx: Context) -> list[str]:
     state = ctx.state
     if state is None:
         return P
+    if state.get("format") != FORMAT:
+        P.append("the state file is in the format of 4.1.0: run --migrate, then declare what "
+                 "it lists")
+        return P
     for k in sorted(set(state) - STATE_KEYS):
         P.append(f"unknown key {k!r} at the top of the state file: nothing reads it")
     if state.get("product") not in (None, ctx.product):
         P.append(f"the state file says product {state.get('product')!r}, this is {ctx.product!r}")
-    try:
-        if num(state.get("standard_hours")) <= 0:
-            raise ValueError
-    except (ValueError, TypeError, ZeroDivisionError):
-        P.append("`standard_hours` is the length of a normal working day, a positive number")
     release = state.get("release") or {}
     if not isinstance(release, dict) or not release.get("name"):
         P.append("`release.name` is the release the perimeter is measured against")
@@ -648,15 +645,22 @@ def check(ctx: Context) -> list[str]:
         P.append(f"unknown key {k!r} under `release`")
     if as_date(release.get("delivery")) is None:
         P.append("`release.delivery` is the agreed delivery date, YYYY-MM-DD")
+    start = as_date(release.get("start"))
+    if start is None:
+        P.append("`release.start` is the first day of the project, YYYY-MM-DD")
+    elif start >= when:
+        P.append(f"`release.start` is {start}: the project starts before the digest's date")
     rel = str(release.get("name", ""))
 
-    later = [s for s in ctx.snaps if s.product == ctx.product and s.date > when]
+    mine = [s for s in ctx.snaps if s.product == ctx.product]
+    later = [s for s in mine if s.date > when]
     if later:
         P.append(f"{later[-1].name} is later than {when}: a digest cannot go back in time")
     if ctx.baseline and ctx.prev:
         P.append(f"there is already {ctx.prev.name}: the baseline is the first run, once")
     if not ctx.baseline and not ctx.prev:
         P.append("no earlier digest for this product: the first run is --baseline")
+    first_snapshot = min((s.date for s in mine), default=when)
 
     rows = state.get("items") or {}
     if not isinstance(rows, dict):
@@ -681,7 +685,7 @@ def check(ctx: Context) -> list[str]:
             P.append(f"{vid}{title}, in {vo.file}, has no row in the state file: classify it")
             continue
         if not isinstance(row, dict):
-            continue                      # reported above as not a mapping
+            continue
         items[vid] = _item(vid, vo.kind, vo.state, row, vo.closer, vo.children, vo.aliases)
     for i, row in rows.items():
         if i in ctx.voci or i in ctx.alias or not isinstance(row, dict):
@@ -701,10 +705,9 @@ def check(ctx: Context) -> list[str]:
             P.append(f"{i} was in {ctx.prev.name} and is now in neither the registers nor the "
                      "state file: an item cannot leave in silence")
     for a in ctx.alias:
-        if a in rows and set(rows[a]) - {"hours_before"}:
+        if a in rows and isinstance(rows[a], dict) and set(rows[a]) - {"hours_before"}:
             ctx.notes.append(f"{a} decides {ctx.alias[a]}: they are one item, and the row of "
                              f"{a} counts only for its hours")
-
     for vid, vo in ctx.voci.items():
         it = items.get(vid)
         if it and vo.title and it.state == "open" and not it.excluded:
@@ -713,71 +716,123 @@ def check(ctx: Context) -> list[str]:
                 P.append(f"{vid} is titled {vo.title!r} in {vo.file} and was confirmed as "
                          f"{seen!r}: confirm its classification again")
 
-    # Hours: every period, the past ones as they were frozen.
-    periods = periods_of(state)
+    # Hours, day by day. A day is either rebuilt in bulk, by column, or declared by item.
+    raw_days = state.get("days") or {}
+    if not isinstance(raw_days, dict):
+        P.append("`days` is a mapping from date to the hours of that day")
+        raw_days = {}
+    for k in raw_days:
+        if as_date(k) is None:
+            P.append(f"day {k!r}: the key is a date, YYYY-MM-DD")
+    days = dated(raw_days)
     per_item: dict[str, Fraction] = {}
-    declared_hours: dict[date, dict] = {}       # every period that parses, read once
-    for d, block in periods.items():
-        if not isinstance(block, dict) or set(block) - PERIOD_KEYS:
-            P.append(f"period {d}: it holds `hours` and `outside`, and nothing else")
+    first_day: dict[str, date] = {}
+    bulk = {k: Fraction(0) for k in BULK_KEYS}
+    any_bulk = False
+    for d in sorted(days):
+        entry = days[d] if days[d] is not None else {}
+        if not isinstance(entry, dict) or set(entry) - DAY_KEYS:
+            P.append(f"day {d}: it holds `hours` and `outside`, or `themes` and `outside` for a "
+                     "day rebuilt in bulk")
             continue
+        if d >= when:
+            P.append(f"day {d}: hours on a day that is not over yet")
+        if start and d < start:
+            P.append(f"day {d}: before `release.start`, so no table of the workbook has it")
+        if entry.get("themes") and entry.get("hours"):
+            P.append(f"day {d}: rebuilt in bulk and declared by item at once; one or the other")
+        if entry.get("themes") and d >= first_snapshot:
+            P.append(f"day {d}: only the days before the first digest are rebuilt in bulk; "
+                     "after it, the hours are declared by item")
         try:
-            hm, om = hours_map(block), outside_map(block)
+            hm = {str(k): num(h) for k, h in (entry.get("hours") or {}).items()}
+            om = {str(k): num(h) for k, h in (entry.get("outside") or {}).items()}
+            tm = {str(k): num(h) for k, h in (entry.get("themes") or {}).items()}
         except (ValueError, ZeroDivisionError) as e:
-            P.append(f"period {d}: {e}")
+            P.append(f"day {d}: {e}")
             continue
-        declared_hours[d] = hm
-        for k, val in list(hm.items()) + list(om.items()):
-            if val < 0:
-                P.append(f"period {d}: {k} has {val} hours")
-        for k, val in hm.items():
+        for k, h in list(hm.items()) + list(om.items()) + list(tm.items()):
+            if h < 0:
+                P.append(f"day {d}: {k} has {h} hours")
+        for k in om:
+            if k not in CATEGORIES:
+                P.append(f"day {d}: {k!r} is not a category outside the product; the categories "
+                         f"are {', '.join(CATEGORIES)}")
+        for k, h in tm.items():
+            if k not in BULK_KEYS:
+                P.append(f"day {d}: {k!r} is not a column of a day rebuilt in bulk; they are "
+                         f"{', '.join(sorted(BULK_KEYS))}")
+            else:
+                bulk[k] += h
+                any_bulk = True
+        for k, h in hm.items():
             target = ctx.alias.get(k, k)
             if target not in items:
-                P.append(f"period {d}: hours on {k}, which is not an item of {ctx.product}")
+                P.append(f"day {d}: hours on {k}, which is not an item of {ctx.product}")
                 continue
-            if items[target].excluded and val:
-                P.append(f"period {d}: hours on {k}, which is excluded from the digest; declare "
-                         "the time as an activity outside the register if it has to show")
-            per_item[target] = per_item.get(target, Fraction(0)) + val
+            per_item[target] = per_item.get(target, Fraction(0)) + h
+            if h and target not in first_day:
+                first_day[target] = d
+    ctx.days = days
+
     for i, it in items.items():
-        row = rows.get(i) or {}
+        row = rows.get(i) if isinstance(rows.get(i), dict) else {}
         before = Fraction(0)
-        if row.get("hours_before") is not None:
-            try:
-                before = num(row["hours_before"])
-            except (ValueError, ZeroDivisionError):
-                P.append(f"{i}: `hours_before` is a number of hours")
-        for a in it.aliases:
-            if isinstance(rows.get(a), dict) and rows[a].get("hours_before") is not None:
+        for r in [row] + [rows.get(a) for a in it.aliases if isinstance(rows.get(a), dict)]:
+            if r.get("hours_before") is not None:
                 try:
-                    before += num(rows[a]["hours_before"])
+                    before += num(r["hours_before"])
                 except (ValueError, ZeroDivisionError):
-                    P.append(f"{a}: `hours_before` is a number of hours")
+                    P.append(f"{i}: `hours_before` is a number of hours")
+        it.before = before
         it.hours = before + per_item.get(i, Fraction(0))
+        it.first_day = first_day.get(i)
+        if it.hours and not it.excluded and it.scope != OUT and it.theme not in THEMES:
+            P.append(f"{i}: hours declared on it and no `theme`, so no column of the "
+                     "workbook counts them")
     ctx.items = items
 
+    # The days rebuilt in bulk and the hours declared on the items must tell the same story.
+    if any_bulk or any(it.before for it in items.values()):
+        declared = {k: Fraction(0) for k in BULK_KEYS}
+        for it in items.values():
+            if it.before:
+                col = OUT if (it.excluded or it.scope == OUT) else it.theme
+                if col in declared:
+                    declared[col] += it.before
+        for k in sorted(BULK_KEYS):
+            if declared[k] != bulk[k]:
+                P.append(f"the days rebuilt in bulk give {hours(bulk[k])} h to {k} and the items "
+                         f"declare {hours(declared[k])} h before the detail: the two have to "
+                         "agree")
+
+    # Every working day of the period is declared, an empty day included.
+    if start:
+        lo = ctx.prev.date if ctx.prev and not ctx.baseline else start
+        d = lo
+        while d < when:
+            if working_day(d) and d >= start and d not in days:
+                P.append(f"no hours declared for {d}: declare them, `{{}}` if nothing was "
+                         "worked")
+            d += timedelta(days=1)
+
     for s in chain(ctx.snaps, ctx.prev):
-        fr = s.frozen
-        prev_ref = fr.get("previous") or {}
+        prev_ref = s.frozen.get("previous") or {}
         if prev_ref.get("dir"):
             target = next((x for x in ctx.snaps if x.name == prev_ref["dir"]), None)
             if target is None or target.digest() != prev_ref.get("sha256"):
                 P.append(f"{prev_ref['dir']} no longer matches the hash {s.name} recorded for "
                          "it: a snapshot is never edited")
-        period = fr.get("period")
-        if period:
-            d = as_date(period.get("from"))
-            block = periods.get(d)
+    if ctx.prev and ctx.prev.frozen.get("format") == FORMAT:
+        frozen_days = dated(ctx.prev.frozen.get("days"))
+        for d in sorted(set(frozen_days) | {d for d in days if d < ctx.prev.date}):
             try:
-                frozen_h = {k: num(x) for k, x in (period.get("hours") or {}).items()}
-                frozen_o = {k: num(x) for k, x in (period.get("outside") or {}).items()}
-                same = (isinstance(block, dict) and hours_map(block) == frozen_h
-                        and outside_map(block) == frozen_o)
+                same = canonical_day(days.get(d)) == (frozen_days.get(d) or {})
             except (ValueError, ZeroDivisionError):
                 same = False
             if not same:
-                P.append(f"the hours of the period from {d} are not the ones {s.name} froze: "
-                         "a past period is not edited")
+                P.append(f"day {d} is not the one {ctx.prev.name} froze: a day already sent is "
+                         "not edited")
 
     others = [p for p in (ctx.root / STORE).glob("state-*.yaml")
               if p.name != f"state-{ctx.product}.yaml"]
@@ -786,17 +841,15 @@ def check(ctx: Context) -> list[str]:
             other = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
         except yaml.YAMLError:
             continue
-        for d, block in periods_of(other).items():
-            mine = periods.get(d)
-            if not mine or not isinstance(block, dict) or not isinstance(mine, dict):
+        for d, entry in dated(other.get("days")).items():
+            mine_day = days.get(d)
+            if not isinstance(entry, dict) or not isinstance(mine_day, dict):
                 continue
-            both = set((block.get("hours") or {})) & set((mine.get("hours") or {}))
-            for i in sorted(both):
-                P.append(f"period {d}: hours on {i} in this state file and in {p.name}; the "
-                         "hours of one item in one period are declared once")
+            for i in sorted(set(entry.get("hours") or {}) & set(mine_day.get("hours") or {})):
+                P.append(f"day {d}: hours on {i} in this state file and in {p.name}; the hours "
+                         "of one item on one day are declared once")
 
-    # What every item needs, for what will be printed about it.
-    period_from = ctx.prev.date if ctx.prev and not ctx.baseline else None
+    # What every item needs, for what the workbook prints about it.
     for i, it in items.items():
         row = rows.get(i) if isinstance(rows.get(i), dict) else {}
         if it.excluded:
@@ -809,30 +862,30 @@ def check(ctx: Context) -> list[str]:
             P.append(f"{i}: no `scope`, the release name ({rel}) or `{OUT}`")
             continue
         in_scope = it.scope == rel
-        shown = it.state == "open" or (it.state == "closed" and in_scope)
         if it.state == "open" and it.scope not in (rel, OUT):
             P.append(f"{i} is open and scoped to {it.scope!r}, not to the current release "
                      f"{rel!r}: assign it to {rel!r} or to `{OUT}`")
+        shown = it.state == "open" or (it.state == "closed" and in_scope)
         if shown:
             for k in ("title", "what", "theme"):
                 if not row.get(k):
-                    P.append(f"{i}: no `{k}`, and the digest prints it")
-        if it.state == "open" and in_scope and not row.get("size"):
-            P.append(f"{i}: open in the perimeter with no `size`")
+                    P.append(f"{i}: no `{k}`, and the workbook prints it")
+        if in_scope and it.state in ("open", "closed") and not row.get("size"):
+            P.append(f"{i}: in the perimeter with no `size`, and the workbook prints its "
+                     "estimated hours")
         if it.state == "closed" and in_scope:
-            declared = row.get("hours_before") is not None or any(
-                k in hm for hm in declared_hours.values() for k in [i, *it.aliases])
-            if not declared:
-                P.append(f"{i}: closed in the perimeter with no hours declared, before or in "
-                         "any period. No number is invented: declare them, 0 included")
-            closed_now = not ctx.baseline and (prev_voci.get(i) or {}).get("state") != "closed"
-            if closed_now and not row.get("size"):
-                P.append(f"{i}: closed in this period with no `size`, which the activity prints")
-        for k in ("title", "what"):
+            if it.closed_on is None:
+                P.append(f"{i}: closed in the perimeter with no `closed_on`")
+            elif it.closed_on > when:
+                P.append(f"{i}: closed on {it.closed_on}, after the digest's date")
+        if it.state == "open" and it.scope == OUT and not row.get("out_reason"):
+            P.append(f"{i}: outside the perimeter with no `out_reason`, which the workbook "
+                     "prints as why")
+        for k in ("title", "what", "out_reason"):
             if row.get(k) and DASHES.search(str(row[k])):
                 P.append(f"{i}: a long dash in `{k}`; use a comma or two sentences")
         if row.get("title") and str(row["title"]).rstrip().endswith("."):
-            P.append(f"{i}: the title ends with a full stop, which the digest adds")
+            P.append(f"{i}: the title ends with a full stop")
         what = str(row.get("what") or "")
         if what:
             for rx, kind in JARGON:
@@ -849,15 +902,51 @@ def check(ctx: Context) -> list[str]:
         if row.get("split_into") and it.state == "closed":
             P.append(f"{i} is closed and split: one or the other")
 
+    # The two lists hold exactly the open items, in the order the person chose.
+    todo = {i for i, it in items.items() if it.state == "open" and it.scope == rel
+            and not it.excluded and not split_parent(it)}
+    out = {i for i, it in items.items() if it.state == "open" and it.scope == OUT
+           and not it.excluded and not split_parent(it)}
+    order = state.get("order") or {}
+    if not isinstance(order, dict):
+        P.append("`order` holds `todo` and `out`, the rows of the two lists in order")
+        order = {}
+    for k in sorted(set(order) - ORDER_KEYS):
+        P.append(f"unknown key {k!r} under `order`")
+    for key, expected in (("todo", todo), ("out", out)):
+        listed = [str(x) for x in (order.get(key) or [])]
+        if len(set(listed)) != len(listed):
+            P.append(f"`order.{key}` names an item twice")
+        missing = sorted(expected - set(listed), key=sort_id)
+        extra = [x for x in listed if x not in expected]
+        if missing:
+            P.append(f"`order.{key}` does not list {', '.join(missing)}: add them where they "
+                     "belong, at the end if nobody said otherwise")
+        if extra:
+            P.append(f"`order.{key}` lists {', '.join(extra)}, which no longer belong there")
+
     if not ctx.baseline:
         nxt = next_working(when)
-        plan = plan_of(state)
+        plan = dated(state.get("plan"))
+        for k in (state.get("plan") or {}):
+            if as_date(k) is None:
+                P.append(f"plan {k!r}: the key is a date, YYYY-MM-DD")
         for d in (when, nxt):
             if d not in plan:
-                P.append(f"no plan for {d}: the digest prints it, `[]` if nothing is planned")
+                P.append(f"no plan for {d}: the workbook prints it, `[]` if nothing is planned")
                 continue
-            for i in plan[d] or []:
-                it = items.get(str(i))
+            for e in plan[d] or []:
+                if not isinstance(e, dict) or set(e) - PLAN_KEYS:
+                    P.append(f"plan {d}: {e!r} is {{item, hours, closes}}")
+                    continue
+                i = str(e.get("item"))
+                it = items.get(i)
+                try:
+                    h = num(e.get("hours"))
+                except (ValueError, ZeroDivisionError):
+                    h = Fraction(0)
+                if h <= 0:
+                    P.append(f"plan {d}: {i} has no hours; the workbook prints how many")
                 if it is None:
                     P.append(f"plan {d}: {i} is not an item; a decision that closes an entry is "
                              "planned under the entry's identifier")
@@ -865,12 +954,24 @@ def check(ctx: Context) -> list[str]:
                     P.append(f"plan {d}: {i} is {it.state}")
                 elif it.excluded:
                     P.append(f"plan {d}: {i} is excluded from the digest")
-                elif ctx.voci.get(str(i)) and ctx.voci[str(i)].status == "draft":
+                elif ctx.voci.get(i) and ctx.voci[i].status == "draft":
                     P.append(f"plan {d}: {i} is a `CHG` in draft, and a draft is not a mandate "
                              "to build. Approve it first, or plan the work that approves it")
-        if period_from and period_from not in periods:
-            P.append(f"no hours for the period from {period_from}: declare them, an empty "
-                     "block if nothing was worked")
+                if not isinstance(e.get("closes", False), bool):
+                    P.append(f"plan {d}: `closes` on {i} is true or false")
+        milestones = state.get("milestones")
+        if milestones is None:
+            P.append("no `milestones`: the Gantt shows them; declare them, `[]` if there are "
+                     "none")
+        elif not isinstance(milestones, list):
+            P.append("`milestones` is a list of {name, date}")
+        else:
+            for m in milestones:
+                if not isinstance(m, dict) or set(m) - MILESTONE_KEYS or not m.get("name") \
+                        or as_date(m.get("date")) is None:
+                    P.append(f"milestone {m!r} is {{name, date}}")
+                elif DASHES.search(str(m["name"])):
+                    P.append(f"milestone {m['name']!r}: a long dash")
 
     waits = state.get("waits") or []
     if not isinstance(waits, list):
@@ -889,594 +990,383 @@ def check(ctx: Context) -> list[str]:
         for k in ("asked", "needed_by"):
             if as_date(w.get(k)) is None:
                 P.append(f"{label}: `{k}` is a date, YYYY-MM-DD")
-        if w.get("blocks") and not w.get("missing") and not w.get("resolved"):
-            P.append(f"{label}: blocks something and has no `missing`, what the blocked item "
+        if (w.get("blocks") or w.get("slows")) and not w.get("missing") \
+                and not w.get("resolved"):
+            P.append(f"{label}: blocks or slows something and has no `missing`, what the item "
                      "lacks")
         for k in ("blocks", "slows"):
             for i in w.get(k) or []:
                 if str(i) not in items:
                     P.append(f"{label}: `{k}` names {i}, which is not an item")
-        for k in ("what", "owner", "without", "missing", "note"):
+        for k in ("what", "owner", "without", "missing"):
             if w.get(k) and DASHES.search(str(w[k])):
                 P.append(f"{label}: a long dash in `{k}`")
-
-    requests = state.get("requests") or {}
-    for i, r in (requests.items() if isinstance(requests, dict) else []):
-        it = items.get(str(i))
-        if it is None or it.kind != "OD" or it.state != "open":
-            P.append(f"request {i}: a decision asked of somebody is an open `OD` in a register, "
-                     "and this is not one")
-        if not isinstance(r, dict):
-            continue
-        for k in sorted(set(r) - REQUEST_KEYS):
-            P.append(f"request {i}: unknown key {k!r}")
-        for k in ("to", "fallback"):
-            if not r.get(k):
-                P.append(f"request {i}: no `{k}`")
-        if as_date(r.get("by")) is None:
-            P.append(f"request {i}: `by` is a date")
-
-    for k, val in ((state.get("periods") or {}).items()):
-        if as_date(k) is None:
-            P.append(f"period {k!r}: the key is the first day of the period, YYYY-MM-DD")
-    for k in (state.get("plan") or {}):
-        if as_date(k) is None:
-            P.append(f"plan {k!r}: the key is a date, YYYY-MM-DD")
     return P
 
 
-def _item(i, kind, st, row, closer, children, aliases) -> Item:
-    return Item(i, kind, st, None if row.get("scope") is None else str(row.get("scope")),
-                row.get("theme"), row.get("size"), row.get("title"), row.get("what"),
-                bool(row.get("excluded")), closer, list(children) + list(row.get("split_into") or []),
-                list(aliases))
-
-
 # ─────────────────────────────────────────────────────────────────────────────
-# The digest
+# What the workbook shows
 
 @dataclass
-class Numbers:
+class Model:
+    name: str
+    when: date
+    prev_date: date
+    delivery: date
+    start: date
+    next_update: date
     rel: str
-    remaining: list            # items in the perimeter, open
-    closed: list               # closed in the perimeter
-    outside: list              # open outside the perimeter
-    groups: dict
-    rem: tuple
-    rem_prev: tuple | None
-    period: dict | None
-    window: dict | None
+    prev_label: str
+    this_label: str
+    plan_rows: list
+    todo: list
+    done: list
+    out: list
+    status: dict          # id -> the Stato of its row
+    waits: list
+    prev_closed: dict
+    this_closed: dict
+    prev_open: dict
+    table: list
+    milestones: list
+    changes: list
 
 
-def split_parent(it: Item) -> bool:
-    return it.state in ("replaced",) or bool(it.children and it.state == "open")
+def period_label(a: date, b: date) -> str:
+    if a == b:
+        return dm(a)
+    if (b - a).days == 1:
+        return f"{dm(a)} e {dm(b)}"
+    return f"dal {dm(a)} al {dm(b)}"
 
 
-def compute(ctx: Context) -> Numbers:
-    state = ctx.state
-    rel = str(state["release"]["name"])
-    items = ctx.items
-
-    def in_rem(it: Item) -> bool:
-        return (it.state == "open" and it.scope == rel and not it.excluded
-                and not split_parent(it))
-
-    remaining = [it for it in items.values() if in_rem(it)]
-    closed = [it for it in items.values()
-              if it.state == "closed" and it.scope == rel and not it.excluded]
-    outside = [it for it in items.values()
-               if it.state == "open" and it.scope == OUT and not it.excluded
-               and not split_parent(it)]
-    rem = (sum((it.rng()[0] for it in remaining), Fraction(0)),
-           sum((it.rng()[1] for it in remaining), Fraction(0)))
-
-    groups = {"chiuse": [], "aggiunte": [], "uscite": [], "ristimate": [], "spezzate": [],
-              "nuove": [], "born_closed": [], "closed_now": []}
-    rem_prev = None
-    period = None
-    window = None
-    if ctx.prev and not ctx.baseline:
-        fr = ctx.prev.frozen
-        prev_rel = str((fr.get("release") or {}).get("name"))
-        pv = fr.get("voci") or {}
-
-        def prev_rng(i):
-            lo, hi = SIZES[pv[i]["size"]]
-            return Fraction(lo), Fraction(hi)
-
-        P_ids = {i for i, x in pv.items()
-                 if x.get("state") == "open" and str(x.get("scope")) == prev_rel
-                 and not x.get("excluded") and not x.get("split")}
-        N_ids = {it.id for it in remaining}
-        rem_prev = (sum((prev_rng(i)[0] for i in P_ids), Fraction(0)),
-                    sum((prev_rng(i)[1] for i in P_ids), Fraction(0)))
-        children_of = {}
-        for i in P_ids:
-            it = items.get(i)
-            if it is not None and split_parent(it):
-                for c in it.children:
-                    children_of[c] = i
-        d_lo = d_hi = Fraction(0)
-        for i in sorted(P_ids, key=sort_id):
-            it = items.get(i)
-            if i in N_ids:
-                lo, hi = it.rng()
-                plo, phi = prev_rng(i)
-                if (lo, hi) != (plo, phi):
-                    groups["ristimate"].append((i, (lo - plo, hi - phi)))
-            elif it is not None and it.state == "closed":
-                groups["chiuse"].append((i, prev_rng(i)))
-            elif it is not None and split_parent(it):
-                kids = [c for c in it.children if c in N_ids and c not in P_ids]
-                lo = sum((items[c].rng()[0] for c in kids), Fraction(0)) - prev_rng(i)[0]
-                hi = sum((items[c].rng()[1] for c in kids), Fraction(0)) - prev_rng(i)[1]
-                groups["spezzate"].append((i, (lo, hi), kids))
-            else:
-                groups["uscite"].append((i, prev_rng(i)))
-        for i in sorted(N_ids - P_ids, key=sort_id):
-            if children_of.get(i) in P_ids:
-                continue
-            groups["aggiunte"].append((i, items[i].rng()))
-            if i not in pv:
-                groups["nuove"].append(i)
-        for it in items.values():
-            if it.state == "closed" and (pv.get(it.id) or {}).get("state") != "closed":
-                groups["closed_now"].append(it.id)
-                if it.id not in P_ids:
-                    groups["born_closed"].append(it.id)
-        lo = (rem_prev[0] - sum(r[0] for _, r in groups["chiuse"])
-              - sum(r[0] for _, r in groups["uscite"])
-              + sum(r[0] for _, r in groups["aggiunte"])
-              + sum(dl[0] for _, dl in groups["ristimate"])
-              + sum(dl[0] for _, dl, _ in groups["spezzate"]))
-        hi = (rem_prev[1] - sum(r[1] for _, r in groups["chiuse"])
-              - sum(r[1] for _, r in groups["uscite"])
-              + sum(r[1] for _, r in groups["aggiunte"])
-              + sum(dl[1] for _, dl in groups["ristimate"])
-              + sum(dl[1] for _, dl, _ in groups["spezzate"]))
-        if (lo, hi) != rem:
-            raise Refusal([f"the reconciliation does not add up: from {span(rem_prev)} the "
-                           f"movements give {span((lo, hi))} and what remains is {span(rem)}. "
-                           "This is a defect in the computation or in a snapshot, never a "
-                           "number to correct by hand"])
-
-        start, end = ctx.prev.date, ctx.when - timedelta(days=1)
-        block = periods_of(state).get(start) or {}
-        hm, om = hours_map(block), outside_map(block)
-
-        def scope_of(k):
-            it = items.get(ctx.alias.get(k, k))
-            return it.scope if it else None
-
-        per = sum((h for k, h in hm.items() if scope_of(k) == rel), Fraction(0))
-        oth = sum(hm.values(), Fraction(0)) - per
-        period = {"from": start, "to": end, "working_days": working_days(start, end),
-                  "hours": hm, "outside": om, "perimeter_hours": per,
-                  "outside_hours": sum(om.values(), Fraction(0)), "other_hours": oth}
-        window = rate_window(ctx, period)
-    return Numbers(rel, remaining, closed, outside, groups, rem, rem_prev, period, window)
+def day_row(d: date, entry: dict, items: dict, alias: dict) -> list:
+    """One row of the day-by-day table: date, the four columns, the five categories."""
+    cols = {k: Fraction(0) for k in BULK_KEYS}
+    for k, h in ((entry or {}).get("themes") or {}).items():
+        cols[k] += num(h)
+    for k, h in ((entry or {}).get("hours") or {}).items():
+        it = items[alias.get(str(k), str(k))]
+        col = OUT if (it.excluded or it.scope == OUT) else it.theme
+        cols[col] += num(h)
+    cats = [num(((entry or {}).get("outside") or {}).get(c, 0)) for c in CATEGORIES]
+    return [d, cols["architettura"], cols["sviluppo"], cols["deploy"], cols[OUT], *cats]
 
 
-def rate_window(ctx: Context, current: dict) -> dict:
-    """The most recent periods with hours, whole, until they cover five working days."""
-    periods = [current]
-    for s in chain(ctx.snaps, ctx.prev):
-        p = s.frozen.get("period")
-        if p:
-            periods.append({"working_days": int(p.get("working_days", 0)),
-                            "perimeter_hours": num(p.get("perimeter_hours", 0)),
-                            "outside_hours": num(p.get("outside_hours", 0)),
-                            "other_hours": num(p.get("other_hours", 0))})
-    days, per, out = 0, Fraction(0), Fraction(0)
-    for p in periods:
-        if p["perimeter_hours"] + p["outside_hours"] + p["other_hours"] == 0:
-            continue                          # a period nobody worked is not data
-        days += p["working_days"]
-        per += p["perimeter_hours"]
-        out += p["outside_hours"]
-        if days >= 5:
-            break
-    std = num(ctx.state["standard_hours"])
-    rate = per / days if days else None
-    normal = std - out / days if days else None
-    return {"days": days, "rate": rate, "normal": normal}
+def wait_status(w: dict, when: date) -> str:
+    e = as_date(w["needed_by"])
+    if e < when:
+        n = (when - e).days
+        return f"SCADUTA da {n} {'giorno' if n == 1 else 'giorni'}"
+    if e == when:
+        return "Scade oggi"
+    n = (e - when).days
+    return f"Entro {n} {'giorno' if n == 1 else 'giorni'}"
 
 
-def render(ctx: Context, n: Numbers) -> str:
+def build_model(ctx: Context) -> Model:
     state, items, when = ctx.state, ctx.items, ctx.when
-    rows = state.get("items") or {}
-    rel = n.rel
-    add, prov = ctx.additions.append, ctx.provisional.append
-    waits = [w for w in (state.get("waits") or []) if not w.get("resolved")]
-    waits.sort(key=lambda w: (as_date(w["needed_by"]), str(w["what"])))
-    blocked = {str(i): w for w in waits for i in (w.get("blocks") or [])}
-    blockers = {}
-    for w in waits:
-        for i in (w.get("blocks") or []) + (w.get("slows") or []):
-            blockers.setdefault(str(i), []).append(w)
-    plan = plan_of(state)
-    nxt = next_working(when)
-    g = n.groups
-
-    def title(i):
-        return str(rows.get(i, {}).get("title") or items[i].title or i)
-
-    def what(i):
-        return f"  Cos'è: {rows[i]['what']}"
-
-    def tema(i):
-        return THEMES[items[i].theme]
-
-    def by_theme(lst):
-        return [(t, [it for it in lst if it.theme == t]) for t in THEMES]
-
-    if n.period["from"] == n.period["to"]:
-        when_added = f"il {dm(n.period['from'])}"
-        sec2 = f"2. ATTIVITÀ {dmy(n.period['from'])}, a consuntivo"
-    else:
-        when_added = f"dal {dm(n.period['from'])} al {dm(n.period['to'])}"
-        sec2 = (f"2. ATTIVITÀ DAL {dmy(n.period['from'])} AL {dmy(n.period['to'])}, "
-                "a consuntivo")
-
-    L = [f"{ctx.name.upper()}, digest del {dmy(when)}", "", "1. SINTESI",
-         f"Consegna concordata: {dm(as_date(state['release']['delivery']))}"]
-    parts = []
-    for count, sing, plur in ((len(n.closed), "chiusa", "chiuse"),
-                              (len(n.remaining), "aperta", "aperte")):
-        if count:
-            parts.append(agree(count, sing, plur))
-        else:
-            parts.append(f"nessuna {sing}")
-            prov(f"«nessuna {sing}» nella sintesi: l'esempio non mostra il caso zero")
-    k = len(g["aggiunte"])
-    if k:
-        parts.append(f"{agree(k, 'aggiunta', 'aggiunte')} {when_added}")
-    else:
-        parts.append(f"nessuna aggiunta {when_added}")
-        prov(f"«nessuna aggiunta {when_added}» nella sintesi")
-    if n.period["from"] != n.period["to"]:
-        prov(f"«{when_added}» nella sintesi: l'esempio mostra un periodo di un giorno solo")
-    L.append("Voci nel perimetro: " + ", ".join(parts))
-
-    total_closed = sum((it.hours for it in n.closed), Fraction(0))
-    L.append(f"Monte ore chiuso: {hours(total_closed)} h")
-    for t, lst in by_theme(n.closed):
-        if lst:
-            L.append(f"  {THEMES[t]}: {voci(len(lst))}, "
-                     f"{hours(sum((it.hours for it in lst), Fraction(0)))} h")
-        else:
-            L.append(f"  {THEMES[t]}: nessuna")
-            prov(f"«{THEMES[t]}: nessuna» sotto il monte ore chiuso")
-    L.append(f"Monte ore rimasto: {span(n.rem)}")
-    for t, lst in by_theme(n.remaining):
-        if not lst:
-            L.append(f"  {THEMES[t]}: nessuna")
-            prov(f"«{THEMES[t]}: nessuna» sotto il monte ore rimasto")
-            continue
-        r = (sum((it.rng()[0] for it in lst), Fraction(0)),
-             sum((it.rng()[1] for it in lst), Fraction(0)))
-        line = f"  {THEMES[t]}: {voci(len(lst))}, {span(r)}"
-        notes = []
-        xl = [it for it in lst if it.size == "XL"]
-        if xl:
-            notes.append(f"{voci(len(xl))} XL, "
-                         f"{span((Fraction(13 * len(xl)), Fraction(40 * len(xl))))}, da spezzare")
-        b = [it for it in lst if it.id in blocked]
-        if b:
-            notes.append(agree(len(b), "bloccata", "bloccate"))
-        if notes:
-            line += " (" + "; ".join(notes) + ")"
-            if len(notes) > 1:
-                prov(f"«{'; '.join(notes)}» sulla riga di {THEMES[t]}: l'esempio non mostra "
-                     "una voce XL e una bloccata nello stesso tema")
-        L.append(line)
-
-    L.append(f"Dal {dm(ctx.prev.date)} al {dm(when)}")
-    L.append(f"  Rimasto al {dm(ctx.prev.date)}: {span(n.rem_prev)}")
-
-    def movement(lst, sign):
-        if not lst:
-            return "nessuna"
-        lo = sum(r[0] for _, r in lst)
-        hi = sum(r[1] for _, r in lst)
-        return f"{voci(len(lst))}, {sign} {hours(lo)} a {hours(hi)} h"
-
-    L.append(f"  Chiuse: {movement(g['chiuse'], 'meno')}")
-    L.append(f"  Aggiunte: {movement(g['aggiunte'], 'più')}")
-    L.append(f"  Uscite senza chiusura: {movement(g['uscite'], 'meno')}")
-    moved = [(i, dl) for i, dl in g["ristimate"]] + [(i, dl) for i, dl, _ in g["spezzate"]]
-    if not moved:
-        L.append("  Ristimate o spezzate: nessuna")
-    else:
-        lo = sum(dl[0] for _, dl in moved)
-        hi = sum(dl[1] for _, dl in moved)
-        if lo >= 0 and hi >= 0:
-            L.append(f"  Ristimate o spezzate: {voci(len(moved))}, più {hours(lo)} a {hours(hi)} h")
-        elif lo <= 0 and hi <= 0:
-            L.append(f"  Ristimate o spezzate: {voci(len(moved))}, "
-                     f"meno {hours(-lo)} a {hours(-hi)} h")
-        else:
-            def signed(x):
-                return f"più {hours(x)} h" if x >= 0 else f"meno {hours(-x)} h"
-            L.append(f"  Ristimate o spezzate: {voci(len(moved))}, minimo {signed(lo)}, "
-                     f"massimo {signed(hi)}")
-            prov("«minimo … massimo …» su Ristimate o spezzate: i due estremi vanno in versi "
-                 "opposti, e l'esempio non lo mostra")
-    L.append(f"  Rimasto al {dm(when)}: {span(n.rem)}")
-
-    L.append("Stima di consegna")
-    w = n.window
-    for label, per_day, empty in (("a ritmo attuale", w["rate"], "nessuna ora sul perimetro"),
-                                  ("a orario normale", w["normal"], "nessuna ora disponibile")):
-        if not per_day or per_day <= 0:
-            L.append(f"  {label}: {empty}, non stimabile")
-            prov(f"«{label}: {empty}, non stimabile»")
-            continue
-        d1 = nth_working(when, math.ceil(n.rem[0] / per_day))
-        d2 = nth_working(when, math.ceil(n.rem[1] / per_day))
-        L.append(f"  {label} ({one_decimal(per_day)} h/giorno): tra il {dm(d1)} e il {dm(d2)}")
-    L.append("Condizioni della stima")
-    if not waits:
-        L.append("Nessuna.")
-        prov("«Nessuna.» sotto le condizioni della stima")
-    for wt in waits:
-        L.append(f"- {wt['what']} entro il {dm(as_date(wt['needed_by']))}.")
-        L.append(f"  Senza: {wt['without']}")
-    if n.outside:
-        L.append(f"Fuori perimetro: {agree(len(n.outside), 'voce aperta, non stimata', 'voci aperte, non stimate')}.")
-    else:
-        L.append("Fuori perimetro: nessuna voce aperta.")
-        prov("«Fuori perimetro: nessuna voce aperta.»")
-
-    # 2 · what happened in the period
-    L += ["", sec2]
-    per = n.period
-    closed_now = [items[i] for i in g["closed_now"]
-                  if items[i].scope == rel and not items[i].excluded]
-    in_scope_closed = {it.id for it in closed_now}
-    total = per["perimeter_hours"] + per["other_hours"] + per["outside_hours"]
-    new_in = [i for i in g["nuove"]]
-    body = []
-    period_hours = {}
-    for k, h in per["hours"].items():
-        target = ctx.alias.get(k, k)
-        period_hours[target] = period_hours.get(target, Fraction(0)) + h
-    if total or closed_now or new_in or g["uscite"]:
-        body.append(f"{hours(total)} h: {hours(per['perimeter_hours'])} sul perimetro, "
-                    f"{hours(per['outside_hours'])} fuori registro")
-        if per["other_hours"]:
-            on = [i for i in period_hours if items[i].scope != rel and period_hours[i]]
-            add({"where": "2 · la riga delle ore",
-                 "text": f"{hours(per['other_hours'])} h su voci fuori perimetro "
-                         f"({', '.join(sorted(on, key=sort_id))}): il totale le conta, le due "
-                         "parti no"})
-        for t, lst in by_theme(sorted(closed_now, key=lambda it: sort_id(it.id))):
-            if not lst:
-                continue
-            body.append(THEMES[t])
-            for it in lst:
-                closer = f" con {it.closer}" if it.closer else ""
-                body.append(f"- {it.id}, {title(it.id)}. Chiusa{closer}.")
-                body.append(what(it.id))
-                body.append(f"  Taglia {it.size}: "
-                            f"{hours(period_hours.get(it.id, Fraction(0)))} h.")
-        if per["outside"]:
-            body.append("Fuori registro")
-            for k, h in per["outside"].items():
-                body.append(f"- {k}: {hours(h)} h.")
-        if new_in:
-            body.append("Voci nuove emerse")
-            for i in sorted(new_in, key=sort_id):
-                body.append(f"- {i}, {title(i)}. {tema(i)}, taglia {items[i].size}.")
-                body.append(what(i))
-        if g["uscite"]:
-            body.append("Voci uscite")
-            hidden = 0
-            for i, _ in sorted(g["uscite"], key=lambda x: sort_id(x[0])):
-                it = items.get(i)
-                if it is None or it.excluded:
-                    hidden += 1
-                    continue
-                reason = ("Tolta dal perimetro." if it.state == "open" else
-                          "Annullata." if it.kind == "CHG" else
-                          "Tolta dal registro." if (rows.get(i) or {}).get("gone") else
-                          "Sostituita.")
-                body.append(f"- {i}, {title(i)}. {reason}")
-                if (rows.get(i) or {}).get("what"):
-                    body.append(what(i))
-                prov(f"«{reason}» per {i} sotto «Voci uscite»: la sezione è approvata, "
-                     "il motivo è una forma proposta")
-            if hidden:
-                body.append(f"- {agree(hidden, 'voce esclusa', 'voci escluse')} dal digest.")
-                prov("«… esclusa dal digest.» sotto «Voci uscite»")
-    else:
-        body.append("Nessuna.")
-    L += body
-
-    # What happened and the canonical format has no line for: listed, not printed.
-    for i, h in sorted(period_hours.items(), key=lambda x: sort_id(x[0])):
-        it = items[i]
-        if h and it.state == "open" and it.scope == rel and not it.excluded:
-            add({"where": f"2 · sotto {THEMES.get(it.theme, '?')}",
-                 "text": f"- {i}, {title(i)}. In corso.\n{what(i)}\n"
-                         f"  Taglia {it.size}: {hours(h)} h."})
-    for i in sorted(g["closed_now"], key=sort_id):
-        it = items[i]
-        if i not in in_scope_closed and not it.excluded:
-            add({"where": "2 · voci chiuse fuori perimetro",
-                 "text": f"- {i}, {title(i)}. Chiusa."})
-    for it in sorted(n.outside, key=lambda x: sort_id(x.id)):
-        if ctx.prev and it.id not in (ctx.prev.frozen.get("voci") or {}):
-            add({"where": "2 · Voci nuove emerse",
-                 "text": f"- {it.id}, {title(it.id)}. {tema(it.id)}, fuori perimetro.\n"
-                         f"{what(it.id)}"})
-    for i, _ in g["aggiunte"]:
-        if i not in g["nuove"]:
-            before = (ctx.prev.frozen.get("voci") or {}).get(i) or {}
-            why = "Riaperta." if before.get("state") == "closed" else "Entrata nel perimetro."
-            add({"where": "2 · Voci entrate nel perimetro", "text": f"- {i}, {title(i)}. {why}"})
-    for i, dl in g["ristimate"]:
-        was = (ctx.prev.frozen.get("voci") or {})[i]["size"]
-        add({"where": "2 · Voci ristimate o spezzate",
-             "text": f"- {i}, {title(i)}. Da {was} a {items[i].size}."})
-    for i, dl, kids in g["spezzate"]:
-        add({"where": "2 · Voci ristimate o spezzate",
-             "text": f"- {i}, {title(i)}. Diventata {' e '.join(kids) or 'nessuna voce'}."})
-    prev_v = (ctx.prev.frozen.get("voci") or {})
-    for i, x in sorted(prev_v.items(), key=lambda x: sort_id(x[0])):
-        it = items.get(i)
-        if x.get("state") == "closed" and it is not None and it.state != "closed":
-            add({"where": "Allegato C", "text": f"- {i}, {title(i)}. Annullata, esce dal "
-                                                f"fatto ({hours(it.hours)} h)."})
-
-    # 3 and 4 · the plan
-    for number, d in ((3, when), (4, nxt)):
-        L += ["", f"{number}. ATTIVITÀ {dmy(d)}, in programma"]
-        shown = 0
-        for i in plan.get(d) or []:
-            i = str(i)
-            it = items[i]
-            if it.scope != rel:
-                add({"where": f"{number} · in programma",
-                     "text": f"- {i}, {title(i)}. {tema(i)}, fuori perimetro."})
-                continue
-            cont = ", prosecuzione" if number == 4 and i in [str(x) for x in plan.get(when) or []] else ""
-            L.append(f"- {i}, {title(i)}{cont}. {tema(i)}, taglia {it.size}.")
-            L.append(what(i))
-            for wt in blockers.get(i, []):
-                L.append(f"  Dipende da: {lower_first(str(wt['what']))}, {wt['owner']}.")
-            shown += 1
-        if not shown:
-            L.append("Nessuna.")
-
-    # 5 · waits
-    L += ["", "5. IN ATTESA DA ALTRI"]
-    if not waits:
-        L.append("Nessuna.")
-    for wt in waits:
-        asked = as_date(wt["asked"])
-        days = (when - asked).days
-        L.append(f"- {wt['what']}. Owner: {wt['owner']}.")
-        L.append(f"  Richiesto il {dm(asked)}, {agree(days, 'giorno', 'giorni')} di attesa. "
-                 f"Serve entro il {dm(as_date(wt['needed_by']))}.")
-        stops = sorted((str(i) for i in wt.get("blocks") or []
-                        if str(i) in {it.id for it in n.remaining}), key=sort_id)
-        if stops:
-            L.append(f"  Voci bloccate: {', '.join(stops)}.")
-        else:
-            note = f", {wt['note']}" if wt.get("note") else ""
-            L.append(f"  Voci bloccate: nessuna nel perimetro{note}.")
-        slows = sorted((str(i) for i in wt.get("slows") or []
-                        if str(i) in {it.id for it in n.remaining}), key=sort_id)
-        if slows:
-            L.append(f"  Voci rallentate: {', '.join(slows)}.")
-
-    # 6 · decisions asked of others: open entries, with who and by when
-    L += ["", "6. DECISIONI RICHIESTE"]
-    requests = state.get("requests") or {}
-    if not requests:
-        L.append("Nessuna.")
-    for i, r in sorted(requests.items(), key=lambda x: (as_date(x[1]["by"]), sort_id(str(x[0])))):
-        i = str(i)
-        L.append(f"- {i}, {title(i)}.")
-        L.append(what(i))
-        L.append(f"  A chi: {r['to']}. Entro: {dm(as_date(r['by']))}.")
-        L.append(f"  Se non arriva: {r['fallback']}")
-
-    # Annex A · to do in the perimeter
-    planned = [str(x) for x in (plan.get(when) or [])] + [str(x) for x in (plan.get(nxt) or [])]
-
-    def order_a(it):
-        if it.id in planned:
-            return (0, planned.index(it.id), 0, sort_id(it.id))
-        return (1, 0, list(SIZES).index(it.size), sort_id(it.id))
-
-    L += ["", f"ALLEGATO A. DA FARE NEL PERIMETRO "
-              f"({voci(len(n.remaining))}, {span(n.rem)})" if n.remaining else
-          "ALLEGATO A. DA FARE NEL PERIMETRO (nessuna voce)"]
-    if not n.remaining:
-        L.append("Nessuna.")
-        prov("«(nessuna voce)» e «Nessuna.» nell'allegato A")
-    for t, lst in by_theme(n.remaining):
-        if not lst:
-            continue
-        r = (sum((it.rng()[0] for it in lst), Fraction(0)),
-             sum((it.rng()[1] for it in lst), Fraction(0)))
-        L.append(f"{THEMES[t]} ({voci(len(lst))}, {span(r)})")
-        for it in sorted(lst, key=order_a):
-            stop = [wt for wt in waits if it.id in [str(x) for x in wt.get("blocks") or []]]
-            tail = (". Bloccata: " + "; ".join(str(wt["missing"]) for wt in stop) + "."
-                    if stop else "")
-            if len(stop) > 1:
-                prov(f"più motivi di blocco su {it.id}, separati da «; »")
-            L.append(f"- {it.id}, {title(it.id)}. {it.size}{tail}")
-            L.append(what(it.id))
-
-    # Annex B · to do outside the perimeter
-    L += ["", f"ALLEGATO B. DA FARE FUORI PERIMETRO "
-              f"({agree(len(n.outside), 'voce, non stimata', 'voci, non stimate')})"
-          if n.outside else "ALLEGATO B. DA FARE FUORI PERIMETRO (nessuna voce)"]
-    if not n.outside:
-        L.append("Nessuna.")
-        prov("«(nessuna voce)» e «Nessuna.» nell'allegato B")
-    for it in sorted(n.outside, key=lambda x: (list(THEMES).index(x.theme), sort_id(x.id))):
-        L.append(f"- {it.id}, {title(it.id)}. {tema(it.id)}.")
-        L.append(what(it.id))
-
-    # Annex C · done
-    done_total = sum((it.hours for it in n.closed), Fraction(0))
-    L += ["", f"ALLEGATO C. FATTO ({voci(len(n.closed))}, {hours(done_total)} h)"
-          if n.closed else "ALLEGATO C. FATTO (nessuna voce)"]
-    if not n.closed:
-        L.append("Nessuna.")
-        prov("«(nessuna voce)» e «Nessuna.» nell'allegato C")
-
-    def kind_of(it):
-        return KIND_ORDER.get(it.closer.split("-")[0] if it.kind == "OD" and it.closer
-                              else it.kind, 0)
-
-    for t in THEMES:
-        lst = [it for it in n.closed if it.theme == t]
-        for k in sorted({kind_of(it) for it in lst}):
-            sub = sorted((it for it in lst if kind_of(it) == k),
-                         key=lambda it: sort_id(it.closer if it.kind == "OD" and it.closer
-                                                else it.id))
-            if k >= 2:
-                prov(f"«{THEMES[t]}, {DONE_LABEL[k]}» nell'allegato C")
-            L.append(f"{THEMES[t]}, {DONE_LABEL[k]} ({voci(len(sub))}, "
-                     f"{hours(sum((it.hours for it in sub), Fraction(0)))} h)")
-            for it in sub:
-                if it.kind == "OD" and it.closer:
-                    L.append(f"- {it.closer}, {title(it.id)}. Chiude {it.id}. {hours(it.hours)} h")
-                else:
-                    L.append(f"- {it.id}, {title(it.id)}. {hours(it.hours)} h")
-                L.append(what(it.id))
-    out = text_of(L)
-    if DASHES.search(out):
-        raise Refusal(["the digest would carry a long dash"])
-    return out
-
-
-def render_baseline(ctx: Context) -> tuple[str, Numbers]:
-    state, items = ctx.state, ctx.items
     rel = str(state["release"]["name"])
-    remaining = [it for it in items.values() if it.state == "open" and it.scope == rel
-                 and not it.excluded and not split_parent(it)]
-    closed = [it for it in items.values() if it.state == "closed" and it.scope == rel
-              and not it.excluded]
-    outside = [it for it in items.values() if it.state == "open" and it.scope == OUT
-               and not it.excluded and not split_parent(it)]
-    rem = (sum((it.rng()[0] for it in remaining), Fraction(0)),
-           sum((it.rng()[1] for it in remaining), Fraction(0)))
-    lines = [f"{ctx.name.upper()}, linea di base del {dmy(ctx.when)}",
-             "Non si invia: il primo digest è quello del prossimo giorno lavorativo.",
-             f"Voci nel perimetro: {agree(len(closed), 'chiusa', 'chiuse')}, "
-             f"{agree(len(remaining), 'aperta', 'aperte')}",
-             f"Monte ore chiuso: {hours(sum((it.hours for it in closed), Fraction(0)))} h",
-             f"Monte ore rimasto: {span(rem)}",
-             f"Fuori perimetro: {agree(len(outside), 'voce aperta', 'voci aperte')}"]
-    n = Numbers(rel, remaining, closed, outside, {}, rem, None, None, None)
-    return text_of(lines), n
+    start = as_date(state["release"]["start"])
+    delivery = as_date(state["release"]["delivery"])
+    order = state.get("order") or {}
+    waits = sorted((w for w in state.get("waits") or [] if not w.get("resolved")),
+                   key=lambda w: (as_date(w["needed_by"]), str(w["what"])))
+    todo = [items[str(i)] for i in order.get("todo") or []]
+    out = [items[str(i)] for i in order.get("out") or []]
+    theme_rank = list(THEMES)
+    done = sorted((it for it in items.values() if it.state == "closed" and it.scope == rel
+                   and not it.excluded),
+                  key=lambda it: (it.closed_on, theme_rank.index(it.theme), sort_id(it.shown_id)))
+
+    status = {}
+    for it in todo:
+        stop = [w for w in waits if it.id in [str(x) for x in w.get("blocks") or []]]
+        slow = [w for w in waits if it.id in [str(x) for x in w.get("slows") or []]]
+        worked = f"{ore(it.hours, 'lavorat')}" if it.hours else ""
+        if stop:
+            s = "Bloccata: " + "; ".join(str(w["missing"]) for w in stop)
+        elif slow:
+            s = "Rallentata: " + "; ".join(str(w["missing"]) for w in slow)
+        elif it.hours:
+            s = f"In corso: {worked}"
+        else:
+            s = "Da iniziare"
+        if (stop or slow) and it.hours:
+            s += f"; {worked}"
+        status[it.id] = s
+    for it in done:
+        word = "Risolto" if it.kind == "KI" else "Chiusa"
+        s = f"{word} il {dm(it.closed_on)}"
+        if it.kind == "OD" and it.closer:
+            s += f", chiude {it.id}"
+        status[it.shown_id] = s
+
+    prev_voci = (ctx.prev.frozen.get("voci") or {}) if ctx.prev else {}
+    history = chain(ctx.snaps, ctx.prev)
+
+    def out_since(it: Item) -> date | None:
+        if (prev_voci.get(it.id) or {}).get("scope") not in (None, OUT):
+            return when
+        later = None
+        for s in history:                      # newest first
+            v = (s.frozen.get("voci") or {}).get(it.id) or {}
+            if v.get("scope") == OUT:
+                later = s.date
+            elif v.get("scope") is not None:
+                return later
+        return None
+
+    for it in out:
+        since = out_since(it)
+        status[it.id] = ("Fuori perimetro" + (f" dal {dm(since)}" if since else "")
+                         + f": {it.out_reason}")
+
+    plan = dated(state.get("plan"))
+    nxt = next_working(when)
+    entries = [(d, e) for d in (when, nxt) for e in plan.get(d) or []]
+    plan_rows = []
+    for k, (d, e) in enumerate(entries):
+        it = items[str(e["item"])]
+        h = num(e["hours"])
+        earlier = any(str(x["item"]) == it.id for _, x in entries[:k])
+        closing_later = next((dd for dd, x in entries[k + 1:]
+                              if str(x["item"]) == it.id and x.get("closes")), None)
+        if e.get("closes"):
+            phrase = "chiusura"
+        else:
+            phrase = "prosegue" if (it.hours or earlier) else "inizio"
+            if closing_later:
+                phrase += f", chiusura prevista il {dm(closing_later)}"
+            elif phrase == "inizio":
+                phrase += ", prosegue nei giorni successivi"
+        plan_rows.append({"item": it, "status": f"In programma il {dm(d)}, {ore(h)}: {phrase}"})
+
+    prev_date = ctx.prev.date
+    pf = ctx.prev.frozen
+    if pf.get("baseline"):
+        prev_label = "linea di base"
+    else:
+        p = pf.get("period") or {}
+        prev_label = period_label(as_date(p.get("from")), as_date(p.get("to")))
+
+    def by_theme(ids_states) -> dict:
+        out_ = {t: 0 for t in THEMES}
+        for t in ids_states:
+            if t in out_:
+                out_[t] += 1
+        return out_
+
+    pp = chain(ctx.snaps, ctx.prev)[1:2]
+    pp_voci = (pp[0].frozen.get("voci") or {}) if pp else {}
+    p_rel = str((pf.get("release") or {}).get("name"))
+    prev_closed = by_theme(frozen_theme(v) for i, v in prev_voci.items()
+                           if v.get("state") == "closed" and str(v.get("scope")) == p_rel
+                           and not v.get("excluded") and not pf.get("baseline")
+                           and (pp_voci.get(i) or {}).get("state") != "closed")
+    this_closed = by_theme(it.theme for it in done
+                           if (prev_voci.get(it.id) or {}).get("state") != "closed")
+    prev_open = by_theme(frozen_theme(v) for v in prev_voci.values()
+                         if v.get("state") == "open" and str(v.get("scope")) == p_rel
+                         and not v.get("excluded") and not v.get("split"))
+
+    frozen_table = {}
+    if pf.get("format") == FORMAT:
+        for r in pf.get("table") or []:
+            frozen_table[as_date(r[0])] = [as_date(r[0])] + [num(x) for x in r[1:]]
+    table = []
+    d = start
+    while d < when:
+        table.append(frozen_table.get(d) or day_row(d, ctx.days.get(d) or {}, items, ctx.alias))
+        d += timedelta(days=1)
+
+    milestones = sorted(((str(m["name"]), as_date(m["date"]))
+                         for m in state.get("milestones") or []), key=lambda x: (x[1], x[0]))
+
+    changes = []
+    for it in items.values():
+        before = prev_voci.get(it.id)
+        if before is None:
+            changes.append(f"nuova: {it.id}")
+            continue
+        if it.state == "closed" and before.get("state") != "closed" and it.scope == rel:
+            changes.append(f"chiusa: {it.shown_id}")
+        if split_parent(it) and not before.get("split"):
+            changes.append(f"spezzata: {it.id} in {', '.join(it.children)}")
+        if it.state == "open" and before.get("state") == "open" and it.size and \
+                before.get("size") and it.size != before.get("size"):
+            changes.append(f"ristimata: {it.id} da {before['size']} a {it.size}")
+        if it.state == "open" and it.scope == OUT and before.get("scope") not in (None, OUT):
+            changes.append(f"uscita dal perimetro: {it.id}")
+        if it.state == "open" and it.scope == rel and before.get("scope") == OUT:
+            changes.append(f"entrata nel perimetro: {it.id}")
+    this_label = period_label(prev_date, when - timedelta(days=1))
+    return Model(ctx.name, when, prev_date, delivery, start, nxt, rel, prev_label, this_label,
+                 plan_rows,
+                 todo, done, out, status, waits, prev_closed, this_closed, prev_open, table,
+                 milestones, sorted(changes))
+
+
+def figures(m: Model) -> dict:
+    """Every number the workbook shows, computed here and written beside its formula."""
+    F: dict = {}
+    when, start = m.when, m.start
+    y = when - timedelta(days=1)
+    windows = [("Ultimi 3 giorni lavorativi", workday(when, -3), y),
+               ("Ultimi 7 giorni", when - timedelta(days=7), y),
+               ("Ultimi 30 giorni", when - timedelta(days=30), y),
+               ("Dall'inizio del progetto", start, y)]
+    F["windows"] = []
+    for label, a, b in windows:
+        sel = [r for r in m.table if a <= r[0] <= b]
+        cols = [sum((r[i] for r in sel), Fraction(0)) for i in range(1, 10)]
+        arch, svil, dep, out_ = cols[:4]
+        outside = sum(cols[4:], Fraction(0))
+        tot = arch + svil + dep + out_ + outside
+        nd = networkdays(max(a, start), b)
+        avg = (arch + svil + dep) / nd if nd > 0 else Fraction(0)
+        F["windows"].append({"label": label, "from": a, "to": b, "tot": tot, "arch": arch,
+                             "svil": svil, "dep": dep, "out": out_, "outside": outside,
+                             "avg": avg, "cats": cols[4:]})
+    for wd in F["windows"]:
+        t = wd["tot"]
+        wd["pct"] = [x / t if t else Fraction(0)
+                     for x in (wd["arch"], wd["svil"], wd["dep"], wd["out"], wd["outside"])]
+    w3, w7, _, w0 = F["windows"]
+
+    nd3 = networkdays(w3["from"], w3["to"])
+    D = excel_round(w3["tot"] / nd3, 1) if nd3 else Fraction(0)
+    E = excel_round(w3["out"] / nd3, 1) if nd3 else Fraction(0)
+    Fo = excel_round(w3["outside"] / nd3, 1) if nd3 else Fraction(0)
+    G = excel_round(D - E - Fo, 1)
+    cmin = sum((it.rng()[0] for it in m.todo), Fraction(0))
+    cmax = sum((it.rng()[1] for it in m.todo), Fraction(0))
+    cases = []
+    for C in (cmin, cmax):
+        if G <= 0:
+            H = I = J = "non stimabile"
+        else:
+            H = math.ceil(excel_round(C / G, 9))
+            I = workday(when - timedelta(days=1), max(1, H))
+            J = networkdays(m.delivery + timedelta(days=1), I) if I > m.delivery else 0
+        cases.append({"B": len(m.todo), "C": C, "D": D, "E": E, "F": Fo, "G": G,
+                      "H": H, "I": I, "J": J})
+    F["cases"] = cases
+    best, worst = cases
+    estimable = isinstance(best["I"], date) and isinstance(worst["I"], date)
+    F["B4"] = dmy(m.delivery)
+    F["B5"] = (f"tra il {dm(best['I'])} e il {dm(worst['I'])}" if estimable
+               else "non stimabile")
+    if not isinstance(worst["J"], int):
+        F["B6"] = "non stimabile"
+    elif worst["J"] == 0:
+        F["B6"] = "nessuno"
+    else:
+        F["B6"] = f"da {best['J']} a {worst['J']} giorni lavorativi"
+    statuses = [wait_status(w, when) for w in m.waits]
+    late = sum(1 for s in statuses if s.startswith("SCADUTA") or s == "Scade oggi")
+    F["wait_status"] = statuses
+    F["B7"] = ("non dipende da richieste ad altri." if not m.waits else
+               f"arrivano in tempo le {len(m.waits)} cose richieste ad altri (punto 3). Oggi "
+               f"{late} sono scadute o scadono oggi.")
+    r0 = [excel_round(x, 0) for x in (w0["arch"], w0["svil"], w0["dep"], w0["out"],
+                                      w0["outside"])]
+    pct0 = excel_round(w0["pct"][4] * 100, 0)
+    F["B8"] = (f"Dall'inizio del progetto {hours(sum(r0, Fraction(0)))} ore lavorate: "
+               f"{hours(r0[0])} architettura, {hours(r0[1])} sviluppo, {hours(r0[2])} deploy, "
+               f"{hours(r0[3])} fuori perimetro, {hours(r0[4])} fuori dal prodotto "
+               f"({hours(pct0)}%: riunioni, reportistica, supporto, formazione).")
+
+    F["themes"] = {}
+    for t in THEMES:
+        lst = [it for it in m.todo if it.theme == t]
+        lo = sum((it.rng()[0] for it in lst), Fraction(0))
+        hi = sum((it.rng()[1] for it in lst), Fraction(0))
+        F["themes"][t] = {"done": sum(1 for it in m.done if it.theme == t),
+                          "prev_closed": m.prev_closed[t], "this_closed": m.this_closed[t],
+                          "todo": len(lst), "delta": len(lst) - m.prev_open[t],
+                          "est": f"tra {hours(lo)} e {hours(hi)} ore", "min": lo}
+    F["est_total"] = f"tra {hours(cmin)} e {hours(cmax)} ore"
+
+    nd_deliv = max(1, networkdays(when, m.delivery))
+    nd7 = networkdays(w7["from"], w7["to"])
+    rate7 = w7["tot"] / nd7 if nd7 else Fraction(0)
+    if cmin == 0 or rate7 == 0:
+        share = Fraction(0)
+    else:
+        share = min(Fraction(1), (cmin / nd_deliv) / rate7)
+    optimal = [share * F["themes"][t]["min"] / cmin if cmin and rate7 else Fraction(0)
+               for t in THEMES]
+    o7, x7 = w7["pct"][3], w7["pct"][4]
+    rest = Fraction(1) - (min(Fraction(1), (cmin / nd_deliv) / rate7) if rate7 else 0)
+    optimal += [rest * o7 / (o7 + x7) if (o7 + x7) else Fraction(0),
+                rest * x7 / (o7 + x7) if (o7 + x7) else Fraction(0)]
+    F["now_share"] = list(w7["pct"])
+    F["optimal"] = optimal
+    F["share_release"] = share
+
+    # The Gantt: what is done where it happened, what is left in a row at the estimate's pace.
+    gantt = []
+    for it in m.done:
+        gantt.append({"kind": "done", "item": it, "start": it.first_day or it.closed_on,
+                      "end": it.closed_on, "worst": None})
+    cum_lo = cum_hi = Fraction(0)
+    for it in m.todo:
+        lo, hi = it.rng()
+        if G > 0:
+            s_idx = math.floor(excel_round(cum_lo / G, 9)) + 1
+            sched = workday(when - timedelta(days=1), s_idx)
+            end = workday(when - timedelta(days=1), math.ceil(excel_round((cum_lo + lo) / G, 9)))
+            worst_end = workday(when - timedelta(days=1),
+                                math.ceil(excel_round((cum_hi + hi) / G, 9)))
+        else:
+            sched = end = worst_end = None
+        started = it.first_day if it.first_day and it.first_day < when else None
+        gantt.append({"kind": "todo", "item": it, "start": started or sched, "end": end,
+                      "worst": worst_end, "fixed_start": started is not None})
+        cum_lo += lo
+        cum_hi += hi
+    for name, d in m.milestones:
+        gantt.append({"kind": "milestone", "name": name, "date": d})
+    gantt.append({"kind": "delivery", "name": "Consegna concordata", "date": m.delivery})
+    ends = [g["worst"] or g["end"] for g in gantt if g["kind"] == "todo" and g["end"]]
+    ends += [g["date"] for g in gantt if g["kind"] in ("milestone", "delivery")]
+    ends += [g["end"] for g in gantt if g["kind"] == "done"]
+    first = workday(start - timedelta(days=1), 1)
+    last = max(ends + [when])
+    cols = []
+    d = first
+    while d <= last:
+        cols.append(d)
+        d = workday(d, 1)
+    F["gantt"] = gantt
+    F["gantt_days"] = cols
+    return F
+
+
+def summary(m: Model, F: dict) -> str:
+    """What the skill shows in the conversation: the first block of the summary sheet."""
+    lines = [f"{m.name.upper()} · stato del rilascio al {dmy(m.when)}",
+             f"Consegna concordata: {F['B4']}",
+             f"Consegna prevista oggi: {F['B5']}",
+             f"Ritardo: {F['B6']}",
+             f"La previsione vale solo se {F['B7']}",
+             f"Dove va il tempo: {F['B8']}"]
+    if m.changes:
+        lines.append("Cambiato dall'aggiornamento precedente:")
+        lines += [f"- {c}" for c in m.changes]
+    return "\n".join(lines) + "\n"
+
+
+def load_workbook_module():
+    name = "_framework_digest_workbook"
+    if name in sys.modules:
+        return sys.modules[name]
+    spec = importlib.util.spec_from_file_location(name, WORKBOOK)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[name] = mod
+    spec.loader.exec_module(mod)
+    return mod
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1525,50 +1415,41 @@ def store_status(root: Path) -> dict:
     return out
 
 
-def write_snapshot(ctx: Context, text: str, n: Numbers) -> tuple[Snap, str]:
-    store = ctx.root / STORE
-    number = max((s.number for s in ctx.snaps), default=0) + 1
-    name = f"DIG-{number:03d}-{ctx.product}-{ctx.when.isoformat()}"
-    path = store / name
-    path.mkdir(parents=True)
+def freeze(ctx: Context, m: Model | None, path: Path, number: int) -> None:
+    items = ctx.items
+    rel = str(ctx.state["release"]["name"])
     frozen = {
+        "format": FORMAT,
         "digest": f"DIG-{number:03d}",
         "product": ctx.product,
         "date": ctx.when.isoformat(),
         "at": (ctx.now or datetime.now().astimezone()).isoformat(timespec="seconds"),
         "baseline": ctx.baseline,
         "previous": ({"dir": ctx.prev.name, "sha256": ctx.prev.digest()} if ctx.prev else None),
-        "release": {"name": n.rel,
-                    "delivery": as_date(ctx.state["release"]["delivery"]).isoformat()},
-        "remaining": [plain(n.rem[0]), plain(n.rem[1])],
-        "voci": {i: {"kind": it.kind, "state": it.state, "scope": it.scope,
-                     "theme": it.theme, "size": it.size, "excluded": it.excluded,
-                     "split": split_parent(it), "closer": it.closer,
-                     "children": it.children, "hours": plain(it.hours)}
-                 for i, it in sorted(ctx.items.items(), key=lambda x: sort_id(x[0]))},
+        "release": {"name": rel,
+                    "delivery": as_date(ctx.state["release"]["delivery"]).isoformat(),
+                    "start": as_date(ctx.state["release"]["start"]).isoformat()},
+        "period": (None if ctx.baseline else
+                   {"from": ctx.prev.date.isoformat(),
+                    "to": (ctx.when - timedelta(days=1)).isoformat()}),
+        "voci": {i: {"kind": it.kind, "state": it.state, "scope": it.scope, "theme": it.theme,
+                     "size": it.size, "excluded": it.excluded, "split": split_parent(it),
+                     "closer": it.closer, "children": it.children, "hours": plain(it.hours),
+                     "closed_on": it.closed_on.isoformat() if it.closed_on else None}
+                 for i, it in sorted(items.items(), key=lambda x: sort_id(x[0]))},
+        "days": {d.isoformat(): canonical_day(e)
+                 for d, e in sorted(ctx.days.items()) if d < ctx.when},
     }
-    if n.period:
-        p = n.period
-        frozen["period"] = {
-            "from": p["from"].isoformat(), "to": p["to"].isoformat(),
-            "working_days": p["working_days"],
-            "perimeter_hours": plain(p["perimeter_hours"]),
-            "outside_hours": plain(p["outside_hours"]),
-            "other_hours": plain(p["other_hours"]),
-            "hours": {k: plain(x) for k, x in p["hours"].items()},
-            "outside": {k: plain(x) for k, x in p["outside"].items()},
-        }
-        frozen["rate"] = {k: (plain(x) if isinstance(x, Fraction) else x)
-                          for k, x in n.window.items()}
-    frozen["additions"] = ctx.additions
-    frozen["provisional"] = ctx.provisional
+    table = m.table if m else [
+        day_row(d, ctx.days.get(d) or {}, items, ctx.alias)
+        for d in (as_date(ctx.state["release"]["start"]) + timedelta(days=k)
+                  for k in range((ctx.when - as_date(ctx.state["release"]["start"])).days))]
+    frozen["table"] = [[r[0].isoformat()] + [plain(x) for x in r[1:]] for r in table]
     frozen["sources_disagree"] = ctx.notes
     (path / "frozen.yaml").write_text(
         "# Written by skills/digest/scripts/digest.py. Never edited: the next digest checks "
         "its hash.\n" + yaml.safe_dump(frozen, allow_unicode=True, sort_keys=False),
         encoding="utf-8")
-    (path / f"{name}.txt").write_text(text, encoding="utf-8")
-    return Snap(number, ctx.product, ctx.when, path), name
 
 
 def commit_and_push(root: Path, message: str) -> tuple[bool, str]:
@@ -1625,6 +1506,10 @@ def init_store(root: Path, url: str) -> int:
 # ─────────────────────────────────────────────────────────────────────────────
 # The inventory: what the skill asks about
 
+HUNK = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
+FILE = re.compile(r"^diff --git a/(.+?) b/(.+)$")
+
+
 def ids_regex() -> re.Pattern:
     registry = yaml.safe_load((FRAMEWORK / "schemas" / "artifact-types.yaml")
                               .read_text(encoding="utf-8"))
@@ -1676,10 +1561,6 @@ def repositories(ctx: Context) -> list[dict]:
                     continue
                 add(f"platform.{key}", (root / str(c["path"])).resolve(), None)
     return out
-
-
-HUNK = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
-FILE = re.compile(r"^diff --git a/(.+?) b/(.+)$")
 
 
 def generated_lines(repo: Path, rev: str, path: str) -> set[int]:
@@ -1737,7 +1618,7 @@ def changed_text(repo: Path, sha: str, diff: str, skip: set[str]) -> str:
 
 
 def worked(ctx: Context, since: str) -> tuple[dict, list, list]:
-    """Which items the commits since the last digest name: a proposal, never a measurement.
+    """Which items the commits since the last digest name, day by day: a proposal only.
 
     In the documents, the identifiers on the lines a commit changed; in the code, the ones its
     message cites. P-07 binds a change to the text of a pull request, not to a commit, so
@@ -1748,52 +1629,61 @@ def worked(ctx: Context, since: str) -> tuple[dict, list, list]:
                               .read_text(encoding="utf-8"))
     skip = set(registry["scan"]["skip_files"])
     mine = set(ctx.voci) | set(ctx.alias)
-    found: dict[str, list] = {}
+    found: dict[str, dict[str, list]] = {}
     loose, repos = [], repositories(ctx)
     for repo in repos:
         if not repo.get("read"):
             continue
         docs = repo["pathspec"] is not None
-        cmd = ["log", "--all", f"--since={since}", "--format=%x1e%h%x1f%s%x1f%b%x1f"]
+        cmd = ["log", "--all", f"--since={since}", "--format=%x1e%h%x1f%as%x1f%s%x1f%b%x1f"]
         if docs:
             cmd += ["-p", "-U0", "--no-ext-diff", "--no-color", "--", repo["pathspec"]]
         where = Path(repo["path"])
         r = git(*cmd, cwd=where)
         for record in r.stdout.split("\x1e")[1:]:
             parts = record.split("\x1f")
-            sha, subject, body = parts[0], parts[1], parts[2]
+            sha, day, subject, body = parts[0], parts[1], parts[2], parts[3]
             text = subject + "\n" + body
-            if docs and len(parts) > 3:
-                text += "\n" + changed_text(where, sha, parts[3], skip)
+            if docs and len(parts) > 4:
+                text += "\n" + changed_text(where, sha, parts[4], skip)
             hits = {ctx.alias.get(i, i) for i in rx.findall(text) if i in mine}
             for i in hits:
-                found.setdefault(i, []).append(f"{repo['name']} {sha} {subject}")
+                found.setdefault(day, {}).setdefault(i, []).append(
+                    f"{repo['name']} {sha} {subject}")
             if not hits and not docs:
-                loose.append(f"{repo['name']} {sha} {subject}")
+                loose.append(f"{repo['name']} {day} {sha} {subject}")
     return found, loose, repos
 
 
 def inventory(ctx: Context) -> dict:
-    rows = (ctx.state or {}).get("items") or {}
+    state = ctx.state or {}
+    rows = state.get("items") or {}
     prev_v = (ctx.prev.frozen.get("voci") or {}) if ctx.prev else {}
     out = {"product": ctx.product, "date": ctx.when.isoformat(),
+           "state_format": state.get("format"),
            "previous": ({"digest": ctx.prev.name, "date": ctx.prev.date.isoformat()}
                         if ctx.prev else None)}
+    days = dated(state.get("days"))
     if ctx.prev:
-        end = ctx.when - timedelta(days=1)
-        out["period"] = {"from": ctx.prev.date.isoformat(), "to": end.isoformat(),
-                         "working_days": working_days(ctx.prev.date, end)}
+        lo, d, need = ctx.prev.date, ctx.prev.date, []
+        while d < ctx.when:
+            if d not in days and working_day(d):
+                need.append(d.isoformat())
+            d += timedelta(days=1)
+        out["period"] = {"from": lo.isoformat(),
+                         "to": (ctx.when - timedelta(days=1)).isoformat(),
+                         "working_days_without_hours": need}
     out["unclassified"] = [{"id": i, "kind": vo.kind, "status": vo.status, "title": vo.title,
                             "file": vo.file}
                            for i, vo in sorted(ctx.voci.items(), key=lambda x: sort_id(x[0]))
                            if i not in rows]
     out["changed"] = [{"id": i, "confirmed_as": rows[i].get("seen"), "now": vo.title}
                       for i, vo in ctx.voci.items()
-                      if i in rows and vo.title and vo.state == "open"
+                      if isinstance(rows.get(i), dict) and vo.title and vo.state == "open"
                       and (rows[i].get("seen") or "").strip() != vo.title.strip()]
-    out["closed_since"] = sorted((i for i, vo in ctx.voci.items() if vo.state == "closed"
-                                  and (prev_v.get(i) or {}).get("state") not in (None, "closed")),
-                                 key=sort_id)
+    closed = sorted((i for i, vo in ctx.voci.items() if vo.state == "closed"
+                     and (prev_v.get(i) or {}).get("state") not in (None, "closed")),
+                    key=sort_id)
     out["new_since"] = sorted((i for i in ctx.voci if ctx.prev and i not in prev_v), key=sort_id)
     out["vanished"] = sorted((i for i in rows if i not in ctx.voci and i not in ctx.alias
                               and (prev_v.get(i) or {}).get("state") not in
@@ -1803,20 +1693,138 @@ def inventory(ctx: Context) -> dict:
                        and (prev_v.get(i) or {}).get("state") != "replaced"}
     out["aliases"] = {a: od for a, od in sorted(ctx.alias.items())}
     out["sources_disagree"] = ctx.notes
+    proposed_close = {}
     if ctx.prev:
         since = ctx.prev.frozen.get("at") or ctx.prev.date.isoformat()
         found, loose, repos = worked(ctx, str(since))
-        out["worked"] = {i: ev for i, ev in sorted(found.items(), key=lambda x: sort_id(x[0]))}
+        out["worked_by_day"] = {
+            d: {i: ev for i, ev in sorted(x.items(), key=lambda y: sort_id(y[0]))}
+            for d, x in sorted(found.items())}
         out["commits_without_an_item"] = loose
         out["repositories"] = repos
-    waits = [w for w in ((ctx.state or {}).get("waits") or []) if isinstance(w, dict)
+        for d, x in sorted(found.items()):
+            for i in x:
+                proposed_close[i] = d
+    out["closed_since"] = [{"id": i, "proposed_closed_on": proposed_close.get(i)}
+                           for i in closed]
+    waits = [w for w in (state.get("waits") or []) if isinstance(w, dict)
              and not w.get("resolved")]
     out["waits_open"] = [{"what": w.get("what"), "owner": w.get("owner"),
-                          "days": (ctx.when - as_date(w["asked"])).days
-                          if as_date(w.get("asked")) else None,
-                          "needed_by": str(w.get("needed_by"))} for w in waits]
+                          "status": wait_status(w, ctx.when)
+                          if as_date(w.get("needed_by")) else None} for w in waits]
+    out["milestones_declared"] = state.get("milestones") is not None
     out["store"] = store_status(ctx.root)
     return out
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# From the state file of 4.1.0
+
+CATEGORY_HINTS = [("riunion", "riunioni"), ("formazion", "formazione"), ("junior", "formazione"),
+                  ("sollecit", "solleciti"), ("access", "solleciti"),
+                  ("report", "reportistica"), ("presentazion", "reportistica"),
+                  ("support", "supporto"), ("demo", "supporto"), ("produzion", "supporto")]
+
+
+def category_of(name: str) -> str | None:
+    low = name.lower()
+    return next((c for hint, c in CATEGORY_HINTS if hint in low), None)
+
+
+def migrate(root: Path, product: str | None) -> int:
+    """Rewrite a 4.1.0 state file as format 2: what is mechanical, converted; the rest, listed.
+
+    Every conversion here is deterministic, and every one that is not is left for the person:
+    a period of several days cannot be split into days by a script, a plan has no hours, a
+    closing date and a reason for being outside the perimeter were never asked. The check
+    refuses until they are declared, and lists them.
+    """
+    root = root.resolve()
+    store = root / STORE
+    if product is None:
+        found = sorted(p.name[len("state-"):-len(".yaml")] for p in store.glob("state-*.yaml"))
+        if len(found) != 1:
+            print(f"say which product with --product: {', '.join(found) or 'none'}",
+                  file=sys.stderr)
+            return 2
+        product = found[0]
+    path = store / f"state-{product}.yaml"
+    data, err = read_state(store, product)
+    if err:
+        print(err, file=sys.stderr)
+        return 2
+    if data.get("format") == FORMAT:
+        print(f"{path.name} is already format {FORMAT}")
+        return 0
+    report = []
+    new: dict = {"format": FORMAT, "product": data.get("product") or product}
+    release = dict(data.get("release") or {})
+    release.setdefault("start", None)
+    new["release"] = release
+    if release.get("start") is None:
+        report.append("release.start: the first day of the project, to declare")
+    items = {}
+    for i, row in (data.get("items") or {}).items():
+        row = dict(row or {})
+        if row.get("theme") in OLD_THEMES:
+            report.append(f"{i}: theme {row['theme']} is now {OLD_THEMES[row['theme']]}")
+            row["theme"] = OLD_THEMES[row["theme"]]
+        items[i] = row
+    new["items"] = items
+    ends = {}
+    for s in snapshots(store):
+        p = s.frozen.get("period") if s.product == product else None
+        if p:
+            ends[as_date(p["from"])] = as_date(p["to"])
+    days, mapped = {}, {}
+    for k, block in (data.get("periods") or {}).items():
+        d = as_date(k)
+        if d is None or not isinstance(block, dict):
+            continue
+        end = ends.get(d)
+        outside = {}
+        for name, h in (block.get("outside") or {}).items():
+            c = category_of(str(name)) or str(name)
+            mapped[str(name)] = c
+            outside[c] = outside.get(c, 0) + h
+        entry = {"hours": dict(block.get("hours") or {}), "outside": outside}
+        if end == d:
+            days[d] = entry
+        else:
+            report.append(f"the period from {d} to {end or 'the day before the next digest'} "
+                          "covers several days: split its hours by day under `days`")
+            days[d] = entry
+    for name, c in sorted(mapped.items()):
+        report.append(f"outside the register: {name!r} counted as {c!r}"
+                      + ("" if c in CATEGORIES else ", which is not a category: choose one"))
+    new["days"] = {d.isoformat(): e for d, e in sorted(days.items())}
+    waits = []
+    for w in data.get("waits") or []:
+        w = dict(w or {})
+        if w.pop("note", None):
+            report.append(f"wait {w.get('what')!r}: its note has no place in the workbook")
+        waits.append(w)
+    new["waits"] = waits
+    for i, r in (data.get("requests") or {}).items():
+        report.append(f"requests: the decision on {i} asked of {r.get('to')} by {r.get('by')} "
+                      "has no section in the workbook; if it is still pending, declare it as a "
+                      "wait")
+    if data.get("standard_hours") is not None:
+        report.append("standard_hours: no longer used, the estimate subtracts the real averages")
+    report.append("order.todo and order.out: the rows of the two lists, to declare")
+    report.append("plan: the next two working days, with the hours and whether each closes")
+    report.append("milestones: to declare, `[]` if there are none")
+    report.append("days: every day from release.start to the day before the first digest, "
+                  "rebuilt in bulk by theme and category, adding up theme by theme to the "
+                  "hours_before of the items")
+    report.append("then --check lists what each item still needs: size, closed_on, out_reason")
+    path.write_text(
+        "# Stato del digest: ciò che la persona ha dichiarato, scritto dalla skill `digest`.\n"
+        + yaml.safe_dump(new, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    print(f"{path.name} rewritten in format {FORMAT}.")
+    for line in report:
+        print(f"- {line}")
+    return 0
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1828,17 +1836,22 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--date", help="the digest's date, YYYY-MM-DD; default today")
     ap.add_argument("--now", help="the instant recorded in the snapshot, ISO 8601; default "
                                   "now. For fixtures, whose history is dated")
+    ap.add_argument("--copy-to", type=Path, help="also copy the workbook into this directory")
     mode = ap.add_mutually_exclusive_group()
-    mode.add_argument("--check", action="store_true", help="list every reason not to print")
+    mode.add_argument("--check", action="store_true", help="list every reason not to write")
     mode.add_argument("--inventory", action="store_true",
-                      help="what the skill asks about: new, changed, closed, worked")
+                      help="what the skill asks about: new, changed, closed, worked, by day")
     mode.add_argument("--baseline", action="store_true",
-                      help="the first run: freeze the state, print nothing to send")
+                      help="the first run: freeze the state, write nothing to send")
+    mode.add_argument("--migrate", action="store_true",
+                      help="rewrite a state file of 4.1.0 in the current format")
     mode.add_argument("--init-store", metavar="URL",
                       help="clone the private repository into _meta/digest")
     a = ap.parse_args(argv)
     if a.init_store:
         return init_store(a.root, a.init_store)
+    if a.migrate:
+        return migrate(a.root, a.product)
     try:
         when = date.fromisoformat(a.date) if a.date else date.today()
     except ValueError:
@@ -1853,11 +1866,8 @@ def main(argv: list[str] | None = None) -> int:
         problems = check(ctx)
         if problems:
             raise Refusal(problems)
-        if a.baseline:
-            text, n = render_baseline(ctx)
-        else:
-            n = compute(ctx)
-            text = render(ctx, n)
+        m = None if a.baseline else build_model(ctx)
+        F = None if a.baseline else figures(m)
     except Refusal as r:
         for p in r.problems:
             print(p)
@@ -1877,23 +1887,38 @@ def main(argv: list[str] | None = None) -> int:
         for p in setup:
             print(p)
         return 1
-    snap, name = write_snapshot(ctx, text, n)
-    pushed, how = commit_and_push(ctx.root, f"{name}")
+    number = max((s.number for s in ctx.snaps), default=0) + 1
+    name = f"DIG-{number:03d}-{ctx.product}-{ctx.when.isoformat()}"
+    path = ctx.root / STORE / name
+    path.mkdir(parents=True)
+    if a.baseline:
+        # Nothing to send: the baseline is what the first workbook compares itself with.
+        rel = str(ctx.state["release"]["name"])
+        rest = [it for it in ctx.items.values() if it.state == "open" and it.scope == rel
+                and not it.excluded and not split_parent(it)]
+        lo = sum((it.rng()[0] for it in rest), Fraction(0))
+        hi = sum((it.rng()[1] for it in rest), Fraction(0))
+        text = (f"{ctx.name.upper()}, linea di base del {dmy(ctx.when)}\n"
+                "Non si invia: il primo aggiornamento è quello del prossimo giorno lavorativo.\n"
+                f"Voci da fare nel perimetro: {len(rest)}, tra {hours(lo)} e {hours(hi)} ore\n")
+        freeze(ctx, None, path, number)
+        out_file = None
+    else:
+        text = summary(m, F)
+        out_file = path / f"{name}.xlsx"
+        load_workbook_module().write(m, F, out_file, ctx.now or datetime.now().astimezone())
+        freeze(ctx, m, path, number)
+    pushed, how = commit_and_push(ctx.root, name)
     print(text, end="")
-    print("\n----- fuori dal digest -----")
-    if ctx.additions:
-        print("Righe che il formato non ha, da aggiungere a mano se servono:")
-        for x in ctx.additions:
-            print(f"[{x['where']}]\n{text_of(x['text'].splitlines())}", end="")
-    if ctx.provisional:
-        print("Forme che l'esempio non mostra, usate in questo digest:")
-        for x in ctx.provisional:
-            print(f"- {x}")
     if ctx.notes:
         print("Fonti in disaccordo:")
         for x in ctx.notes:
             print(f"- {x}")
-    print(f"{snap.path.relative_to(ctx.root)} · {how}")
+    if out_file and a.copy_to:
+        a.copy_to.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(out_file, a.copy_to / out_file.name)
+        print(f"copia: {a.copy_to / out_file.name}")
+    print(f"{path.relative_to(ctx.root)} · {how}")
     return 0 if pushed else 3
 
 

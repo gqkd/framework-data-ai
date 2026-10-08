@@ -3,26 +3,31 @@
 
     python digest.py <dest>          writes <dest>/atlas and <dest>/atlas-asks
 
-`atlas` is the documentation of one product as it stands on the morning of 07/10/2026, with
-its history in git: the register as it was on 05/10, a development release that evening, the
-baseline of the digest written by the digest script itself on 06/10 at 08:30, the work of
-06/10 committed through the day, and the state file filled for the digest of 07/10. Rendering
-that digest must give `tests/fixtures/digest/DIG-002-atlas-2026-10-07.txt` character for
-character, which is what `tests/selfcheck.py` asserts.
+`atlas` is the documentation of one product as it stands on the morning of 09/10/2026, with its
+history in git and the digest's store beside it. The project started on 22/09; the days up to
+05/10 were rebuilt in bulk when the digest was adopted, and the baseline was written by the
+digest script itself on 06/10 at 08:30. On 06/10 a decision closed `OD-114` and two changes
+were verified; the digest of 07/10 was rendered at 08:30, again by the script; on 07/10 a known
+issue was resolved, and on 08/10 `OD-098` was split in two, `OD-116` was decided and with it
+`CHG-021` left the release. The state file is filled for the digest of 09/10, and rendering
+it must give, cell by cell, the reference workbook `tests/fixtures/digest/`, which is what
+`tests/selfcheck.py` asserts.
 
 `atlas-asks` is the same morning before anybody answered: one more known issue in the register
-that the state file does not classify, and neither the hours of 06/10 nor the plan declared.
-It is what the behaviour case runs on, and what the skill has to ask about.
+that the state file does not classify, the two new entries of the split unclassified, and
+neither the hours of 07/10 and 08/10 nor the plan declared. It is what the behaviour case runs
+on, and what the skill has to ask about.
 
-WHY GENERATED AND NOT STATIC. The baseline is the script's own output, so it is produced by
-the script at build time rather than copied in by hand and left behind the first time the
-snapshot format moves; and the worked-on list the skill proposes comes from `git log`, which a
-directory of files does not have. The store `_meta/digest/` is a git repository of its own
-whose remote is a bare repository in `.remote/`, a relative path, so that a copy of the fixture
-pushes into its own copy and never into this one.
+WHY GENERATED AND NOT STATIC. The baseline and the digest of 07/10 are the script's own output,
+so they are produced by the script at build time rather than copied in by hand and left behind
+the first time the snapshot format moves; and the worked-on list the skill proposes comes from
+`git log`, which a directory of files does not have. The store `_meta/digest/` is a git
+repository of its own whose remote is a bare repository in `.remote/`, a relative path, so that
+a copy of the fixture pushes into its own copy and never into this one.
 
 Everything here is synthetic: the product, the people and every number.
 """
+
 
 from __future__ import annotations
 
@@ -32,6 +37,8 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+
+import yaml
 
 HERE = Path(__file__).resolve().parent
 FRAMEWORK = HERE.parents[2]
@@ -170,24 +177,8 @@ The analysts' own queries, on the same questions.
 | metric resolution | share of questions mapped to the metric they ask for | 0.80 | 0.90 | 0.95 | yes |
 """
 
-LOG = fm(schema="framework/signal-log/v1", artifact_type="signal-log",
-         lifecycle="append-only", status="active", products="[atlas]", owners="[lead]",
-         created=REVIEW, classification="internal") + """\
-# Signal log: Atlas
 
-## Signals
 
-| ID | Date | Type | Observed | Impact | Who/Where | Linked |
-|---|---|---|---|---|---|---|
-| SIG-001 | 2026-09-01 | request | three repositories drift apart at every release | slower releases | team | CHG-012 |
-| SIG-002 | 2026-09-01 | request | passwords are stored by the product itself | security review | team | CHG-015 |
-| SIG-003 | 2026-09-01 | request | the session does not say which customer a user belongs to | data exposure | team | CHG-017 |
-| SIG-004 | 2026-09-01 | request | all customers share one datastore | data exposure | team | CHG-018 |
-| SIG-005 | 2026-09-01 | request | every deployment is done by hand | errors at release | team | CHG-019 |
-| SIG-006 | 2026-09-01 | feedback | answers during a data load are incomplete | wrong numbers | pilot customer | CHG-021 |
-| SIG-007 | 2026-09-01 | request | builds are started by hand | errors at release | team | CHG-022 |
-| SIG-008 | 2026-09-01 | request | nothing is tested in a production-like environment | errors in production | team | CHG-024 |
-"""
 
 ICG = fm(schema="framework/impact-classification/v1", artifact_type="impact-classification",
          lifecycle="immutable", status="accepted", id="ICG-001", products="[atlas]",
@@ -313,56 +304,174 @@ A question is mapped to a metric of the glossary by a fixed rule, applied before
 A question no metric covers gets no number, which is what OD-109 is about.
 """
 
-OPEN_ROWS_BASE = """
+
+
+def signal_log(resolved: bool) -> str:
+    """The log; on 07/10 it records what resolved KI-013, which the register then names."""
+    row = ("| SIG-009 | 2026-10-07 | observation | long questions answer again after the "
+           "platform's time limit was raised | none | infrastructure team | KI-013 |\n"
+           if resolved else "")
+    return fm(schema="framework/signal-log/v1", artifact_type="signal-log",
+              lifecycle="append-only", status="active", products="[atlas]", owners="[lead]",
+              created=REVIEW, classification="internal") + """\
+# Signal log: Atlas
+
+## Signals
+
+| ID | Date | Type | Observed | Impact | Who/Where | Linked |
+|---|---|---|---|---|---|---|
+| SIG-001 | 2026-09-01 | request | three repositories drift apart at every release | slower releases | team | CHG-012 |
+| SIG-002 | 2026-09-01 | request | passwords are stored by the product itself | security review | team | CHG-015 |
+| SIG-003 | 2026-09-01 | request | the session does not say which customer a user belongs to | data exposure | team | CHG-017 |
+| SIG-004 | 2026-09-01 | request | all customers share one datastore | data exposure | team | CHG-018 |
+| SIG-005 | 2026-09-01 | request | every deployment is done by hand | errors at release | team | CHG-019 |
+| SIG-006 | 2026-09-01 | feedback | answers during a data load are incomplete | wrong numbers | pilot customer | CHG-021 |
+| SIG-007 | 2026-09-01 | request | builds are started by hand | errors at release | team | CHG-022 |
+| SIG-008 | 2026-09-01 | request | nothing is tested in a production-like environment | errors in production | team | CHG-024 |
+""" + row
+
+
+ICG_2 = fm(schema="framework/impact-classification/v1", artifact_type="impact-classification",
+           lifecycle="immutable", status="accepted", id="ICG-002", products="[atlas]",
+           owners="[lead]", created="2026-10-07 16:00", routing="\n  SIG-009: none",
+           classification="internal") + """\
+# ICG-002 · Triage of cycle 2
+
+<!-- section: intake -->
+## Intake
+
+One signal: long questions answer again since the platform's time limit was raised.
+
+<!-- section: classification -->
+## Classification
+
+It changes nothing in the product: it records why a known issue is resolved.
+
+<!-- section: open-questions -->
+## Open questions
+
+None.
+"""
+
+
+DEC_036 = fm(schema="framework/decision-record/v1", artifact_type="decision-record",
+             lifecycle="immutable", status="accepted", id="DEC-036", scope="product",
+             products="[atlas]", owners="[lead]", approvers="[lead]",
+             created="2026-10-08 12:00", derives_from="[OD-116]", supersedes="null",
+             classification="internal", leaves_open="[]") + """\
+# DEC-036 · The loading notice moves to the next release
+
+## Context
+
+The question whether the loading notice ships with release 1.0 had no answer by the day it
+was needed, and the release has no room for it.
+
+## Decision
+
+The loading notice ships with the release after 1.0. Until then an answer given during a
+data load says that the data are being loaded.
+
+## Alternatives considered
+
+| Alternative | Why discarded |
+|---|---|
+| Keep it in release 1.0 | it does not fit before the agreed delivery |
+
+## Consequences
+
+`CHG-021` leaves release 1.0 and stays approved for the next one.
+"""
+
+# The register's entries, as rows of its front matter and as headings of its body, by stage:
+# "06" is 05/10 and the morning of 06/10, "07" is after the work of 06/10, "09" after the work
+# of 07/10 and 08/10.
+ROWS = {
+    "OD-076": """
   OD-076:
     status: open
     cost_to_reverse: medium
     default_in_force: the browser keeps the access token
-    trigger: the security review of the first customer release
+    trigger: the security review of the first customer release""",
+    "OD-098": """
   OD-098:
     status: open
     cost_to_reverse: high
     default_in_force: the current loading tool stays
-    trigger: the first data source the tool cannot read
+    trigger: the first data source the tool cannot read""",
+    "OD-098-split": """
+  OD-098:
+    status: superseded""",
+    "OD-109": """
   OD-109:
     status: open
     cost_to_reverse: low
     default_in_force: a question with no defined metric gets no answer
-    trigger: the metric glossary arriving from the functional team"""
-OPEN_ROW_114_OPEN = """
+    trigger: the metric glossary arriving from the functional team""",
+    "OD-114": """
   OD-114:
     status: open
     cost_to_reverse: low
     default_in_force: the model chooses the metric
-    trigger: the first two answers to one question that disagree"""
-OPEN_ROW_114_DECIDED = """
+    trigger: the first two answers to one question that disagree""",
+    "OD-114-decided": """
   OD-114:
     status: decided
-    closed_by: DEC-026"""
-OPEN_ROW_115 = """
+    closed_by: DEC-026""",
+    "OD-115": """
   OD-115:
     status: open
     cost_to_reverse: low
     default_in_force: the raw message of the service reaches the user
-    trigger: the first release a customer uses"""
-OPEN_ROW_116 = """
+    trigger: the first release a customer uses""",
+    "OD-116": """
   OD-116:
     status: open
     cost_to_reverse: low
     default_in_force: the loading notice is part of release 1.0
-    trigger: the project lead reviewing the scope of release 1.0"""
-OPEN_ROW_KI = """
+    trigger: the project lead reviewing the scope of release 1.0""",
+    "OD-116-decided": """
+  OD-116:
+    status: decided
+    closed_by: DEC-036""",
+    "OD-120": """
+  OD-120:
+    status: open
+    cost_to_reverse: medium
+    default_in_force: the loader reads the two formats it reads today
+    trigger: the first source in another format""",
+    "OD-121": """
+  OD-121:
+    status: open
+    cost_to_reverse: medium
+    default_in_force: the data are loaded every night
+    trigger: a customer asking for fresher data""",
+    "KI-013": """
   KI-013:
-    status: open"""
-OPEN_ROW_KI_014 = """
+    status: open""",
+    "KI-013-resolved": """
+  KI-013:
+    status: decided
+    closed_by: SIG-009""",
+    "KI-014": """
   KI-014:
-    status: open"""
+    status: open""",
+}
+STAGE_ROWS = {
+    "06": ["OD-076", "OD-098", "OD-109", "OD-114", "OD-116"],
+    "07": ["OD-076", "OD-098", "OD-109", "OD-114-decided", "OD-115", "OD-116", "KI-013"],
+    "09": ["OD-076", "OD-098-split", "OD-109", "OD-114-decided", "OD-115", "OD-116-decided",
+           "OD-120", "OD-121", "KI-013-resolved"],
+}
 
-H_082 = """### OD-076 · Where the access token is kept
+H_076 = """### OD-076 · Where the access token is kept
 
 - **Question:** does the access token stay in the browser, or move to a component on the
   server?
 - **The problem the default introduces:** a script running in the browser can read it.
+"""
+H_076_NOTES = H_076 + """\
+- **Notes:** a component on the server would hold the token and give the browser a session
+  cookie only; it waits for the security review.
 """
 H_098 = """### OD-098 · Keep or replace the data loading tool
 
@@ -386,6 +495,16 @@ H_116 = """### OD-116 · Whether the loading notice stays in release 1.0
 
 - **Question:** does the loading notice ship with release 1.0, or with the next one?
 """
+H_120 = """### OD-120 · Which file formats the loader reads
+
+- **Question:** which formats of the customers' files does the loader have to read?
+- **The problem the default introduces:** two of the planned sources send another format.
+"""
+H_121 = """### OD-121 · How often the customers' data is loaded
+
+- **Question:** once a night, several times a day, or as the data arrive?
+- **The problem the default introduces:** an answer can be a day old.
+"""
 KI_013 = """### KI-013 · Long questions exceed the timeout
 
 - Questions that need many calculation steps exceed the time limit, and no answer arrives.
@@ -402,23 +521,30 @@ KI_014 = """### KI-014 · Exports time out on large tenants
 - **Reopening trigger:** the first export request covering a full year.
 - **Reference:** none yet.
 """
+CLOSED = {
+    "OD-114": "- **2026-10-06 · OD-114** → [`DEC-026`](../../decisions/DEC-026-metric-"
+              "resolution.md) · a fixed rule maps a question to a metric.\n",
+    "KI-013": "- **2026-10-07 · KI-013** → `SIG-009` · the platform's time limit was raised, and "
+              "long questions answer again.\n",
+    # Superseded and not decided, so it keeps its heading: only a decided entry may leave the
+    # body for a line here.
+    "OD-098": "### OD-098 · Keep or replace the data loading tool\n\n- **Superseded on "
+              "2026-10-08** by OD-120 and OD-121: which formats the loader reads, and how often "
+              "it runs, are decided apart.\n",
+    "OD-116": "- **2026-10-08 · OD-116** → [`DEC-036`](../../decisions/DEC-036-loading-notice-"
+              "scope.md) · the loading notice moves to the next release.\n",
+}
 
 
-def product_open(day: str, ki_014: bool = False) -> str:
-    rows = OPEN_ROWS_BASE
-    if day == "06":
-        rows += OPEN_ROW_114_OPEN + OPEN_ROW_116
-    else:
-        rows += OPEN_ROW_114_DECIDED + OPEN_ROW_115 + OPEN_ROW_116 + OPEN_ROW_KI
-        rows += OPEN_ROW_KI_014 if ki_014 else ""
-    low = [H_109] + ([H_114] if day == "06" else [H_115]) + [H_116]
-    known = "" if day == "06" else "\n" + KI_013 + ("\n" + KI_014 if ki_014 else "")
-    closed = ("" if day == "06" else
-              "\n- **2026-10-06 · OD-114** → [`DEC-026`](../../decisions/DEC-026-metric-"
-              "resolution.md) · a fixed rule maps a question to a metric.\n")
-    review = (f"last_review: {REVIEW}" if day == "06" else
-              "last_review: 2026-10-06 17:45\nreview_scope: the whole register, after the "
-              "decision on the metric rule and the two new entries")
+def product_open(stage: str, review: str = f"last_review: {REVIEW}", ki_014: bool = False,
+                 notes_076: bool = False) -> str:
+    rows = "".join(ROWS[k] for k in STAGE_ROWS[stage]) + (ROWS["KI-014"] if ki_014 else "")
+    high = [H_098] if stage != "09" else []
+    medium = [H_076_NOTES if notes_076 else H_076] + ([H_120, H_121] if stage == "09" else [])
+    low = [H_109] + ([H_114] if stage == "06" else [H_115]) + ([H_116] if stage != "09" else [])
+    known = [KI_013] if stage == "07" else []
+    known += [KI_014] if ki_014 else []
+    closed = {"06": [], "07": ["OD-114"], "09": ["OD-114", "KI-013", "OD-098", "OD-116"]}[stage]
     head = ("---\nschema: framework/open-register/v1\nartifact_type: open-register\n"
             "lifecycle: living\nstatus: active\nowners: [lead]\n"
             f"created: {REVIEW}\n{review}\nclassification: internal\nentries:{rows}\n---\n\n")
@@ -429,19 +555,19 @@ def product_open(day: str, ki_014: bool = False) -> str:
 
 ## Cost to reverse HIGH: changing it later means redoing work that already exists
 
-{H_098}
+{chr(10).join(high) if high else "None." + chr(10)}
 ## Cost to reverse MEDIUM: changing it later costs a migration, not a rewrite
 
-{H_082}
+{chr(10).join(medium)}
 ## Cost to reverse LOW: changing it later costs an afternoon
 
 {chr(10).join(low)}
 # §2 · Accepted known issues
-{known}
+{"".join(chr(10) + k for k in known)}
 # §3 · Parking lot
 
 # §4 · Closed decisions
-{closed}"""
+{"".join(chr(10) + CLOSED[k] for k in closed)}"""
 
 
 RMP = fm(**living("roadmap"), version="1.0.0", products="[atlas]", owners="[lead]",
@@ -565,231 +691,250 @@ rollback:
             "products/atlas/releases/RLM-001-dev-build.yaml": rlm}
 
 
-# THE STATE FILE, AS THE SKILL WOULD HAVE WRITTEN IT. The Italian is the digest's: every
-# title and description here is printed as it stands.
-ITEMS_BASE = """\
-  OD-076:
-    title: custodia del permesso di accesso lato server
-    what: >-
-      spostare la custodia del permesso dal browser a un componente lato server, per ridurre
-      l'esposizione in caso di attacco al browser.
-    theme: architettura
-    scope: out
-    seen: Where the access token is kept
-  OD-098:
-    title: tenere o sostituire lo strumento di caricamento dati
-    what: >-
-      se lo strumento che oggi carica i dati resta nell'architettura o viene sostituito da
-      codice proprio. Tocca tutto il percorso dei dati, per questo va spezzata prima di poterla
-      stimare meglio.
-    theme: architettura
-    scope: "1.0"
-    size: XL
-    seen: Keep or replace the data loading tool
-  OD-109:
-    title: risposta alle domande non coperte
-    what: >-
-      come si comporta il sistema davanti a una domanda a cui non sa rispondere con un numero
-      garantito: rifiuta, avvisa o risponde comunque.
-    theme: architettura
-    scope: "1.0"
-    size: M
-    seen: How to answer a question no metric covers
-  OD-114:
-    title: come il sistema capisce quale indicatore gli viene chiesto
-    what: >-
-      la regola con cui una domanda in linguaggio naturale viene ricondotta a un indicatore
-      definito, da cui dipende che il numero in risposta sia quello giusto.
-    theme: architettura
-    scope: "1.0"
-    size: S
-    seen: Which rule maps a question to a defined metric
-  OD-116:
-    title: se CHG-021, avviso di caricamento in corso, resta nel perimetro
-    what: >-
-      la scelta se l'avviso di caricamento in corso resta in questo rilascio o passa al
-      successivo.
-    theme: sviluppo
-    scope: out
-    seen: Whether the loading notice stays in release 1.0
-  DEC-019:
-    title: un archivio dati per cliente
-    what: >-
-      ogni cliente ha un archivio fisicamente separato, invece di un archivio unico filtrato
-      per cliente.
-    theme: architettura
-    scope: "1.0"
-    hours_before: 14
-  CHG-012:
-    title: repository unica
-    what: >-
-      il codice di più repository separate riunito in una sola, con una struttura che
-      permette di estrarne un componente senza riscriverlo.
-    theme: sviluppo
-    scope: "1.0"
-    hours_before: 12
-  CHG-015:
-    title: login con servizio esterno
-    what: >-
-      l'autenticazione degli utenti affidata a un servizio esterno specializzato, invece di
-      gestire le password in proprio.
-    theme: sviluppo
-    scope: "1.0"
-    hours_before: 8
-  CHG-017:
-    title: scambio del permesso di accesso al login
-    what: >-
-      dopo il login il sistema rilascia un proprio permesso che indica a quale cliente
-      appartiene l'utente, ed è ciò che impedisce a un cliente di vedere i dati di un altro.
-    theme: sviluppo
-    scope: "1.0"
-    size: M
-    seen: Token exchange at login
-  CHG-018:
-    title: isolamento dei dati per cliente
-    what: >-
-      ogni cliente ha un archivio dati separato e il sistema apre solo quello indicato dal
-      permesso di accesso dell'utente.
-    theme: sviluppo
-    scope: "1.0"
-    size: L
-    seen: Per-tenant data isolation
-  CHG-019:
-    title: flusso di rilascio
-    what: >-
-      la sequenza fissa di passi con cui una versione del codice arriva in un ambiente, senza
-      interventi manuali che cambiano ogni volta.
-    theme: infrastruttura
-    scope: "1.0"
-    size: S
-    seen: Release pipeline
-  CHG-021:
-    title: avviso di caricamento in corso
-    what: >-
-      quando un caricamento dati è in corso la richiesta attende per un tempo limitato e poi
-      avvisa l'utente di riprovare, invece di restituire dati incompleti.
-    theme: sviluppo
-    scope: "1.0"
-    size: M
-    seen: Loading-in-progress notice
-  CHG-022:
-    title: etichette di versione per il rilascio
-    what: >-
-      l'etichetta di versione che fa partire in automatico la costruzione e il rilascio in un
-      ambiente.
-    theme: infrastruttura
-    scope: "1.0"
-    size: S
-    seen: Version tags trigger builds
-  CHG-024:
-    title: primo rilascio in preprod
-    what: >-
-      la prima installazione della nuova versione nell'ambiente di prova che replica la
-      produzione, dove si verifica prima di rilasciare.
-    theme: infrastruttura
-    scope: "1.0"
-    size: M
-    seen: First release to preprod
-  INC-040:
-    title: servizio condiviso per i permessi di accesso
-    what: >-
-      un unico servizio che rilascia i permessi per tutti i prodotti, al posto del modulo
-      interno a un solo prodotto.
-    theme: sviluppo
-    scope: out
-    seen: A shared token service for every product
-  INC-041:
-    title: rilevamento delle anomalie
-    what: >-
-      segnalazione automatica dei valori che si discostano dall'andamento atteso.
-    theme: sviluppo
-    scope: out
-    seen: Anomaly detection on customer metrics
-  EVR-001:
-    scope: out
-"""
-ITEMS_NEW = """\
-  OD-115:
-    title: formato dei messaggi di errore
-    what: >-
-      cosa vede l'utente quando una richiesta non va a buon fine, e quali dettagli tecnici
-      restano solo nei log.
-    theme: architettura
-    scope: "1.0"
-    size: S
-    seen: What an error shows to the user
-  KI-013:
-    title: tempo massimo superato sulle domande lunghe
-    what: >-
-      le domande che richiedono molti passaggi di calcolo superano il tempo massimo e l'utente
-      non riceve risposta.
-    theme: sviluppo
-    scope: "1.0"
-    size: M
-    seen: Long questions exceed the timeout
-"""
-WAITS = """\
-waits:
-  - what: Risposta sul registro delle immagini
-    owner: team infrastruttura
-    asked: 2026-10-01
-    needed_by: 2026-10-07
-    without: le versioni non si possono costruire e rilasciare in automatico.
-    missing: manca la risposta sul registro delle immagini
-    blocks: [CHG-022]
-  - what: Ambiente preprod
-    owner: team infrastruttura
-    asked: 2026-09-25
-    needed_by: 2026-10-09
-    without: le modifiche non si possono verificare né chiudere.
-    missing: manca preprod
-    blocks: [CHG-024]
-  - what: Domande di benchmark
-    owner: team funzionale
-    asked: 2026-09-22
-    needed_by: 2026-10-10
-    without: la qualità non si può valutare in modo oggettivo.
-    note: blocca la valutazione al rilascio
-  - what: Glossario delle metriche
-    owner: team funzionale
-    asked: 2026-09-22
-    needed_by: 2026-10-10
-    without: gli indicatori restano definiti a ipotesi e vanno rivisti dopo.
-    slows: [OD-109]
-"""
-HEAD = """\
-# Stato del digest di Atlas: ciò che la persona ha dichiarato, scritto dalla skill `digest`
-# con le sue risposte. Ore, taglie, perimetro e attese non stanno negli artefatti.
-product: atlas
-standard_hours: 8
-release:
-  name: "1.0"
-  delivery: 2026-10-13
-items:
-"""
-REQUESTS = """\
-requests:
-  OD-116:
-    to: responsabile di progetto
-    by: 2026-10-09
-    fallback: lo tolgo dal perimetro.
-"""
-PLAN = """\
-plan:
-  2026-10-07: [CHG-018, CHG-022]
-  2026-10-08: [CHG-018, CHG-021]
-"""
-PERIODS = """\
-periods:
-  2026-10-06:
-    hours:
-      OD-114: 5
-      CHG-017: 3
-      CHG-019: 1.5
-    outside:
-      Riunioni di stato: 1
-      Formazione di un junior: 0.5
-"""
+
+# THE STATE FILE, AS THE SKILL WOULD HAVE WRITTEN IT. The Italian is the workbook's: every
+# title, description and reason here is printed as it stands.
+
+def item(title, what, theme, scope, seen=None, **kw) -> dict:
+    out = {"title": title, "what": what, "theme": theme, "scope": scope}
+    if seen:
+        out["seen"] = seen
+    out.update(kw)
+    return out
+
+
+def items_06() -> dict:
+    """The classification confirmed at the baseline, on the morning of 06/10."""
+    return {
+        "OD-076": item(
+            "custodia del permesso di accesso lato server",
+            "spostare la custodia del permesso dal browser a un componente lato server, per "
+            "ridurre l'esposizione in caso di attacco al browser.",
+            "architettura", "out", "Where the access token is kept",
+            out_reason="miglioria di sicurezza prevista dopo il rilascio"),
+        "OD-098": item(
+            "tenere o sostituire lo strumento di caricamento dati",
+            "se lo strumento che oggi carica i dati resta o viene sostituito da codice proprio. "
+            "Tocca tutto il percorso dei dati, per questo va spezzata prima di poterla stimare.",
+            "architettura", "1.0", "Keep or replace the data loading tool", size="XL"),
+        "OD-109": item(
+            "risposta alle domande non coperte",
+            "come si comporta il sistema davanti a una domanda a cui non sa rispondere con un "
+            "numero garantito: rifiuta, avvisa o risponde comunque.",
+            "architettura", "1.0", "How to answer a question no metric covers", size="L"),
+        "OD-114": item(
+            "come il sistema capisce quale indicatore gli viene chiesto",
+            "la regola con cui una domanda in linguaggio naturale viene ricondotta a un "
+            "indicatore definito, da cui dipende che il numero in risposta sia quello giusto.",
+            "architettura", "1.0", "Which rule maps a question to a defined metric", size="S"),
+        "OD-116": item(
+            "se l'avviso di caricamento resta nel rilascio",
+            "la scelta se l'avviso di caricamento in corso entra in questo rilascio o nel "
+            "successivo.",
+            "sviluppo", "out", "Whether the loading notice stays in release 1.0",
+            out_reason="è una scelta sul perimetro, la prende il responsabile di progetto"),
+        "DEC-019": item(
+            "un archivio dati per cliente",
+            "ogni cliente ha un archivio fisicamente separato, invece di un archivio unico "
+            "filtrato per cliente.",
+            "architettura", "1.0", size="XL", closed_on="2026-09-29", hours_before=14),
+        "CHG-012": item(
+            "repository unica",
+            "il codice di più repository separate riunito in una sola, con una struttura che "
+            "permette di estrarne un componente senza riscriverlo.",
+            "sviluppo", "1.0", size="L", closed_on="2026-09-24", hours_before=12),
+        "CHG-015": item(
+            "login con servizio esterno",
+            "l'autenticazione degli utenti affidata a un servizio esterno specializzato, invece "
+            "di gestire le password in proprio.",
+            "sviluppo", "1.0", size="L", closed_on="2026-10-01", hours_before=8),
+        "CHG-017": item(
+            "scambio del permesso di accesso al login",
+            "dopo il login il sistema rilascia un proprio permesso che indica a quale cliente "
+            "appartiene l'utente, ed è ciò che impedisce a un cliente di vedere i dati di un "
+            "altro.",
+            "sviluppo", "1.0", "Token exchange at login", size="M"),
+        "CHG-018": item(
+            "isolamento dei dati per cliente",
+            "ogni cliente ha un archivio dati separato e il sistema apre solo quello indicato "
+            "dal permesso di accesso dell'utente.",
+            "sviluppo", "1.0", "Per-tenant data isolation", size="L"),
+        "CHG-019": item(
+            "flusso di rilascio",
+            "la sequenza fissa di passi con cui una versione del codice arriva in un ambiente, "
+            "senza interventi manuali che cambiano ogni volta.",
+            "deploy", "1.0", "Release pipeline", size="S"),
+        "CHG-021": item(
+            "avviso di caricamento in corso",
+            "quando un caricamento dati è in corso la richiesta attende per un tempo limitato e "
+            "poi avvisa l'utente di riprovare, invece di restituire dati incompleti.",
+            "sviluppo", "1.0", "Loading-in-progress notice", size="M"),
+        "CHG-022": item(
+            "etichette di versione per il rilascio",
+            "l'etichetta di versione che fa partire in automatico la costruzione e il rilascio "
+            "in un ambiente.",
+            "deploy", "1.0", "Version tags trigger builds", size="S"),
+        "CHG-024": item(
+            "primo rilascio in preprod",
+            "la prima installazione della nuova versione nell'ambiente di prova che replica la "
+            "produzione, dove si verifica prima di rilasciare.",
+            "deploy", "1.0", "First release to preprod", size="M"),
+        "INC-040": item(
+            "servizio condiviso per i permessi di accesso",
+            "un unico servizio che rilascia i permessi per tutti i prodotti, al posto del modulo "
+            "interno a un solo prodotto.",
+            "sviluppo", "out", "A shared token service for every product",
+            out_reason="serve quando ci sarà un secondo prodotto"),
+        "INC-041": item(
+            "rilevamento delle anomalie",
+            "segnalazione automatica dei valori che si discostano dall'andamento atteso.",
+            "sviluppo", "out", "Anomaly detection on customer metrics",
+            out_reason="previsto nell'architettura futura"),
+        "EVR-001": {"scope": "out"},
+    }
+
+
+def items_07() -> dict:
+    items = items_06()
+    items["OD-114"]["closed_on"] = "2026-10-06"
+    items["CHG-017"]["closed_on"] = "2026-10-06"
+    items["CHG-019"]["closed_on"] = "2026-10-06"
+    items["OD-115"] = item(
+        "formato dei messaggi di errore",
+        "cosa vede l'utente quando una richiesta non va a buon fine, e quali dettagli tecnici "
+        "restano solo nei log.",
+        "architettura", "1.0", "What an error shows to the user", size="S")
+    items["KI-013"] = item(
+        "tempo massimo superato sulle domande lunghe",
+        "le domande che richiedono molti passaggi di calcolo superano il tempo massimo e "
+        "l'utente non riceve risposta.",
+        "sviluppo", "1.0", "Long questions exceed the timeout", size="M")
+    return items
+
+
+def items_09() -> dict:
+    items = items_07()
+    items["KI-013"].update(
+        closed_on="2026-10-07",
+        what="le domande che richiedono molti passaggi di calcolo superavano il tempo massimo e "
+             "l'utente non riceveva risposta.")
+    items["OD-098"]["split_into"] = ["OD-120", "OD-121"]
+    items["OD-120"] = item(
+        "formati dei dati in ingresso",
+        "quali formati di file lo strumento di caricamento deve saper leggere.",
+        "architettura", "1.0", "Which file formats the loader reads", size="L")
+    items["OD-121"] = item(
+        "frequenza dei caricamenti",
+        "ogni quanto vengono caricati i dati dei clienti, e quindi quanto sono recenti.",
+        "architettura", "1.0", "How often the customers' data is loaded", size="L")
+    items["OD-116"]["closed_on"] = "2026-10-08"
+    items["CHG-021"].update(scope="out",
+                            out_reason="decisione presa su OD-116, passa al rilascio successivo")
+    return items
+
+
+# The days before the baseline, rebuilt in bulk by column: the hours on the product by theme,
+# the hours outside it by category. Saturday and Sunday appear only when somebody worked.
+BULK = {
+    "2026-09-22": ({"sviluppo": 4}, {"riunioni": 2, "solleciti": 2}),
+    "2026-09-23": ({"sviluppo": 4}, {"riunioni": 1, "solleciti": 2, "formazione": 1}),
+    "2026-09-24": ({"sviluppo": 4}, {"supporto": 3, "riunioni": 1}),
+    "2026-09-25": ({"architettura": 3}, {"supporto": 4, "riunioni": 2}),
+    "2026-09-26": ({"architettura": 3}, {}),
+    "2026-09-28": ({"architettura": 4}, {"supporto": 4, "riunioni": 1}),
+    "2026-09-29": ({"architettura": 4}, {"reportistica": 3, "riunioni": 1, "formazione": 1}),
+    "2026-09-30": ({"sviluppo": 4}, {"reportistica": 2, "riunioni": 1, "solleciti": 1}),
+    "2026-10-01": ({"sviluppo": 4}, {"supporto": 3, "riunioni": 1}),
+    "2026-10-02": ({}, {"supporto": 5, "riunioni": 2, "formazione": 1}),
+    "2026-10-03": ({}, {"reportistica": 4}),
+    "2026-10-04": ({}, {"supporto": 3}),
+    "2026-10-05": ({}, {"supporto": 4, "reportistica": 3, "riunioni": 1}),
+}
+DAYS_BY_ITEM = {
+    "2026-10-06": ({"OD-114": 5, "CHG-017": 3, "CHG-019": 1.5},
+                   {"riunioni": 1, "formazione": 0.5}),
+    "2026-10-07": ({"KI-013": 2},
+                   {"supporto": 2, "reportistica": 1, "riunioni": 1, "formazione": 1.5}),
+    "2026-10-08": ({"CHG-018": 4, "OD-076": 1}, {"riunioni": 1, "solleciti": 1}),
+}
+
+
+def days(until: str) -> dict:
+    out = {}
+    for d, (themes, outside) in BULK.items():
+        out[d] = {k: v for k, v in (("themes", themes), ("outside", outside)) if v}
+    for d, (hours, outside) in DAYS_BY_ITEM.items():
+        if d < until:
+            out[d] = {"hours": hours, "outside": outside}
+    return out
+
+
+WAITS = [
+    {"what": "Risposta sul registro delle immagini", "owner": "team infrastruttura",
+     "asked": "2026-10-01", "needed_by": "2026-10-07",
+     "without": "le versioni non si possono costruire e rilasciare in automatico.",
+     "missing": "manca la risposta sul registro delle immagini", "blocks": ["CHG-022"]},
+    {"what": "Ambiente preprod", "owner": "team infrastruttura",
+     "asked": "2026-09-25", "needed_by": "2026-10-09",
+     "without": "le modifiche non si possono verificare né chiudere, e la stima non vale più.",
+     "missing": "manca l'ambiente preprod", "blocks": ["CHG-024"]},
+    {"what": "Domande di benchmark", "owner": "team funzionale",
+     "asked": "2026-09-22", "needed_by": "2026-10-10",
+     "without": "la qualità delle risposte non si può valutare in modo oggettivo prima del "
+                "rilascio."},
+    {"what": "Glossario delle metriche", "owner": "team funzionale",
+     "asked": "2026-09-22", "needed_by": "2026-10-10",
+     "without": "gli indicatori restano definiti a ipotesi e vanno rivisti dopo il rilascio.",
+     "missing": "manca il glossario delle metriche", "slows": ["OD-109"]},
+    {"what": "Decisione sull'avviso di caricamento", "owner": "responsabile di progetto",
+     "asked": "2026-10-06", "needed_by": "2026-10-09",
+     "without": "l'avviso resta nel rilascio senza che nessuno l'abbia scelto."},
+]
+MILESTONES = [{"name": "Demo al team funzionale", "date": "2026-10-15"}]
+
+
+def state(stage: str) -> dict:
+    """The state file as it stands before the digest of a day: 06, 07 or 09."""
+    out = {"format": 2, "product": "atlas",
+           "release": {"name": "1.0", "delivery": "2026-10-13", "start": "2026-09-22"}}
+    waits = [dict(w) for w in WAITS]
+    if stage == "06":
+        out["items"] = items_06()
+        out["order"] = {"todo": ["CHG-018", "OD-098", "OD-109", "OD-114", "CHG-017", "CHG-019",
+                                 "CHG-021", "CHG-022", "CHG-024"],
+                        "out": ["OD-076", "OD-116", "INC-040", "INC-041"]}
+        out["days"] = days("2026-10-06")
+    elif stage == "07":
+        out["items"] = items_07()
+        out["order"] = {"todo": ["CHG-018", "OD-098", "OD-109", "OD-115", "KI-013", "CHG-021",
+                                 "CHG-022", "CHG-024"],
+                        "out": ["OD-076", "OD-116", "INC-040", "INC-041"]}
+        out["days"] = days("2026-10-07")
+        out["plan"] = {"2026-10-07": [{"item": "KI-013", "hours": 2, "closes": True},
+                                      {"item": "CHG-018", "hours": 3}],
+                       "2026-10-08": [{"item": "CHG-018", "hours": 4}]}
+        out["milestones"] = MILESTONES
+    else:
+        out["items"] = items_09()
+        out["order"] = {"todo": ["CHG-018", "OD-120", "OD-121", "OD-109", "OD-115", "CHG-022",
+                                 "CHG-024"],
+                        "out": ["CHG-021", "OD-076", "INC-040", "INC-041"]}
+        out["days"] = days("2026-10-09")
+        out["plan"] = {"2026-10-09": [{"item": "CHG-018", "hours": 5}],
+                       "2026-10-12": [{"item": "CHG-018", "hours": 2, "closes": True},
+                                      {"item": "OD-120", "hours": 3}]}
+        out["milestones"] = MILESTONES
+        waits[4]["resolved"] = True
+    out["waits"] = waits
+    return out
+
+
+def write_state(store: Path, data: dict) -> None:
+    write(store, "state-atlas.yaml",
+          "# Stato del digest di Atlas: ciò che la persona ha dichiarato, scritto dalla skill\n"
+          "# `digest` con le sue risposte. Ore, taglie, perimetro, date e attese non stanno "
+          "negli artefatti.\n" + yaml.safe_dump(data, allow_unicode=True, sort_keys=False,
+                                                width=100))
 
 
 def write(root: Path, rel: str, text: str) -> None:
@@ -820,13 +965,36 @@ def index(root: Path) -> None:
         str(root), "--emit-index", cwd=root)
 
 
+def render(root: Path, day: str, *extra: str) -> None:
+    r = subprocess.run([sys.executable, str(SCRIPT), "--root", str(root), "--product", "atlas",
+                        "--date", day, "--now", f"{day}T08:30:00+02:00", *extra],
+                       capture_output=True, text=True)
+    if r.returncode:
+        sys.exit(f"the digest of {day} was refused:\n{r.stdout}\n{r.stderr}")
+
+
+def reread(root: Path, register: str, day: str, scope: str) -> None:
+    """A register edited after its last reading is read again, in a commit of its own."""
+    write(root, "products/atlas/OPEN.md", register)
+    top = root / "OPEN.md"
+    text = top.read_text(encoding="utf-8")
+    start = text.index("last_review:")
+    end = text.index("classification:", start)
+    top.write_text(text[:start] + f"last_review: {day} 17:46\nreview_scope: the composed view "
+                   f"of what is open, after {scope}\n" + text[end:], encoding="utf-8")
+    commit(root, "The open registers reread", f"{day}T17:50:00+02:00")
+    index(root)
+    if run("git", "status", "--porcelain", cwd=root):
+        commit(root, "indices regenerated", f"{day}T17:55:00+02:00")
+
+
 def build(root: Path, asks: bool) -> None:
     root.mkdir(parents=True)
     run("git", "init", "-q", "-b", "main", cwd=root)
     write(root, ".gitignore", "_meta/digest/\n.remote/\n")
     files = {"AGENTS.md": AGENTS, "OPEN.md": ROOT_OPEN, "products/atlas/product.yaml": PRODUCT,
              "products/atlas/PBR.md": PBR, "products/atlas/EVP.md": EVP,
-             "products/atlas/LOG.md": LOG, "products/atlas/RMP.md": RMP,
+             "products/atlas/LOG.md": signal_log(False), "products/atlas/RMP.md": RMP,
              "products/atlas/cycles/ICG-001-cycle-1.md": ICG,
              "decisions/DEC-019-tenant-datastore.md": DEC_020,
              "products/atlas/OPEN.md": product_open("06")}
@@ -857,19 +1025,12 @@ def build(root: Path, asks: bool) -> None:
     run("git", "remote", "add", "origin", "../../.remote/digest.git", cwd=store)
     for k, v in (("user.name", "lead"), ("user.email", "lead@example.com")):
         run("git", "config", k, v, cwd=store)
-    write(store, "state-atlas.yaml", HEAD + ITEMS_BASE + WAITS)
-    r = subprocess.run([sys.executable, str(SCRIPT), "--root", str(root), "--product", "atlas",
-                        "--baseline", "--date", "2026-10-06",
-                        "--now", "2026-10-06T08:30:00+02:00"],
-                       capture_output=True, text=True)
-    if r.returncode:
-        sys.exit(f"the baseline was refused:\n{r.stdout}\n{r.stderr}")
+    write_state(store, state("06"))
+    render(root, "2026-10-06", "--baseline")
 
     # 06/10, through the day.
     write(root, "decisions/DEC-026-metric-resolution.md", DEC_027)
-    write(root, "products/atlas/OPEN.md", product_open("07", ki_014=asks).replace(
-        "last_review: 2026-10-06 17:45\nreview_scope: the whole register, after the decision "
-        "on the metric rule and the two new entries", f"last_review: {REVIEW}"))
+    write(root, "products/atlas/OPEN.md", product_open("07"))
     index(root)
     commit(root, "OD-114 decided by DEC-026: a fixed rule maps a question to a metric",
            "2026-10-06T11:00:00+02:00")
@@ -878,23 +1039,49 @@ def build(root: Path, asks: bool) -> None:
               change(cid, "verified"))
         commit(root, f"{cid} verified in the development environment",
                f"2026-10-06T{when}:00+02:00")
-    # The register was edited after its last reading, so the reading is redone and attested
-    # in a commit that touches the attestation block alone.
-    write(root, "products/atlas/OPEN.md", product_open("07", ki_014=asks))
-    top = root / "OPEN.md"
-    top.write_text(top.read_text(encoding="utf-8").replace(
-        f"last_review: {REVIEW}", "last_review: 2026-10-06 17:46\nreview_scope: the composed "
-        "view of what is open, after the new entries of the product register", 1),
-        encoding="utf-8")
-    commit(root, "The open registers reread", "2026-10-06T17:50:00+02:00")
-    index(root)
-    if run("git", "status", "--porcelain", cwd=root):
-        commit(root, "indices regenerated", "2026-10-06T17:55:00+02:00")
+    reread(root, product_open("07", "last_review: 2026-10-06 17:45\nreview_scope: the whole "
+                                    "register, after the decision on the metric rule and the "
+                                    "two new entries"),
+           "2026-10-06", "the new entries of the product register")
+    write_state(store, state("07"))
+    render(root, "2026-10-07")
 
-    state = HEAD + ITEMS_BASE + ITEMS_NEW + WAITS + REQUESTS
+    # 07/10 and 08/10.
+    write(root, "products/atlas/LOG.md", signal_log(True))
+    write(root, "products/atlas/cycles/ICG-002-cycle-2.md", ICG_2)
+    write(root, "products/atlas/OPEN.md", product_open("07").replace(
+        ROWS["KI-013"], ROWS["KI-013-resolved"]).replace("\n" + KI_013, "").replace(
+        CLOSED["OD-114"], CLOSED["OD-114"] + "\n" + CLOSED["KI-013"]))
+    commit(root, "KI-013 resolved: the platform's time limit was raised",
+           "2026-10-07T16:00:00+02:00")
+    split = product_open("09", ki_014=asks).replace(ROWS["OD-116-decided"], ROWS["OD-116"])
+    split = split.replace("\n" + CLOSED["OD-116"], "").replace(
+        "## Cost to reverse LOW: changing it later costs an afternoon\n\n" + H_109 + "\n" + H_115,
+        "## Cost to reverse LOW: changing it later costs an afternoon\n\n" + H_109 + "\n" + H_115
+        + "\n" + H_116)
+    write(root, "products/atlas/OPEN.md", split)
+    commit(root, "OD-098 split into OD-120 and OD-121, decided apart",
+           "2026-10-08T10:00:00+02:00")
+    write(root, "decisions/DEC-036-loading-notice-scope.md", DEC_036)
+    write(root, "products/atlas/OPEN.md", product_open("09", ki_014=asks))
+    index(root)
+    commit(root, "OD-116 decided by DEC-036: the loading notice moves to the next release",
+           "2026-10-08T12:00:00+02:00")
+    write(root, "src/tenant.py", '"""The datastore of a request is the one its token names."""'
+                                 "\n\n\ndef datastore(token: dict) -> str:\n"
+                                 '    return f"atlas-{token[\'tenant\']}"\n')
+    commit(root, "CHG-018: open the datastore the access token names",
+           "2026-10-08T15:00:00+02:00")
+    write(root, "products/atlas/OPEN.md", product_open("09", ki_014=asks, notes_076=True))
+    commit(root, "OD-076: notes on keeping the token on the server",
+           "2026-10-08T16:30:00+02:00")
+    reread(root, product_open("09", "last_review: 2026-10-08 17:45\nreview_scope: the whole "
+                                    "register, after the split of OD-098 and the decision on "
+                                    "the loading notice", ki_014=asks, notes_076=True),
+           "2026-10-08", "the split and the decision of 08/10")
+
     if not asks:
-        state += PLAN + PERIODS
-    write(store, "state-atlas.yaml", state)
+        write_state(store, state("09"))
 
 
 def main() -> int:

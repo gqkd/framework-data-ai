@@ -23,7 +23,7 @@ covers both. They are examples of what somebody types, not a syntax.
 | **`audit`** | *"è tutto a posto?"* · *"check the docs are consistent"* | runs the validator, judges what to do with each finding, and on request reads both ends of the pairs that have to agree |
 | **`business`** | *"facciamo il SAL settimanale"*, *"dove siamo col progetto per il management"* · *"weekly steering update"* | a dated business SAL, one per product or for the suite: movement since the previous update, current state, direction, target, challenges and actions required outside development |
 | **`presentation`** | *"fammi una presentazione del prodotto per il cliente"* · *"slides for the business"* | a customer-safe `.pptx` per product, of six to ten slides: what the product is for, what it does today, how it works in one diagram, and a roadmap of what is done and what is left, with no dates |
-| **`digest`** | *"prepara il digest"*, *"digest giornaliero"* · *"daily digest"* | the daily state of one product, computed from the registers and from what the person declares: what closed and in how many hours, what is left as a range of hours, when it can be delivered and what that waits on from others |
+| **`digest`** | *"prepara il digest"*, *"digest giornaliero"* · *"daily digest"* | the daily status workbook of one product, an Excel file computed from the registers and from what the person declares: when it can be delivered against the agreed date and what that waits on from others, every item to do, done and out of the perimeter, the hours day by day, and a calendar with the milestones |
 
 ---
 
@@ -135,10 +135,11 @@ skill still has no state between invocations, as §1 says; the state is a file i
 project, like everything else the skills read.
 
 The split of §1 is what makes the numbers trustworthy. The script reads the registers, the
-state file and the previous snapshot, and computes the reconciliation from one digest to the
-next, the pace, the delivery dates and the days of waiting; it refuses to print while an item
-in the registers is unclassified, or a classified one has left them without closing, so
-nothing enters or leaves the count in silence. The skill asks only what neither the commits
+state file and the previous snapshot, and computes the hours left, the pace of the last three
+working days, the delivery dates, the days of waiting and the shares of the hours; it writes
+each into the workbook as a formula with its value beside it, and it refuses to write while
+an item in the registers is unclassified, or a classified one has left them without closing,
+so nothing enters or leaves the count in silence. The skill asks only what neither the commits
 nor the registers know, proposes how to classify what is new, and writes the descriptions.
 It is not a mode of `business` either: the SAL is weekly, for the people who steer, and
 carries no hours; the digest is daily, about the work, and carries little else. And it writes

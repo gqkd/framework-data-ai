@@ -1,4 +1,4 @@
-# Three dependencies, and the second and third are decisions worth knowing about.
+# Five dependencies, and all but the first are decisions worth knowing about.
 #
 # `jsonschema` is what lets the front matter check live in the generated schemas instead
 # of being reimplemented in Python. One enforcement path rather than two: a schema an
@@ -13,3 +13,12 @@ jsonschema>=4.18
 # written against. Only `skills/presentation/scripts/render.py` imports it, and only to
 # render: checking an outline needs PyYAML alone.
 python-pptx>=1.0
+
+# `XlsxWriter` writes the workbook of the `digest` skill: every formula with the value the
+# script computed beside it, which is what lets the file read the same in a preview that does
+# not recalculate. `python-pptx` already depends on it; it is named here because
+# `skills/digest/scripts/workbook.py` imports it directly. `openpyxl` reads the workbook back
+# in `tests/selfcheck.py`, which compares it cell by cell with the reference in
+# `tests/fixtures/digest/`; the skill itself never imports it.
+XlsxWriter>=3.0
+openpyxl>=3.1

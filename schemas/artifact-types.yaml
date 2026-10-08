@@ -1268,7 +1268,45 @@
 # A project whose CI pins the validator through `framework_commit` at an earlier commit adds
 # `_meta/digest` to its own `scan.skip_dirs` before the first digest, or moves the pin first.
 # The store is set up once per documentation repository, with `digest.py --init-store <url>`.
-version: "4.1.0"
+#
+# 4.1.0 -> 4.2.0. The digest stops being a text and becomes an Excel workbook, the one its
+# readers asked for: a functional team and a direction who read the first sheet and little else.
+# MINOR, although the rule above calls MAJOR what asks for a migration, and the reason is where
+# the migration is: no artifact changes, no check of the validator changes, and the only file
+# to convert is the digest's own state, outside the artifact set, which the digest refuses with
+# the command that converts it. A project that does not use the digest has nothing to migrate.
+#
+# WHAT THE NOTE OF 4.1.0 SAYS AND IS NO LONGER TRUE. There is no reconciliation from one digest
+# to the next and no delivery date at a normal day's hours: `standard_hours` is gone. The
+# estimate is the hours left by size over the hours per working day of the last three working
+# days, net of the hours out of the perimeter and outside the product, each rounded to one
+# decimal before the subtraction, because that is what the reference workbook does and its
+# readers check it by hand. The hours are declared per item and per day, not per period, and a
+# snapshot freezes every day up to the day before its date. The themes are `architettura`,
+# `sviluppo` and `deploy`, which `infrastruttura` became; the hours outside the product fall in
+# five fixed categories; a decision asked of somebody is a wait like any other.
+#
+# WHAT IT IS. Four sheets: a summary with the delivery, the estimate in the best and the worst
+# case, what is needed from others, progress by theme, how the hours are split today and how
+# they should be, and a calendar of every item with the milestones; the four lists of items;
+# the hours by period and day by day; how to read it. Every derived cell is a formula,
+# written by XlsxWriter with the value the script computed beside it, so the file reads the
+# same in a preview that does not recalculate. The format is the reference workbook in
+# `tests/fixtures/digest/`, made and computed by a spreadsheet before the code existed, and
+# `tests/selfcheck.py` renders the fixture's day and compares the two cell by cell, value and
+# style, listing the few cells allowed to differ and why.
+#
+# WHAT MOVES AROUND IT. `requirements.txt` names XlsxWriter, which `python-pptx` already
+# brought in, and openpyxl, which the tests read the workbook with. Nothing in the scan, in
+# `framework.yaml` or in any template.
+#
+# ADOPTION. `FW001` reports the new number at `warn` in every repository that declares 4.1.x:
+# update `framework_version`. A project that uses the digest runs `digest.py --migrate` once,
+# then declares through the skill what it lists: the first day of the project, the days before
+# the first digest rebuilt in bulk, the closing dates and sizes of the items done, the order of
+# the lists, the plan with its hours and the milestones. The snapshots of 4.1.0 stay as they
+# are and still anchor the chain of hashes.
+version: "4.2.0"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of

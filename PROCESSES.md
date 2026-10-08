@@ -1007,35 +1007,37 @@ is rendered.
 
 ### Trigger
 
-The working day starts, and somebody expects to know where the work on a product stands: what
-closed since yesterday and in how many hours, what is left, when it can be delivered, and what
-that waits on.
+The working day starts, and somebody expects to know where the work on a product stands: when
+it can be delivered against the agreed date, what that waits on, what was done and what is
+left, and where the hours went.
 
 ### Actors
 
 - `DEV` or `ADMIN`, whoever does the work: declares what only they know, the hours, the sizes,
-  the waits and the plan, reads the digest and sends it.
-- Whoever they report to: reads it, and answers the decisions it asks for.
+  the closing dates, the waits, the plan and the milestones, reads the workbook and sends it.
+- Whoever they report to, a functional team or a direction: reads its first sheet, and answers
+  what it says is needed from them.
 
 ### How it runs
 
 ```mermaid
 flowchart LR
   reg["The registers:<br/>OD, KI, DEC, CHG, INC, EVR"] --> inv["--inventory: new, changed,<br/>closed, worked since the last one"]
-  inv --> ask["Questions: hours, activities outside<br/>the register, waits, plan, decisions"]
+  inv --> ask["Questions: hours by day, hours outside<br/>the product, waits, plan, milestones"]
   ask --> state["state-&lt;p&gt;.yaml"]
   state --> check["--check"]
-  check --> dig(["DIG-NNN, dated,<br/>pushed to a private repository"])
+  check --> dig(["DIG-NNN.xlsx, dated,<br/>pushed to a private repository"])
 ```
 
-**The person declares, the script computes.** Hours, sizes, the perimeter of a release and
-what was asked of whom have no source among the artifacts and must not acquire one there:
-they live in a state file outside the artifact set, in a clone of a private repository the
-documentation repository ignores. Everything else in the digest is derived: what closed and
-what is new comes from the registers compared with the previous snapshot, the remaining hours
-from the sizes, the reconciliation from one digest to the next is computed and has to add up,
-and the delivery dates follow from the pace. The script refuses to print while an item is
-unclassified or a classified one has left the registers without closing.
+**The person declares, the script computes.** Hours, sizes, the perimeter of a release,
+closing dates and what was asked of whom have no source among the artifacts and must not
+acquire one there: they live in a state file outside the artifact set, in a clone of a private
+repository the documentation repository ignores. Everything else in the workbook is derived:
+what closed and what is new comes from the registers compared with the previous snapshot, the
+hours left from the sizes, the delivery dates from the pace of the last three working days,
+and every derived cell is a formula. A day already sent is frozen in the snapshot that sent
+it. The script refuses to write while an item is unclassified or a classified one has left the
+registers without closing.
 
 What a `CHG` must be to count as closed is the framework's: `verified`. A product with no
 environment to verify in closes nothing, and the digest says so rather than counting merges.

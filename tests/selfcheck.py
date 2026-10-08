@@ -2916,7 +2916,7 @@ def _extract_skips_own_output():
         for rel in ("_meta/corpus/offerta.pptx",
                     "_meta/presentation/PRS-001-atlas-2026-10-02/PRS-001-atlas-2026-10-02.pptx",
                     "_meta/business/SAL-001-atlas-2026-10-02.md",
-                    "_meta/digest/DIG-002-atlas-2026-10-07/DIG-002-atlas-2026-10-07.txt",
+                    "_meta/digest/DIG-002-atlas-2026-10-07/DIG-002-atlas-2026-10-07.xlsx",
                     "_meta/extract/offerta/blocks.md",
                     "presentation/deck-del-cliente.pptx"):
             (root / rel).parent.mkdir(parents=True, exist_ok=True)
@@ -3061,9 +3061,21 @@ def _presentation_renders():
     return problems
 
 DIGEST = ROOT / "skills" / "digest" / "scripts" / "digest.py"
-CANONICAL = ROOT / "tests" / "fixtures" / "digest" / "DIG-002-atlas-2026-10-07.txt"
+WORKBOOK = ROOT / "skills" / "digest" / "scripts" / "workbook.py"
+REFERENCE = ROOT / "tests" / "fixtures" / "digest" / "DIG-003-atlas-2026-10-09.xlsx"
 _GIT_ID = {"GIT_AUTHOR_NAME": "lead", "GIT_AUTHOR_EMAIL": "lead@example.com",
            "GIT_COMMITTER_NAME": "lead", "GIT_COMMITTER_EMAIL": "lead@example.com"}
+# WHERE THE WORKBOOK OF THE FIXTURE MAY DIFFER FROM THE REFERENCE, AND WHY. Everything else has
+# to be equal, value by value and style by style, in every cell the reference fills.
+_DIGEST_DIFFERS = {
+    # D9: in the fixture OD-116 is closed by a decision instead of left without an answer, so
+    # nothing leaves the workbook in silence; the reason printed for CHG-021 says so.
+    ("Attività", "H36"): "Fuori perimetro dal 09/10: decisione presa su OD-116, passa al "
+                         "rilascio successivo",
+}
+# D11 c: the delay is red when there is one, through a conditional format; in the reference it
+# was red by hand, and stayed red at zero.
+_DIGEST_RED_WHEN_LATE = {("Riepilogo", "B6"), ("Riepilogo", "J12"), ("Riepilogo", "J13")}
 
 
 def _digest_copy(tmp: str, which: str = "atlas") -> Path | None:
@@ -3089,74 +3101,183 @@ def _edit(path: Path, old: str, new: str) -> None:
     path.write_text(text.replace(old, new, 1), encoding="utf-8")
 
 
-@check("the digest of the fixture is the canonical example, character for character")
-def _digest_reproduces_the_canonical():
+def _state(root: Path, change) -> None:
+    """Edit the state file of the fixture as data: `change` receives it and edits it in place."""
+    path = root / "_meta" / "digest" / "state-atlas.yaml"
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    change(data)
+    path.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False), encoding="utf-8")
+
+
+def _cell_style(c) -> tuple:
+    """What a reader sees of a cell, with the spellings of a default made one."""
+    colour = c.font.color.rgb if c.font.color is not None and c.font.color.type == "rgb" else None
+    fill = c.fill.fgColor.rgb if c.fill is not None and c.fill.fill_type == "solid" else None
+    return (c.font.name, c.font.sz, bool(c.font.b), bool(c.font.i), colour, fill,
+            c.number_format, bool(c.alignment.wrap_text), c.alignment.horizontal or "general",
+            c.alignment.vertical or "bottom")
+
+
+def _same_value(a, b) -> bool:
+    import datetime as _dt
+    a, b = [x.date() if isinstance(x, _dt.datetime) else x for x in (a, b)]
+    if isinstance(a, (int, float)) and isinstance(b, (int, float)) \
+            and not isinstance(a, bool) and not isinstance(b, bool):
+        return abs(a - b) < 1e-9
+    return a == b
+
+
+@check("the workbook of the fixture is the reference, cell by cell, value and style")
+def _digest_reproduces_the_reference():
     # THE FORMAT IS FIXED, AND THIS IS WHERE IT IS FIXED. The person who reads the digest every
-    # morning wrote the example by hand before a line of code existed; every section, label,
-    # number and line break of it has to come out of the script from a register and a state
-    # file, and nothing else. A change to the format is a change to that file first.
+    # morning made the reference workbook before a line of this code existed, and a spreadsheet
+    # computed every formula in it. Here the script renders the same day from a register and a
+    # state file: every value it writes beside a formula has to be the value that spreadsheet
+    # computed, and every cell has to look the same. A change to the format is a change to the
+    # reference first, and `_DIGEST_DIFFERS` lists the cells allowed to differ, with the reason.
+    import openpyxl
     with tempfile.TemporaryDirectory() as tmp:
         root = _digest_copy(tmp)
         if root is None:
             return ["the digest fixture could not be built: evals/fixtures/generators/digest.py"]
-        rc, out = _digest(root, "--date", "2026-10-07")
-        snap = root / "_meta" / "digest" / "DIG-002-atlas-2026-10-07"
-        txt = snap / "DIG-002-atlas-2026-10-07.txt"
-        if rc != 0 or not txt.is_file():
-            return [f"digest.py exited {rc} and wrote {'a' if txt.is_file() else 'no'} digest:"
-                    f" {out.strip()[-400:]}"]
+        rc, out = _digest(root, "--date", "2026-10-09", "--now", "2026-10-09T08:30:00+02:00",
+                          "--copy-to", str(Path(tmp) / "copy"))
+        snap = root / "_meta" / "digest" / "DIG-003-atlas-2026-10-09"
+        xlsx = snap / "DIG-003-atlas-2026-10-09.xlsx"
+        if rc != 0 or not xlsx.is_file():
+            return [f"digest.py exited {rc} and wrote {'a' if xlsx.is_file() else 'no'} "
+                    f"workbook: {out.strip()[-400:]}"]
         problems = []
-        want, got = CANONICAL.read_text(encoding="utf-8"), txt.read_text(encoding="utf-8")
-        if got != want:
-            diff = [f"line {n}: expected {a!r}, got {b!r}"
-                    for n, (a, b) in enumerate(zip(want.splitlines(), got.splitlines()), 1)
-                    if a != b][:5]
-            problems.append("the digest differs from tests/fixtures/digest: "
-                            + ("; ".join(diff) or f"{len(want)} against {len(got)} characters"))
-        frozen = yaml.safe_load((snap / "frozen.yaml").read_text(encoding="utf-8"))
-        if frozen.get("additions") or frozen.get("provisional"):
-            problems.append("the canonical day needs no line outside the format, and the script "
-                            f"listed some: {frozen.get('additions')} {frozen.get('provisional')}")
+        ref = openpyxl.load_workbook(REFERENCE, data_only=True)
+        got = openpyxl.load_workbook(xlsx, data_only=True)
+        if ref.sheetnames != got.sheetnames:
+            return [f"the sheets are {got.sheetnames}, the reference has {ref.sheetnames}"]
+        for name in ref.sheetnames:
+            r, g = ref[name], got[name]
+            for row in r.iter_rows():
+                for c in row:
+                    other = g[c.coordinate]
+                    want = _DIGEST_DIFFERS.get((name, c.coordinate), c.value)
+                    if not _same_value(want, other.value):
+                        problems.append(f"{name}!{c.coordinate} is {other.value!r}, the reference "
+                                        f"says {c.value!r}")
+                    if c.value is None:
+                        continue
+                    a, b = _cell_style(c), _cell_style(other)
+                    if (name, c.coordinate) in _DIGEST_RED_WHEN_LATE:
+                        a, b = a[:4] + a[6:], b[:4] + b[6:]
+                    if a != b:
+                        problems.append(f"{name}!{c.coordinate} looks {b}, the reference {a}")
+            for what, mine, theirs in (
+                    ("merged cells", {str(m) for m in g.merged_cells.ranges if m.min_row < 40},
+                     {str(m) for m in r.merged_cells.ranges}),
+                    ("frozen panes", g.freeze_panes, r.freeze_panes),
+                    ("protection", g.protection.sheet, r.protection.sheet),
+                    ("filter and sort", (g.protection.autoFilter, g.protection.sort),
+                     (r.protection.autoFilter, r.protection.sort))):
+                if mine != theirs:
+                    problems.append(f"{name}: {what} {mine}, the reference {theirs}")
+            for col, dim in r.column_dimensions.items():
+                if dim.width and abs((g.column_dimensions[col].width or 0) - dim.width) > 0.75:
+                    problems.append(f"{name}: column {col} is {g.column_dimensions[col].width} "
+                                    f"wide, the reference {dim.width}")
+        conditional = {str(rng.sqref): [rule.formula for rule in rng.rules]
+                       for rng in openpyxl.load_workbook(xlsx)["Riepilogo"]
+                       .conditional_formatting}
+        if not any("$J$13>0" in str(f) for f in conditional.get("B6:J6", [])) or \
+                not any("J12>0" in str(f) for f in conditional.get("J12:J13", [])):
+            problems.append(f"the delay is not red through a conditional format: {conditional}")
+        if len(got["Riepilogo"]._charts) != 2:
+            problems.append("the summary has not the two pies of the reference, and no other")
+        if not (Path(tmp) / "copy" / xlsx.name).is_file():
+            problems.append("--copy-to did not leave a copy where it was asked")
+        if "Consegna prevista oggi: tra il 16/10 e il 23/10" not in out \
+                or "spezzata: OD-098 in OD-120, OD-121" not in out:
+            problems.append(f"the conversation does not get the summary and the changes: {out}")
         remote = root / ".remote" / "digest.git"
         log = subprocess.run(["git", "-C", str(remote), "log", "--format=%s"],
                              capture_output=True, text=True).stdout.split()
-        if "DIG-002-atlas-2026-10-07" not in log:
+        if "DIG-003-atlas-2026-10-09" not in log:
             problems.append(f"the snapshot was not pushed to the private store: {log}")
-        if any(len(line) > 74 for line in got.splitlines()):
-            problems.append("a line of the digest is longer than 74 characters")
+    return problems[:12]
+
+
+@check("the calendar on the first sheet places every item, the milestones and today")
+def _digest_draws_the_calendar():
+    # The calendar is the one part of the first sheet the reference does not have, so it is
+    # checked against the plan of the fixture: the done items on the day they closed, the
+    # items to do one after the other at the pace of the estimate, ending where the estimate
+    # ends, and each milestone on its day. A day is three characters of a fixed-width font.
+    import openpyxl
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _digest_copy(tmp)
+        if root is None:
+            return ["the digest fixture could not be built"]
+        rc, out = _digest(root, "--date", "2026-10-09", "--now", "2026-10-09T08:30:00+02:00")
+        xlsx = root / "_meta/digest/DIG-003-atlas-2026-10-09/DIG-003-atlas-2026-10-09.xlsx"
+        if rc != 0:
+            return [f"the digest of 09/10 was refused: {out.strip()[:300]}"]
+        ws = openpyxl.load_workbook(xlsx)["Riepilogo"]
+    rows = {str(ws.cell(r, 1).value or ""): str(ws.cell(r, 2).value or "")
+            for r in range(58, ws.max_row + 1)}
+    problems = []
+    if str(ws["A58"].value) != "6. Calendario delle attività":
+        problems.append(f"section 6 is not below the pies: A58 is {ws['A58'].value!r}")
+    import datetime as _dt
+    calendar, d = [], _dt.date(2026, 9, 22)
+    while d <= _dt.date(2026, 10, 23):
+        calendar += [d] if d.weekday() < 5 else []
+        d += _dt.timedelta(days=1)
+    header = rows.get("Attività", "")
+    if header.split() != [f"{x.day:02d}" for x in calendar]:
+        problems.append(f"the days run from the first day of the project to the latest end, "
+                        f"working days only: {header!r}")
+
+    def slot(day: str) -> int:
+        dd, mm = map(int, day.split("/"))
+        return calendar.index(_dt.date(2026, mm, dd))
+
+    def span(label: str) -> tuple[int, int]:
+        line = next((v for k, v in rows.items() if k.startswith(label)), "")
+        cells = [k // 3 for k, ch in enumerate(line) if ch == "█"]
+        return (cells[0], cells[-1]) if cells else (-1, -1)
+
+    for label, first, last in (("CHG-012", "24/09", "24/09"), ("DEC-026", "06/10", "06/10"),
+                               ("KI-013", "07/10", "07/10"), ("CHG-018", "08/10", "13/10"),
+                               ("OD-120", "12/10", "15/10"), ("CHG-024", "16/10", "23/10")):
+        if span(label) != (slot(first), slot(last)):
+            problems.append(f"{label} is drawn on {span(label)}, not from {first} to {last}")
+    for label, day in (("Demo al team funzionale", "15/10"), ("Consegna concordata", "13/10")):
+        line = next((v for k, v in rows.items() if k.startswith(label)), "")
+        if "♦" not in line or line.index("♦") // 3 != slot(day):
+            problems.append(f"the milestone {label!r} is not on {day}")
+    done = next((v for k, v in rows.items() if k.startswith("CHG-012")), "")
+    if len(done) <= slot("09/10") * 3 + 1 or done[slot("09/10") * 3 + 1] != "│":
+        problems.append("today is not marked where nothing else is drawn")
+    if "OD-098" in "".join(rows) or "CHG-021" in "".join(rows):
+        problems.append("an item split or out of the perimeter is on the calendar")
     return problems
 
 
 @check("a new entry in the register stops the digest until it is classified")
 def _digest_refuses_the_unclassified():
-    # NO ITEM ENTERS THE COUNT IN SILENCE. An entry the state file does not know has no size,
-    # so the hours left would be computed without it and the digest would print a number that
-    # is wrong by an amount nobody can see. The refusal names it; the classification lifts it.
+    # An item the state file does not know has no theme, no scope and no size, so the hours
+    # left would be computed without it and the workbook would print a number that is wrong
+    # in a way nobody sees. The morning before anybody answered is that state, three times.
     with tempfile.TemporaryDirectory() as tmp:
-        root = _digest_copy(tmp)
+        root = _digest_copy(tmp, "atlas-asks")
         if root is None:
             return ["the digest fixture could not be built"]
-        register = root / "products" / "atlas" / "OPEN.md"
-        _edit(register, "entries:\n", "entries:\n  KI-099:\n    status: open\n")
-        _edit(register, "# §3 · Parking lot",
-              "### KI-099 · Exports stop at one year\n\n- An export of more than a year "
-              "stops.\n\n# §3 · Parking lot")
         problems = []
-        rc, out = _digest(root, "--date", "2026-10-07", "--check")
-        if rc != 1 or "KI-099" not in out:
-            problems.append(f"an unclassified entry did not stop the digest (exit {rc}): "
-                            f"{out.strip()[:200]}")
-        rc, out = _digest(root, "--date", "2026-10-07")
-        if rc == 0 or (root / "_meta/digest/DIG-002-atlas-2026-10-07").exists():
-            problems.append("the digest was written with an entry nobody classified")
-        state = root / "_meta" / "digest" / "state-atlas.yaml"
-        _edit(state, "items:\n", "items:\n  KI-099:\n    title: esportazioni oltre un anno\n"
-                                 "    what: un'esportazione di più di un anno di dati si ferma "
-                                 "prima della fine.\n    theme: sviluppo\n    scope: out\n"
-                                 "    seen: Exports stop at one year\n")
-        rc, out = _digest(root, "--date", "2026-10-07", "--check")
-        if rc != 0:
-            problems.append(f"classified, it still does not pass: {out.strip()[:300]}")
+        rc, out = _digest(root, "--date", "2026-10-09", "--check")
+        for want in ("KI-014", "OD-120", "OD-121", "no hours declared for 2026-10-07",
+                     "no plan for 2026-10-12"):
+            if rc != 1 or want not in out:
+                problems.append(f"the morning before the answers did not refuse on {want!r} "
+                                f"(exit {rc}): {out.strip()[:300]}")
+        rc, out = _digest(root, "--date", "2026-10-09")
+        if rc == 0 or (root / "_meta/digest/DIG-003-atlas-2026-10-09").exists():
+            problems.append("the workbook was written with entries nobody classified")
     return problems
 
 
@@ -3164,44 +3285,64 @@ def _digest_refuses_the_unclassified():
 def _digest_refusals():
     # One mutation each, on a fresh copy, and each must be refused by itself with a sentence
     # that names it: a check that passes with one of these in it prints a count somebody sends.
+    def day(d, value):
+        return lambda s: s["days"].__setitem__(d, value)
+
     cases = [
         ("an open item gone from the register without closing",
          lambda r: (_edit(r / "products/atlas/OPEN.md",
                           "  OD-109:\n    status: open\n    cost_to_reverse: low\n"
                           "    default_in_force: a question with no defined metric gets no "
                           "answer\n    trigger: the metric glossary arriving from the "
-                          "functional team\n", ""),
+                          "functional team", ""),
                     _edit(r / "products/atlas/OPEN.md",
                           "### OD-109 · How to answer a question no metric covers", "### Gone")),
          "OD-109"),
         ("a register title changed after the confirmation",
-         lambda r: _edit(r / "products/atlas/OPEN.md", "### OD-098 · Keep or replace",
-                         "### OD-098 · Keep, extend or replace"), "confirm its classification"),
+         lambda r: _edit(r / "products/atlas/OPEN.md", "### OD-121 · How often",
+                         "### OD-121 · When and how often"), "confirm its classification"),
         ("a change in draft planned for today",
          lambda r: _edit(next((r / "products/atlas/changes").glob("CHG-018-*.md")),
                          "status: approved", "status: draft"), "draft"),
         ("a register status the digest does not map",
-         lambda r: _edit(next((r / "products/atlas/changes").glob("CHG-021-*.md")),
+         lambda r: _edit(next((r / "products/atlas/changes").glob("CHG-022-*.md")),
                          "status: approved", "status: paused"), "does not map"),
-        ("an item closed in the perimeter with no hours",
-         lambda r: _edit(r / "_meta/digest/state-atlas.yaml", "    hours_before: 14\n", ""),
-         "DEC-019"),
+        ("an item closed in the perimeter with no closing date",
+         lambda r: _state(r, lambda s: s["items"]["KI-013"].pop("closed_on")), "closed_on"),
+        ("an item outside the perimeter with no reason",
+         lambda r: _state(r, lambda s: s["items"]["INC-041"].pop("out_reason")), "out_reason"),
         ("an identifier inside a description",
-         lambda r: _edit(r / "_meta/digest/state-atlas.yaml",
-                         "quali dettagli tecnici\n      restano solo nei log.",
-                         "quali dettagli tecnici\n      restano solo nei log, come in DEC-026."),
+         lambda r: _state(r, lambda s: s["items"]["OD-115"].__setitem__(
+             "what", "cosa vede l'utente quando una richiesta fallisce, come in DEC-026.")),
          "an identifier"),
         ("a long dash in a title",
-         lambda r: _edit(r / "_meta/digest/state-atlas.yaml",
-                         "title: repository unica", "title: repository unica — monorepo"),
-         "long dash"),
+         lambda r: _state(r, lambda s: s["items"]["CHG-012"].__setitem__(
+             "title", "repository unica — monorepo")), "long dash"),
+        ("a working day with no hours declared",
+         lambda r: _state(r, lambda s: s["days"].pop("2026-10-08")),
+         "no hours declared for 2026-10-08"),
+        ("hours on a day not over yet",
+         lambda r: _state(r, day("2026-10-09", {"hours": {"CHG-018": 1}})), "not over yet"),
+        ("a category outside the product that does not exist",
+         lambda r: _state(r, day("2026-10-08", {"hours": {"CHG-018": 4, "OD-076": 1},
+                                                "outside": {"caffè": 2}})),
+         "is not a category"),
+        ("days rebuilt in bulk that the items do not add up to",
+         lambda r: _state(r, lambda s: s["items"]["CHG-012"].__setitem__("hours_before", 10)),
+         "have to agree"),
+        ("an open item missing from its list",
+         lambda r: _state(r, lambda s: s["order"]["todo"].remove("OD-121")),
+         "does not list OD-121"),
+        ("a planned item with no hours",
+         lambda r: _state(r, lambda s: s["plan"]["2026-10-12"][1].pop("hours")), "no hours"),
+        ("no milestones declared",
+         lambda r: _state(r, lambda s: s.pop("milestones")), "no `milestones`"),
+        ("a state file of 4.1.0",
+         lambda r: _state(r, lambda s: s.pop("format")), "--migrate"),
         ("the hours of one item declared in two products",
          lambda r: (r / "_meta/digest/state-borea.yaml").write_text(
-             "product: borea\nperiods:\n  2026-10-06:\n    hours:\n      OD-114: 2\n",
+             "format: 2\nproduct: borea\ndays:\n  2026-10-08:\n    hours:\n      CHG-018: 2\n",
              encoding="utf-8"), "declared once"),
-        ("a decision asked of somebody that is not an open entry",
-         lambda r: _edit(r / "_meta/digest/state-atlas.yaml", "requests:\n  OD-116:",
-                         "requests:\n  OD-114:"), "open `OD`"),
     ]
     problems = []
     for what, mutate, says in cases:
@@ -3210,7 +3351,7 @@ def _digest_refusals():
             if root is None:
                 return ["the digest fixture could not be built"]
             mutate(root)
-            rc, out = _digest(root, "--date", "2026-10-07", "--check")
+            rc, out = _digest(root, "--date", "2026-10-09", "--check")
             if rc != 1 or says not in out:
                 problems.append(f"{what}: exit {rc}, and the refusal does not say {says!r}: "
                                 f"{out.strip()[:200]}")
@@ -3222,117 +3363,106 @@ def _digest_refusals():
     return problems
 
 
-def _digest_second_day(root: Path, *, two_parents: bool = False) -> None:
-    """07/10 and 08/10 worked: a split, a re-estimate, an item out, a known issue closed."""
-    register = root / "products" / "atlas" / "OPEN.md"
-    _edit(register, "  KI-013:\n    status: open", "  KI-013:\n    status: decided\n"
-                                                    "    closed_by: CHG-018")
-    _edit(register, "entries:\n",
-          "entries:\n  OD-120:\n    status: open\n    cost_to_reverse: medium\n"
-          "    default_in_force: the loader reads the two current formats\n"
-          "    trigger: the first source in a new format\n  OD-121:\n    status: open\n"
-          "    cost_to_reverse: medium\n    default_in_force: loads run nightly\n"
-          "    trigger: a customer asking for fresher data\n")
-    _edit(register, "### OD-076 ·", "### OD-120 · Input formats the loader must read\n\n"
-                                    "### OD-121 · How often the loader runs\n\n### OD-076 ·")
-    env = {**os.environ, **_GIT_ID, "GIT_AUTHOR_DATE": "2026-10-08T12:00:00+02:00",
-           "GIT_COMMITTER_DATE": "2026-10-08T12:00:00+02:00"}
-    subprocess.run(["git", "commit", "-qam", "OD-098 split; KI-013 fixed"], cwd=root, env=env,
-                   check=True)
-    state = root / "_meta" / "digest" / "state-atlas.yaml"
-    _edit(state, "    seen: Keep or replace the data loading tool\n",
-          "    seen: Keep or replace the data loading tool\n    split_into: [OD-120, OD-121]\n")
-    _edit(state, "    size: M\n    seen: How to answer a question no metric covers\n",
-          "    size: L\n    seen: How to answer a question no metric covers\n"
-          + ("    split_into: [OD-121]\n" if two_parents else ""))
-    _edit(state, '    scope: "1.0"\n    size: M\n    seen: Loading-in-progress notice\n',
-          "    scope: out\n    size: M\n    seen: Loading-in-progress notice\n")
-    _edit(state, "items:\n", "items:\n"
-          "  OD-120:\n    title: formati dei dati in ingresso\n    what: quali formati di file "
-          "lo strumento di caricamento deve saper leggere.\n    theme: architettura\n"
-          '    scope: "1.0"\n    size: L\n    seen: Input formats the loader must read\n'
-          "  OD-121:\n    title: frequenza dei caricamenti\n    what: ogni quanto vengono "
-          "caricati i dati dei clienti, e quindi quanto sono recenti.\n    theme: architettura\n"
-          '    scope: "1.0"\n    size: L\n    seen: How often the loader runs\n')
-    _edit(state, "  2026-10-08: [CHG-018, CHG-021]\n",
-          "  2026-10-08: [CHG-018, CHG-021]\n  2026-10-09: [CHG-018]\n  2026-10-12: [OD-120]\n")
-    with state.open("a", encoding="utf-8") as f:
-        f.write("  2026-10-07:\n    hours:\n      CHG-018: 4\n      KI-013: 2\n      OD-076: 1\n"
-                "    outside:\n      Riunioni di stato: 1\n")
-
-
-@check("a second day computes what the canonical one cannot show, and keeps the rest out")
-def _digest_second_day_check():
-    # The example is one day with nothing in progress, so it says nothing about a window of
-    # several periods, a split, a re-estimate going two ways at once, or an item leaving the
-    # perimeter. The numbers below were computed by hand before the script printed them:
-    # 33 to 76 less 3 to 5 closed, less 3 to 5 out, less 1 to 16 split, plus 3 to 7
-    # re-estimated is 29 to 57; 15,5 h in three working days is 5,2 a day.
-    with tempfile.TemporaryDirectory() as tmp:
-        root = _digest_copy(tmp)
-        if root is None:
-            return ["the digest fixture could not be built"]
-        rc, out = _digest(root, "--date", "2026-10-07")
-        _digest_second_day(root)
-        rc, out = _digest(root, "--date", "2026-10-09")
-        txt = root / "_meta/digest/DIG-003-atlas-2026-10-09/DIG-003-atlas-2026-10-09.txt"
-        if rc != 0 or not txt.is_file():
-            return [f"the second day was refused (exit {rc}): {out.strip()[:400]}"]
-        got = txt.read_text(encoding="utf-8")
-        problems = [f"the second day does not say {line!r}" for line in (
-            "  Rimasto al 07/10: 33 a 76 h",
-            "  Chiuse: 1 voce, meno 3 a 5 h",
-            "  Uscite senza chiusura: 1 voce, meno 3 a 5 h",
-            "  Ristimate o spezzate: 2 voci, minimo più 2 h, massimo meno 9 h",
-            "  Rimasto al 09/10: 29 a 57 h",
-            "  a ritmo attuale (5,2 h/giorno): tra il 16/10 e il 26/10",
-            "  a orario normale (7,2 h/giorno): tra il 15/10 e il 20/10",
-            "2. ATTIVITÀ DAL 07/10/2026 AL 08/10/2026, a consuntivo",
-            "- KI-013, tempo massimo superato sulle domande lunghe. Chiusa con CHG-018.",
-            "- CHG-021, avviso di caricamento in corso. Tolta dal perimetro.",
-            "4. ATTIVITÀ 12/10/2026, in programma") if line not in got.splitlines()]
-        if "In corso" in got:
-            problems.append("an item in progress reached the digest: the format has no line "
-                            "for it, so it is listed after the digest instead")
-        frozen = yaml.safe_load((txt.parent / "frozen.yaml").read_text(encoding="utf-8"))
-        where = {a["where"] for a in frozen.get("additions") or []}
-        for want in ("2 · sotto Sviluppo", "2 · Voci ristimate o spezzate",
-                     "2 · la riga delle ore"):
-            if want not in where:
-                problems.append(f"nothing listed for {want!r} outside the digest: {where}")
-        if not frozen.get("provisional"):
-            problems.append("the forms the example does not show were not listed")
-    with tempfile.TemporaryDirectory() as tmp:
-        root = _digest_copy(tmp)
-        _digest(root, "--date", "2026-10-07")
-        _digest_second_day(root, two_parents=True)
-        rc, out = _digest(root, "--date", "2026-10-09")
-        if rc != 1 or "does not add up" not in out:
-            problems.append("one item split out of two parents was counted twice and printed: "
-                            "the reconciliation must stop it")
-    return problems
-
-
-@check("a past period and an earlier snapshot cannot be edited under the next digest")
+@check("a day already sent and an earlier snapshot cannot be edited under the next digest")
 def _digest_history_is_frozen():
     problems = []
     for what, mutate, says in [
-        ("the hours of a period already printed",
-         lambda r: _edit(r / "_meta/digest/state-atlas.yaml", "      OD-114: 5\n",
-                         "      OD-114: 7\n"), "not the ones DIG-002-atlas-2026-10-07 froze"),
+        ("the hours of a day already sent",
+         lambda r: _state(r, lambda s: s["days"]["2026-10-06"]["hours"].__setitem__("OD-114",
+                                                                                   7)),
+         "not the one DIG-002-atlas-2026-10-07 froze"),
         ("an earlier snapshot",
          lambda r: _edit(next((r / "_meta/digest").glob("DIG-001-*/frozen.yaml")),
-                         "remaining:\n- '34'", "remaining:\n- '35'"), "no longer matches"),
+                         "baseline: true", "baseline: false"), "no longer matches"),
     ]:
         with tempfile.TemporaryDirectory() as tmp:
             root = _digest_copy(tmp)
             if root is None:
                 return ["the digest fixture could not be built"]
-            _digest(root, "--date", "2026-10-07")
             mutate(root)
-            rc, out = _digest(root, "--date", "2026-10-08", "--check")
+            rc, out = _digest(root, "--date", "2026-10-09", "--check")
             if rc != 1 or says not in out:
                 problems.append(f"{what} was edited and nothing said so: {out.strip()[:300]}")
+    return problems
+
+
+@check("the workbook says «non stimabile» and «Nessuna.» where a number or a row would lie")
+def _digest_edge_cases():
+    # D11 d. No hours on the release in the last three working days, and every list empty: a
+    # spreadsheet left to itself prints #DIV/0!, a delivery dated yesterday, or counts the
+    # line that says the table is empty. The model is built by hand, so that a case the
+    # fixture never reaches is still rendered and read back.
+    import openpyxl
+    x = _load(DIGEST, "digest_edges")
+    from datetime import date as _d
+    from fractions import Fraction as Fr
+    when, start = _d(2026, 10, 9), _d(2026, 10, 1)
+    table = []
+    d = start
+    while d < when:
+        table.append([d] + [Fr(0)] * 4 + [Fr(4), Fr(0), Fr(1), Fr(0), Fr(0)])
+        d += x.timedelta(days=1)
+    m = x.Model("Borea", when, _d(2026, 10, 8), _d(2026, 10, 20), start, _d(2026, 10, 12), "1.0",
+                "linea di base", "08/10", [], [], [], [], {}, [], {t: 0 for t in x.THEMES},
+                {t: 0 for t in x.THEMES}, {t: 0 for t in x.THEMES}, table, [], [])
+    F = x.figures(m)
+    problems = []
+    if F["B5"] != "non stimabile" or F["cases"][0]["H"] != "non stimabile":
+        problems.append(f"no hours on the release gave a date: {F['B5']!r}")
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp) / "edge.xlsx"
+        _load(WORKBOOK, "digest_edges_workbook").write(m, F, out, x.datetime(2026, 10, 9, 8, 30))
+        wb = openpyxl.load_workbook(out, data_only=True)
+    s, a = wb["Riepilogo"], wb["Attività"]
+    for cell, want in (("B5", "non stimabile"), ("B6", "non stimabile"), ("I12", "non stimabile"),
+                       ("B7", "non dipende da richieste ad altri."), ("B12", 0),
+                       ("A17", "Nessuna.")):
+        if s[cell].value != want:
+            problems.append(f"Riepilogo!{cell} is {s[cell].value!r}, not {want!r}")
+    nessuna = [c.coordinate for row in a.iter_rows() for c in row if c.value == "Nessuna."]
+    totals = [c.value for row in a.iter_rows() for c in row
+              if isinstance(c.value, str) and c.value.endswith(" voci")]
+    if len(nessuna) != 4 or totals != ["0 voci"] * 3:
+        problems.append(f"empty lists show {nessuna} and count {totals}")
+    return problems
+
+
+@check("a state file of 4.1.0 migrates, and what a script cannot know is listed, not guessed")
+def _digest_migrates_the_state():
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        store = root / "_meta" / "digest"
+        store.mkdir(parents=True)
+        (store / "state-atlas.yaml").write_text(
+            "product: atlas\nstandard_hours: 8\nrelease:\n  name: \"1.0\"\n"
+            "  delivery: 2026-10-13\nitems:\n  CHG-019:\n    title: flusso di rilascio\n"
+            "    theme: infrastruttura\n    scope: \"1.0\"\n    size: S\n"
+            "waits:\n  - what: Ambiente preprod\n    owner: team infrastruttura\n"
+            "    asked: 2026-09-25\n    needed_by: 2026-10-09\n    without: niente prove.\n"
+            "    note: blocca il rilascio\nrequests:\n  OD-116:\n    to: responsabile\n"
+            "    by: 2026-10-09\nplan:\n  2026-10-07: [CHG-019]\nperiods:\n  2026-10-06:\n"
+            "    hours:\n      CHG-019: 1.5\n    outside:\n      Riunioni di stato: 1\n"
+            "      Formazione di un junior: 0.5\n", encoding="utf-8")
+        r = subprocess.run([sys.executable, str(DIGEST), "--root", str(root), "--migrate"],
+                           capture_output=True, text=True)
+        try:
+            data = yaml.safe_load((store / "state-atlas.yaml").read_text(encoding="utf-8"))
+        except yaml.YAMLError:
+            data = {}
+    problems = []
+    if r.returncode or data.get("format") != 2:
+        return [f"--migrate exited {r.returncode}: {(r.stdout + r.stderr).strip()[:300]}"]
+    if data["items"]["CHG-019"]["theme"] != "deploy":
+        problems.append("the theme infrastruttura was not renamed deploy")
+    day = (data.get("days") or {}).get("2026-10-06") or {}
+    if day.get("outside") != {"riunioni": 1, "formazione": 0.5} or \
+            day.get("hours") != {"CHG-019": 1.5}:
+        problems.append(f"the hours of 06/10 did not become a day: {day}")
+    for word in ("release.start", "requests", "standard_hours", "order", "milestones", "note"):
+        if word not in r.stdout:
+            problems.append(f"the migration does not tell the person about {word!r}")
+    if "standard_hours" in data or "requests" in data or "periods" in data:
+        problems.append("a key of 4.1.0 survived the migration")
     return problems
 
 
@@ -3360,25 +3490,29 @@ def _digest_maps_every_status():
     return problems
 
 
-@check("the items a commit names are proposed as worked on, and a regenerated index is not")
+@check("the items a commit names are proposed day by day, and a regenerated index is not")
 def _digest_reads_the_history():
     with tempfile.TemporaryDirectory() as tmp:
         root = _digest_copy(tmp)
         if root is None:
             return ["the digest fixture could not be built"]
-        rc, out = _digest(root, "--date", "2026-10-07", "--inventory")
+        rc, out = _digest(root, "--date", "2026-10-09", "--inventory")
         inv = yaml.safe_load(out) if rc == 0 else {}
-    worked = set((inv or {}).get("worked") or {})
+    by_day = (inv or {}).get("worked_by_day") or {}
     problems = []
-    for want in ("OD-114", "OD-115", "KI-013", "CHG-017", "CHG-019"):
-        if want not in worked:
-            problems.append(f"{want} changed on 06/10 and is not proposed as worked on")
-    for noise in ("OD-076", "CHG-021", "CHG-024"):
-        if noise in worked:
+    for d, want in (("2026-10-07", "KI-013"), ("2026-10-08", "CHG-018"),
+                    ("2026-10-08", "OD-076"), ("2026-10-08", "OD-116")):
+        if want not in (by_day.get(d) or {}):
+            problems.append(f"{want} changed on {d} and is not proposed as worked on that day")
+    for noise in ("OD-109", "CHG-024", "OD-115"):
+        if any(noise in v for v in by_day.values()):
             problems.append(f"{noise} is proposed as worked on because a regenerated index "
                             "names it")
-    if (inv or {}).get("aliases") != {"DEC-026": "OD-114"}:
-        problems.append(f"DEC-026 decides OD-114 and is one item with it: {inv.get('aliases')}")
+    if (inv or {}).get("aliases") != {"DEC-026": "OD-114", "DEC-036": "OD-116"}:
+        problems.append(f"a decision and the entry it closes are one item: {inv.get('aliases')}")
+    closed = {c["id"]: c["proposed_closed_on"] for c in (inv or {}).get("closed_since") or []}
+    if closed.get("KI-013") != "2026-10-07":
+        problems.append(f"the closing day of KI-013 is not proposed from its commit: {closed}")
     return problems
 
 
@@ -3405,7 +3539,7 @@ def _digest_store_stays_private():
         if root is None:
             return problems + ["the digest fixture could not be built"]
         (root / ".gitignore").write_text(".remote/\n", encoding="utf-8")
-        rc, out = _digest(root, "--date", "2026-10-07")
+        rc, out = _digest(root, "--date", "2026-10-09")
         if rc != 1 or "not ignored" not in out:
             problems.append("the store was written while the documentation repository would "
                             f"have committed it: {out.strip()[:200]}")
