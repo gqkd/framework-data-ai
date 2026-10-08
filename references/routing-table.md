@@ -118,7 +118,7 @@ Three shapes fail the test, and they are the ones that actually happen:
 The same test says what stays. A count the decision itself **creates** is fine: `DEC-018` is
 titled «five artifacts are required», and that five is the decision's own content, not a
 reading of somebody else's list -- it changes only if somebody decides differently, which is
-what `supersedes` is for. Referring to `DEC-002`, `OD-026` or `products/qosmos/ARC.md` by id is
+what `supersedes` is for. Referring to `DEC-002`, `OD-026` or `products/atlas/ARC.md` by id is
 fine for the same reason: an id is stable by decision, and if it stops resolving that is
 `REF001` and a real repair, not ageing.
 
