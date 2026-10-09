@@ -316,8 +316,11 @@ first table of Attività and section 5 of the summary.
    «Da fare», for the top of its size, at the pace of the estimate, so the last one ends on
    the expected delivery; the milestones and the agreed delivery as diamonds; today's column
    in yellow. The first and last day of an item to do are formulas, and the bars conditional
-   formats on them. With stages, the rows are grouped by stage and by increment: the row of
-   an increment is the sum, the earliest start and the latest end of what composes it, and
+   formats on them. An item already started is placed like the others, by its place in the
+   queue: the day it was first worked is in its status, «in corso dal 08/10», and not in its
+   bar, which would otherwise cover the days of every item before it. With stages, the rows
+   are grouped by stage and by increment: the row of an increment is the sum, the earliest
+   start and the latest end of what composes it, and
    the milestone that closes a stage says by formula whether it is «in tempo», «a rischio» or
    «incompleta». With stages the rows also fold, closed when the file opens: the stages and
    the milestones in view, a stage's increments under its «+», an increment's components

@@ -15,6 +15,8 @@ What the case is built to show, each by one item:
 - a conditional increment, counted like the others (INC-103), and one with nothing under it,
   still to be broken down and out of the estimate (INC-104);
 - an item blocked by a wait, which goes to the end of its increment (OD-201);
+- an item worked once before the digest and placed by the queue after the next week
+  (CHG-303), whose bar, increment and stage start where the queue puts it and not on 06/10;
 - an item in no increment, which comes after the stages (KI-021);
 - a stage milestone at risk, one in time and one incomplete.
 
@@ -481,7 +483,9 @@ def state(stage: str) -> dict:
            "items": ITEMS, "order": {"todo": ["KI-021"], "out": ["CHG-305"]},
            "days": days, "waits": WAITS}
     if stage == "07":
-        days["2026-10-06"] = {"hours": {"CHG-302": 4, "OD-201": 2},
+        # One hour of the day on CHG-303 and not on CHG-302: the day and its theme add up to
+        # what they did before, so the pace and every date computed from it stay put.
+        days["2026-10-06"] = {"hours": {"CHG-302": 3, "CHG-303": 1, "OD-201": 2},
                               "outside": {"riunioni": 1}}
         out["plan"] = {"2026-10-07": [{"item": "CHG-302", "hours": 4}],
                        "2026-10-08": [{"item": "CHG-302", "hours": 4, "closes": True}]}

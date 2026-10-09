@@ -707,7 +707,7 @@ def gantt_sheet(wb, ws, S, m, F, at: dict) -> None:
     last = first + len(days) - 1
     # Excel does not open or close a group on a protected sheet, so a Gantt that folds is the
     # one sheet left unprotected.
-    setup(ws, {"A": 12 if staged else 10, "B": 36, "C": 14 if staged else 11, "D": 11,
+    setup(ws, {"A": 12 if staged else 10, "B": 36, "C": 18, "D": 11,
                "E": 11, "F": 7}, (4, 6), protect=not staged)
     if staged:
         ws.outline_settings(True, False, True, False)
@@ -826,17 +826,19 @@ def gantt_sheet(wb, ws, S, m, F, at: dict) -> None:
                 ws.write_datetime(r - 1, 4, dt(g["end"]), when)
                 ws.write_number(r - 1, 5, number(it.hours), hours_fmt)
             else:
-                ws.write_string(r - 1, 2, short_status(m.status[it.id]), S.cell())
+                # The first day worked is in the status, «in corso dal 08/10», and not in the
+                # bar, which is the item's place in the queue, as for every other item.
+                status = short_status(m.status[it.id])
+                if g["since"]:
+                    status += f" dal {dm(g['since'])}"
+                ws.write_string(r - 1, 2, status, S.cell())
                 row = a + todo_k
                 cum = ("0" if todo_k == 0 else
                        f"SUMPRODUCT({size_top(f'{AT}$E${a}:$E${row - 1}')})")
                 own = size_top(f"{AT}$E${row}")
-                if g["started"]:
-                    ws.write_datetime(r - 1, 3, dt(g["start"]), when)
-                else:
-                    ws.write_formula(r - 1, 3, f'=IF({G}<=0,"non stimabile",WORKDAY({today}-1,'
-                                               f'ROUNDDOWN(ROUND({cum}/{G},9),0)+1))',
-                                     when, cached(g["start"]))
+                ws.write_formula(r - 1, 3, f'=IF({G}<=0,"non stimabile",WORKDAY({today}-1,'
+                                           f'ROUNDDOWN(ROUND({cum}/{G},9),0)+1))',
+                                 when, cached(g["start"]))
                 ws.write_formula(r - 1, 4, f'=IF({G}<=0,"non stimabile",WORKDAY({today}-1,'
                                            f'MAX(1,ROUNDUP(ROUND(({cum}+{own})/{G},9),0))))',
                                  when, cached(g["end"]))
@@ -925,9 +927,13 @@ def gantt_sheet(wb, ws, S, m, F, at: dict) -> None:
         span = (rows_first - 1, first, rows_last - 1, last)
         f0 = f"{col_name(first)}$4"
         inside = f"ISNUMBER($D{rows_first}),{f0}>=$D{rows_first},{f0}<=$E{rows_first}"
-        rules = [(f'=AND($C{rows_first}="{state}",{inside})', colour)
+        # A status is matched by its start: an item already started says since when after it.
+        def is_(state: str) -> str:
+            return f'LEFT($C{rows_first},{len(state)})="{state}"'
+
+        rules = [(f"=AND({is_(state)},{inside})", colour)
                  for state, colour in (("fatta", BAR["fatta"]), ("bloccata", BAR["bloccata"]))]
-        todo = ",".join(f'$C{rows_first}="{x}"' for x in TODO_STATES)
+        todo = ",".join(is_(x) for x in TODO_STATES)
         rules.append((f"=AND(OR({todo}),{inside})", BAR["da fare"]))
         rules.append((f"={f0}={today}", "#FFF2CC"))
         if staged:
@@ -941,11 +947,11 @@ def gantt_sheet(wb, ws, S, m, F, at: dict) -> None:
             ws.conditional_format(*span, {"type": "formula", "criteria": criteria,
                                           "format": wb.add_format({"bg_color": colour})})
         ws.conditional_format(rows_first - 1, 2, rows_last - 1, 2,
-                              {"type": "formula", "criteria": f'=$C{rows_first}="bloccata"',
+                              {"type": "formula", "criteria": f"={is_('bloccata')}",
                                "format": wb.add_format({"bold": True, "font_color": "#9C0006",
                                                         "bg_color": "#F8CBAD"})})
         ws.conditional_format(rows_first - 1, 2, rows_last - 1, 2,
-                              {"type": "formula", "criteria": f'=$C{rows_first}="rallentata"',
+                              {"type": "formula", "criteria": f"={is_('rallentata')}",
                                "format": wb.add_format({"bg_color": "#FCE4D6"})})
         for mr in milestone_rows:
             ws.conditional_format(mr - 1, 2, mr - 1, 2,
@@ -962,7 +968,9 @@ def gantt_sheet(wb, ws, S, m, F, at: dict) -> None:
              "fare, in arancione chiaro quelle bloccate. In giallo la colonna di oggi.",
              "Le voci da fare sono in fila nell'ordine della tabella «Da fare» del foglio "
              "Attività, ognuna con le ore massime della sua taglia, al ritmo della stima del "
-             "Riepilogo (punto 2): l'ultima finisce il giorno della consegna prevista.",
+             "Riepilogo (punto 2): l'ultima finisce il giorno della consegna prevista. Una "
+             "voce già cominciata sta al suo posto nella fila come le altre, e il giorno in cui "
+             "ci si è lavorato la prima volta è nel suo Stato, «in corso dal …».",
              "◆ arancione: milestone. ◆ rosso: consegna concordata."]
     if not F.get("gantt_done", True):
         notes[0] = ("Le voci chiuse non sono mostrate. In blu le voci da fare, in arancione "

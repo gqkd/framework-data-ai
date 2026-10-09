@@ -1461,9 +1461,11 @@ def figures(m: Model) -> dict:
                           max(1, math.ceil(excel_round((cum + it.top()) / G, 9))))
         else:
             begin = end = None
-        started = it.first_day if it.first_day and it.first_day < when else None
-        sched[it.id] = {"kind": "todo", "item": it, "start": started or begin, "end": end,
-                        "started": started is not None}
+        # An item already started is placed like any other, by its place in the queue and its
+        # hours: a bar from the first day worked would cover the days of every item before it.
+        # That day is said in its status instead.
+        since = it.first_day if it.first_day and it.first_day < when else None
+        sched[it.id] = {"kind": "todo", "item": it, "start": begin, "end": end, "since": since}
         cum += it.top()
 
     def done_row(it: Item) -> dict:

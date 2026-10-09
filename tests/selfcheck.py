@@ -3369,8 +3369,9 @@ def _digest_reproduces_the_reference():
 def _digest_draws_the_gantt():
     # The Gantt is the one sheet the reference does not have, so it is checked against the plan
     # of the fixture, computed by hand at 5,2 hours a day from 09/10 with every item at the top
-    # of its size: CHG-018 12 hours from the day it started, 08/10, to the third working day,
-    # 13/10; OD-120 from 24/5,2 to 4,6 days, so from the third to the fifth; and so on to
+    # of its size: CHG-018, first in the queue, 12 hours from 09/10 to the third working day,
+    # 13/10, and «in corso dal 08/10», the day it was started, which its bar does not draw;
+    # OD-120 from 24/5,2 to 4,6 days, so from the third to the fifth; and so on to
     # CHG-024, whose 57th hour falls on 23/10, the date of point 2 of the summary.
     import datetime as _dt
     import openpyxl
@@ -3405,7 +3406,8 @@ def _digest_draws_the_gantt():
 
     for label, state, first, last in (
             ("CHG-012", "fatta", "24/09", "24/09"), ("DEC-026", "fatta", "06/10", "06/10"),
-            ("KI-013", "fatta", "07/10", "07/10"), ("CHG-018", "in corso", "08/10", "13/10"),
+            ("KI-013", "fatta", "07/10", "07/10"),
+            ("CHG-018", "in corso dal 08/10", "09/10", "13/10"),
             ("OD-120", "da fare", "13/10", "15/10"), ("OD-121", "da fare", "15/10", "19/10"),
             ("OD-109", "rallentata", "19/10", "22/10"), ("CHG-022", "bloccata", "22/10", "22/10"),
             ("CHG-024", "bloccata", "23/10", "23/10")):
@@ -3749,9 +3751,10 @@ def _borea(root: Path, *args: str) -> tuple[int, str]:
 def _digest_reads_the_stages():
     # Computed by hand from the fixture, at 3 hours a day for the release from 07/10 (15 hours
     # in the last three working days, 2 a day outside the product). Every item counts for the
-    # top of its size and the items to do follow the stages: CHG-302 (12, started 06/10) to
-    # 12/10; OD-201 (12, blocked, so last in its increment, worked 06/10) to 16/10; OD-202 (2)
-    # on 19/10; CHG-303 (5) 19/10 to 21/10; CHG-304 (5, of a conditional increment, counted)
+    # top of its size and the items to do follow the stages, each from its place in the queue
+    # however early it was started: CHG-302 (12, worked 06/10) 07/10 to 12/10; OD-201 (12,
+    # blocked, so last in its increment, worked 06/10) 13/10 to 16/10; OD-202 (2) on 19/10;
+    # CHG-303 (5, worked 06/10) 19/10 to 21/10; CHG-304 (5, of a conditional increment, counted)
     # 21/10 to 22/10; KI-021 (2, in no increment) on 23/10, the expected delivery. INC-101 is
     # worth 4 + 6 + 12 + 12 = 34 hours, its done half included; INC-104 has nothing under it.
     import datetime as _dt
@@ -3789,8 +3792,8 @@ def _digest_reads_the_stages():
     d = lambda dd, mm: _dt.date(2026, mm, dd)
     for key, expected in (
             ("INC-101", ("in corso", d(1, 10), d(16, 10), 34)),
-            ("CHG-302", ("in corso", d(6, 10), d(12, 10), 12)),
-            ("OD-201", ("bloccata", d(6, 10), d(16, 10), 12)),
+            ("CHG-302", ("in corso dal 06/10", d(7, 10), d(12, 10), 12)),
+            ("OD-201", ("bloccata dal 06/10", d(13, 10), d(16, 10), 12)),
             ("INC-103", ("da fare, condizionale", d(21, 10), d(22, 10), 5)),
             ("KI-021", ("da fare", d(23, 10), d(23, 10), 2)),
             ("Prova con la squadra pilota", ("a rischio", d(14, 10), d(14, 10), None)),
@@ -3860,8 +3863,8 @@ def _digest_folds_the_gantt():
     t1 = rows.get("Tappa t1")
     got = tuple(v.date() if isinstance(v, _dt.datetime) else v
                 for v in (ws.cell(t1, c).value for c in (4, 5, 6))) if t1 else None
-    if got != (_dt.date(2026, 10, 6), _dt.date(2026, 10, 16), 24):
-        problems.append(f"the row of stage t1 reads {got}, not from 06/10 to 16/10 for 24 hours")
+    if got != (_dt.date(2026, 10, 7), _dt.date(2026, 10, 16), 24):
+        problems.append(f"the row of stage t1 reads {got}, not from 07/10 to 16/10 for 24 hours")
     elif not (str(formulas.cell(t1, 4).value).startswith("=IF(COUNT(")
               and "MAX(" in str(formulas.cell(t1, 5).value)
               and str(formulas.cell(t1, 6).value).startswith("=F")):
@@ -3904,7 +3907,7 @@ def _stages_rendered(tmp: str) -> tuple[Path | None, str]:
        "after the digest's")
 def _digest_lists_the_next_week():
     # The digest of Wednesday 07/10 looks at Thursday 08/10 to Wednesday 14/10. On the Gantt
-    # CHG-302 runs from 06/10 to 12/10 and OD-201 from 06/10 to 16/10, so both touch it;
+    # CHG-302 runs from 07/10 to 12/10 and OD-201 from 13/10 to 16/10, so both touch it;
     # OD-202 starts on 19/10, after it, and is not there. CHG-302 is in the plan the person
     # declared, for 07/10 and for 08/10, and keeps what the plan says; OD-201 is not, and says
     # its days and its hours.
@@ -3929,7 +3932,8 @@ def _digest_lists_the_next_week():
         start, end = gantt.cell(r, 4).value, gantt.cell(r, 5).value
         if str(gantt.cell(r, 1).value).startswith("INC-"):
             continue                            # an increment is what composes it, not an item
-        if gantt.cell(r, 3).value in ("da fare", "in corso", "rallentata", "bloccata") \
+        if str(gantt.cell(r, 3).value).startswith(("da fare", "in corso", "rallentata",
+                                                    "bloccata")) \
                 and isinstance(start, _dt.datetime) and isinstance(end, _dt.datetime) \
                 and start.date() <= hi and end.date() >= lo:
             placed.append(gantt.cell(r, 1).value)
@@ -3940,7 +3944,7 @@ def _digest_lists_the_next_week():
     if "OD-202" in ids:
         problems.append("OD-202, which starts on 19/10, is in the next week")
     status = dict(listed)
-    if status.get("OD-201") != "dal 06/10 al 16/10, 12 ore":
+    if status.get("OD-201") != "dal 13/10 al 16/10, 12 ore":
         problems.append(f"an item not in the plan says {status.get('OD-201')!r}")
     if status.get("CHG-302") != ("In programma il 07/10, 4 ore: prosegue, chiusura prevista il "
                                  "08/10; il 08/10, 4 ore: chiusura"):
@@ -3974,6 +3978,56 @@ def _digest_sums_the_group():
         return [f"«Fuori dalle tappe» carries {got!r}, {formula!r}; its rows add up to "
                 f"{sum(held)}"]
     return []
+
+
+@check("an item started before the digest is placed by the queue, and says since when")
+def _digest_places_a_started_item():
+    # A bar from the first day worked to the item's place in the queue covered the days of
+    # every item before it, and the rows of its increment and its stage began with it. CHG-303
+    # was worked one hour on 06/10 and comes after CHG-302, OD-201 and OD-202, 12 + 12 + 2 = 26
+    # hours at 3 a day: it starts on the ninth working day after 06/10, 19/10, and its 5 hours
+    # end on the eleventh, 21/10. INC-102 and stage t2 start with OD-202 on 19/10, and the next
+    # week, 08/10 to 14/10, does not list it.
+    import datetime as _dt
+    import openpyxl
+    with tempfile.TemporaryDirectory() as tmp:
+        xlsx, out = _stages_rendered(tmp)
+        if xlsx is None:
+            return [f"the digest of 07/10 was refused: {out.strip()[:400]}"]
+        book = openpyxl.load_workbook(xlsx, data_only=True)
+        formulas = openpyxl.load_workbook(xlsx)["Gantt"]
+    ws, problems = book["Gantt"], []
+    rows = {}
+    for r in range(5, ws.max_row + 1):
+        key = ws.cell(r, 1).value or ws.cell(r, 2).value
+        if key:
+            rows.setdefault(str(key), r)
+
+    def at(key: str) -> tuple:
+        r = rows.get(key)
+        vals = [ws.cell(r, c).value for c in (3, 4, 5, 6)] if r else [None] * 4
+        return tuple(v.date() if isinstance(v, _dt.datetime) else v for v in vals)
+
+    d = lambda dd, mm: _dt.date(2026, mm, dd)
+    if at("CHG-303") != ("in corso dal 06/10", d(19, 10), d(21, 10), 5):
+        problems.append(f"CHG-303 reads {at('CHG-303')}, not «in corso dal 06/10» from 19/10 "
+                        "to 21/10 for 5 hours")
+    r = rows.get("CHG-303")
+    if r and not str(formulas.cell(r, 4).value).startswith("=IF(Riepilogo!$G$12<=0"):
+        problems.append(f"the first day of a started item is {formulas.cell(r, 4).value!r}, not "
+                        "the formula on its place in the queue")
+    for key in ("INC-102", "Tappa t2"):
+        if at(key)[1] != d(19, 10):
+            problems.append(f"{key} starts on {at(key)[1]}, not with its first item in the "
+                            "queue on 19/10")
+    week = [book["Attività"].cell(r, 1).value for r in range(5, 9)]
+    if "CHG-303" in week:
+        problems.append(f"CHG-303, placed from 19/10, is in the next week: {week}")
+    rules = [x.formula[0] for c in formulas.conditional_formatting
+             if str(c.sqref).startswith("G5:") for x in c.rules]
+    if not any('LEFT($C5,8)="in corso"' in f for f in rules):
+        problems.append("a status that says since when loses its bar: the rules match it whole")
+    return problems
 
 
 @check("a stage milestone needs its date, and the stages place what `order.todo` no longer must")

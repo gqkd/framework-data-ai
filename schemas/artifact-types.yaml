@@ -1432,7 +1432,39 @@
 #
 # ADOPTION. `FW001` reports the new number at `warn`: update `framework_version`. Nothing to
 # declare: the next digest has the next week, and no column «Ottimale».
-version: "4.4.0"
+#
+# 4.4.0 -> 4.4.1. A defect in the Gantt of the digest: an item to do already started had a bar
+# from the first day worked to the end of its place in the queue, so it covered the days of
+# every item before it: an item of 2 hours, started early and placed late, ran for weeks
+# when the queue put its hours on the last two days. The defect climbed to the rows that take
+# the earliest start of what they hold, so an increment and its stage looked begun long
+# before their first item in the queue. Since 4.4.0 it reached «La prossima settimana» too,
+# which takes the items whose days touch it.
+#
+# PATCH by the rule at the top, as 2.7.1 and 2.8.1 were: a defect, and no type, field, check
+# or template moves, and no project has anything to declare. The file changes for whoever has
+# an item started before the digest, but to say what it meant to say; 4.4.0 was a MINOR
+# because it changed, on request, what the file shows.
+#
+# WHAT CHANGES. Every item to do is placed the same way, started or not: its first and last
+# day come from its place in the queue and its hours, by formula on every row. The first day
+# worked stays on the row and leaves the bar: the status reads «in corso dal 08/10»,
+# «bloccata dal …», «rallentata dal …», and the rules that colour the bars and the statuses
+# match a status by its start. The column of the status is wide enough for it. The rows of
+# the increments and the stages, and the next week, read the same first and last day and
+# follow by themselves. The expected delivery does not move, no item changes hours, an item of
+# 2 hours on two days stays on two days, and an item done stays from its first day to its
+# closing.
+#
+# THE FIXTURES. The fixture with stages moves one hour of 06/10 from CHG-302 to CHG-303, so it
+# has an item started before the digest and placed after the next week, and the day adds up
+# as before: the pace and every date the checks computed by hand stay put, but for the started
+# items. The reference in `tests/fixtures/digest/` does not change: its Gantt is not in it, and
+# its next week lists the same items with the same statuses.
+#
+# ADOPTION. Nothing to do: `FW001` is silent on a patch. The next digest places the items
+# already started where the queue puts them.
+version: "4.4.1"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of
