@@ -141,7 +141,6 @@ class Styles:
 
 HOURS = "0.0;\\-0.0;0"
 SIGNED = "\\+0;\\-0;0"
-SIGNED_PCT = "\\+0%;\\-0%;0%"
 DATE = "dd/mm/yyyy"
 
 
@@ -221,9 +220,9 @@ def activities(wb, S, m, F) -> dict:
         return first, first + len(rows) - 1
 
     r = 3
-    plan = [(p["item"], p["status"], False) for p in m.plan_rows]
-    pos["plan"] = table(r, "1. Prossimi giorni", plan)
-    r = pos["plan"][1] + 3
+    week = [(w["item"], w["status"], False) for w in F["next_week"]]
+    pos["week"] = table(r, "1. La prossima settimana", week)
+    r = pos["week"][1] + 3
 
     todo = [(it, m.status[it.id], False) for it in m.todo]
     a, b = pos["todo"] = table(r, "2. Da fare nel perimetro del rilascio", todo)
@@ -654,44 +653,25 @@ def summary_sheet(wb, ws, S, m, F, at: dict):
     s5 = r + 2
     ws.set_h_pagebreaks([s5 - 1])
     ws.write_string(s5 - 1, 0, "5. Ripartizione delle ore di progetto", S.section())
-    header(ws, S, s5 + 1, ("Tipo di ore", "Oggi (media ultimi 7 giorni)",
-                           f"Ottimale per consegnare il {dm(m.delivery)}", "Differenza"), 43.5)
-    ws.write_formula(s5, 2, f'="Ottimale per consegnare il "&{dd(B6)}', S.head(),
-                     f"Ottimale per consegnare il {dm(m.delivery)}")
-    stop = f"SUMPRODUCT({size_top(rng)})"
-    rate7 = f"({OL}$D$6/NETWORKDAYS({OL}$B$6,{OL}$C$6))"
-    share = f"MIN(1,({stop}/MAX(1,NETWORKDAYS({B4},{B6})))/{rate7})"
+    # How the hours are split today, and no more: the split «optimal» to deliver on the agreed
+    # date, and its difference from today's, were taken out on the request of the person who
+    # sends the file.
+    header(ws, S, s5 + 1, ("Tipo di ore", "Oggi (media ultimi 7 giorni)"), 43.5)
     labels = (*THEME_LABELS, "Fuori perimetro", "Fuori dal prodotto")
     for k, label in enumerate(labels):
         r = s5 + 2 + k
         ws.write_string(r - 1, 0, label, S.cell(bold=True))
         ws.write_formula(r - 1, 1, f"={OL}${'EFGHI'[k]}$13", S.cell(num_format="0%"),
                          number(F["now_share"][k]))
-        if k < 3:
-            f = (f'=IF(OR({stop}=0,{OL}$D$6=0),0,{share}*SUMPRODUCT(({AT}$C${a}:$C${b}='
-                 f'"{label}")*{size_top(rng)})/{stop})')
-        else:
-            mine = f"{OL}${'HI'[k - 3]}$13"
-            both = f"({OL}$H$13+{OL}$I$13)"
-            f = f"=IF({both}=0,0,(1-{share})*{mine}/{both})"
-        ws.write_formula(r - 1, 2, f, S.cell(num_format="0%"), number(F["optimal"][k]))
-        ws.write_formula(r - 1, 3, f"=C{r}-B{r}", S.cell(num_format=SIGNED_PCT, bold=True),
-                         number(F["optimal"][k] - F["now_share"][k]))
     t = s5 + 7
     ws.write_string(t - 1, 0, "Totale", S.total())
     ws.write_formula(t - 1, 1, f"=SUM(B{s5 + 2}:B{s5 + 6})", S.total(num_format="0%"),
                      number(sum(F["now_share"], Fraction(0))))
-    ws.write_formula(t - 1, 2, f"=SUM(C{s5 + 2}:C{s5 + 6})", S.total(num_format="0%"),
-                     number(sum(F["optimal"], Fraction(0))))
-    ws.write_blank(t - 1, 3, None, S.cell(bg_color="#D9E1F2"))
     for rr in range(s5 + 2, s5 + 8):
         ws.set_row(rr - 1, 15.75)
-    ws.conditional_format(f"D{s5 + 2}:D{s5 + 6}",
-                          {"type": "formula", "criteria": f"=$D{s5 + 2}<-0.05",
-                           "format": wb.add_format({"bold": True, "font_color": "#C00000"})})
-    # No charts. The reference had two pies under this table, and the person who sends the
-    # file asked for them to go: the table says the same in five rows, and the Gantt is the
-    # one picture the readers asked for.
+    # No charts. The reference had two pies under this table, and has one since the split
+    # «optimal» went; the person who sends the file asked for them to go: the table says the
+    # same in five rows, and the Gantt is the one picture the readers asked for.
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -925,6 +905,15 @@ def gantt_sheet(wb, ws, S, m, F, at: dict) -> None:
     for srow, (lo, hi, g) in spans.items():
         if not g["items"]:
             continue
+        if g["kind"] == "group":
+            # A group holds its items directly: its hours are theirs, as a stage's are those of
+            # its increments.
+            ws.write_formula(srow - 1, 5, f"=SUM(F{lo}:F{hi})",
+                             S(bold=True, bg_color="#D9E1F2", border=1, border_color=GREY_BORDER,
+                               num_format=HOURS),
+                             number(sum((r["item"].hours if r["kind"] == "done"
+                                         else r["item"].top() for r in g["items"]),
+                                        Fraction(0))))
         span_d, span_e = f"D{lo}:D{hi}", f"E{lo}:E{hi}"
         ws.write_formula(srow - 1, 3, f'=IF(COUNT({span_d})=0,"non stimabile",MIN({span_d}))',
                          span_fill, cached(g["start"]))
@@ -1012,8 +1001,8 @@ def write(m, F, path, now: datetime) -> None:
     gantt = wb.add_worksheet("Gantt")
     at = activities(wb, S, m, F)
     hours_sheet(wb, S, m, F)
-    shown = [p["item"].shown_id for p in m.plan_rows] + [it.shown_id for it in
-                                                         m.todo + m.done + m.out]
+    shown = [w["item"].shown_id for w in F["next_week"]] + [it.shown_id for it in
+                                                           m.todo + m.done + m.out]
     legend_sheet(wb, S, m, shown)
     summary_sheet(wb, summary, S, m, F, at)
     gantt_sheet(wb, gantt, S, m, F, at)

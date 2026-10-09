@@ -1401,7 +1401,38 @@
 # ADOPTION. Nothing to do: `FW001` is silent on a patch. A project with stages finds its Gantt
 # folded at the next digest; one that wants it lighter declares, through the skill,
 # `gantt: {done: false, from: week}` in the digest's state.
-version: "4.3.1"
+#
+# 4.3.1 -> 4.4.0. Three changes to the digest's workbook, asked by its readers: the first
+# table of Attività is the next week, the summary loses the split of the hours «optimal» for
+# the agreed date, and the row of a group of the Gantt carries its hours. MINOR by the rule at
+# the top: the file changes for every project that uses the digest, as it did in 4.2.0, and
+# nothing in the artifact set, the validator or a template moves. No state file has anything
+# to add.
+#
+# THE NEXT WEEK. «1. Prossimi giorni» printed the rows of the plan the person declares for the
+# digest's day and the next working day. «1. La prossima settimana» lists every item to do
+# whose days on the Gantt touch the five working days after the digest's, Monday to Friday
+# after a Friday's digest: the computation that places the items on the Gantt, started and
+# blocked items included, in its order. An item in the declared plan says what the plan says
+# of it, both days when it is planned on both; any other says its first and last day and its
+# hours. The plan is still asked, and still refused when missing.
+#
+# THE SPLIT «OPTIMAL» IS GONE from section 5 of the summary: the share of each kind of hours
+# that would deliver on the agreed date, the difference from today's, and the red on a
+# difference below five points. Section 5 is how the hours are split today, and its total.
+#
+# THE ROW OF A GROUP of a Gantt in stages, «Prima di tutto» or «Fuori dalle tappe», carries in
+# «Ore» the sum of the rows it holds, as a stage carries that of its increments: 4.3.1 gave it
+# dates and a bar, and left the hours empty.
+#
+# THE REFERENCE IN `tests/fixtures/digest/` IS EDITED for the first time, where these change it
+# and nowhere else: rows 3 to 7 of Attività; C31:D37 of the summary, with their conditional
+# format and the pie that charted the optimal split. `tests/selfcheck.py` says which cells
+# and why, and still compares every other cell of the reference, value and style.
+#
+# ADOPTION. `FW001` reports the new number at `warn`: update `framework_version`. Nothing to
+# declare: the next digest has the next week, and no column «Ottimale».
+version: "4.4.0"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of

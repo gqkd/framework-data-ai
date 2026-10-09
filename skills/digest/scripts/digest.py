@@ -1446,22 +1446,9 @@ def figures(m: Model) -> dict:
         F["themes"][t] = {"done": sum(1 for it in m.done if it.theme == t),
                           "prev_closed": m.prev_closed[t], "this_closed": m.this_closed[t],
                           "todo": len(lst), "delta": len(lst) - m.prev_open[t],
-                          "est": f"{hours(top)} ore", "top": top}
+                          "est": f"{hours(top)} ore"}
     F["est_total"] = f"{hours(C)} ore"
-
-    nd_deliv = max(1, networkdays(when, m.delivery))
-    nd7 = networkdays(w7["from"], w7["to"])
-    rate7 = w7["tot"] / nd7 if nd7 else Fraction(0)
-    share = min(Fraction(1), (C / nd_deliv) / rate7) if C and rate7 else Fraction(0)
-    optimal = [share * F["themes"][t]["top"] / C if C and rate7 else Fraction(0)
-               for t in THEMES]
-    o7, x7 = w7["pct"][3], w7["pct"][4]
-    rest = Fraction(1) - (min(Fraction(1), (C / nd_deliv) / rate7) if rate7 else 0)
-    optimal += [rest * o7 / (o7 + x7) if (o7 + x7) else Fraction(0),
-                rest * x7 / (o7 + x7) if (o7 + x7) else Fraction(0)]
     F["now_share"] = list(w7["pct"])
-    F["optimal"] = optimal
-    F["share_release"] = share
 
     # The Gantt: what is done where it happened, what is left in a row at the estimate's pace,
     # each item for the top of its size, so the last one ends on the date of point 2.
@@ -1597,6 +1584,28 @@ def figures(m: Model) -> dict:
     F["gantt_days"] = cols
     F["gantt_from_week"] = from_week
     F["gantt_done"] = show_done
+    # The next week, the first table of Attività: every item to do whose days on the Gantt
+    # touch the five working days after the digest's, in the order of the Gantt. An item the
+    # person planned keeps what the plan says of it; the others say when and for how long.
+    lo, hi = workday(when, 1), workday(when, 5)
+    planned: dict = {}
+    for p in m.plan_rows:
+        planned.setdefault(p["item"].id, []).append(p["status"])
+    F["next_week"] = []
+    for g in gantt:
+        if g["kind"] != "todo" or g["start"] is None or g["end"] is None \
+                or g["start"] > hi or g["end"] < lo:
+            continue
+        it = g["item"]
+        if it.id in planned:
+            first, *more = planned[it.id]
+            status = "; ".join([first] + [x.removeprefix("In programma ") for x in more])
+        else:
+            span = (f"il {dm(g['start'])}" if g["start"] == g["end"]
+                     else f"dal {dm(g['start'])} al {dm(g['end'])}")
+            status = f"{span}, {ore(it.top())}"
+        F["next_week"].append({"item": it, "status": status})
+
     # What the expected delivery does not count, said where the readers stop: the summary.
     F["undecomposed"] = [g["id"] for g in gantt if g["kind"] == "inc"
                          and g["status"].startswith("da scomporre")]

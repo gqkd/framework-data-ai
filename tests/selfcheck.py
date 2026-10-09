@@ -3178,6 +3178,14 @@ def _presentation_renders():
 DIGEST = ROOT / "skills" / "digest" / "scripts" / "digest.py"
 WORKBOOK = ROOT / "skills" / "digest" / "scripts" / "workbook.py"
 REFERENCE = ROOT / "tests" / "fixtures" / "digest" / "DIG-003-atlas-2026-10-09.xlsx"
+# THE REFERENCE WAS EDITED ONCE, IN 4.4.0, WHERE ITS READERS ASKED FOR A DIFFERENT FILE, AND
+# NOWHERE ELSE. Everything in it is still what a spreadsheet wrote and computed, but for:
+# - Attività, rows 3 to 7: the first table is «1. La prossima settimana», the items whose days
+#   on the Gantt touch 12/10 to 16/10, CHG-018, OD-120 and OD-121, each row copied from the
+#   item's own row of «Da fare» in the reference, with the Stato of the new rule;
+# - Riepilogo, C31:D37: no column «Ottimale» and no «Differenza», nor the conditional format
+#   on the second, nor the pie that charted the first.
+# Each part of the archive these do not touch is the spreadsheet's, byte for byte.
 _GIT_ID = {"GIT_AUTHOR_NAME": "lead", "GIT_AUTHOR_EMAIL": "lead@example.com",
            "GIT_COMMITTER_NAME": "lead", "GIT_COMMITTER_EMAIL": "lead@example.com"}
 # WHERE THE WORKBOOK OF THE FIXTURE MAY DIFFER FROM THE REFERENCE, AND WHY. Everything else has
@@ -3185,9 +3193,7 @@ _GIT_ID = {"GIT_AUTHOR_NAME": "lead", "GIT_AUTHOR_EMAIL": "lead@example.com",
 #
 # Since 4.2.0 every item counts for the top of its size, by the person's choice: one estimate
 # instead of a best and a worst case. So where the reference prints a range the workbook prints
-# its top, the one row of the estimate is the reference's worst case, and the optimal split
-# follows: delivering 57 hours by 13/10 takes every hour of the week, given to the themes in
-# proportion to their hours, 38, 12 and 7 of 57, and none left outside the release.
+# its top, and the one row of the estimate is the reference's worst case.
 _DIGEST_DIFFERS = {
     # D9: in the fixture OD-116 is closed by a decision instead of left without an answer, so
     # nothing leaves the workbook in silence; the reason printed for CHG-021 says so.
@@ -3201,8 +3207,6 @@ _DIGEST_DIFFERS = {
                               "essere stimata bene: va spezzata in voci più piccole.",
     ("Come leggerlo", "B38"): "Ogni voce conta per il massimo della sua taglia: la stima è "
                               "prudente, e la consegna prevista è una data sola.",
-    **{("Riepilogo", f"C{r}"): v for r, v in ((32, 38 / 57), (33, 12 / 57), (34, 7 / 57),
-                                              (35, 0), (36, 0))},
 }
 # D11 c: the delay is red when there is one, through a conditional format; in the reference it
 # was red by hand, and stayed red at zero.
@@ -3229,8 +3233,6 @@ def _digest_expected(ref) -> dict:
         out[("Riepilogo", f"{col}13")] = None
     out[("Riepilogo", "A13")] = None
     out.update(_DIGEST_DIFFERS)
-    for r in range(32, 37):
-        out[("Riepilogo", f"D{r}")] = out[("Riepilogo", f"C{r}")] - summary[f"B{r}"].value
     return out
 
 
@@ -3345,8 +3347,9 @@ def _digest_reproduces_the_reference():
         if not any("$J$12>0" in str(f) for f in conditional.get("B6:J6", [])) or \
                 not any("J12>0" in str(f) for f in conditional.get("J12", [])):
             problems.append(f"the delay is not red through a conditional format: {conditional}")
-        # The reference has two pies under section 5; the person who sends the file asked
-        # for them to go in 4.3.0, and the summary has no chart at all.
+        # The reference has a pie under section 5, and had two until the split «optimal» it
+        # charted went in 4.4.0; the person who sends the file asked for the pies to go in
+        # 4.3.0, and the summary has no chart at all.
         if got["Riepilogo"]._charts:
             problems.append("the summary carries a chart: the pies were taken out on request")
         if not (Path(tmp) / "copy" / xlsx.name).is_file():
@@ -3885,6 +3888,92 @@ def _digest_folds_the_gantt():
     if formulas.protection.sheet:
         problems.append("the Gantt that folds is protected, so its groups do not open")
     return problems
+
+
+def _stages_rendered(tmp: str) -> tuple[Path | None, str]:
+    """The workbook of 07/10 of the stages fixture, as the state file declares it."""
+    root = _stages_copy(tmp)
+    if root is None:
+        return None, "the stages fixture could not be built"
+    rc, out = _borea(root, "--date", "2026-10-07", "--now", "2026-10-07T08:30:00+02:00")
+    xlsx = root / "_meta/digest/DIG-002-borea-2026-10-07/DIG-002-borea-2026-10-07.xlsx"
+    return (xlsx if rc == 0 else None), out
+
+
+@check("«La prossima settimana» lists the items the Gantt places in the five working days "
+       "after the digest's")
+def _digest_lists_the_next_week():
+    # The digest of Wednesday 07/10 looks at Thursday 08/10 to Wednesday 14/10. On the Gantt
+    # CHG-302 runs from 06/10 to 12/10 and OD-201 from 06/10 to 16/10, so both touch it;
+    # OD-202 starts on 19/10, after it, and is not there. CHG-302 is in the plan the person
+    # declared, for 07/10 and for 08/10, and keeps what the plan says; OD-201 is not, and says
+    # its days and its hours.
+    import datetime as _dt
+    import openpyxl
+    with tempfile.TemporaryDirectory() as tmp:
+        xlsx, out = _stages_rendered(tmp)
+        if xlsx is None:
+            return [f"the digest of 07/10 was refused: {out.strip()[:400]}"]
+        book = openpyxl.load_workbook(xlsx, data_only=True)
+    problems = []
+    at, gantt = book["Attività"], book["Gantt"]
+    if at["A3"].value != "1. La prossima settimana":
+        problems.append(f"the first table of Attività is {at['A3'].value!r}")
+    listed, r = [], 5
+    while at.cell(r, 1).value:
+        listed.append((at.cell(r, 1).value, at.cell(r, 8).value))
+        r += 1
+    lo, hi = _dt.date(2026, 10, 8), _dt.date(2026, 10, 14)
+    placed = []
+    for r in range(5, gantt.max_row + 1):
+        start, end = gantt.cell(r, 4).value, gantt.cell(r, 5).value
+        if str(gantt.cell(r, 1).value).startswith("INC-"):
+            continue                            # an increment is what composes it, not an item
+        if gantt.cell(r, 3).value in ("da fare", "in corso", "rallentata", "bloccata") \
+                and isinstance(start, _dt.datetime) and isinstance(end, _dt.datetime) \
+                and start.date() <= hi and end.date() >= lo:
+            placed.append(gantt.cell(r, 1).value)
+    ids = [i for i, _ in listed]
+    if ids != placed or ids != ["CHG-302", "OD-201"]:
+        problems.append(f"the next week lists {ids}; the Gantt places {placed} in 08/10-14/10, "
+                        "and by hand it is CHG-302 and OD-201")
+    if "OD-202" in ids:
+        problems.append("OD-202, which starts on 19/10, is in the next week")
+    status = dict(listed)
+    if status.get("OD-201") != "dal 06/10 al 16/10, 12 ore":
+        problems.append(f"an item not in the plan says {status.get('OD-201')!r}")
+    if status.get("CHG-302") != ("In programma il 07/10, 4 ore: prosegue, chiusura prevista il "
+                                 "08/10; il 08/10, 4 ore: chiusura"):
+        problems.append(f"an item in the plan says {status.get('CHG-302')!r}, not what the "
+                        "plan says of it")
+    return problems
+
+
+@check("the row of a group of the Gantt carries the hours of the rows it holds")
+def _digest_sums_the_group():
+    # «Fuori dalle tappe» holds KI-021 alone, 2 hours for the top of S; the stages have carried
+    # the sum of their increments since 4.3.0, and a group the sum of its rows since 4.4.0.
+    import openpyxl
+    with tempfile.TemporaryDirectory() as tmp:
+        xlsx, out = _stages_rendered(tmp)
+        if xlsx is None:
+            return [f"the digest of 07/10 was refused: {out.strip()[:400]}"]
+        values = openpyxl.load_workbook(xlsx, data_only=True)["Gantt"]
+        formulas = openpyxl.load_workbook(xlsx)["Gantt"]
+    head = next((r for r in range(5, values.max_row + 1)
+                 if values.cell(r, 1).value == "Fuori dalle tappe"), None)
+    if head is None:
+        return ["the Gantt of the stages fixture has no «Fuori dalle tappe»"]
+    held, r = [], head + 1
+    while values.cell(r, 1).value and not str(values.cell(r, 1).value).startswith("Tappa "):
+        held.append(values.cell(r, 6).value or 0)
+        r += 1
+    got, formula = values.cell(head, 6).value, str(formulas.cell(head, 6).value)
+    if not held or got != sum(held) or got != 2 \
+            or formula != f"=SUM(F{head + 1}:F{head + len(held)})":
+        return [f"«Fuori dalle tappe» carries {got!r}, {formula!r}; its rows add up to "
+                f"{sum(held)}"]
+    return []
 
 
 @check("a stage milestone needs its date, and the stages place what `order.todo` no longer must")

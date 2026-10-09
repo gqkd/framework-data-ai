@@ -301,13 +301,16 @@ Fixed. Sheets, sections, positions, formulas, colours and fonts are those of the
 workbook the script is tested against, `tests/fixtures/digest/DIG-003-atlas-2026-10-09.xlsx`
 in the framework's repository; `tests/selfcheck.py` lists the few cells allowed to differ and
 why: every item counts for the top of its size, so where the reference prints a range the
-workbook prints its top, and the estimate is one row instead of a best and a worst case.
+workbook prints its top, and the estimate is one row instead of a best and a worst case. The
+reference itself was edited once, in 4.4.0, where its readers asked for a different file: the
+first table of Attività and section 5 of the summary.
 
 1. **Riepilogo**, the sheet most readers stop at: where the release stands (agreed delivery,
    delivery expected today, delay, what the forecast depends on, where the time goes), how the
    estimate is computed, what is needed from others, progress by theme, how the hours of the
-   project are split today and how they should be to deliver on the agreed date. No charts:
-   the reference had two pies there, taken out on the person's request.
+   project are split today. Not how they should be split to deliver on the agreed date, nor
+   the difference: that column went on the person's request. No charts: the reference had two
+   pies there, taken out on the person's request too.
 2. **Gantt**: one row per item and per milestone, one column per working day, and the hours
    of each row. Every item done on the days it was worked; every item to do in the order of
    «Da fare», for the top of its size, at the pace of the estimate, so the last one ends on
@@ -318,13 +321,18 @@ workbook prints its top, and the estimate is one row instead of a best and a wor
    the milestone that closes a stage says by formula whether it is «in tempo», «a rischio» or
    «incompleta». With stages the rows also fold, closed when the file opens: the stages and
    the milestones in view, a stage's increments under its «+», an increment's components
-   under its own, and the row of a stage spans its items with a bar of its own. Two
+   under its own, and the row of a stage spans its items with a bar of its own; that of a
+   group, «Prima di tutto» or «Fuori dalle tappe», also carries the hours of its rows. Two
    preferences under `gantt` in the state make it lighter: `done: false` leaves out what is
    closed, and the increments and stages with nothing left to do, but never an increment
    still to break down or a stage that names a milestone; `from: week` starts the days on the
    Monday of the digest's week instead of the first day of the project.
-3. **Attività**: the next days, what is left in the perimeter, what was done in it since the
-   start, what is outside it. Every item, nothing cut short.
+3. **Attività**: the next week, what is left in the perimeter, what was done in it since the
+   start, what is outside it. Every item, nothing cut short. The next week is every item to
+   do whose days on the Gantt touch the five working days after the digest's, from Monday to
+   Friday after a Friday's digest, in the order of the Gantt: started and blocked items
+   included. An item in the declared plan says what the plan says of it, on each day planned;
+   any other says its first and last day and its hours, «dal 15/10 al 19/10, 12 ore».
 4. **Ore lavorate**: the hours by period, as shares, outside the product by category, and day
    by day from the start. Every other number follows from the last table.
 5. **Come leggerlo**: the dates every formula starts from, in yellow, and the legend.
