@@ -141,6 +141,10 @@ plan:                              # today and the next working day
 milestones:
   - {name: Demo al team funzionale, date: 2026-10-15}
   - {stage: t1, date: 2026-10-14}  # the milestone a stage of the roadmap names: the date only
+gantt:                             # optional; without it, the Gantt of 4.3.0
+  done: false                      # default true; false leaves out the items closed, and the
+                                   # increments and stages left with nothing to do
+  from: week                       # default start; week starts the days on this week's Monday
 ```
 
 **When the roadmap orders its increments in stages** (`delivery_stages` in `RMP.md`, kept by
@@ -312,7 +316,13 @@ workbook prints its top, and the estimate is one row instead of a best and a wor
    formats on them. With stages, the rows are grouped by stage and by increment: the row of
    an increment is the sum, the earliest start and the latest end of what composes it, and
    the milestone that closes a stage says by formula whether it is «in tempo», «a rischio» or
-   «incompleta».
+   «incompleta». With stages the rows also fold, closed when the file opens: the stages and
+   the milestones in view, a stage's increments under its «+», an increment's components
+   under its own, and the row of a stage spans its items with a bar of its own. Two
+   preferences under `gantt` in the state make it lighter: `done: false` leaves out what is
+   closed, and the increments and stages with nothing left to do, but never an increment
+   still to break down or a stage that names a milestone; `from: week` starts the days on the
+   Monday of the digest's week instead of the first day of the project.
 3. **Attività**: the next days, what is left in the perimeter, what was done in it since the
    start, what is outside it. Every item, nothing cut short.
 4. **Ore lavorate**: the hours by period, as shares, outside the product by category, and day
@@ -321,8 +331,9 @@ workbook prints its top, and the estimate is one row instead of a best and a wor
 
 Every derived cell is a formula, written with the value the script computed for it, so the
 file reads the same in a preview and in a spreadsheet. The sheets are protected without a
-password. Where a number cannot be computed, the cell says «non stimabile»; an empty list has
-one row, «Nessuna.», which no count includes.
+password, except a Gantt that folds: Excel opens no group on a protected sheet. Where a
+number cannot be computed, the cell says «non stimabile»; an empty list has one row,
+«Nessuna.», which no count includes.
 
 Every number is the script's: the hours left, the pace, the delivery dates, the days of
 waiting, the shares. Do not compute one in the conversation and do not round one by hand. If

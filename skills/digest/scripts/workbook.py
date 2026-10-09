@@ -145,7 +145,7 @@ SIGNED_PCT = "\\+0%;\\-0%;0%"
 DATE = "dd/mm/yyyy"
 
 
-def setup(ws, widths: dict, freeze: tuple | None):
+def setup(ws, widths: dict, freeze: tuple | None, protect: bool = True):
     for col, w in widths.items():
         ws.set_column(f"{col}:{col}", w)
     if freeze:
@@ -155,7 +155,8 @@ def setup(ws, widths: dict, freeze: tuple | None):
     ws.set_paper(9)
     ws.fit_to_pages(1, 0)
     ws.set_margins(left=0.75, right=0.75, top=1, bottom=1)
-    ws.protect()
+    if protect:
+        ws.protect()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -717,14 +718,19 @@ def gantt_sheet(wb, ws, S, m, F, at: dict) -> None:
     row per stage, under it a row per increment, whose hours, first and last day are the sum,
     the earliest and the latest of what composes it, and under that its components. A stage
     that names a milestone ends with it, and the status of the milestone is a formula on the
-    rows of the stage.
+    rows of the stage. The groups fold, closed when the file opens: the stages and the
+    milestones in view, the increments one level down, their components two.
     """
     days: list[date] = F["gantt_days"]
     staged = m.staging is not None
     first = 6                                      # column G, the first day
     last = first + len(days) - 1
+    # Excel does not open or close a group on a protected sheet, so a Gantt that folds is the
+    # one sheet left unprotected.
     setup(ws, {"A": 12 if staged else 10, "B": 36, "C": 14 if staged else 11, "D": 11,
-               "E": 11, "F": 7}, (4, 6))
+               "E": 11, "F": 7}, (4, 6), protect=not staged)
+    if staged:
+        ws.outline_settings(True, False, True, False)
     ws.set_column(first, last, 3.6)
     ws.write_string(0, 0, "Gantt", S.title())
 
@@ -745,12 +751,14 @@ def gantt_sheet(wb, ws, S, m, F, at: dict) -> None:
     for c, label in enumerate(("Voce", "Titolo", "Stato", "Inizio", "Fine", "Ore")):
         ws.write_string(3, c, label, S.head())
     day_head = S.head(align="center", text_wrap=False, num_format="dd")
+    today = f"{CL}$B$4"
+    # The first day of the project, or the Monday of the digest's week.
+    first_day = (f"=WORKDAY({today}-WEEKDAY({today},3)-1,1)" if F.get("gantt_from_week")
+                 else f"=WORKDAY({CL}$B$7-1,1)")
     for k, d in enumerate(days):
-        formula = (f"=WORKDAY({CL}$B$7-1,1)" if k == 0
-                   else f"=WORKDAY({col_name(first + k - 1)}4,1)")
+        formula = first_day if k == 0 else f"=WORKDAY({col_name(first + k - 1)}4,1)"
         ws.write_formula(3, first + k, formula, day_head, serial(d))
     ws.set_row(3, 21.75)
-    today = f"{CL}$B$4"
     ws.conditional_format(3, first, 3, last,
                           {"type": "formula", "criteria": f"={col_name(first)}$4={today}",
                            "format": wb.add_format({"bg_color": "#FFC000",
@@ -769,10 +777,22 @@ def gantt_sheet(wb, ws, S, m, F, at: dict) -> None:
     rows_first = r
     unknown_start = False
     stage_rows: dict = {}                          # row of a stage -> (stage, its increments)
+    spans: dict = {}                               # row of a stage or a group -> [lo, hi, it]
     current_stage = None
+    current_span = None
+    in_inc = False
     milestone_rows: list[int] = []
+
+    def fold(r: int, level: int, children: bool) -> None:
+        """The level of a row in the groups that fold, which exist only with stages."""
+        if staged:
+            ws.set_row(r - 1, None, None, {"level": level, "hidden": level > 0,
+                                           "collapsed": children})
+
     for g in F["gantt"]:
         kind = g["kind"]
+        if kind in ("inc", "todo", "done") and current_span:
+            spans[current_span][1] = r
         if kind in ("group", "stage"):
             label = g["name"] if kind == "group" else f"Tappa {g['id']}"
             ws.write_string(r - 1, 0, label, stage_fill)
@@ -787,6 +807,10 @@ def gantt_sheet(wb, ws, S, m, F, at: dict) -> None:
                 stage_rows[r] = (g, [])
             else:
                 current_stage = None
+            current_span = r
+            spans[r] = [r + 1, r, g]
+            in_inc = False
+            fold(r, 0, bool(g["incs"]) if kind == "stage" else True)
         elif kind == "inc":
             n = len(g["rows"])
             ws.write_string(r - 1, 0, g["id"], S.cell(bold=True))
@@ -809,6 +833,8 @@ def gantt_sheet(wb, ws, S, m, F, at: dict) -> None:
                 ws.write_blank(r - 1, c, None, grid)
             if current_stage:
                 stage_rows[current_stage][1].append(r)
+            in_inc = True
+            fold(r, 1, n > 0)
         elif kind in ("done", "todo"):
             it = g["item"]
             ws.write_string(r - 1, 0, it.shown_id, S.cell(bold=True, **indent))
@@ -838,6 +864,7 @@ def gantt_sheet(wb, ws, S, m, F, at: dict) -> None:
                 todo_k += 1
             for c in range(first, last + 1):
                 ws.write_blank(r - 1, c, None, grid)
+            fold(r, 2 if in_inc else 1, False)
         else:
             delivery = kind == "delivery"
             ws.write_string(r - 1, 0, "", S.cell())
@@ -848,7 +875,17 @@ def gantt_sheet(wb, ws, S, m, F, at: dict) -> None:
                 verdict = (f'=IF(COUNTIF({span_e},"non stimabile")>0,"non stimabile",'
                            f'IF(OR(COUNTIF({span_c},"da scomporre*")>0,COUNT({span_e})=0),'
                            f'"incompleta",IF(MAX({span_e})>D{r},"a rischio","in tempo")))')
-                ws.write_formula(r - 1, 2, verdict, S.cell(bold=True), g["status"])
+                if lo > hi and g["end"]:
+                    # Nothing of the stage is shown, because all of it is closed: its last day
+                    # is a fact, not a formula on rows that are not there.
+                    e = g["end"]
+                    verdict = (f'=IF(DATE({e.year},{e.month},{e.day})>D{r},"a rischio",'
+                               f'"in tempo")')
+                if lo > hi and not g["end"]:
+                    # Nothing under the stage at all: incomplete, whatever the date says.
+                    ws.write_string(r - 1, 2, g["status"], S.cell(bold=True))
+                else:
+                    ws.write_formula(r - 1, 2, verdict, S.cell(bold=True), g["status"])
                 milestone_rows.append(r)
             else:
                 ws.write_string(r - 1, 2, "consegna" if delivery else "milestone", S.cell())
@@ -871,6 +908,8 @@ def gantt_sheet(wb, ws, S, m, F, at: dict) -> None:
                                       {"type": "formula", "criteria": f'=$C${r}="a rischio"',
                                        "format": wb.add_format({"font_color": "#C00000"})})
             current_stage = None if kind == "stage_milestone" else current_stage
+            current_span = None
+            in_inc = False
         r += 1
     rows_last = r - 1
     for srow, (stage, incs) in stage_rows.items():
@@ -879,19 +918,36 @@ def gantt_sheet(wb, ws, S, m, F, at: dict) -> None:
                          S(bold=True, bg_color="#D9E1F2", border=1, border_color=GREY_BORDER,
                            num_format=HOURS),
                          number(sum((h["hours"] for h in stage["incs"]), Fraction(0))))
+    # The first and last day of a stage or a group, as those of an increment, on every row it
+    # holds: its increments are the MIN and the MAX of their own rows, so they change nothing.
+    span_fill = S(bold=True, bg_color="#D9E1F2", border=1, border_color=GREY_BORDER,
+                  num_format=DATE)
+    for srow, (lo, hi, g) in spans.items():
+        if not g["items"]:
+            continue
+        span_d, span_e = f"D{lo}:D{hi}", f"E{lo}:E{hi}"
+        ws.write_formula(srow - 1, 3, f'=IF(COUNT({span_d})=0,"non stimabile",MIN({span_d}))',
+                         span_fill, cached(g["start"]))
+        ws.write_formula(srow - 1, 4, f'=IF(COUNTIF({span_e},"non stimabile")>0,'
+                                      f'"non stimabile",MAX({span_e}))',
+                         span_fill, cached(g["end"]))
 
     if rows_last >= rows_first:
         span = (rows_first - 1, first, rows_last - 1, last)
         f0 = f"{col_name(first)}$4"
         inside = f"ISNUMBER($D{rows_first}),{f0}>=$D{rows_first},{f0}<=$E{rows_first}"
-        rules = [(f'=AND(LEFT($A{rows_first},4)="INC-",{inside})', "#44546A")]
-        rules += [(f'=AND($C{rows_first}="{state}",{inside})', colour)
-                  for state, colour in (("fatta", BAR["fatta"]), ("bloccata", BAR["bloccata"]))]
+        rules = [(f'=AND($C{rows_first}="{state}",{inside})', colour)
+                 for state, colour in (("fatta", BAR["fatta"]), ("bloccata", BAR["bloccata"]))]
         todo = ",".join(f'$C{rows_first}="{x}"' for x in TODO_STATES)
         rules.append((f"=AND(OR({todo}),{inside})", BAR["da fare"]))
         rules.append((f"={f0}={today}", "#FFF2CC"))
-        if not staged:
-            rules = rules[1:]
+        if staged:
+            # The bar of a stage or a group, darker than that of an increment, under it.
+            groups = sorted({g["name"] for g in F["gantt"] if g["kind"] == "group"})
+            heads = ",".join([f'LEFT($A{rows_first},6)="Tappa "']
+                             + [f'$A{rows_first}="{x}"' for x in groups])
+            rules[:0] = [(f"=AND(OR({heads}),{inside})", NAVY),
+                         (f'=AND(LEFT($A{rows_first},4)="INC-",{inside})', "#44546A")]
         for criteria, colour in rules:
             ws.conditional_format(*span, {"type": "formula", "criteria": criteria,
                                           "format": wb.add_format({"bg_color": colour})})
@@ -919,12 +975,18 @@ def gantt_sheet(wb, ws, S, m, F, at: dict) -> None:
              "Attività, ognuna con le ore massime della sua taglia, al ritmo della stima del "
              "Riepilogo (punto 2): l'ultima finisce il giorno della consegna prevista.",
              "◆ arancione: milestone. ◆ rosso: consegna concordata."]
+    if not F.get("gantt_done", True):
+        notes[0] = ("Le voci chiuse non sono mostrate. In blu le voci da fare, in arancione "
+                    "chiaro quelle bloccate. In giallo la colonna di oggi.")
     if staged:
         notes[1:1] = [
             "Le voci sono raggruppate per tappa e per incremento, nell'ordine della roadmap. "
             "Un incremento non ha ore sue: vale la somma di ciò che lo compone, prima le "
             "decisioni e i problemi da risolvere, poi le modifiche. La sua barra, in grigio "
             "scuro, va dalla prima all'ultima delle sue voci.",
+            "Tappe e incrementi si aprono con il «+» a sinistra: all'apertura si vedono solo "
+            "le tappe e le milestone. La barra di una tappa o di un gruppo, in blu scuro, va "
+            "dalla prima all'ultima delle sue voci.",
             "Un incremento «da scomporre» non ha ancora niente sotto e non entra nella stima. "
             "La milestone di una tappa è «a rischio» quando l'ultima voce della tappa finisce "
             "dopo la sua data, «incompleta» quando la tappa ha incrementi da scomporre."]

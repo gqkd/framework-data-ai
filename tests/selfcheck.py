@@ -3509,6 +3509,12 @@ def _digest_refusals():
          lambda r: _state(r, lambda s: s["plan"]["2026-10-12"][1].pop("hours")), "no hours"),
         ("no milestones declared",
          lambda r: _state(r, lambda s: s.pop("milestones")), "no `milestones`"),
+        ("a Gantt that starts from a month",
+         lambda r: _state(r, lambda s: s.__setitem__("gantt", {"from": "mese"})),
+         "`gantt.from` is 'mese'"),
+        ("a preference of the Gantt that nothing reads",
+         lambda r: _state(r, lambda s: s.__setitem__("gantt", {"done": False, "colori": "blu"})),
+         "unknown key 'colori' under `gantt`"),
         ("a state file of 4.1.0",
          lambda r: _state(r, lambda s: s.pop("format")), "--migrate"),
         ("the hours of one item declared in two products",
@@ -3807,6 +3813,77 @@ def _digest_reads_the_stages():
                  "Da scomporre, fuori dalla stima: INC-104"):
         if line not in out:
             problems.append(f"the conversation does not say {line!r}")
+    return problems
+
+
+@check("with `gantt: {done: false, from: week}` the Gantt shows the open work from this Monday, "
+       "folded by stage")
+def _digest_folds_the_gantt():
+    # The readers of a roadmap in stages found the Gantt too heavy: every item closed since the
+    # first day, every component in view. With the two preferences the same day of the fixture
+    # loses DEC-210 and CHG-301, which are done, starts on Monday 05/10 instead of 28/09, and
+    # opens on the stages and the milestones alone. INC-101 keeps its status, «in corso», which
+    # its closed half decides, but is worth only what is left, CHG-302 and OD-201, 12 + 12.
+    import datetime as _dt
+    import openpyxl
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _stages_copy(tmp)
+        if root is None:
+            return ["the stages fixture could not be built"]
+        path = root / "_meta" / "digest" / "state-borea.yaml"
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        data["gantt"] = {"done": False, "from": "week"}
+        path.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False),
+                        encoding="utf-8")
+        rc, out = _borea(root, "--date", "2026-10-07", "--now", "2026-10-07T08:30:00+02:00")
+        xlsx = root / "_meta/digest/DIG-002-borea-2026-10-07/DIG-002-borea-2026-10-07.xlsx"
+        if rc != 0:
+            return [f"the digest of 07/10 was refused: {out.strip()[:400]}"]
+        ws = openpyxl.load_workbook(xlsx, data_only=True)["Gantt"]
+        formulas = openpyxl.load_workbook(xlsx)["Gantt"]
+    problems = []
+    rows = {}
+    for r in range(5, ws.max_row + 1):
+        key = ws.cell(r, 1).value or ws.cell(r, 2).value
+        if key:
+            rows.setdefault(str(key), r)
+    closed = [k for k, r in rows.items() if ws.cell(r, 3).value == "fatta"]
+    if closed or "DEC-210" in rows or "CHG-301" in rows:
+        problems.append(f"items closed are still on the Gantt: {closed}")
+    g4 = ws["G4"].value
+    if not g4 or g4.date() != _dt.date(2026, 10, 5) or "WEEKDAY(" not in str(formulas["G4"].value):
+        problems.append(f"the first column is {g4}, {formulas['G4'].value!r}, not the Monday "
+                        "of the digest's week by formula")
+    t1 = rows.get("Tappa t1")
+    got = tuple(v.date() if isinstance(v, _dt.datetime) else v
+                for v in (ws.cell(t1, c).value for c in (4, 5, 6))) if t1 else None
+    if got != (_dt.date(2026, 10, 6), _dt.date(2026, 10, 16), 24):
+        problems.append(f"the row of stage t1 reads {got}, not from 06/10 to 16/10 for 24 hours")
+    elif not (str(formulas.cell(t1, 4).value).startswith("=IF(COUNT(")
+              and "MAX(" in str(formulas.cell(t1, 5).value)
+              and str(formulas.cell(t1, 6).value).startswith("=F")):
+        problems.append("the first day, the last day and the hours of a stage are not formulas")
+    if not str(ws.cell(rows.get("INC-104", 1), 3).value).startswith("da scomporre"):
+        problems.append("an increment still to break down left with the closed work")
+
+    def level(key: str) -> tuple:
+        dim = formulas.row_dimensions[rows[key]] if key in rows else None
+        return (dim.outlineLevel, bool(dim.hidden)) if dim else None
+
+    for keys, want in ((("Tappa t1", "Tappa t2", "Tappa t3", "Fuori dalle tappe"), (0, False)),
+                       (("INC-101", "INC-102", "INC-103", "INC-104", "KI-021"), (1, True)),
+                       (("CHG-302", "OD-201", "OD-202", "CHG-303", "CHG-304"), (2, True))):
+        for key in keys:
+            if level(key) != want:
+                problems.append(f"{key} is at level and hidden {level(key)}, not {want}")
+    if t1 and not formulas.row_dimensions[t1].collapsed:
+        problems.append("a stage does not open folded")
+    if formulas.sheet_properties.outlinePr is None \
+            or formulas.sheet_properties.outlinePr.summaryBelow is not False:
+        problems.append("the «+» of a group is not on the row of the stage, above its rows")
+    # Excel opens and closes no group on a protected sheet.
+    if formulas.protection.sheet:
+        problems.append("the Gantt that folds is protected, so its groups do not open")
     return problems
 
 

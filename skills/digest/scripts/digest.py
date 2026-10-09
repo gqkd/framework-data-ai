@@ -123,7 +123,7 @@ STATES = {
 }
 
 STATE_KEYS = {"format", "product", "release", "items", "order", "days", "waits", "plan",
-              "milestones"}
+              "milestones", "gantt"}
 RELEASE_KEYS = {"name", "delivery", "start", "commitment"}
 ITEM_KEYS = {"title", "what", "theme", "scope", "size", "seen", "closed_on", "out_reason",
              "hours_before", "excluded", "split_into", "gone"}
@@ -133,6 +133,9 @@ DAY_KEYS = {"hours", "outside", "themes"}
 PLAN_KEYS = {"item", "hours", "closes"}
 MILESTONE_KEYS = {"name", "stage", "date"}
 ORDER_KEYS = {"todo", "out", "first"}
+# Two preferences of the Gantt, both optional: without them it shows the items closed too,
+# from the first day of the project.
+GANTT_KEYS = {"done", "from"}
 
 SNAPSHOT = re.compile(r"^DIG-(\d{3,})-(.+)-(\d{4}-\d{2}-\d{2})$")
 HEADING_ID = re.compile(r"^#{1,6}\s+\**([A-Z]{2,4}-\d{3,})\**\s*[·:\-–—]?\s*(.*?)\s*$")
@@ -745,6 +748,18 @@ def check(ctx: Context) -> list[str]:
     elif start >= when:
         P.append(f"`release.start` is {start}: the project starts before the digest's date")
     rel = str(release.get("name", ""))
+    gantt = state.get("gantt")
+    if gantt is not None and not isinstance(gantt, dict):
+        P.append("`gantt` holds `done` and `from`, the two preferences of the Gantt")
+    elif gantt:
+        for k in sorted(set(gantt) - GANTT_KEYS):
+            P.append(f"unknown key {k!r} under `gantt`: nothing reads it")
+        if "done" in gantt and not isinstance(gantt["done"], bool):
+            P.append(f"`gantt.done` is {gantt['done']!r}: true shows the items closed, false "
+                     "leaves them out")
+        if "from" in gantt and gantt["from"] not in ("start", "week"):
+            P.append(f"`gantt.from` is {gantt['from']!r}: `start`, the first day of the "
+                     "project, or `week`, the Monday of the digest's week")
 
     mine = [s for s in ctx.snaps if s.product == ctx.product]
     later = [s for s in mine if s.date > when]
@@ -1172,6 +1187,7 @@ class Model:
     changes: list
     staging: Staging | None = None
     stage_dates: dict = field(default_factory=dict)   # stage id -> the date of its milestone
+    gantt: dict = field(default_factory=dict)         # the preferences of the Gantt, `done`, `from`
 
 
 def period_label(a: date, b: date) -> str:
@@ -1353,7 +1369,8 @@ def build_model(ctx: Context) -> Model:
     return Model(ctx.name, when, prev_date, delivery, start, nxt, rel, prev_label, this_label,
                  plan_rows,
                  todo, done, out, status, waits, prev_closed, this_closed, prev_open, table,
-                 milestones, sorted(changes), ctx.staging, stage_dates)
+                 milestones, sorted(changes), ctx.staging, stage_dates,
+                 dict(state.get("gantt") or {}))
 
 
 def figures(m: Model) -> dict:
@@ -1466,10 +1483,15 @@ def figures(m: Model) -> dict:
         return {"kind": "done", "item": it, "start": it.first_day or it.closed_on,
                 "end": it.closed_on}
 
+    # With `done: false` only the work still open is drawn: no item closed, and no increment
+    # or stage left with nothing to do. What an increment is and what a milestone says are
+    # still read on every row, the closed ones included.
+    show_done = m.gantt.get("done", True)
     gantt = []
     st = m.staging
     if st is None:
-        gantt += [done_row(it) for it in m.done] + [sched[it.id] for it in m.todo]
+        gantt += ([done_row(it) for it in m.done] if show_done else []) \
+            + [sched[it.id] for it in m.todo]
     else:
         done_ids = {it.id: it for it in m.done}
         if st.pinned:
@@ -1477,16 +1499,14 @@ def figures(m: Model) -> dict:
             gantt += [sched[i] for i in st.pinned]
         for sid, name, milestone, incs in st.stages:
             stage = {"kind": "stage", "id": sid, "name": name, "incs": []}
-            gantt.append(stage)
-            in_stage: list = []
+            block = [stage]
+            in_stage: list = []                    # (status, every row) of each increment
             for inc in incs:
                 comps = [c for c in st.components.get(inc, []) if c not in st.pinned]
                 rows = ([done_row(done_ids[c]) for c in sorted(
                             (c for c in comps if c in done_ids),
                             key=lambda c: (done_ids[c].closed_on, sort_id(c)))]
                         + [sched[it.id] for it in m.todo if it.id in comps])
-                hours_ = sum((r["item"].hours if r["kind"] == "done" else r["item"].top()
-                              for r in rows), Fraction(0))
                 if not st.components.get(inc):
                     status = "da scomporre"
                 elif not rows:
@@ -1499,6 +1519,14 @@ def figures(m: Model) -> dict:
                     status = "da fare"
                 if st.states.get(inc) == "conditional":
                     status += ", condizionale"
+                in_stage.append((status, rows))
+                if not show_done:
+                    # One still to break down is open work, even with nothing under it.
+                    rows = [r for r in rows if r["kind"] != "done"]
+                    if not rows and not status.startswith("da scomporre"):
+                        continue
+                hours_ = sum((r["item"].hours if r["kind"] == "done" else r["item"].top()
+                              for r in rows), Fraction(0))
                 starts = [r["start"] for r in rows if r["start"]]
                 ends = [r["end"] for r in rows]
                 head = {"kind": "inc", "id": inc, "title": st.titles.get(inc, inc),
@@ -1507,24 +1535,25 @@ def figures(m: Model) -> dict:
                         "end": (None if not ends or any(e is None for e in ends)
                                 else max(ends))}
                 stage["incs"].append(head)
-                gantt.append(head)
-                gantt += rows
-                in_stage.append(head)
+                block.append(head)
+                block += rows
             if milestone:
                 d = m.stage_dates.get(sid)
-                ends = [r["end"] for h in in_stage for r in h["rows"]]
+                ends = [r["end"] for _, every in in_stage for r in every]
                 if any(e is None for e in ends):
                     verdict = "non stimabile"
-                elif any(h["status"].startswith("da scomporre") for h in in_stage) or not ends:
+                elif any(s.startswith("da scomporre") for s, _ in in_stage) or not ends:
                     verdict = "incompleta"
                 elif max(ends) > d:
                     verdict = "a rischio"
                 else:
                     verdict = "in tempo"
-                gantt.append({"kind": "stage_milestone", "stage": sid, "name": milestone,
+                block.append({"kind": "stage_milestone", "stage": sid, "name": milestone,
                               "date": d, "status": verdict,
                               "end": max(ends) if ends and None not in ends else None})
-        loose = ([done_row(it) for it in m.done if it.id not in st.owner]
+            if stage["incs"] or milestone or show_done:
+                gantt += block
+        loose = (([done_row(it) for it in m.done if it.id not in st.owner] if show_done else [])
                  + [sched[it.id] for it in m.todo
                     if it.id not in st.owner and it.id not in st.pinned])
         if loose:
@@ -1533,10 +1562,31 @@ def figures(m: Model) -> dict:
     for name, d in m.milestones:
         gantt.append({"kind": "milestone", "name": name, "date": d})
     gantt.append({"kind": "delivery", "name": "Consegna concordata", "date": m.delivery})
+    # A stage and a group span what they hold, milestone excluded: from the first day of the
+    # first of their items to the last day of the last.
+    holder = None
+    for g in gantt:
+        if g["kind"] in ("stage", "group"):
+            holder = g
+            holder["items"] = []
+        elif g["kind"] in ("todo", "done") and holder is not None:
+            holder["items"].append(g)
+        elif g["kind"] != "inc":
+            holder = None
+    for g in gantt:
+        if g["kind"] in ("stage", "group"):
+            starts = [r["start"] for r in g["items"] if r["start"]]
+            ends = [r["end"] for r in g["items"]]
+            g["start"] = min(starts) if starts else None
+            g["end"] = None if not ends or None in ends else max(ends)
     ends = [g["end"] for g in gantt if g["kind"] in ("todo", "done") and g["end"]]
     ends += [g["date"] for g in gantt if g["kind"] in ("milestone", "delivery",
                                                        "stage_milestone") and g.get("date")]
-    first = workday(start - timedelta(days=1), 1)
+    # With `from: week` the first column is the Monday of the digest's week, not the first
+    # day of the project.
+    from_week = m.gantt.get("from", "start") == "week"
+    first = workday((when - timedelta(days=when.weekday()) if from_week else start)
+                    - timedelta(days=1), 1)
     last = max(ends + [when])
     cols = []
     d = first
@@ -1545,6 +1595,8 @@ def figures(m: Model) -> dict:
         d = workday(d, 1)
     F["gantt"] = gantt
     F["gantt_days"] = cols
+    F["gantt_from_week"] = from_week
+    F["gantt_done"] = show_done
     # What the expected delivery does not count, said where the readers stop: the summary.
     F["undecomposed"] = [g["id"] for g in gantt if g["kind"] == "inc"
                          and g["status"].startswith("da scomporre")]

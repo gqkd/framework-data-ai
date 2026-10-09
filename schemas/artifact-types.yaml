@@ -1364,7 +1364,44 @@
 # from items with a size into the sum of what composes them: those with nothing under it
 # leave the estimate, and the expected delivery moves earlier with no work done, which the
 # conversation says. Then it declares the date of each stage milestone, once.
-version: "4.3.0"
+#
+# 4.3.0 -> 4.3.1. The Gantt of the digest gets lighter for a roadmap in stages: it folds by
+# stage, and two optional preferences in the digest's state leave out the work closed and
+# start the days from the Monday of the digest's week. PATCH by the choice of the person who
+# maintains the digest, although the rule at the top calls MINOR a skill that does more than
+# it did: no type, field, template or check of the validator moves, and the one new key lives
+# in the digest's own state, outside the artifact set.
+#
+# WHAT IT ANSWERS. The readers of a product with stages found the Gantt too heavy: every item
+# closed since the first day of the project, every component of every increment in view, and
+# weeks of columns before today's.
+#
+# THE TWO PREFERENCES, both optional, under `gantt` in the state file:
+#   done: false   no item closed, and no increment or stage left with nothing to do. An
+#                 increment «da scomporre» stays, because it is open work not yet broken
+#                 down, and so does a stage that names a milestone. The status of an
+#                 increment and the verdict of a stage milestone are still computed on every
+#                 row, the closed ones included; the hours, the first and the last day of an
+#                 increment on the rows shown.
+#   from: week    the first column is the Monday of the week of the digest's date, by formula
+#                 on that date, instead of the first day of the project.
+# A key under `gantt` that nothing reads, a `done` that is not true or false and a `from` that
+# is not `start` or `week` are refused. Without the key neither applies: a product without
+# stages gets the workbook of 4.3.0 cell by cell, and the reference in `tests/fixtures/digest/`
+# does not move.
+#
+# WITH STAGES, ALWAYS. The Gantt folds in three levels, closed when the file opens: the stages
+# and the milestones in view, the increments under the «+» of their stage, the components
+# under the «+» of their increment, and the items of a group, «Prima di tutto» or «Fuori dalle
+# tappe», one level under it. The row of a stage or a group gets the first and the last day of
+# what it holds, by formula, and a bar of its own, darker than an increment's. Excel opens no
+# group on a protected sheet, so this Gantt is the one sheet left unprotected; the other
+# sheets, and the Gantt of a product without stages, stay protected.
+#
+# ADOPTION. Nothing to do: `FW001` is silent on a patch. A project with stages finds its Gantt
+# folded at the next digest; one that wants it lighter declares, through the skill,
+# `gantt: {done: false, from: week}` in the digest's state.
+version: "4.3.1"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of
