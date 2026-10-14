@@ -1,6 +1,7 @@
 # Contributions: approved base, bounded scope and execution evidence
 
-Use this for external contributions and multi-repository PR assessment. It extends, not
+Use this for external contributions and multi-repository PR assessment, and for the
+exchange where sessions hand each other material (the last section). It extends, not
 replaces, the operational reading procedure. No branch-local CHG, PR body or uploaded
 JSON authenticates its own authority.
 
@@ -154,3 +155,176 @@ separation from untrusted execution. Its [CODEOWNERS documentation](https://docs
 explains how required approval depends on repository protection configuration.
 The supplied workflow is locally tested with synthetic API/Git inputs; a live remote run
 and protections must be verified when a project adopts it.
+
+## The exchange between sessions
+
+A project where one documentation session and several code sessions work in parallel hands
+material between them: a brief going out, a verification, the text and the link of a merge
+request, evidence and a contribution policy coming back. Every rule above says where that
+material ends up. None said where it waits, or when it goes, and after six weeks of parallel
+sessions the folder holding the repositories was full of worktrees already merged, deliveries
+already integrated and copies of credentials nobody removed. This section is the rule for
+when. It is optional: a project that declares no exchange works as before.
+
+### The place
+
+`.framework/sessions.yaml` declares it, relative to the root of the documentation
+repository, outside it:
+
+```yaml
+exchange: ../_scambio
+```
+
+Not in `framework.yaml`, for the reason the annotations are not there either: a key that file
+does not know stops every validator released before it, the one `migrate.py` rebuilds and
+the one a CI job pins alike. A hidden path is invisible to all of them, so the file can be
+written the day the project adopts this version, or any day after.
+
+The value is committed and read on every machine with a clone, so an absolute path, one
+starting with `~`, or one that falls inside the documentation repository stops the validator
+with the repair. Code sessions must be able to write there: how a project lets them (a hook,
+a permission) is the project's, and the framework never relies on material copied by hand
+out of a session's scratchpad. On a machine where the place does not exist, a CI runner
+being the ordinary case, nothing about it is checked and the report says so in a line; an
+annotation in `.framework/expected-findings.yaml` about the exchange is not reported as
+obsolete there, since nothing looked.
+
+### One folder per element, with fixed names
+
+```
+_scambio/
+  in-arrivo/CHG-021/      until the documentation session has integrated it
+    brief.md              written by `cycle` (step 6): the mandate, for the code session
+    verifica.md           the verification, for the change's §Verification
+    mr.md  mr-link.txt    the text and the link of the merge request
+    evidenze/             evidence: logs, outputs, screenshots
+    contribution-policy.json
+    risorse.md            what the work created outside the repositories
+    sessioni/2026-10-14-ab12cd34.md   a closing declaration per session
+  integrati/CHG-021/      the same folder, moved, with INTEGRATO
+  sessioni/               declarations of sessions that worked on no single element
+```
+
+The folder is named by the element's identifier: a change, or the entry a report is about
+when it is not a mandate's (measurements on an open decision go in `in-arrivo/OD-128/`). The
+names inside are fixed, so that nothing has to carry the identifier in its own name, and a
+file named with the prefix, the shape this replaces, is a finding. Inside `evidenze/` the
+names are free. Material that fits none of the fixed names goes in `evidenze/`.
+
+### From in-arrivo to integrati
+
+When the documentation session has integrated a delivery, it moves the folder to
+`integrati/` and writes `INTEGRATO` there:
+
+```yaml
+commit: 4f1c2a9e7b30          # the commit of the documentation that integrated it
+date: 2026-10-14
+parts:                        # every delivered name in the folder, and where it went
+  verifica.md: CHG-021 §Verification
+  evidenze/: CHG-021 §Verification, cited
+  mr-link.txt: CHG-021 §Verification
+  contribution-policy.json: .framework/contribution-policy.json
+```
+
+`brief.md`, `risorse.md` and `sessioni/` are not parts: they were written about the work, not
+delivered as its result, and a folder with nothing delivered moves with `parts: {}`. The
+commit is the one on the branch the documentation is read from: after a squash or a rebase,
+write the new one. A second delivery for an element already integrated, or a new brief for
+it, waits in `in-arrivo/` like the first, so the same identifier can be in both stages;
+integrated, its files join the folder in `integrati/` and `INTEGRATO` becomes a list with one
+block per integration. A file it replaces was integrated by the earlier block's commit,
+which still holds what mattered of it.
+
+A delivery is a proposal, never an input of the strict profile: a `contribution-policy.json`
+in the exchange governs nothing until the documentation session has reviewed it and
+committed it at `.framework/contribution-policy.json`, before the implementation it governs.
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT:?}/skills/audit/scripts/exchange.py" --root <documentation>
+```
+
+lists, in the order they are worth reading: the elements the documents already call done
+whose folder is still in `in-arrivo/`; the deliveries waiting for integration, the oldest
+first, with the days since the oldest delivered file; the elements with a brief and nothing
+delivered yet; the resources of elements done still there, with their commands; the
+declarations in `sessioni/`; and the findings below. It reads modification times off the
+disk, so a copy that does not preserve them resets the count. It moves and writes nothing.
+
+### What a mandate creates outside the repositories
+
+`risorse.md`, written by the session that creates a resource, when it creates it:
+
+```
+| Tipo | Percorso o nome | Comando che la toglie |
+|---|---|---|
+| worktree | /home/me/projects/app-chg021 | git -C /home/me/projects/app worktree remove /home/me/projects/app-chg021 |
+| ramo locale | chg-021 in /home/me/projects/app | git -C /home/me/projects/app branch -D chg-021 |
+| stack isolato | app-chg021 | docker compose -p app-chg021 down |
+| copia di credenziali | /tmp/<scratchpad>/.env.misure (DB_URL, DB_PASSWORD) | rm /tmp/<scratchpad>/.env.misure |
+```
+
+The types are `worktree`, `ramo locale`, `stack isolato`, `volume`, `immagine`,
+`copia di credenziali` and `altro`. Paths are absolute, because the list is read from
+whatever directory the next session starts in. The list is what is still there: a resource
+removed is a row deleted.
+
+When the element is done, a change at `implemented`, the documentation session lists its
+resources with their commands and proposes the removal. It runs a command only on the
+person's approval, and deletes the row when it has. A resource still there afterwards is a
+warning, never an error. A worktree or a copy of credentials is there when its path exists;
+the other kinds are names in tools the validator does not run, and are there while their row
+is.
+
+**Copies of credentials.** A copy of a `.env` or of a key lives only in the scratchpad of the
+session that needs it, is in the list with its path and the names of the keys it holds,
+never their values, and is deleted when the session closes. Never under the folder that
+holds the repositories: one `git add -A` in the wrong directory publishes it.
+
+### The closing declaration
+
+Every session, documentation or code, closes with a short declaration, written in
+`sessioni/<date>-<session>.md` of the element's folder, or of the exchange when the session
+worked on no single element. `<session>` is the session's identifier as its tool names it;
+the first eight characters are enough. Three sections, with these headings:
+
+```markdown
+## Committato
+- `CHG-021` in app: 3 commits on `chg-021`, merged as !42
+
+## Non committato
+- `products/p/OPEN.md`: OD-128, the two lines of the default in force
+
+## Fuori dai repository
+- see `risorse.md`: the worktree and the copy of the `.env`
+```
+
+A section with nothing to say says `niente`. The second is what lets another session, in the
+same working tree, commit the work of all of them without guessing whose a line is. A
+declaration in the exchange's own `sessioni/` is removed by the session that commits what it
+lists as not committed; one in an element's folder travels with the folder.
+
+### What the validator reports on it
+
+Only where the place exists, and reading only names, modification times, `risorse.md`,
+`INTEGRATO` and the headings of the declarations: never a verification, an evidence or a
+copy of credentials. It does not look for copies nobody listed.
+
+| Check | What it says |
+|---|---|
+| `EXC001` | a folder names an identifier the documentation does not declare |
+| `EXC002` | an element done in the documents still has its folder in `in-arrivo/` |
+| `EXC003` | a folder in `integrati/` whose `INTEGRATO` is missing, unreadable, names a commit the documentation's history does not hold, or leaves a delivered name without a destination |
+| `EXC004` | a resource still there after its element is done |
+| `EXC005` | a copy of credentials under the folder that holds the repositories, or a value in the list |
+| `EXC006` | a name the framework does not read: a loose file, a name not fixed, the exchange inside a git repository |
+| `EXC007` | a resource row without a known type, an absolute path where one is due, or a command; a copy of credentials without its keys; a declaration misnamed or without one of its sections |
+
+Done, for the exchange, means a change at `implemented`, `verified` or `rolled-back`, or an
+`OD` or `KI` entry `decided` or `superseded`: the work is merged, or the question answered.
+It is earlier than what the digest counts as closed, a change at `verified`, and on purpose:
+what a mandate created outside the repositories serves the work up to the merge. A change
+that two documents declare is done only when both say so. All seven are warnings.
+
+The rule has to reach sessions that run no skill, which only the project's `AGENTS.md` does:
+say there that the project declares an exchange, that briefs and deliveries go through it,
+and that every session closes with its declaration.

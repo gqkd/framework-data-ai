@@ -417,6 +417,45 @@ then the `ICG` is what moves — but an `ICG` is `immutable`, so that is a new o
 supersedes it, not an edit. Propose, do not apply: which of the two is wrong is exactly the
 question.
 
+## The exchange between sessions
+
+When `.framework/sessions.yaml` declares `exchange:`, sessions hand each other material in a
+place outside the repositories: a folder per element in `in-arrivo/` until the documentation
+session has integrated it, in `integrati/` afterwards with an `INTEGRATO` saying which
+commit took it in and where each part went, a `risorse.md` per element listing what the work
+created outside the repositories, and a closing declaration per session.
+`references/contributions.md`, *The exchange between sessions*, describes each; this is what
+to do with it.
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT:?}/skills/audit/scripts/exchange.py" --root <project>
+```
+
+lists what waits, elements done and still in `in-arrivo/` first, then the deliveries by age,
+the briefs with nothing delivered yet, the resources of elements done with their commands,
+and the declarations not attached to an element. The validator reports the same place as
+`EXC001`-`EXC007`, all warnings, and only where the place exists: a CI runner has the
+repository and not what sits beside it, so a clean CI run says nothing about the exchange.
+
+What each finding asks of you, and none of it is a fix you apply in silence:
+
+- **`EXC002`, done and not moved.** Check that the delivery was integrated: the change's
+  §Verification, the entry the measurement was about. If it was, propose the move and the
+  `INTEGRATO`, with the commit that integrated it; if it was not, that is the work, and the
+  state that says done is the thing to raise.
+- **`EXC004`, a resource still there.** Propose the removal with the command in the row, one
+  row at a time. Run it only on the person's approval, then delete the row. A worktree with
+  uncommitted work in it is the person's to look at before anything is removed.
+- **`EXC005`, credentials where they should not be.** Say where the copy is and which keys it
+  holds, from the list. Never open the file to find out, never print a value, and propose the
+  deletion rather than performing it.
+- **`EXC001`, `EXC003`, `EXC006`, `EXC007`, the shape.** The repair is a rename, a move into
+  the element's folder, a line in `INTEGRATO` or in `risorse.md`. Propose it; the material is
+  somebody's delivery, and its name is the only thing joining it to its element.
+
+At the end of a session, the declaration the preamble asks for goes in the element's
+`sessioni/`, or in the exchange's when the session worked on no single element.
+
 ## Adopting a new version of the framework
 
 Read `references/adoption.md` for upgrade, explicit memory use and optional mapping
@@ -446,7 +485,10 @@ numbers disagree — and what clears them is `--adopt`, not an edit to any docum
 them as migration work sends somebody looking for a repair that does not exist.
 
 It also prints the migration note for every version crossed, read out of
-`schemas/artifact-types.yaml` where it is written beside the number it explains.
+`schemas/artifact-types.yaml` where it is written beside the number it explains, and the
+checks the catalog has gained since the declared version, read out of the two catalogs: a
+new check that reports nothing on this project is still listed, so that its silence reads as
+having looked.
 
 `--adopt` writes the new number into the project's `framework.yaml`, and refuses while
 anything is still under **new**: that number is a claim that the migration is done. A finding

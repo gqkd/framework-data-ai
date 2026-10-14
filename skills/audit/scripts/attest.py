@@ -202,8 +202,8 @@ def main() -> int:
               f"({when:%Y-%m-%d %H:%M} {v._offset(when)}), which {what}. The commit is not "
               "written into the document: the attestation commit and its parent carry it.")
     print("Nothing is committed. Commit the attestations on their own -- a commit that changes "
-          "only `last_review` and `review_scope` is a reading, not a change -- and then run "
-          "`validate.py --emit-index`: the derived views list `last_review`.")
+          "only `last_review` and `review_scope` is a reading, not a change. No derived view "
+          "needs regenerating: none of them carries `last_review`.")
     return 0
 
 

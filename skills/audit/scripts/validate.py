@@ -81,6 +81,7 @@ if _CORE_NAME not in sys.modules:
     _core_spec.loader.exec_module(_core)
 _artifacts = importlib.import_module(f"{_CORE_NAME}.artifacts")
 _references = importlib.import_module(f"{_CORE_NAME}.references")
+_exchange = importlib.import_module(f"{_CORE_NAME}.exchange")
 
 # Public compatibility aliases: old callers keep importing validate.py directly.
 Artifact = _artifacts.Artifact
@@ -287,6 +288,44 @@ def load_project(root: Path) -> dict:
     return project
 
 
+# WHERE A PROJECT SAYS HOW ITS SESSIONS HAND EACH OTHER MATERIAL, AND WHY NOT IN
+# `framework.yaml`. For the reason the annotations below are not there either: a key that file
+# does not know stops every validator released before it, the one `migrate.py` rebuilds and
+# the one a CI job pins alike, so the day a project wrote it every older run would stop. A
+# hidden path is read by the tooling that knows it and is invisible, by construction, to all
+# the rest. Optional: without the file, nothing about the exchange runs.
+SESSIONS = ".framework/sessions.yaml"
+SESSIONS_KEYS = {"exchange"}
+
+
+def load_exchange(root: Path) -> tuple[str | None, Path | None]:
+    """The exchange `.framework/sessions.yaml` declares: the value as written, and the place.
+
+    A file that does not say a place stops the validator, for the reason an unknown key in
+    `framework.yaml` does: a place that reads as declared and is not leaves every check on it
+    silent, and the silence reads as an exchange with nothing waiting in it.
+    """
+    path = root / SESSIONS
+    if not path.exists():
+        return None, None
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except (yaml.YAMLError, UnicodeError) as e:
+        sys.exit(f"{path}: does not parse as YAML.\n{str(e).strip()}")
+    if not isinstance(data, dict):
+        sys.exit(f"{path}: the top level has to be a mapping")
+    unknown = sorted(set(data) - SESSIONS_KEYS)
+    if unknown:
+        sys.exit(f"{path}: unknown key(s) {', '.join(map(repr, unknown))}. This file holds: "
+                 f"{', '.join(sorted(SESSIONS_KEYS))}.")
+    if "exchange" not in data:
+        return None, None
+    place, problem = _exchange.declared(data["exchange"], root)
+    if problem:
+        sys.exit(f"{path}: {problem}")
+    return str(data["exchange"]).strip(), place
+
+
 # WHERE A PROJECT SAYS "I LOOKED AT THIS FINDING AND DECIDED", AND WHY IT IS NOT IN
 # `framework.yaml`. The place was forced rather than chosen. `migrate.py` reconstructs the
 # validator of the version a project declares out of the framework's own git history, so
@@ -369,7 +408,7 @@ def load_annotations(root: Path) -> tuple[list[dict], bool, str | None]:
 
 
 def apply_annotations(report: Report, rows: list[dict], require_all: bool,
-                      where: str) -> None:
+                      where: str, unread: tuple[str, ...] = ()) -> None:
     """Join the annotations onto the findings, on `(code, path)` and nothing finer.
 
     THE KEY IS THE ONE `migrate.py` ALREADY USES, and that is the argument for it rather
@@ -395,6 +434,11 @@ def apply_annotations(report: Report, rows: list[dict], require_all: bool,
 
     for row in rows:
         matched = by_pair.get((row["code"], row["path"]))
+        if not matched and str(row["code"]).startswith(unread):
+            # NOT LOOKED FOR, WHICH IS NOT REPAIRED. The exchange is on the machines where
+            # sessions work and nowhere else, so an annotation written there about it would
+            # read as obsolete on every CI run, where nothing about the exchange runs.
+            continue
         if not matched:
             if report.level(row["code"]) == RETIRED:
                 since = (report.config.get(row["code"]) or {}).get("retired_in",
@@ -3671,6 +3715,39 @@ def check_roadmap(arts: list[Artifact], report: Report) -> None:
                                "about the work and not a fact about the product")
 
 
+def check_exchange(root: Path, declared: str | None, place: Path | None, arts: list[Artifact],
+                   references: ReferenceIndex, repo: "Repository | None", report: Report) -> str:
+    """`EXC001`-`EXC007`, on the exchange `.framework/sessions.yaml` declares, where it is here.
+
+    WHERE IT IS NOT, NOTHING RUNS AND NOTHING IS REPORTED. The exchange lives beside the clone on
+    the machines where sessions work, and nowhere else: a CI runner has the repository and not
+    the place beside it. A finding for its absence would sound on every push, about a directory
+    that is supposed to be absent there. The report says so in a line, as it does for a
+    directory outside any history, and the JSON says which of the three it was.
+    """
+    if place is None:
+        return "not-declared"
+    if not place.is_dir():
+        return "absent"
+    ex = _exchange.read(place, declared, report)
+
+    def in_history(sha: str) -> bool:
+        r = _git(["merge-base", "--is-ancestor", sha, "HEAD"], root)
+        return r is not None and r.returncode == 0
+
+    _exchange.check(ex, references.known, _exchange.standing(arts), projects_folder(root),
+                    in_history if repo is not None and repo.has_head else None, report)
+    return "read"
+
+
+def projects_folder(root: Path) -> Path:
+    """The folder holding the documentation repository and its neighbours: the parent of the
+    repository's top, which is the parent of `root` unless the documentation is a subfolder."""
+    top = _git(["rev-parse", "--show-toplevel"], root)
+    base = Path(top.stdout.strip()) if top is not None and top.returncode == 0 else root
+    return base.resolve().parent
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Generated indices
 
@@ -3858,8 +3935,15 @@ def build_indices(root: Path, arts: list[Artifact]) -> dict[Path, str]:
         changes = sorted(a.id for a in mine if a.type == "change-contract"
                          and a.meta.get("status") in ("approved", "implemented") and a.id)
         releases = sorted(a.id for a in mine if a.type == "release-note" and a.id)
-        living = sorted(f"{a.rel} ({a.meta.get('last_review') or 'never reviewed'})"
-                        for a in mine if a.meta.get("lifecycle") == "living")
+        # THE PATHS, WITHOUT THE INSTANT OF THEIR LAST READING. The view used to carry it,
+        # which made every attestation two commits: the reading, and the regeneration of a
+        # view that only copied the reading's instant -- a quarter of a project's history in
+        # the case that measured it. The instant has one home, the document's own front
+        # matter, and what the copy was for is said there by `LC001` (never read), `LC002`
+        # (read too long ago) and `LC004` (not an instant). Regenerating inside `attest.py`
+        # instead would have put into the commit of a reading whatever else the working tree
+        # held, including registers other sessions had edited and not committed.
+        living = sorted(a.rel for a in mine if a.meta.get("lifecycle") == "living")
         lines = [f"# {GENERATED_MARK}. Do not edit by hand.",
                  "#",
                  "# The derived view of this product. `product.yaml` beside it is authoritative",
@@ -3960,6 +4044,7 @@ def main() -> int:
     config, stale_days = load_config(project)
     scan = load_scan(registry, project)
     annotations, require_all, annotations_rel = load_annotations(root)
+    exchange_declared = load_exchange(root)
     if args.stale_days is not None:
         stale_days = args.stale_days
 
@@ -4025,10 +4110,12 @@ def main() -> int:
     check_stack(arts, report)
     check_cross_product(arts, report)
     check_roadmap(arts, report)
+    exchange = check_exchange(root, *exchange_declared, arts, references, repo, report)
     # Last, and it has to be: an annotation is a statement about the set of findings, so it
     # cannot be joined until every check has finished producing them.
     if annotations_rel is not None:
-        apply_annotations(report, annotations, require_all, annotations_rel)
+        apply_annotations(report, annotations, require_all, annotations_rel,
+                          unread=("EXC",) if exchange != "read" else ())
     if repo is not None:
         repo.close()
 
@@ -4117,6 +4204,8 @@ def main() -> int:
             # outside any repository: `LC007` compared with the clock and `LC006` did not
             # run. A shallow or unreadable history never reaches this line: it exits 2.
             "history": "read" if repo is not None else "none",
+            # `not-declared`, `absent` (declared, and not on this machine) or `read`.
+            "exchange": exchange,
             "generated": index_written, "out_of_date": index_stale,
             "hand_maintained": index_protected,
             "findings": [f.as_json() for f in report.findings],
@@ -4145,6 +4234,10 @@ def main() -> int:
             print("History: none. This directory is not inside a git repository, so LC006 and "
                   "the history half of LC008 did not run, and LC007 compared every "
                   "attestation with the current time.")
+        if exchange == "absent":
+            print(f"Exchange: {exchange_declared[0]} is not on this machine, so EXC001-EXC007 "
+                  "did not run. Expected where the repository is a clone and no session works "
+                  "beside it, as in CI.")
         if unenforced:
             print(f"Artifact types whose placement is not enforced: {unenforced}")
         if index_written:

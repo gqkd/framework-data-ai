@@ -1415,6 +1415,74 @@ checks:
       stale, while the date the digest draws is the one declared in its state: two dates for
       one milestone, and the one in the roadmap is the one people read.
 
+  # ── The exchange between sessions ──────────────────────────────────────────
+  # Run only where `.framework/sessions.yaml` declares `exchange:` and the directory is here,
+  # which a CI runner never is: see `references/contributions.md`, "The exchange between
+  # sessions". All warnings, because what they describe is a place nobody commits.
+  EXC001:
+    level: warn
+    title: a folder in the exchange names an element the documentation does not declare
+    prevents: >
+      Material nobody can place. The folder's name is the only thing joining what a session
+      delivered to the change or the decision it is about, and a name that resolves to nothing
+      -- a typo, an element renamed, one never written -- is a delivery whose integration no
+      state in the documents can ever say is done.
+  EXC002:
+    level: warn
+    title: an element done in the documents still has its folder in in-arrivo/
+    prevents: >
+      The state measured in the first project to run sessions in parallel: nine elements out
+      of thirteen already integrated into their mandates, their material still waiting beside
+      the four that were not, and nothing saying which were which. A change at `implemented`,
+      `verified` or `rolled-back`, an `OD` or `KI` `decided` or `superseded`, is done; its
+      folder belongs in `integrati/` with the file that says where each part went, or it is
+      waiting behind a state that says it is done.
+  EXC003:
+    level: warn
+    title: a folder in integrati/ without an INTEGRATO that says where each part went
+    prevents: >
+      Moved read as integrated. The move is one command and proves nothing; what makes it an
+      integration is the commit of the documentation that took the material in, the day, and
+      for each part of the folder the place its content now lives. A commit the history does
+      not hold, a part with no destination, or a destination for a part that is not there, is
+      an integration nobody can retrace.
+  EXC004:
+    level: warn
+    title: a resource listed by an element is still there after the element is done
+    prevents: >
+      Six worktrees of mandates already merged, 2.3 GB, with no rule saying to remove them.
+      The session that creates a resource lists it, with the command that removes it, and the
+      documentation session proposes that command when the element is done and runs it on
+      approval. A row still present after that is the proposal not made or not answered. A
+      worktree or a copy of credentials is present when its path exists; the other kinds are
+      names in tools this does not run, and are present while their row is.
+  EXC005:
+    level: warn
+    title: a copy of credentials is under the projects folder, or the list carries a value
+    prevents: >
+      A secret left where every repository and every session can reach it. A copy of a `.env`
+      or of a key lives in the scratchpad of the session that needed it and goes with it; the
+      list names its path and the keys it holds, never what they hold. Under the folder that
+      contains the documentation and its neighbours, one `git add -A` in the wrong directory
+      publishes it.
+  EXC006:
+    level: warn
+    title: a name in the exchange that the framework does not read
+    prevents: >
+      Material where nobody looks. The exchange holds `in-arrivo/`, `integrati/` and
+      `sessioni/`; an element folder holds fixed names. A file named with the element's prefix
+      is the shape this replaced, three hundred files of it in the case that produced the
+      rule, and the exchange inside a git repository is one commit away from publishing it.
+  EXC007:
+    level: warn
+    title: a resource row or a closing declaration that cannot be read
+    prevents: >
+      A list that cannot be acted on. A resource without its type, its path or name, or the
+      command that removes it cannot be proposed for removal; a copy of credentials without
+      the names of its keys cannot be rotated when it turns up somewhere; a closing
+      declaration without one of its three parts -- committed, not committed, outside the
+      repositories -- leaves the next session reading transcripts to learn whose a line is.
+
 # ON THE PROSE COUPLED CHECKS. There are none left. REG002 and REG003 used to read the body
 # of `OPEN.md` -- the `### OD-NNN` headings and the "Cost to reverse" and "Default in force"
 # lines inside each entry -- which is the fragility the section markers removed, one level

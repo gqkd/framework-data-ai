@@ -19,7 +19,7 @@ decisions, products, initiatives and corpus, live in that project's repository, 
 | `PROCESSES.md` | The operating processes: who does what, what each one leaves written, and which of them the tooling actually carries today. Diagrammed, one per process |
 | `templates/` | One template per artifact, each with its anti-patterns at the bottom |
 | `schemas/` | The artifact catalog and what each type is allowed to be. `artifact-types.yaml` is the source; `generate.py` projects it into the JSON Schemas, into `FRAMEWORK.md §7` and into `templates/README.md` |
-| `skills/` | The skills themselves. `audit/` also carries the gate: `scripts/validate.py`, `scripts/migrate.py`, `scripts/attest.py` (how a person attests a reading) and `checks.yaml` |
+| `skills/` | The skills themselves. `audit/` also carries the gate: `scripts/validate.py`, `scripts/migrate.py`, `scripts/attest.py` (how a person attests a reading), `scripts/exchange.py` (what waits in the exchange between sessions) and `checks.yaml` |
 | `src/framework_data_ai/` | Shared reading and resolution, the artifact contracts and a separate code-observation layer, used by the opt-in verification profiles. Loaded from this checkout; no package installation required |
 | `ci/` | Legacy PR template/workflow, optional trusted-base documentary controller, contribution-policy and CODEOWNERS adoption examples; see `references/contributions.md` |
 | `references/` | Shared by the skills: the common preamble, the routing table, the operating-mode and evidence rules, the contribution trust boundary and the adoption procedure |
@@ -248,7 +248,7 @@ python3 skills/audit/scripts/validate.py --root ../my-project --emit-index
 <!-- generated: counts -->
 *Generated from `schemas/artifact-types.yaml` and `skills/audit/checks.yaml`. Edit those, not this line.*
 
-**30 artifact types. 94 checks** (25 error, 67 warn, 2 info), each catalogued with the failure it prevents written next to it, and 1 retired code whose number is never reused.
+**30 artifact types. 101 checks** (25 error, 74 warn, 2 info), each catalogued with the failure it prevents written next to it, and 1 retired code whose number is never reused.
 <!-- /generated -->
 
 The count above is generated, and it is generated because the one that used to be here was

@@ -7167,6 +7167,474 @@ def _ci_assets_fetch_history():
     return problems
 
 
+EXCHANGE = ROOT / "skills" / "audit" / "scripts" / "exchange.py"
+
+_EXCHANGE_SECTIONS = ("<!-- section: what-changes -->\n## A\n"
+                      "<!-- section: what-must-not-change -->\n## B\n"
+                      "<!-- section: how-we-know-it-worked -->\n## C\n")
+
+
+def _exchange_docs(tmp: Path, exchange: str | None = "../_scambio") -> tuple[_Repo, Path, str]:
+    """A documentation repository beside its exchange: what every check on the place reads.
+
+    `CHG-001` implemented and `OD-002` decided are closed; `CHG-002` and `CHG-003` approved and
+    `OD-001` open are not. The exchange is not created: each check makes what it needs.
+    """
+    repo = _Repo(tmp / "docs")
+    if exchange is not None:
+        repo.write(".framework/sessions.yaml", f"exchange: {exchange}\n")
+    for ident, status in (("CHG-001", "implemented"), ("CHG-002", "approved"),
+                          ("CHG-003", "approved")):
+        repo.write(f"products/p/changes/{ident}.md", _fm(
+            schema="framework/change-contract/v1", artifact_type="change-contract",
+            lifecycle="immutable", status=status, id=ident, products="[p]", owners="[o]",
+            created="2026-10-01") + f"# {ident}\n\n" + _EXCHANGE_SECTIONS)
+    repo.write("OPEN.md", _fm(
+        schema="framework/open-register/v1", artifact_type="open-register",
+        lifecycle="living", status="active", owners="[o]", created="2026-10-01",
+        last_review="2026-10-01 09:00",
+        entries="\n  OD-001:\n    status: open\n    cost_to_reverse: low"
+                "\n  OD-002:\n    status: decided\n    cost_to_reverse: low"
+                "\n    closed_by: DEC-001") + "# Open\n")
+    sha = repo.commit("the documents", "2026-10-01T09:00:00+02:00")
+    return repo, tmp / "_scambio", sha
+
+
+def _put(base: Path, files: dict[str, str]) -> None:
+    for rel, text in files.items():
+        p = base / rel
+        if rel.endswith("/"):
+            p.mkdir(parents=True, exist_ok=True)
+            continue
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(text, encoding="utf-8")
+
+
+def _exc(repo: _Repo, code: str) -> list[str]:
+    """The paths, under the exchange, at which `code` is reported."""
+    return sorted(f["path"].split("_scambio/", 1)[-1] for f in repo.findings(code))
+
+
+_RESOURCE_HEAD = "| Tipo | Percorso o nome | Comando che la toglie |\n|---|---|---|\n"
+_DECLARATION = ("# Chiusura\n\n## Committato\n\nniente\n\n## Non committato\n\n"
+                "- `OPEN.md`: OD-001, le righe del default\n\n## Fuori dai repository\n\n"
+                "vedi `risorse.md`\n")
+
+
+@check("`exchange:` in .framework/sessions.yaml is a place relative to the documentation and outside it, and optional")
+def _exchange_is_declared():
+    # The value is committed and read on every machine, so a path that names one machine is
+    # refused, and one inside the repository is refused because what waits there is not
+    # committed. Without the file nothing changes, and a declared place that is not on this
+    # machine -- every CI runner -- runs no check and says so rather than warning on each push.
+    # Not a key of `framework.yaml`: one there stops every older validator.
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        for n, (value, says) in enumerate((
+                ("/srv/_scambio", "a place on one machine"),
+                ("~/_scambio", "a place on one machine"),
+                ("'C:\\\\scambio'", "a place on one machine"),
+                ("scambio", "inside the documentation repository"),
+                ("'.'", "inside the documentation repository"),
+                ("[a, b]", "has to be a path"),
+                ("../_scambio\nwhere: here", "unknown key"))):
+            repo, _, _ = _exchange_docs(Path(tmp) / f"refused-{n}", value)
+            rc, out, err = repo.validate()
+            if rc == 0 or out is not None or says not in err:
+                problems.append(f"`exchange: {value}` was not refused with {says!r} "
+                                f"(exit {rc}): {err.strip()[-160:]}")
+        if "exchange" in _load(VALIDATE, "validate_exchange_keys").PROJECT_KEYS:
+            problems.append("`framework.yaml` accepts `exchange`: every validator before this "
+                            "one would stop on it")
+        repo, ex, _ = _exchange_docs(Path(tmp) / "none", None)
+        repo.write("framework.yaml", f"framework_version: {REGISTRY['version']}\n")
+        _put(ex, {"in-arrivo/CHG-999/x.txt": "x"})
+        rc, out, err = repo.validate()
+        if out is None or out.get("exchange") != "not-declared" or any(
+                f["code"].startswith("EXC") for f in out["findings"]):
+            problems.append("a project without `exchange:` is not read as before: "
+                            f"{(out or {}).get('exchange')!r}, {err.strip()[-120:]}")
+        repo, ex, _ = _exchange_docs(Path(tmp) / "absent")
+        rc, out, err = repo.validate()
+        if out is None or out.get("exchange") != "absent":
+            problems.append(f"a declared exchange not on this machine reads as "
+                            f"{(out or {}).get('exchange')!r}, not `absent`")
+        r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(repo.path),
+                            "--stale-days", "36500"], capture_output=True, text=True)
+        if "is not on this machine" not in r.stdout:
+            problems.append("the report does not say that the exchange checks did not run "
+                            "where the exchange is absent")
+        ex.mkdir()
+        rc, out, err = repo.validate()
+        if out is None or out.get("exchange") != "read":
+            problems.append(f"an exchange on this machine reads as {(out or {}).get('exchange')!r}")
+    return problems
+
+
+@check("EXC001: a folder in the exchange names an element the documentation does not declare")
+def _exc001():
+    with tempfile.TemporaryDirectory() as tmp:
+        repo, ex, _ = _exchange_docs(Path(tmp))
+        _put(ex, {"in-arrivo/CHG-002/brief.md": "b", "in-arrivo/OD-001/verifica.md": "v",
+                  "in-arrivo/CHG-009/brief.md": "b", "integrati/KI-404/brief.md": "b"})
+        got = _exc(repo, "EXC001")
+    want = ["in-arrivo/CHG-009", "integrati/KI-404"]
+    return [] if got == want else [f"EXC001 reported at {got}, expected {want}: a change "
+                                   "and an entry of a register both name an element"]
+
+
+@check("EXC002: an element done in the documents still has its folder in in-arrivo/")
+def _exc002():
+    with tempfile.TemporaryDirectory() as tmp:
+        repo, ex, _ = _exchange_docs(Path(tmp))
+        _put(ex, {f"in-arrivo/{i}/verifica.md": "v"
+                  for i in ("CHG-001", "CHG-002", "OD-001", "OD-002")})
+        _put(ex, {"integrati/CHG-001/brief.md": "b"})
+        got = _exc(repo, "EXC002")
+    want = ["in-arrivo/CHG-001", "in-arrivo/OD-002"]
+    return [] if got == want else [f"EXC002 reported at {got}, expected {want}: implemented "
+                                   "and decided close an element, approved and open do not, "
+                                   "and integrati/ is where a closed one belongs"]
+
+
+@check("EXC003: a folder in integrati/ without an INTEGRATO that says where each part went")
+def _exc003():
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        repo, ex, sha = _exchange_docs(Path(tmp))
+        good = (f"commit: {sha[:12]}\ndate: 2026-10-14\nparts:\n"
+                "  verifica.md: CHG-001 §Verification\n  evidenze/: CHG-001 §Verification\n")
+        cases = {
+            "CHG-001": (good, []),
+            "CHG-002": (None, ["integrati/CHG-002"]),
+            "CHG-003": (good.replace(sha[:12], "0123456789ab"), ["integrati/CHG-003/INTEGRATO"]),
+            "OD-001": (good.replace("  evidenze/: CHG-001 §Verification\n", ""),
+                       ["integrati/OD-001/INTEGRATO"]),
+            "OD-002": (good + "  mr.md: CHG-001\n", ["integrati/OD-002/INTEGRATO"]),
+        }
+        for ident, (mark, _) in cases.items():
+            _put(ex, {f"integrati/{ident}/verifica.md": "v",
+                      f"integrati/{ident}/evidenze/log.txt": "l"})
+            if mark is not None:
+                _put(ex, {f"integrati/{ident}/INTEGRATO": mark})
+        got = _exc(repo, "EXC003")
+        want = sorted(p for _, paths in cases.values() for p in paths)
+        if got != want:
+            problems.append(f"EXC003 reported at {got}, expected {want}: a missing file, a "
+                            "commit the history does not hold, a part with no destination and "
+                            "a destination with no part")
+        # A second delivery after the first was integrated: one block per integration, and
+        # the parts of all of them cover the folder.
+        _put(ex, {"integrati/CHG-001/INTEGRATO":
+                  f"- commit: {sha[:12]}\n  date: 2026-10-14\n  parts:\n"
+                  "    verifica.md: CHG-001 §Verification\n"
+                  f"- commit: {sha}\n  date: 2026-10-20\n  parts:\n"
+                  "    evidenze: CHG-001 §Verification\n",
+                  "integrati/CHG-002/INTEGRATO": "commit: [unreadable\n"})
+        got = _exc(repo, "EXC003")
+        if "integrati/CHG-001/INTEGRATO" in got or "integrati/CHG-002/INTEGRATO" not in got:
+            problems.append(f"two integration blocks, or an unreadable INTEGRATO, read wrong: {got}")
+    return problems
+
+
+@check("EXC004: a resource listed by an element is still there after the element is done")
+def _exc004():
+    with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as away:
+        repo, ex, _ = _exchange_docs(Path(tmp))
+        there = Path(away) / "app-chg"
+        there.mkdir()
+        rows = (_RESOURCE_HEAD
+                + f"| worktree | `{there}` | `git -C /src/app worktree remove {there}` |\n"
+                + f"| worktree | {Path(away) / 'gone'} | git worktree remove gone |\n"
+                + "| ramo locale | chg-001 in /src/app | git -C /src/app branch -D chg-001 |\n")
+        _put(ex, {"in-arrivo/CHG-002/risorse.md": rows, "integrati/CHG-001/risorse.md": rows,
+                  "integrati/CHG-001/INTEGRATO": "x: y\n"})
+        got = [(f["path"].split("_scambio/", 1)[-1], f["message"].split(":", 1)[0])
+               for f in repo.findings("EXC004")]
+    want = [("integrati/CHG-001/risorse.md", "line 3"),
+            ("integrati/CHG-001/risorse.md", "line 5")]
+    return [] if sorted(got) == want else [
+        f"EXC004 reported {sorted(got)}, expected {want}: a worktree whose path exists and a "
+        "branch still listed are there; a path that is gone is a resource removed; an "
+        "element still approved keeps its resources"]
+
+
+@check("EXC005: a copy of credentials is under the projects folder, or the list carries a value")
+def _exc005():
+    with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as scratch:
+        repo, ex, _ = _exchange_docs(Path(tmp))
+        near, far = Path(tmp) / ".env.backup", Path(scratch) / ".env.misure"
+        near.write_text("x")
+        far.write_text("x")
+        _put(ex, {"in-arrivo/CHG-002/risorse.md": _RESOURCE_HEAD
+                  + f"| copia di credenziali | {far} (DB_URL, DB_PASSWORD) | rm {far} |\n"
+                  + f"| copia di credenziali | {near} (DB_URL) | rm {near} |\n"
+                  + f"| copia di credenziali | {far} (DB_PASSWORD=hunter2) | rm {far} |\n"})
+        got = [f["message"].split(":", 1)[0] for f in repo.findings("EXC005")]
+    return [] if sorted(got) == ["line 4", "line 5"] else [
+        f"EXC005 reported on {sorted(got)}, expected lines 4 and 5: a copy beside the "
+        "repositories, and a value written in the list; a copy in a scratchpad is where it "
+        "belongs"]
+
+
+@check("EXC006: a name in the exchange that the framework does not read")
+def _exc006():
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        repo, ex, _ = _exchange_docs(Path(tmp))
+        _put(ex, {"in-arrivo/CHG-002-verifica.md": "the old shape",
+                  "in-arrivo/CHG-002/verifica.md": "v", "in-arrivo/CHG-002/mr.md": "m",
+                  "in-arrivo/CHG-002/mr-link.txt": "l", "in-arrivo/CHG-002/evidenze/": "",
+                  "in-arrivo/CHG-002/contribution-policy.json": "{}",
+                  "in-arrivo/CHG-002/brief.md": "b", "in-arrivo/CHG-002/risorse.md": _RESOURCE_HEAD,
+                  "in-arrivo/CHG-002/sessioni/2026-10-14-ab12cd34.md": _DECLARATION,
+                  "in-arrivo/CHG-003/note.txt": "n", "in-arrivo/CHG-003/evidenze": "a file",
+                  "in-arrivo/CHG-003/INTEGRATO": "x", "copie/": "",
+                  "sessioni/2026-10-14-ab12cd34.md": _DECLARATION})
+        got = _exc(repo, "EXC006")
+        want = ["copie", "in-arrivo/CHG-002-verifica.md", "in-arrivo/CHG-003/INTEGRATO",
+                "in-arrivo/CHG-003/evidenze", "in-arrivo/CHG-003/note.txt"]
+        if got != want:
+            problems.append(f"EXC006 reported at {got}, expected {want}")
+    with tempfile.TemporaryDirectory() as tmp:
+        outer = _Repo(Path(tmp) / "outer")
+        repo, ex, _ = _exchange_docs(Path(tmp) / "work", "../../outer/_scambio")
+        (outer.path / "_scambio").mkdir()
+        got = [f["message"] for f in repo.findings("EXC006")]
+        if len(got) != 1 or "inside the git repository" not in got[0]:
+            problems.append(f"an exchange inside a git repository reads as {got}")
+    return problems
+
+
+@check("EXC007: a resource row or a closing declaration that cannot be read")
+def _exc007():
+    with tempfile.TemporaryDirectory() as tmp:
+        repo, ex, _ = _exchange_docs(Path(tmp))
+        _put(ex, {"in-arrivo/CHG-002/risorse.md": _RESOURCE_HEAD
+                  + "| worktree | /srv/app-chg002 | git worktree remove /srv/app-chg002 |\n"
+                  + "| container | app-db | docker rm -f app-db |\n"
+                  + "| volume | app-db-data | |\n"
+                  + "| worktree | ../app-chg002 | git worktree remove ../app-chg002 |\n"
+                  + "| copia di credenziali | /tmp/s/.env | rm /tmp/s/.env |\n",
+                  "in-arrivo/CHG-002/sessioni/2026-10-14-ab12cd34.md": _DECLARATION,
+                  "in-arrivo/CHG-002/sessioni/chiusura.md": _DECLARATION,
+                  "sessioni/2026-10-13-ef56.md": _DECLARATION.replace("Non committato", "Altro")})
+        got = sorted((f["path"].split("_scambio/", 1)[-1], f["message"].split(":", 1)[0]
+                      if f["message"].startswith("line") else "")
+                     for f in repo.findings("EXC007"))
+    want = sorted([("in-arrivo/CHG-002/risorse.md", "line 4"),
+                   ("in-arrivo/CHG-002/risorse.md", "line 5"),
+                   ("in-arrivo/CHG-002/risorse.md", "line 6"),
+                   ("in-arrivo/CHG-002/risorse.md", "line 7"),
+                   ("in-arrivo/CHG-002/sessioni/chiusura.md", ""),
+                   ("sessioni/2026-10-13-ef56.md", "")])
+    return [] if got == want else [
+        f"EXC007 reported {got}, expected {want}: a type not in the list, a missing command, a "
+        "relative path, a copy of credentials without its keys, a declaration misnamed and "
+        "one without a part"]
+
+
+@check("every status a change or an entry can have is either done or not, for the exchange")
+def _exchange_maps_every_status():
+    # Two meanings of "closed" already exist, the digest's and this one, and the second is
+    # earlier on purpose. A status the schemas gain and neither set names would read as not
+    # done for ever, and its resources would never be proposed for removal.
+    x = _load(VALIDATE, "validate_exchange_states")._exchange
+    problems = []
+    for kind, path, done, not_done in (
+            ("change-contract", ("properties", "status", "enum"), x.CLOSED_CHANGE, x.OPEN_CHANGE),
+            ("open-register", ("properties", "entries", "additionalProperties", "properties",
+                               "status", "enum"), x.CLOSED_ENTRY, x.OPEN_ENTRY)):
+        node = json.loads((ROOT / "schemas" / "framework" / kind / "v1.json").read_text())
+        for key in path:
+            node = node[key]
+        if set(node) != done | not_done or done & not_done:
+            problems.append(f"{kind}: the schema allows {sorted(node)}, the exchange calls "
+                            f"{sorted(done)} done and {sorted(not_done)} not")
+    return problems
+
+
+@check("a value written in risorse.md is never repeated, by the validator or by the listing")
+def _exchange_keeps_values_out():
+    # The list names a copy of credentials and its keys. A row that carries a value anyway is
+    # `EXC005`, and every other place that prints a row -- `EXC004`, `EXC007`, the listing and
+    # its JSON -- must not become the second copy of the secret.
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as scratch:
+        repo, ex, _ = _exchange_docs(Path(tmp))
+        copy = Path(scratch) / ".env.misure"
+        copy.write_text("x")
+        _put(ex, {f"in-arrivo/{i}/risorse.md": _RESOURCE_HEAD
+                  + f"| copia di credenziali | {copy} (DB_PASSWORD=hunter2) | rm {copy} |\n"
+                  + f"| copia di credenziali | {copy} (DB_URL) | rm {copy} -e TOKEN=hunter2 |\n"
+                  + "| copia di credenziali | .env (DB_PASSWORD=hunter2) | rm .env |\n"
+                  for i in ("CHG-001", "CHG-002")})
+        rc, out, err = repo.validate()
+        outputs = {"validate --json": json.dumps(out or {}) + err}
+        for extra in ((), ("--json",)):
+            r = subprocess.run([sys.executable, str(EXCHANGE), "--root", str(repo.path), *extra],
+                               capture_output=True, text=True)
+            outputs[f"exchange.py {' '.join(extra)}"] = r.stdout + r.stderr
+        for name, text in outputs.items():
+            if "hunter2" in text:
+                problems.append(f"{name} repeats a value written in risorse.md")
+        if not any(f["code"] == "EXC004" for f in (out or {}).get("findings", [])):
+            problems.append("the row with a value is not reported as present at all: the "
+                            "test proves nothing")
+        if len([f for f in (out or {}).get("findings", []) if f["code"] == "EXC005"]) != 4:
+            problems.append("each row carrying a value, in either cell, is an EXC005")
+    return problems
+
+
+@check("an annotation on an EXC finding is not obsolete where the exchange is not on the machine")
+def _exchange_annotations_travel():
+    # Annotations join on (code, path), and the exchange is on the machines where sessions
+    # work and nowhere else. Written there, an annotation on an `EXC` would read as `AN001`,
+    # obsolete, on every CI run, where nothing about the exchange ran.
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        repo, ex, _ = _exchange_docs(Path(tmp))
+        repo.write(".framework/expected-findings.yaml",
+                   "expected:\n  - code: EXC001\n    path: ../_scambio/in-arrivo/CHG-009\n"
+                   "    reason: a delivery for a change still being written\n"
+                   "    clears_when: CHG-009 is written\n")
+        _put(ex, {"in-arrivo/CHG-009/brief.md": "b", "Thumbs.db": "", "in-arrivo/desktop.ini": "",
+                  "integrati/CHG-001/brief.md": "b",
+                  "integrati/CHG-001/INTEGRATO": "commit: HEAD\ndate: 2026-10-14\nparts: {}\n"})
+        sha = repo.git("rev-parse", "HEAD")
+        (ex / "integrati/CHG-001/INTEGRATO").write_text(
+            f"commit: {sha[:12]}\ndate: 2026-10-14\nparts: {{}}\n")
+        rc, out, err = repo.validate()
+        codes = sorted((f["code"], bool(f.get("accepted"))) for f in (out or {}).get("findings", [])
+                       if f["code"].startswith(("EXC", "AN")))
+        if codes != [("EXC001", True)]:
+            problems.append(f"with the exchange here: {codes}, expected the annotated EXC001 "
+                            "alone -- litter is not a name, and a folder that delivered nothing "
+                            "moves with `parts: {}`")
+        shutil.rmtree(ex)
+        rc, out, err = repo.validate()
+        if any(f["code"].startswith(("EXC", "AN")) for f in (out or {}).get("findings", [])):
+            problems.append(f"without the exchange: {[f['code'] for f in out['findings']]}, "
+                            "expected no EXC and no AN001")
+    return problems
+
+
+@check("exchange.py lists what waits, the elements done first, the oldest next, with the days")
+def _exchange_lists_what_waits():
+    problems = []
+
+    def run(root: Path, *extra: str):
+        return subprocess.run([sys.executable, str(EXCHANGE), "--root", str(root), *extra],
+                              capture_output=True, text=True)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        repo, ex, _ = _exchange_docs(Path(tmp))
+        r = run(repo.path)
+        if r.returncode != 0 or "is not on this machine" not in r.stdout:
+            problems.append(f"an exchange not yet created: exit {r.returncode}, {r.stdout!r}")
+        now = datetime.now().timestamp()
+        _put(ex, {"in-arrivo/CHG-001/verifica.md": "v", "in-arrivo/CHG-002/verifica.md": "v",
+                  "in-arrivo/OD-001/verifica.md": "v", "in-arrivo/CHG-003/brief.md": "b",
+                  "in-arrivo/CHG-001/risorse.md": _RESOURCE_HEAD
+                  + "| ramo locale | chg-001 | git -C /src/app branch -D chg-001 |\n",
+                  "sessioni/2026-10-14-ab12cd34.md": _DECLARATION})
+        for rel, days in (("in-arrivo/CHG-002/verifica.md", 5), ("in-arrivo/OD-001/verifica.md", 2),
+                          ("in-arrivo/CHG-003/brief.md", 1)):
+            os.utime(ex / rel, (now - days * 86400, now - days * 86400))
+        r = run(repo.path)
+        out = r.stdout
+        order = [out.find(s) for s in ("DONE IN THE DOCUMENTS", "CHG-001", "WAITING",
+                                       "CHG-002", "OD-001", "AT A CODE SESSION", "CHG-003",
+                                       "RESOURCES OF ELEMENTS DONE", "branch -D chg-001",
+                                       "CLOSING DECLARATIONS", "2026-10-14-ab12cd34.md")]
+        if r.returncode != 0 or -1 in order or order != sorted(order):
+            problems.append(f"the listing is not in the order it is worth reading (exit "
+                            f"{r.returncode}): {order}\n{out}")
+        for says in ("waiting 5 days", "waiting 2 days", "brief written 1 day ago"):
+            if says not in out:
+                problems.append(f"the listing does not say {says!r}")
+        r = run(repo.path, "--json")
+        try:
+            data = json.loads(r.stdout)
+        except json.JSONDecodeError:
+            data = {}
+        if ([e["id"] for e in data.get("waiting", [])] != ["CHG-002", "OD-001"]
+                or [e["id"] for e in data.get("done_in_incoming", [])] != ["CHG-001"]
+                or [e["id"] for e in data.get("at_a_code_session", [])] != ["CHG-003"]
+                or [r["command"] for r in data.get("resources_to_remove", [])]
+                != ["git -C /src/app branch -D chg-001"]):
+            problems.append(f"--json does not carry the same listing: {r.stdout[:300]}")
+        if any(f["code"] != "EXC002" and f["code"] != "EXC004" for f in data.get("findings", [])):
+            problems.append(f"the listing reports findings beyond the place: {data.get('findings')}")
+        before = sorted(p.relative_to(ex).as_posix() for p in ex.rglob("*"))
+        if sorted(p.relative_to(ex).as_posix() for p in ex.rglob("*")) != before:
+            problems.append("the listing moved or wrote something")
+        bare, _, _ = _exchange_docs(Path(tmp) / "bare", None)
+        r = run(bare.path)
+        if r.returncode != 2 or "no `exchange` declared" not in r.stderr:
+            problems.append(f"without `exchange:` the command exited {r.returncode}: "
+                            f"{r.stderr.strip()[-120:]}")
+    return problems
+
+
+@check("a reading changes no derived view: product.index.yaml does not carry last_review")
+def _a_reading_regenerates_nothing():
+    # Every attestation used to cost two commits, the reading and the regeneration of a view
+    # that copied its instant. The view lists the living documents and not when they were
+    # last read, which the document says and `LC001`, `LC002` and `LC004` report on.
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = _Repo(Path(tmp) / "r")
+        repo.write("products/p/product.yaml", _fm(
+            schema="framework/product-manifest/v1", artifact_type="product-manifest",
+            lifecycle="living", status="active", products="[p]", name="P", one_liner="A thing.",
+            owners="[o]", created="2026-06-01 09:00", last_review="2026-06-01 09:00",
+            stage="\n  phase: F1\n  block: A").removeprefix("---\n").split("\n---\n")[0] + "\n")
+        repo.write("products/p/PBR.md", _brief("p", "2026-06-01 09:00", scope="the whole file"))
+        rc, out, err = repo.validate("--emit-index")
+        view = repo.path / "products/p/product.index.yaml"
+        if not view.exists():
+            return [f"--emit-index wrote no view (exit {rc}): {err.strip()[-160:]}"]
+        text = view.read_text(encoding="utf-8")
+        if "2026-06-01" in text or "never reviewed" in text:
+            problems.append(f"the view still carries the instant of a reading: {text}")
+        if "products/p/PBR.md" not in text:
+            problems.append("the view no longer lists the living documents")
+        repo.commit("the documents", "2026-06-01T09:00:00+02:00")
+        repo.write("products/p/PBR.md", _brief("p", "2026-06-02 10:00",
+                                               scope="the whole file, again"))
+        repo.commit("a reading", "2026-06-02T10:00:00+02:00")
+        rc, out, err = repo.validate("--emit-index", "--check")
+        if rc != 0 or (out or {}).get("out_of_date"):
+            problems.append(f"after a reading the views are out of date: "
+                            f"{(out or {}).get('out_of_date')}")
+        if repo.findings("LC006"):
+            problems.append("the commit of the reading is read as a change: LC006 no longer "
+                            "steps over an attestation")
+    return problems
+
+
+@check("migrate.py names the checks the new catalog has and the declared one did not")
+def _migrate_names_new_checks():
+    migrate = _load(ROOT / "skills" / "audit" / "scripts" / "migrate.py", "migrate_new_checks")
+    got = migrate.new_checks({"AA001": {"level": "warn"}},
+                             {"AA001": {"level": "warn"},
+                              "BB001": {"level": "error", "title": "a new one"},
+                              "CC001": {"level": "retired", "title": "gone"}})
+    want = [{"code": "BB001", "level": "error", "title": "a new one"}]
+    problems = [] if got == want else [f"new_checks returned {got}, expected {want}"]
+    head = subprocess.run(["git", "-C", str(ROOT), "show", "HEAD~1:skills/audit/checks.yaml"],
+                          capture_output=True, text=True)
+    if head.returncode == 0:
+        before = yaml.safe_load(head.stdout).get("checks") or {}
+        listed = {c["code"] for c in migrate.new_checks(before, CHECKS["checks"])}
+        missing = {c for c in CHECKS["checks"] if c not in before
+                   and CHECKS["checks"][c].get("level") != "retired"} - listed
+        if missing:
+            problems.append(f"checks in the catalog and not before, not listed: {sorted(missing)}")
+    return problems
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 @check("contribution authority, artifact resolution and code-observation contracts")

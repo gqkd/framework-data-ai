@@ -155,6 +155,13 @@ works" but what is observed, measured or asserted.
 A `CHG` starts at `status: draft` and becomes `approved` when the user approves it. Only an
 approved one authorizes anything.
 
+**When it reaches `implemented`**, and the project declares an exchange, read the
+`risorse.md` in its folder and propose removing what is still there, one row at a time with
+the command the row gives. Run a command only on the person's approval, and delete the row
+when you have. Then, once the delivery is integrated, move the folder from `in-arrivo/` to
+`integrati/` with its `INTEGRATO`. `exchange.py` lists both; `EXC002` and `EXC004` are what
+the validator says when either is left undone.
+
 **The increment it realises.** When the roadmap declares `increments:`, ask which increment
 the change belongs to, proposing the one whose decisions or issues it derives from, and
 write it in the change's own `derives_from` beside the rest: a `CHG` cannot be edited after
@@ -219,6 +226,27 @@ Done when          CHG-NNN §how-we-know-it-worked
                    the validator passes with no errors
                    a new EVR, if an AI component was touched
 ```
+
+**Where the brief goes.** When `.framework/sessions.yaml` declares `exchange:`, write the
+brief to `<exchange>/in-arrivo/CHG-NNN/brief.md`, creating the folder, and tell the person
+its absolute path: the code session reads it from there, and delivers into the same folder,
+so the brief and the verification of one mandate end up side by side. A brief left in this
+conversation, or in a session's scratchpad, is one somebody copies by hand. Without the key,
+hand it over as before. With it, the brief carries one more block, written with the absolute
+path of the folder, because the code session starts in another directory:
+
+```
+Delivery           <absolute path>/in-arrivo/CHG-NNN/, under the fixed names: verifica.md,
+                   mr.md, mr-link.txt, evidenze/, contribution-policy.json
+                   risorse.md: one row per resource, the moment it exists -- type, path or
+                   name, the command that removes it; a copy of credentials only in your
+                   scratchpad, with the names of its keys and never their values
+                   sessioni/<date>-<session>.md when you close: committed, not committed,
+                   outside the repositories
+```
+
+`references/contributions.md`, *The exchange between sessions*, is where each of those is
+described, and the place to read before writing the block for the first time.
 
 Two levels of evaluation exist and merging them is a costly mistake. **Task acceptance** is
 `CHG §how-we-know-it-worked` plus the validator plus the project's tests: did this change

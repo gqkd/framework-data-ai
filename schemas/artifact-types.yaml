@@ -1555,7 +1555,66 @@
 # ADOPTION. `FW001` reports the new number at `warn`: update `framework_version`. A state file of
 # 4.4.1 is read as it is, and the next digest shows the new estimate. Then, when wanted, declare
 # through the skill the owners and the preferences of the Gantt.
-version: "4.5.0"
+#
+# 4.5.0 -> 4.6.0. Sessions hand each other material in a place outside the repositories, and
+# what a mandate creates outside them has a list and an end. MINOR by the rule at the top: an
+# optional file, `.framework/sessions.yaml`, seven warnings that run only where it declares a
+# place, a command, and a derived view one field shorter. No type or field of an artifact
+# moves; `templates/AGENTS.md` gains an optional section.
+#
+# THE CAUSE, measured in the first project to run one documentation session beside several
+# code sessions: every rule said where to put things and none said when to take them away.
+# Worktrees of mandates merged weeks before, deliveries already integrated beside the ones
+# that were not, briefs copied by hand out of scratchpads, copies of credentials left behind,
+# and uncommitted lines of four sessions in one file with nothing saying whose.
+#
+# THE EXCHANGE. `exchange: ../_scambio` in `.framework/sessions.yaml`, relative to the root of
+# the repository and outside it; an absolute path, `~`, or a place inside the repository stops
+# the validator. Not a key of `framework.yaml`, which gains none for the reason written at
+# 4.1.0: it would stop every older validator, the one `migrate.py` rebuilds and the one a CI
+# job pins. One folder per element, named by its identifier, with fixed names inside:
+# `brief.md`, `verifica.md`, `mr.md`, `mr-link.txt`, `evidenze/`, `contribution-policy.json`,
+# `risorse.md`, `sessioni/`. In `in-arrivo/` until the documentation session has integrated
+# it, in `integrati/` afterwards with an `INTEGRATO` file: the commit, the date, where each
+# part went. `cycle` writes the brief of step 6 into the element's folder. `risorse.md` lists,
+# as each is created, what the work leaves outside the repositories, with the command that
+# removes it; at `implemented` the documentation session proposes the removals and runs them
+# on approval. Done, for the exchange, is a change at `implemented` or after, an `OD` or `KI`
+# decided or superseded: earlier than the digest's closed, which waits for `verified`. Copies
+# of credentials live only in a session's scratchpad, listed with the names of their keys and
+# never the values. Every session closes with a declaration: committed, not committed, outside
+# the repositories. `references/contributions.md` describes all of it.
+#
+# THE COMMAND. `skills/audit/scripts/exchange.py --root <documentation>` lists what waits, the
+# elements done in the documents and still in `in-arrivo/` first, then the deliveries by age,
+# with the days.
+#
+# THE DERIVED VIEW. `product.index.yaml` lists the living documents without the instant of
+# their last reading. Every attestation cost two commits, the reading and a regeneration that
+# only copied its instant; the instant has one home, the document, and `LC001`, `LC002` and
+# `LC004` report on it. The other way, `attest.py` regenerating the views into the commit of
+# the reading, would have carried into it whatever else the shared working tree held. `LC006`
+# steps over a reading exactly as before. `--emit-index --check` reports each
+# `product.index.yaml` out of date once, after adopting: regenerate it.
+#
+# `migrate.py` NOW NAMES THE CHECKS THE CATALOG HAS GAINED since the declared version, read
+# out of the two catalogs, beside the findings.
+#
+# NEW CHECKS, all `warn`, all silent where no exchange is declared or where it is not on the
+# machine, as on a CI runner, where an annotation on them is not reported as obsolete either:
+#   EXC001  a folder names an identifier the documentation does not declare;
+#   EXC002  an element done in the documents still has its folder in `in-arrivo/`;
+#   EXC003  a folder in `integrati/` without an `INTEGRATO` that says commit, date and parts;
+#   EXC004  a resource still there after its element is done;
+#   EXC005  a copy of credentials under the folder of the repositories, or a value in the list;
+#   EXC006  a name the framework does not read, or the exchange inside a git repository;
+#   EXC007  a resource row or a closing declaration that cannot be read.
+#
+# ADOPTION. `FW001` reports the new number at `warn`: `migrate.py --adopt`. Regenerate the
+# views with `--emit-index`, once. Then, when wanted, write `.framework/sessions.yaml`, and
+# the section of `templates/AGENTS.md` into the project's own: the rule has to reach sessions
+# that run no skill. A project without the file sees nothing else move.
+version: "4.6.0"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of

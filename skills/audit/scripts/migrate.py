@@ -305,6 +305,33 @@ def previous_framework(args, declared, root, framework):
                                                 "commit": sha, "commit_verified": True}
 
 
+def catalog(tree: Path) -> dict | None:
+    """The `checks:` of a framework tree, or None where it cannot be read: then nothing is
+    listed, because every check would read as new."""
+    try:
+        data = yaml.safe_load((tree / "skills/audit/checks.yaml").read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, yaml.YAMLError):
+        return None
+    checks = data.get("checks") if isinstance(data, dict) else None
+    return checks if isinstance(checks, dict) else None
+
+
+def new_checks(old_catalog: dict, new_catalog: dict) -> list[dict]:
+    """The checks the new catalog runs and the old one did not have, with level and title.
+
+    READ OUT OF THE TWO CATALOGS, NOT OUT OF THE NOTE. The note says why a check arrived, and
+    is written by hand; this says which ones did, and cannot forget one. A finding of a new
+    check lands under NEW like any other, and only where the project gives it something to
+    read: this is the list of what may, so that a NEW section with nothing from a check is
+    read as the check having looked, rather than as the check not existing.
+    """
+    old = set(old_catalog or {})
+    return [{"code": code, "level": str((spec or {}).get("level", "warn")),
+             "title": str((spec or {}).get("title", ""))}
+            for code, spec in sorted((new_catalog or {}).items())
+            if code not in old and (spec or {}).get("level") != "retired"]
+
+
 def retired_pins(root: Path, framework: Path) -> list[dict]:
     """The `checks:` lines of the project that pin a code the new catalog has retired.
 
@@ -503,7 +530,7 @@ def main() -> int:
 
     report = {"project": str(root), "declared": declared, "current": current,
               "up_to_date": False, "notes": [], "already_there": [], "new": [], "gone": [],
-              "version_line": [], "accepted": [], "problems": []}
+              "version_line": [], "accepted": [], "problems": [], "new_checks": []}
 
     if unreadable and not args.from_version:
         report["problems"].append(unreadable)
@@ -540,6 +567,9 @@ def main() -> int:
         try:
             with previous_framework(args, declared, root, framework) as (old_tree, origin):
                 report["previous_source"] = origin
+                before, now = (catalog(t) for t in (old_tree, framework))
+                if before is not None and now is not None:
+                    report["new_checks"] = new_checks(before, now)
                 old = findings(old_tree / VALIDATE_REL, root)
                 new = findings(framework / VALIDATE_REL, root)
                 if origin.get("commit"):
@@ -635,6 +665,12 @@ def main() -> int:
         print("\n-- WHAT MOVED " + "-" * 40)
         for n in report["notes"]:
             print(f"\n{n['note']}")
+    if report["new_checks"]:
+        print(f"\n-- CHECKS NEW SINCE {declared} ({len(report['new_checks'])}) " + "-" * 20)
+        print("   in the catalog now and not in the declared version's; their findings, if "
+              "any, are under NEW")
+        for c in report["new_checks"]:
+            print(f"   {c['code']}  {c['level']:<6} {c['title']}")
     for key, label, why in (
             ("new", "NEW: reported only by the new validator",
              "this is the migration work"),

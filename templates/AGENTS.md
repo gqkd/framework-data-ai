@@ -98,6 +98,21 @@ from static observations and hypotheses. Deferred sources still require actual r
 their captured hashes. Partial graphs cannot exclude impact; reading reports do not attest
 comprehension, human review or production verification.
 
+## Sessions and the exchange
+
+> Keep this section only if `.framework/sessions.yaml` declares `exchange:`; delete it
+> otherwise.
+
+This project hands material between sessions through `../_scambio`, outside every
+repository: one folder per element in `in-arrivo/`, named by its identifier, with the fixed
+names of the framework's `references/contributions.md`, *The exchange between sessions*. A
+brief is read from there and a delivery written there, never copied out of a scratchpad.
+Whatever you create outside the repositories goes in the element's `risorse.md` the moment
+it exists, with the command that removes it; a copy of credentials stays in your scratchpad,
+listed with the names of its keys and never their values. Every session closes with its
+declaration in `sessioni/`: what it committed, what it leaves uncommitted, what it leaves
+outside the repositories.
+
 ## Mandatory updates
 
 After changing the code, update:
