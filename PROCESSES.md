@@ -1041,10 +1041,11 @@ closing dates and what was asked of whom have no source among the artifacts and 
 acquire one there: they live in a state file outside the artifact set, in a clone of a private
 repository the documentation repository ignores. Everything else in the workbook is derived:
 what closed and what is new comes from the registers compared with the previous snapshot, the
-hours left from the sizes, the delivery dates from the pace of the last three working days,
+hours left from the sizes, the delivery dates from the pace of the last five working days,
 and every derived cell is a formula. A day already sent is frozen in the snapshot that sent
-it. The script refuses to write while an item is unclassified or a classified one has left the
-registers without closing.
+it; corrected later in the state file, it is counted again and said so. The script refuses to
+write while an item is unclassified or a classified one has left the registers without
+closing.
 
 When the roadmap orders its increments in stages (`P-06`), the workbook takes its order and
 its Gantt from them: every item in the stage and increment it belongs to, every increment

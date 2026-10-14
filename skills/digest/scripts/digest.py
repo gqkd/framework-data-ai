@@ -27,14 +27,18 @@ documentation repository by its `.gitignore`. It holds
 NNN is one sequence across the products. A snapshot is never edited: each one carries the hash
 of the one before it, and freezes every day up to the day before its date, both as declared and
 as counted, so a classification changed today never rewrites the hours of a day already sent.
+A day already sent and declared anew in the state file is a correction: it is counted again,
+with today's classification, said in the conversation and recorded in the next snapshot.
 
 THE STATE FILE, FORMAT 2:
 
     format: 2
     product: atlas
-    release: {name: "1.0", delivery: 2026-10-13, start: 2026-09-22, commitment: null}
+    release: {name: "1.0", delivery: 2026-10-13, start: 2026-09-22, commitment: null,
+              owner: Direzione}
     items:                      # per identifier: title, what, theme, scope, size, seen,
-      CHG-018: {...}            # closed_on, out_reason, hours_before, excluded, split_into, gone
+      CHG-018: {...}            # closed_on, out_reason, hours_before, excluded, split_into, gone,
+                                # owner
     order: {todo: [...], out: [...]}        # the rows of the two lists, in the order shown
     days:                       # per date: hours per item and per category outside the product,
       2026-10-08: {hours: {CHG-018: 4}, outside: {riunioni: 1}}
@@ -43,6 +47,8 @@ THE STATE FILE, FORMAT 2:
     plan: {2026-10-09: [{item: CHG-018, hours: 5}], 2026-10-12: [{item: CHG-018, hours: 2,
            closes: true}]}
     milestones: [{name: Demo al team funzionale, date: 2026-10-15}, {stage: t1, date: 2026-10-14}]
+    gantt: {done: recent, from: window, owner: Team tecnico, requests: [team funzionale],
+            outline: {t3: {from: 2026-11-02, to: 2026-11-27}}}     # every key optional
 
 WITH A ROADMAP IN STAGES. When the product's `RMP.md` declares `delivery_stages`, the order of
 «Da fare» is computed from them through the validator's `roadmap_plan`, so the two cannot
@@ -53,16 +59,18 @@ the milestone a stage names takes its date from `{stage, date}` in `milestones`.
 WHAT IS REFUSED, BEFORE ANYTHING IS WRITTEN. `--check` lists every reason, and rendering runs it
 first: an identifier the state file does not classify; a classified one gone from the registers
 without closing; an open item whose title changed since it was confirmed; a field the workbook
-prints and nobody declared; a working day of the period with no hours declared, or hours on a
-day not yet over or before the project started; hours on an item of the perimeter with no theme;
-a category that is not one of the five; a day already frozen edited after the fact; an earlier
-snapshot whose hash no longer matches; the days rebuilt in bulk not adding up, theme by theme,
-to the hours declared on the items; a planned item closed, excluded, without hours or a `CHG` in
-`draft`; the two lists not holding exactly the open items, or `order.first` naming one that is
-not; the milestone of a stage of the roadmap without its date, or a date for a stage the roadmap
-does not have; a description with the register's jargon or more than two sentences; a long dash;
-a status this file does not map; a date on a weekend. Fix the state file or the registers, never
-this file to get past it.
+prints and nobody declared; a working day of the period with no hours declared, or hours on a day
+not yet over or before the project started; hours on an item of the perimeter with no theme; a
+category that is not one of the five; a day already frozen that the state file no longer declares;
+an earlier snapshot whose hash no longer matches; the days rebuilt in bulk not adding up, theme by
+theme, to the hours declared on the items; a planned item closed, excluded, without hours or a
+`CHG` in `draft`; the two lists not holding exactly the open items, or `order.first` naming one
+that is not; the milestone of a stage of the roadmap without its date, or a date for a stage the
+roadmap does not have; a stage in `gantt.outline` the roadmap does not have, with dates missing or
+out of order, or with items to do; an `owner` that is not a name, or `gantt.requests` that is not a
+list of them; a description with the register's jargon or more than two sentences; a long dash; a
+status this file does not map; a date on a weekend. Fix the state file or the registers, never this
+file to get past it.
 
 Exit codes: 0 done, 1 refused, 2 cannot run, 3 written and committed but not pushed.
 Needs PyYAML, jsonschema (the registers are read through the validator), XlsxWriter and `git`;
@@ -98,9 +106,8 @@ THEMES = {"architettura": "Architettura", "sviluppo": "Sviluppo", "deploy": "Dep
 # What a snapshot written before 4.2.0 calls a theme, read as what it is called now.
 OLD_THEMES = {"infrastruttura": "deploy"}
 # A size is a range of hours, S 1 to 2, M 3 to 5, L 6 to 12, XL 13 to 40, and the estimate counts
-# every item at the top of its range: one number, on the side of caution, the same in every
-# cell and on the Gantt.
-SIZES = {"S": 2, "M": 5, "L": 12, "XL": 40}
+# every item at the middle of its range: one number, the same in every cell and on the Gantt.
+SIZES = {"S": Fraction(3, 2), "M": Fraction(4), "L": Fraction(9), "XL": Fraction(53, 2)}
 # The hours outside the product, in five categories and in this order, which is the order of
 # the columns of the day-by-day table. Their labels are the workbook's, in `workbook.py`.
 CATEGORIES = ("supporto", "reportistica", "riunioni", "solleciti", "formazione")
@@ -124,18 +131,23 @@ STATES = {
 
 STATE_KEYS = {"format", "product", "release", "items", "order", "days", "waits", "plan",
               "milestones", "gantt"}
-RELEASE_KEYS = {"name", "delivery", "start", "commitment"}
+RELEASE_KEYS = {"name", "delivery", "start", "commitment", "owner"}
 ITEM_KEYS = {"title", "what", "theme", "scope", "size", "seen", "closed_on", "out_reason",
-             "hours_before", "excluded", "split_into", "gone"}
+             "hours_before", "excluded", "split_into", "gone", "owner"}
 WAIT_KEYS = {"what", "owner", "asked", "needed_by", "without", "missing", "blocks", "slows",
              "resolved"}
 DAY_KEYS = {"hours", "outside", "themes"}
 PLAN_KEYS = {"item", "hours", "closes"}
-MILESTONE_KEYS = {"name", "stage", "date"}
+MILESTONE_KEYS = {"name", "stage", "date", "owner"}
 ORDER_KEYS = {"todo", "out", "first"}
-# Two preferences of the Gantt, both optional: without them it shows the items closed too,
-# from the first day of the project.
-GANTT_KEYS = {"done", "from"}
+# The preferences of the Gantt, all optional: without them it shows the items closed too, from
+# the week the project started, and no request to others.
+GANTT_KEYS = {"done", "from", "owner", "outline", "requests"}
+# The pace of the estimate is the average of the last working days, a week of them: the hours
+# outside the product come in weekly amounts, and three days catch an arbitrary part of a week.
+PACE_DAYS = 5
+# The Gantt shows day by day the weeks around the digest's, this many before and after it.
+WINDOW_WEEKS = 4
 
 SNAPSHOT = re.compile(r"^DIG-(\d{3,})-(.+)-(\d{4}-\d{2}-\d{2})$")
 HEADING_ID = re.compile(r"^#{1,6}\s+\**([A-Z]{2,4}-\d{3,})\**\s*[·:\-–—]?\s*(.*?)\s*$")
@@ -208,6 +220,17 @@ def as_date(v) -> date | None:
         except ValueError:
             return None
     return None
+
+
+def lowered(text: str) -> str:
+    """A phrase as it reads inside a sentence: its first letter small, unless it opens an
+    acronym."""
+    return text[:1].lower() + text[1:] if text[1:2].islower() else text
+
+
+def named_text(v) -> bool:
+    """A name or a team, as a cell prints it: text, and not blank."""
+    return isinstance(v, str) and bool(v.strip())
 
 
 def dm(d: date) -> str:
@@ -561,10 +584,11 @@ class Item:
     first_day: date | None = None
     derives_from: list = field(default_factory=list)
     group: bool = False                  # an increment of the roadmap's stages: not work
+    owner: str | None = None             # who follows it, as the person declared: the Gantt
 
-    def top(self) -> Fraction:
-        """The hours the estimate counts for this item: the top of its size."""
-        return Fraction(SIZES[self.size])
+    def estimate(self) -> Fraction:
+        """The hours the estimate counts for this item: the middle of its size."""
+        return SIZES[self.size]
 
     @property
     def shown_id(self) -> str:
@@ -578,7 +602,8 @@ def _item(i, kind, st, row, closer, children, aliases, derives_from=()) -> Item:
                 bool(row.get("excluded")), closer,
                 list(children) + list(row.get("split_into") or []), list(aliases),
                 closed_on=as_date(row.get("closed_on")), out_reason=row.get("out_reason"),
-                derives_from=[bare(x) for x in derives_from])
+                derives_from=[bare(x) for x in derives_from],
+                owner=str(row["owner"]) if isinstance(row.get("owner"), str) else None)
 
 
 def split_parent(it: Item) -> bool:
@@ -602,6 +627,7 @@ class Context:
     baseline: bool
     problems: list = field(default_factory=list)
     notes: list = field(default_factory=list)      # disagreements between sources
+    corrected: list = field(default_factory=list)  # days already sent, declared anew
     items: dict = field(default_factory=dict)
     days: dict = field(default_factory=dict)
     now: datetime | None = None
@@ -667,6 +693,7 @@ class Staging:
     owner: dict                  # item id -> (stage id, increment id)
     states: dict                 # increment -> the state the roadmap gives it
     titles: dict                 # increment -> its title, as the state file confirmed it
+    leads: dict = field(default_factory=dict)  # increment -> who follows it, when declared
 
 
 def staging(ctx: Context, items: dict, todo: set, pinned: list, waits: list) -> Staging:
@@ -714,7 +741,8 @@ def staging(ctx: Context, items: dict, todo: set, pinned: list, waits: list) -> 
             placed += [i for i in free if i not in blocked] + [i for i in free if i in blocked]
     return Staging(stages, components, groups, pinned, placed, owner,
                    {i: (rows.get(i) or {}).get("state") for i in components},
-                   {i: (items[i].title if i in items else None) or i for i in components})
+                   {i: (items[i].title if i in items else None) or i for i in components},
+                   {i: items[i].owner for i in components if i in items and items[i].owner})
 
 
 def check(ctx: Context) -> list[str]:
@@ -740,6 +768,8 @@ def check(ctx: Context) -> list[str]:
         release = {}
     for k in sorted(set(release) - RELEASE_KEYS):
         P.append(f"unknown key {k!r} under `release`")
+    if "owner" in release and not named_text(release["owner"]):
+        P.append("`release.owner` is who answers for the agreed delivery, a name or a team")
     if as_date(release.get("delivery")) is None:
         P.append("`release.delivery` is the agreed delivery date, YYYY-MM-DD")
     start = as_date(release.get("start"))
@@ -750,16 +780,39 @@ def check(ctx: Context) -> list[str]:
     rel = str(release.get("name", ""))
     gantt = state.get("gantt")
     if gantt is not None and not isinstance(gantt, dict):
-        P.append("`gantt` holds `done` and `from`, the two preferences of the Gantt")
+        P.append("`gantt` holds the preferences of the Gantt: `done`, `from`, `owner`, "
+                 "`outline`, `requests`")
     elif gantt:
         for k in sorted(set(gantt) - GANTT_KEYS):
             P.append(f"unknown key {k!r} under `gantt`: nothing reads it")
-        if "done" in gantt and not isinstance(gantt["done"], bool):
+        if "done" in gantt and gantt["done"] not in (True, False, "recent"):
             P.append(f"`gantt.done` is {gantt['done']!r}: true shows the items closed, false "
-                     "leaves them out")
-        if "from" in gantt and gantt["from"] not in ("start", "week"):
-            P.append(f"`gantt.from` is {gantt['from']!r}: `start`, the first day of the "
-                     "project, or `week`, the Monday of the digest's week")
+                     "leaves them out, `recent` shows those closed since the first day shown "
+                     "day by day")
+        if "from" in gantt and gantt["from"] not in ("start", "week", "window"):
+            P.append(f"`gantt.from` is {gantt['from']!r}: `start`, the week the project "
+                     "started, `window`, the first day shown day by day, "
+                     f"{WINDOW_WEEKS} weeks before the digest's, or `week`, the Monday of the "
+                     "digest's week")
+        if "owner" in gantt and not named_text(gantt["owner"]):
+            P.append("`gantt.owner` is the name the column Owner shows for an item that "
+                     "declares none, a name or a team")
+        asked_of = gantt.get("requests")
+        if "requests" in gantt and (not isinstance(asked_of, list)
+                                    or not all(named_text(x) for x in asked_of)):
+            P.append("`gantt.requests` is a list of names: the `owner` of the requests to "
+                     "others the Gantt shows")
+        outline = gantt.get("outline")
+        if "outline" in gantt and not isinstance(outline, dict):
+            P.append("`gantt.outline` maps a phase not yet broken down to {from, to}, the "
+                     "first and the last day the plan gives it")
+        for sid, span in (outline if isinstance(outline, dict) else {}).items():
+            a, b = ((as_date(span.get("from")), as_date(span.get("to")))
+                    if isinstance(span, dict) else (None, None))
+            if not isinstance(span, dict) or set(span) - {"from", "to"} or not a or not b:
+                P.append(f"`gantt.outline.{sid}` is {{from, to}}, two dates YYYY-MM-DD")
+            elif b < a:
+                P.append(f"`gantt.outline.{sid}` ends on {b}, before it starts on {a}")
 
     mine = [s for s in ctx.snaps if s.product == ctx.product]
     later = [s for s in mine if s.date > when]
@@ -940,9 +993,14 @@ def check(ctx: Context) -> list[str]:
                 same = canonical_day(days.get(d)) == (frozen_days.get(d) or {})
             except (ValueError, ZeroDivisionError):
                 same = False
-            if not same:
-                P.append(f"day {d} is not the one {ctx.prev.name} froze: a day already sent is "
-                         "not edited")
+            if frozen_days.get(d) and d not in days:
+                P.append(f"day {d} was sent with {ctx.prev.name}, and the state file no longer "
+                         "declares it: declare it again, `{}` if nothing was worked")
+            elif not same:
+                # A day already sent can be corrected: it is counted again, with the
+                # classification of today, and the conversation says so, since the file
+                # changes from one sending to the next.
+                ctx.corrected.append(d)
 
     others = [p for p in (ctx.root / STORE).glob("state-*.yaml")
               if p.name != f"state-{ctx.product}.yaml"]
@@ -971,6 +1029,10 @@ def check(ctx: Context) -> list[str]:
         row = rows.get(i) if isinstance(rows.get(i), dict) else {}
         if it.excluded:
             continue
+        if "owner" in row and not named_text(row["owner"]):
+            P.append(f"{i}: `owner` is who follows it, a name or a team, as the Gantt prints it")
+        elif row.get("owner") and DASHES.search(row["owner"]):
+            P.append(f"{i}: a long dash in `owner`")
         if it.group:
             if not row.get("title"):
                 P.append(f"{i}: no `title`, and the Gantt prints it above what composes it")
@@ -1049,6 +1111,18 @@ def check(ctx: Context) -> list[str]:
                               state.get("waits") if isinstance(state.get("waits"), list)
                               else [])
         placed = set(ctx.staging.placed)
+    outline = (gantt or {}).get("outline") if isinstance(gantt, dict) else None
+    for sid in (outline if isinstance(outline, dict) else {}):
+        if str(sid) not in ((ctx.roadmap or {}).get("stages") or {}):
+            P.append(f"`gantt.outline` names {sid!r}, and the roadmap has no such stage")
+            continue
+        inside = sorted((i for i, (s_, _) in ctx.staging.owner.items()
+                         if s_ == str(sid) and i in todo and i not in first), key=sort_id)
+        if inside:
+            P.append(f"`gantt.outline.{sid}` draws a phase not yet broken down, and "
+                     f"{', '.join(inside)} {'is' if len(inside) == 1 else 'are'} in it and to "
+                     "do: the estimate counts them, so the phase is drawn on them. Take the "
+                     "phase out of `gantt.outline`")
     for key, expected in (("todo", todo - placed), ("out", out)):
         listed = [str(x) for x in (order.get(key) or [])]
         if len(set(listed)) != len(listed):
@@ -1116,6 +1190,8 @@ def check(ctx: Context) -> list[str]:
                         or bool(m.get("name")) == bool(m.get("stage")):
                     P.append(f"milestone {m!r} is {{name, date}}, or {{stage, date}} for the "
                              "milestone a stage of the roadmap names")
+                elif "owner" in m and not named_text(m["owner"]):
+                    P.append(f"milestone {m!r}: `owner` is who answers for it, a name or a team")
                 elif m.get("stage"):
                     if str(m["stage"]) not in named:
                         P.append(f"a date for the milestone of stage {m['stage']!r}, and the "
@@ -1187,7 +1263,10 @@ class Model:
     changes: list
     staging: Staging | None = None
     stage_dates: dict = field(default_factory=dict)   # stage id -> the date of its milestone
-    gantt: dict = field(default_factory=dict)         # the preferences of the Gantt, `done`, `from`
+    gantt: dict = field(default_factory=dict)         # the preferences of the Gantt
+    stage_leads: dict = field(default_factory=dict)   # stage id -> who answers for its milestone
+    release_owner: str | None = None                  # who answers for the agreed delivery
+    blockers: dict = field(default_factory=dict)      # item id -> what it waits for, from whom
 
 
 def period_label(a: date, b: date) -> str:
@@ -1241,8 +1320,14 @@ def build_model(ctx: Context) -> Model:
                   key=lambda it: (it.closed_on, theme_rank.index(it.theme), sort_id(it.shown_id)))
 
     status = {}
+    blockers = {}
     for it in todo:
         stop = [w for w in waits if it.id in [str(x) for x in w.get("blocks") or []]]
+        if stop:
+            # What it waits for, in the words of the request up to their first comma, and who
+            # was asked: «ambiente preprod (team infrastruttura)», as the Gantt says it.
+            blockers[it.id] = "; ".join(f"{lowered(str(w['what']).split(',')[0].strip())} "
+                                        f"({w['owner']})" for w in stop)
         slow = [w for w in waits if it.id in [str(x) for x in w.get("slows") or []]]
         worked = f"{ore(it.hours, 'lavorat')}" if it.hours else ""
         if stop:
@@ -1336,17 +1421,22 @@ def build_model(ctx: Context) -> Model:
     if pf.get("format") == FORMAT:
         for r in pf.get("table") or []:
             frozen_table[as_date(r[0])] = [as_date(r[0])] + [num(x) for x in r[1:]]
+    # A day as the earlier snapshot counted it, so a classification changed since does not
+    # rewrite it; a day declared anew after it was sent is counted again.
     table = []
     d = start
     while d < when:
-        table.append(frozen_table.get(d) or day_row(d, ctx.days.get(d) or {}, items, ctx.alias))
+        table.append((None if d in ctx.corrected else frozen_table.get(d))
+                     or day_row(d, ctx.days.get(d) or {}, items, ctx.alias))
         d += timedelta(days=1)
 
-    milestones = sorted(((str(m["name"]), as_date(m["date"]))
+    milestones = sorted(((str(m["name"]), as_date(m["date"]), m.get("owner"))
                          for m in state.get("milestones") or [] if m.get("name")),
                         key=lambda x: (x[1], x[0]))
     stage_dates = {str(m["stage"]): as_date(m["date"])
                    for m in state.get("milestones") or [] if m.get("stage")}
+    stage_leads = {str(m["stage"]): m["owner"]
+                   for m in state.get("milestones") or [] if m.get("stage") and m.get("owner")}
 
     changes = []
     for it in items.values():
@@ -1370,15 +1460,16 @@ def build_model(ctx: Context) -> Model:
                  plan_rows,
                  todo, done, out, status, waits, prev_closed, this_closed, prev_open, table,
                  milestones, sorted(changes), ctx.staging, stage_dates,
-                 dict(state.get("gantt") or {}))
+                 dict(state.get("gantt") or {}), stage_leads,
+                 state["release"].get("owner"), blockers)
 
 
 def figures(m: Model) -> dict:
     """Every number the workbook shows, computed here and written beside its formula."""
-    F: dict = {}
+    F: dict = {"pace_days": PACE_DAYS}
     when, start = m.when, m.start
     y = when - timedelta(days=1)
-    windows = [("Ultimi 3 giorni lavorativi", workday(when, -3), y),
+    windows = [(f"Ultimi {PACE_DAYS} giorni lavorativi", workday(when, -PACE_DAYS), y),
                ("Ultimi 7 giorni", when - timedelta(days=7), y),
                ("Ultimi 30 giorni", when - timedelta(days=30), y),
                ("Dall'inizio del progetto", start, y)]
@@ -1398,14 +1489,14 @@ def figures(m: Model) -> dict:
         t = wd["tot"]
         wd["pct"] = [x / t if t else Fraction(0)
                      for x in (wd["arch"], wd["svil"], wd["dep"], wd["out"], wd["outside"])]
-    w3, w7, _, w0 = F["windows"]
+    wp, w7, _, w0 = F["windows"]
 
-    nd3 = networkdays(w3["from"], w3["to"])
-    D = excel_round(w3["tot"] / nd3, 1) if nd3 else Fraction(0)
-    E = excel_round(w3["out"] / nd3, 1) if nd3 else Fraction(0)
-    Fo = excel_round(w3["outside"] / nd3, 1) if nd3 else Fraction(0)
+    nd = networkdays(wp["from"], wp["to"])
+    D = excel_round(wp["tot"] / nd, 1) if nd else Fraction(0)
+    E = excel_round(wp["out"] / nd, 1) if nd else Fraction(0)
+    Fo = excel_round(wp["outside"] / nd, 1) if nd else Fraction(0)
     G = excel_round(D - E - Fo, 1)
-    C = sum((it.top() for it in m.todo), Fraction(0))
+    C = sum((it.estimate() for it in m.todo), Fraction(0))
     if G <= 0:
         H = I = J = "non stimabile"
     else:
@@ -1428,7 +1519,7 @@ def figures(m: Model) -> dict:
     n = len(m.waits)
     F["B7"] = ("non dipende da richieste ad altri." if not n else
                ("arriva in tempo l'unica cosa richiesta" if n == 1 else
-                f"arrivano in tempo le {n} cose richieste") + " ad altri (punto 3). Oggi "
+                f"arrivano in tempo le {n} cose richieste") + " ad altri (punto 2). Oggi "
                + ("nessuna è scaduta." if late == 0 else "1 è scaduta o scade oggi."
                   if late == 1 else f"{late} sono scadute o scadono oggi."))
     r0 = [excel_round(x, 0) for x in (w0["arch"], w0["svil"], w0["dep"], w0["out"],
@@ -1442,55 +1533,100 @@ def figures(m: Model) -> dict:
     F["themes"] = {}
     for t in THEMES:
         lst = [it for it in m.todo if it.theme == t]
-        top = sum((it.top() for it in lst), Fraction(0))
+        est = sum((it.estimate() for it in lst), Fraction(0))
         F["themes"][t] = {"done": sum(1 for it in m.done if it.theme == t),
                           "prev_closed": m.prev_closed[t], "this_closed": m.this_closed[t],
                           "todo": len(lst), "delta": len(lst) - m.prev_open[t],
-                          "est": f"{hours(top)} ore"}
+                          "est": f"{hours(est)} ore"}
     F["est_total"] = f"{hours(C)} ore"
     F["now_share"] = list(w7["pct"])
 
     # The Gantt: what is done where it happened, what is left in a row at the estimate's pace,
-    # each item for the top of its size, so the last one ends on the date of point 2.
+    # each item for the hours of its estimate, so the last one ends on the date of point 1.
+    pref = m.gantt
+    default_owner = pref.get("owner")
     sched: dict = {}
     cum = Fraction(0)
     for it in m.todo:
         if G > 0:
             begin = workday(when - timedelta(days=1), math.floor(excel_round(cum / G, 9)) + 1)
             end = workday(when - timedelta(days=1),
-                          max(1, math.ceil(excel_round((cum + it.top()) / G, 9))))
+                          max(1, math.ceil(excel_round((cum + it.estimate()) / G, 9))))
         else:
             begin = end = None
         # An item already started is placed like any other, by its place in the queue and its
         # hours: a bar from the first day worked would cover the days of every item before it.
         # That day is said in its status instead.
         since = it.first_day if it.first_day and it.first_day < when else None
-        sched[it.id] = {"kind": "todo", "item": it, "start": begin, "end": end, "since": since}
-        cum += it.top()
+        sched[it.id] = {"kind": "todo", "item": it, "start": begin, "end": end, "since": since,
+                        "owner": it.owner or default_owner, "level": 0}
+        cum += it.estimate()
 
     def done_row(it: Item) -> dict:
         return {"kind": "done", "item": it, "start": it.first_day or it.closed_on,
-                "end": it.closed_on}
+                "end": it.closed_on, "owner": it.owner or default_owner, "level": 0}
+
+    def holder(kind: str, name: str, members: list, **more) -> dict:
+        """A row that holds others, a phase or a group: it spans what it holds."""
+        for g in members:
+            g["level"] += 1
+        items = [g for g in members if g["kind"] in ("todo", "done")]
+        starts = [g["start"] for g in items if g["start"]]
+        ends = [g["end"] for g in items]
+        return {"kind": kind, "name": name, "members": members, "items": items, "level": 0,
+                "start": min(starts) if starts else None,
+                "end": None if not ends or None in ends else max(ends), **more}
+
+    # The days shown one by one: four weeks before the digest's and four after, from the
+    # week the project started if that is later; with `from: week`, from the digest's own.
+    # Before them one column a week, from the week the project started, or none with `from:
+    # window` or `week`; after them one a week, to the last date of the sheet.
+    gantt_from = pref.get("from", "start")
+    monday = when - timedelta(days=when.weekday())
+    day_from = (monday if gantt_from == "week" else
+                max(monday - timedelta(weeks=WINDOW_WEEKS),
+                    start - timedelta(days=start.weekday())))
+    day_to = monday + timedelta(weeks=WINDOW_WEEKS, days=4)
 
     # With `done: false` only the work still open is drawn: no item closed, and no increment
-    # or stage left with nothing to do. What an increment is and what a milestone says are
-    # still read on every row, the closed ones included.
-    show_done = m.gantt.get("done", True)
+    # or stage left with nothing to do. With `done: recent`, the same, and above it the items
+    # closed since the first day shown one by one, in a group of their own. What an increment
+    # is and what a milestone says are still read on every row, the closed ones included.
+    show_done = pref.get("done", True)
     gantt = []
+    if show_done == "recent":
+        lately = [done_row(it) for it in m.done if it.closed_on >= day_from]
+        if lately:
+            gantt.append(holder("group", f"Chiuso dal {dm(day_from)}", lately))
+            gantt += lately
+        show_done = False
     st = m.staging
+    stones = []                                    # the milestones of the phases
     if st is None:
         gantt += ([done_row(it) for it in m.done] if show_done else []) \
             + [sched[it.id] for it in m.todo]
     else:
         done_ids = {it.id: it for it in m.done}
+        outline = {str(k): (as_date(v["from"]), as_date(v["to"]))
+                   for k, v in (pref.get("outline") or {}).items()}
         if st.pinned:
-            gantt.append({"kind": "group", "name": "Prima di tutto"})
-            gantt += [sched[i] for i in st.pinned]
+            pinned = [sched[i] for i in st.pinned]
+            gantt.append(holder("group", "Prima di tutto", pinned))
+            gantt += pinned
         for sid, name, milestone, incs in st.stages:
-            stage = {"kind": "stage", "id": sid, "name": name, "incs": []}
-            block = [stage]
+            # «F2 · Gli avvisi ai clienti» is the phase F2 and its name; a name without a
+            # code has the stage's identifier in its place.
+            code, title = name.split(" · ", 1) if " · " in name else (sid, name)
+            block = []
             in_stage: list = []                    # (status, every row) of each increment
-            for inc in incs:
+            if sid in outline:
+                # Not broken down yet: drawn on the days the plan gives it, with nothing under
+                # it and no hours, outside the estimate.
+                a, b = outline[sid]
+                stage = holder("stage", title, [], id=sid, code=code, incs=[], outline=True)
+                stage.update(start=a, end=b, status="da dettagliare")
+                in_stage.append(("da scomporre", []))
+            for inc in ([] if sid in outline else incs):
                 comps = [c for c in st.components.get(inc, []) if c not in st.pinned]
                 rows = ([done_row(done_ids[c]) for c in sorted(
                             (c for c in comps if c in done_ids),
@@ -1514,19 +1650,30 @@ def figures(m: Model) -> dict:
                     rows = [r for r in rows if r["kind"] != "done"]
                     if not rows and not status.startswith("da scomporre"):
                         continue
-                hours_ = sum((r["item"].hours if r["kind"] == "done" else r["item"].top()
+                hours_ = sum((r["item"].hours if r["kind"] == "done" else r["item"].estimate()
                               for r in rows), Fraction(0))
                 starts = [r["start"] for r in rows if r["start"]]
                 ends = [r["end"] for r in rows]
+                # Who follows an increment: whom the person named for it, or else whoever
+                # follows everything under it, when that is one.
+                owners = {r["owner"] for r in rows}
                 head = {"kind": "inc", "id": inc, "title": st.titles.get(inc, inc),
-                        "status": status, "hours": hours_, "rows": rows,
+                        "owner": st.leads.get(inc) or (owners.pop() if len(owners) == 1
+                                                       else None),
+                        "status": status, "hours": hours_, "rows": rows, "level": 0,
                         "start": min(starts) if starts else None,
                         "end": (None if not ends or any(e is None for e in ends)
                                 else max(ends))}
-                stage["incs"].append(head)
+                for r in rows:
+                    r["level"] = 1
                 block.append(head)
                 block += rows
+            if sid not in outline:
+                stage = holder("stage", title, block, id=sid, code=code,
+                               incs=[g for g in block if g["kind"] == "inc"])
             if milestone:
+                # The milestone of a phase heads the sheet with the others; what it says is
+                # read on the rows of its phase.
                 d = m.stage_dates.get(sid)
                 ends = [r["end"] for _, every in in_stage for r in every]
                 if any(e is None for e in ends):
@@ -1537,55 +1684,70 @@ def figures(m: Model) -> dict:
                     verdict = "a rischio"
                 else:
                     verdict = "in tempo"
-                block.append({"kind": "stage_milestone", "stage": sid, "name": milestone,
-                              "date": d, "status": verdict,
-                              "end": max(ends) if ends and None not in ends else None})
-            if stage["incs"] or milestone or show_done:
-                gantt += block
+                stones.append({"kind": "stage_milestone", "stage": sid, "phase": stage,
+                               "name": milestone, "date": d, "status": verdict,
+                               "owner": m.stage_leads.get(sid),
+                               "end": max(ends) if ends and None not in ends else None})
+            if stage["incs"] or stage.get("outline") or show_done:
+                gantt += [stage] + block
         loose = (([done_row(it) for it in m.done if it.id not in st.owner] if show_done else [])
                  + [sched[it.id] for it in m.todo
                     if it.id not in st.owner and it.id not in st.pinned])
         if loose:
-            gantt.append({"kind": "group", "name": "Fuori dalle tappe"})
+            gantt.append(holder("group", "Fuori dalle fasi", loose))
             gantt += loose
-    for name, d in m.milestones:
-        gantt.append({"kind": "milestone", "name": name, "date": d})
-    gantt.append({"kind": "delivery", "name": "Consegna concordata", "date": m.delivery})
-    # A stage and a group span what they hold, milestone excluded: from the first day of the
-    # first of their items to the last day of the last.
-    holder = None
-    for g in gantt:
-        if g["kind"] in ("stage", "group"):
-            holder = g
-            holder["items"] = []
-        elif g["kind"] in ("todo", "done") and holder is not None:
-            holder["items"].append(g)
-        elif g["kind"] != "inc":
-            holder = None
-    for g in gantt:
-        if g["kind"] in ("stage", "group"):
-            starts = [r["start"] for r in g["items"] if r["start"]]
-            ends = [r["end"] for r in g["items"]]
-            g["start"] = min(starts) if starts else None
-            g["end"] = None if not ends or None in ends else max(ends)
-    ends = [g["end"] for g in gantt if g["kind"] in ("todo", "done") and g["end"]]
-    ends += [g["date"] for g in gantt if g["kind"] in ("milestone", "delivery",
-                                                       "stage_milestone") and g.get("date")]
-    # With `from: week` the first column is the Monday of the digest's week, not the first
-    # day of the project.
-    from_week = m.gantt.get("from", "start") == "week"
-    first = workday((when - timedelta(days=when.weekday()) if from_week else start)
-                    - timedelta(days=1), 1)
-    last = max(ends + [when])
+    # The milestones of the release head the sheet, as in the plan the readers agreed on: the
+    # agreed delivery, the expected one, which is point 1 of the summary, then those declared
+    # and those of the phases, by date. The milestone of a phase that falls on the agreed
+    # delivery is that delivery, and has no row of its own.
+    J = F["case"]["J"]
+    top = [{"kind": "agreed", "name": "Consegna concordata", "date": m.delivery,
+            "status": "Concordata", "owner": m.release_owner},
+           {"kind": "expected", "name": "Consegna prevista", "date": F["case"]["I"],
+            "status": ("Non stimabile" if not isinstance(J, int) else
+                       f"Ritardo {J} gg lav." if J > 0 else "In tempo"),
+            "owner": default_owner}]
+    top += sorted([{"kind": "milestone", "name": name, "date": d, "status": "Pianificata",
+                    "owner": owner} for name, d, owner in m.milestones]
+                  + [g for g in stones if g["date"] != m.delivery],
+                  key=lambda g: (g["date"], g["name"]))
+    # The requests to others the person wants in view: of whom `gantt.requests` names, still
+    # open, from the day they were asked to the day they are needed by.
+    asked_of = [str(x) for x in pref.get("requests") or []]
+    requests = []
+    for w in m.waits:
+        if str(w["owner"]) in asked_of:
+            said = wait_status(w, when)
+            requests.append({"wait": w, "asked": as_date(w["asked"]),
+                             "needed_by": as_date(w["needed_by"]),
+                             "status": ("Scaduta" + said[len("SCADUTA"):]
+                                        if said.startswith("SCADUTA") else said)})
+
+    ends = [g["end"] for g in gantt if g["kind"] in ("todo", "done") or g.get("outline")]
+    ends += [g["date"] for g in top if isinstance(g.get("date"), date)]
+    ends += [x["needed_by"] for x in requests]
+    last = max([e for e in ends if e] + [when])
     cols = []
-    d = first
-    while d <= last:
-        cols.append(d)
+    week = start - timedelta(days=start.weekday())
+    while gantt_from == "start" and week < day_from:
+        cols.append((week, True))
+        week += timedelta(days=7)
+    d = day_from
+    while d <= day_to:
+        cols.append((d, False))
         d = workday(d, 1)
+    week = day_to + timedelta(days=3)
+    while week <= last:
+        cols.append((week, True))
+        week += timedelta(days=7)
     F["gantt"] = gantt
+    F["gantt_top"] = top
+    F["gantt_stones"] = stones
+    F["gantt_requests"] = requests
     F["gantt_days"] = cols
-    F["gantt_from_week"] = from_week
-    F["gantt_done"] = show_done
+    F["gantt_from"] = gantt_from
+    F["gantt_done"] = pref.get("done", True)
+    F["window_weeks"] = WINDOW_WEEKS
     # The next week, the first table of Attività: every item to do whose days on the Gantt
     # touch the five working days after the digest's, in the order of the Gantt. An item the
     # person planned keeps what the plan says of it; the others say when and for how long.
@@ -1605,7 +1767,7 @@ def figures(m: Model) -> dict:
         else:
             span = (f"il {dm(g['start'])}" if g["start"] == g["end"]
                      else f"dal {dm(g['start'])} al {dm(g['end'])}")
-            status = f"{span}, {ore(it.top())}"
+            status = f"{span}, {ore(it.estimate())}"
         F["next_week"].append({"item": it, "status": status})
 
     # What the expected delivery does not count, said where the readers stop: the summary.
@@ -1619,14 +1781,15 @@ def figures(m: Model) -> dict:
 
 
 def summary(m: Model, F: dict) -> str:
-    """What the skill shows in the conversation: the first block of the summary sheet."""
+    """What the skill shows in the conversation: the first block of the summary sheet, and
+    what the person who sends it reads before sending, which the sheet no longer prints."""
     lines = [f"{m.name.upper()} · stato del rilascio al {dmy(m.when)}",
              f"Consegna concordata: {F['B4']}",
              f"Consegna prevista oggi: {F['B5']}",
              f"Ritardo: {F['B6']}",
              f"La previsione vale solo se {F['B7']}",
              f"Dove va il tempo: {F['B8']}"]
-    for g in F["gantt"]:
+    for g in F["gantt_stones"]:
         if g["kind"] == "stage_milestone":
             tail = (f", la tappa finisce il {dm(g['end'])}"
                     if g["end"] and g["status"] in ("a rischio", "in tempo") else "")
@@ -1735,6 +1898,8 @@ def freeze(ctx: Context, m: Model | None, path: Path, number: int) -> None:
     if m is not None:
         frozen["order"] = [it.id for it in m.todo]
     frozen["sources_disagree"] = ctx.notes
+    if ctx.corrected:
+        frozen["corrected"] = [d.isoformat() for d in ctx.corrected]
     (path / "frozen.yaml").write_text(
         "# Written by skills/digest/scripts/digest.py. Never edited: the next digest checks "
         "its hash.\n" + yaml.safe_dump(frozen, allow_unicode=True, sort_keys=False),
@@ -2148,6 +2313,14 @@ def migrate(root: Path, product: str | None) -> int:
 
 # ─────────────────────────────────────────────────────────────────────────────
 
+def corrected(ctx: Context) -> None:
+    """The days already sent and declared anew: allowed, and said, since what the readers
+    received changes from one sending to the next."""
+    if ctx.corrected:
+        print(f"Giorni già inviati con {ctx.prev.name} e corretti, contati di nuovo: "
+              + ", ".join(dm(d) for d in ctx.corrected))
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--root", type=Path, default=Path("."), help="the project's documents")
@@ -2192,6 +2365,7 @@ def main(argv: list[str] | None = None) -> int:
             print(p)
         return 1
     if a.check:
+        corrected(ctx)
         print("ok")
         return 0
 
@@ -2215,10 +2389,10 @@ def main(argv: list[str] | None = None) -> int:
         rel = str(ctx.state["release"]["name"])
         rest = [it for it in ctx.items.values() if it.state == "open" and it.scope == rel
                 and not it.excluded and not split_parent(it)]
-        top = sum((it.top() for it in rest), Fraction(0))
+        est = sum((it.estimate() for it in rest), Fraction(0))
         text = (f"{ctx.name.upper()}, linea di base del {dmy(ctx.when)}\n"
                 "Non si invia: il primo aggiornamento è quello del prossimo giorno lavorativo.\n"
-                f"Voci da fare nel perimetro: {len(rest)}, {hours(top)} ore\n")
+                f"Voci da fare nel perimetro: {len(rest)}, {hours(est)} ore\n")
         freeze(ctx, None, path, number)
         out_file = None
     else:
@@ -2232,6 +2406,7 @@ def main(argv: list[str] | None = None) -> int:
         print("Fonti in disaccordo:")
         for x in ctx.notes:
             print(f"- {x}")
+    corrected(ctx)
     if out_file and a.copy_to:
         a.copy_to.mkdir(parents=True, exist_ok=True)
         shutil.copy2(out_file, a.copy_to / out_file.name)

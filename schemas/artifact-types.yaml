@@ -1464,7 +1464,98 @@
 #
 # ADOPTION. Nothing to do: `FW001` is silent on a patch. The next digest places the items
 # already started where the queue puts them.
-version: "4.4.1"
+#
+# 4.4.1 -> 4.5.0. The workbook of the digest takes the form of the plan its readers agreed on,
+# and says less where they asked it to say less. MINOR by the rule at the top: optional keys in
+# the digest's state, the checks on them, and a file that changes for every project, as in
+# 4.4.0. No type, field of an artifact, validator code or template moves.
+#
+# WHAT IT ANSWERS. A product owner rebuilt a digest by hand into a development plan, and the
+# team agreed to keep its form: the milestones first, who follows each row, phases instead of
+# stages, the weeks around today day by day and the rest by week, the work lately closed and
+# what others owe in view. Its readers also asked for an estimate closer to what happens.
+#
+# THE ESTIMATE. Every size counts for the middle of its range, S 1,5 hours, M 4, L 9, XL 26,5,
+# instead of its top. The pace is the average of the last five working days instead of three:
+# the hours outside the product come in weekly amounts, and three days caught an arbitrary part
+# of a week. The expected delivery moves with nothing declared differently: earlier for the
+# sizes, either way for the pace.
+#
+# WHAT THE FILE NO LONGER SAYS. The summary keeps the agreed delivery, the expected one and the
+# delay; what the forecast depends on and where the time goes are gone, the estimate is in rows
+# nobody sees, since the expected delivery is a formula on them, and the sections after it are
+# numbered 2 to 4. The conversation still says the first two. Nowhere does the file say how many
+# hours a size counts: «Come leggerlo» gives the range of each, and its rules of the numbers
+# name neither a top nor a middle.
+#
+# THE GANTT. Six rows of heading: the title, the date of reference, the legend, then the month,
+# the day and the date of each column. Columns ID, Attività, Owner, Stato, Inizio, Fine, Ore.
+# One column per working day for the four weeks before the digest's and the four after it;
+# before them one per week from the week the project started, after them one per week to the
+# last date. On top the milestones: the agreed delivery, the expected one with «Ritardo N gg
+# lav.» by formula on the summary, then those declared and those of the phases by date, the
+# latter with their verdict by formula on the rows of the phase; the milestone of a phase that
+# falls on the agreed delivery is that delivery and has no row. Statuses «Da iniziare», «In
+# corso», «Rallentata», «Bloccata», «Chiusa», «Da scomporre», in the colours of that plan, and a
+# red line on the date of reference. A blocked item says what it waits for and from whom, the
+# `what` of the wait up to its first comma and its `owner`. An item closed on a Saturday or a
+# Sunday has its bar on the Friday before. A phase reads its code and its name, «F2» and «Gli
+# avvisi ai clienti» for a stage the roadmap names «F2 · Gli avvisi ai clienti», and otherwise
+# its identifier. The field stays `delivery_stages`, named so to keep clear of the framework's
+# phases F1-F6, and that reason still holds in the registry: only what the reader sees changes.
+#
+# THE OWNER. Optional, in the digest's state: `owner` on an item, an increment included, and on
+# a milestone; `release.owner`, who answers for the agreed delivery; `gantt.owner`, the name an
+# item that declares none shows, and the expected delivery. An increment shows the owner
+# declared on it, or that of its items when they have one. The registers do not hold it in that
+# form, since the `owners` of a change contract answer for the document, so the person declares
+# it once.
+#
+# THE OTHER PREFERENCES of the Gantt, all optional under `gantt`:
+#   done: recent  as `done: false`, and at the head of the work, folded, a group «Chiuso dal
+#                 gg/mm» with the items closed since the first day shown day by day;
+#   from: window  no column before that day; `start`, the default, and `week` stay as they were;
+#   outline       {stage: {from, to}}: a stage not broken down yet, drawn on those days with the
+#                 status «Da dettagliare», no hours and nothing under it, out of the estimate;
+#   requests      a list of names: their open waits, under the milestones in a block «COSA SERVE
+#                 DA ALTRI», always open, with a bar from the request to its deadline, red after
+#                 it up to today.
+#
+# ORE LAVORATE. The day by day folds by month and by week, a week across two months split in
+# two: the months and the weeks in view when the file opens, each a SUBTOTAL of its rows and
+# without a date, so that the sums by date do not count it. The sheet is no longer protected,
+# since Excel opens no group on a protected sheet.
+#
+# A DAY ALREADY SENT can be corrected. It was refused; now it is counted again, with today's
+# classification, said in the conversation, `--check` included, and recorded in the next
+# snapshot under `corrected`. A day already sent that the state file no longer declares is
+# still refused.
+#
+# NEW CHECKS, each refused by `--check`:
+#   - `gantt.done` other than true, false or `recent`; `gantt.from` other than `start`, `week`
+#     or `window`;
+#   - an `owner` that is not a name, on an item, a milestone, `release` or `gantt`;
+#   - `gantt.requests` that is not a list of names;
+#   - a stage in `gantt.outline` that the roadmap does not have, without `from` or `to`, with
+#     `to` before `from`, or with items to do in the perimeter, which the estimate would count
+#     and the Gantt would not show;
+#   - a day already sent that the state file no longer declares.
+# One check is gone: a day already sent and declared differently, which is now a correction.
+#
+# THE REFERENCE in `tests/fixtures/digest/` does not change. The check reads it by the new
+# rules: a range is its middle; the hours of the estimate are the mean of its two cases; the
+# pace of five days, the days needed, the expected delivery, the delay and the days of an item
+# of the next week are computed again by the test from the reference's own hours and queue;
+# the days of «Ore lavorate» are found by date under their months and weeks; the two rows the
+# summary no longer prints, and the texts that said how a size counts, are listed with the
+# reason.
+#
+# NOT DONE. Less detail for the months far ahead, which the readers left to be evaluated.
+#
+# ADOPTION. `FW001` reports the new number at `warn`: update `framework_version`. A state file of
+# 4.4.1 is read as it is, and the next digest shows the new estimate. Then, when wanted, declare
+# through the skill the owners and the preferences of the Gantt.
+version: "4.5.0"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of

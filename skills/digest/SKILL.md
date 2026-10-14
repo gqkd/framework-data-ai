@@ -22,7 +22,8 @@ The digest is where the work on one product stands today, written for the person
 and for whoever they send it to: a functional team and a direction that read the first sheet
 and little else. It is not an artifact and has no owner, like the SAL of `business` and the
 deck of `presentation`: do not ask who is responsible for it, and do not put an owner, an
-approver or a "prepared by" on it. It is never a source either. A fact that appears in it
+approver or a "prepared by" on it. The `owner` of an item, which the Gantt prints, is another
+thing: who follows that piece of work. It is never a source either. A fact that appears in it
 first goes back to the register that owns it, through `requirement` or `resolve`, and comes
 back into the next digest from there.
 
@@ -63,8 +64,11 @@ _meta/digest/
 
 One sequence of numbers across the products. A snapshot is never edited: the next one checks
 its hash, and it freezes every day up to the day before its date, so a classification
-changed today never moves the hours of a day already sent. A second workbook on the same day
-takes a new number and replaces the first.
+changed today never moves the hours of a day already sent. A day already sent can still be
+corrected in the state file: the script counts it again, says so before writing (`--check`
+included), and records it in the snapshot, because the readers know the file can change from
+one sending to the next. A day that disappears from the state file is refused. A second
+workbook on the same day takes a new number and replaces the first.
 
 The state file, format 2, with one item of each shape:
 
@@ -76,6 +80,7 @@ release:
   delivery: 2026-10-13             # the agreed delivery date
   start: 2026-09-22                # the first day of the project
   commitment: null                 # the CMT, when the date was promised to a customer
+  owner: Direzione                 # optional: who answers for the agreed delivery, on the Gantt
 items:
   OD-120:
     title: formati dei dati in ingresso
@@ -83,8 +88,9 @@ items:
       quali formati di file lo strumento di caricamento deve saper leggere.
     theme: architettura            # architettura | sviluppo | deploy
     scope: "1.0"                   # the release name, or out
-    size: L                        # S 1-2 h, M 3-5, L 6-12, XL 13-40: counted at the top
+    size: L                        # S 1-2 h, M 3-5, L 6-12, XL 13-40: counted at the middle
     seen: Which file formats the loader reads   # the register's title, confirmed
+    owner: Team tecnico            # optional: who follows it, a team or a name; the Gantt
   KI-013:
     title: tempo massimo superato sulle domande lunghe
     what: >-
@@ -139,12 +145,20 @@ plan:                              # today and the next working day
   2026-10-09: [{item: CHG-018, hours: 5}]
   2026-10-12: [{item: CHG-018, hours: 2, closes: true}, {item: OD-120, hours: 3}]
 milestones:
-  - {name: Demo al team funzionale, date: 2026-10-15}
+  - {name: Demo al team funzionale, date: 2026-10-15, owner: PM}   # owner optional
   - {stage: t1, date: 2026-10-14}  # the milestone a stage of the roadmap names: the date only
-gantt:                             # optional; without it, the Gantt of 4.3.0
-  done: false                      # default true; false leaves out the items closed, and the
-                                   # increments and stages left with nothing to do
-  from: week                       # default start; week starts the days on this week's Monday
+gantt:                             # optional, every key
+  done: recent                     # default true; false leaves out the items closed, and the
+                                   # increments and stages left with nothing to do; recent the
+                                   # same, with those closed since the first day shown day by
+                                   # day in a group of their own
+  from: window                     # default start, the week the project started; window, the
+                                   # first day shown day by day; week, the Monday of this week
+  owner: Team tecnico              # the Owner of an item that names none, and of the expected
+                                   # delivery
+  outline:                         # a phase of the roadmap not broken down yet: drawn on these
+    t3: {from: 2026-11-02, to: 2026-11-27}   # days, «Da dettagliare», out of the estimate
+  requests: [team funzionale]      # whose open waits the Gantt shows, by their `owner`
 ```
 
 **When the roadmap orders its increments in stages** (`delivery_stages` in `RMP.md`, kept by
@@ -155,8 +169,11 @@ the end of their increment. Pinned items come before everything, and items in no
 everything, in `order.todo`, which then holds only those. An increment is not a piece of work
 here: it has a title in the state file and no theme, scope or size, because it is worth the
 sum of what composes it. One with nothing under it is «da scomporre», worth zero hours, and
-both the summary and the conversation say that the expected delivery leaves it out. A
-conditional increment is counted like the others, and labelled.
+both the Gantt and the conversation say that the expected delivery leaves it out. A
+conditional increment is counted like the others, and labelled. A stage not broken down yet
+can be drawn on the dates its plan gives it, with `gantt.outline`: it must have nothing to do
+in the perimeter, since the estimate would count what the Gantt does not show, and the script
+refuses one that has, or that the roadmap does not have.
 
 The hours outside the product go in five categories and no others: `supporto` (support to the
 demo and to production), `reportistica` (reports and status presentations), `riunioni`,
@@ -242,9 +259,10 @@ and reused unchanged until the person changes it.
   say so when proposing it. An item outside the perimeter needs `out_reason`, the why the
   workbook prints.
 - **Size**, for every item in the perimeter, open or closed. The estimate counts every item
-  at the top of its size, S 2 hours, M 5, L 12, XL 40: one number, on the side of caution,
-  and one delivery date. An `XL` is flagged to be split; when it is split, `split_into` names
-  the items that replace it.
+  at the middle of its size, S 1,5 hours, M 4, L 9, XL 26,5: one number, and one delivery
+  date. The workbook gives the range of each size and never the number it counts, by the
+  person's choice. An `XL` is flagged to be split; when it is split, `split_into` names the
+  items that replace it.
 - **Closing date** (`closed_on`), for every item closed in the perimeter: proposed from the
   commit that closed it in the register, confirmed by the person. A commit that came late
   gives a late date, which is why it is confirmed.
@@ -288,6 +306,12 @@ What the commits and the registers say is never asked. Ask, in one message:
    afterwards only when the person says they want to change them. Never every day. A
    milestone a stage of the roadmap names needs only its date, asked the first time the stage
    appears; until then the script refuses, and says which.
+6. **The owner** of an item, an increment or a milestone, the team or the person who follows
+   it, technical or functional: once, when it first appears, together with its
+   classification, and afterwards only when the person changes it. Optional: an item without
+   one shows `gantt.owner` when declared, an increment the owner of its items when they have
+   one, and otherwise the cell is empty; nothing is refused for it. Who answers for the agreed
+   delivery is `release.owner`, asked with the date.
 
 The agreed delivery date is asked at the first run and when the release changes. If it was
 promised to a customer, it is a commitment: name the `CMT` in `release.commitment` and say
@@ -299,37 +323,57 @@ Never ask which items were worked on, closed or opened.
 
 Fixed. Sheets, sections, positions, formulas, colours and fonts are those of the reference
 workbook the script is tested against, `tests/fixtures/digest/DIG-003-atlas-2026-10-09.xlsx`
-in the framework's repository; `tests/selfcheck.py` lists the few cells allowed to differ and
-why: every item counts for the top of its size, so where the reference prints a range the
-workbook prints its top, and the estimate is one row instead of a best and a worst case. The
-reference itself was edited once, in 4.4.0, where its readers asked for a different file: the
-first table of Attività and section 5 of the summary.
+in the framework's repository; `tests/selfcheck.py` lists the cells allowed to differ and why:
+every item counts for the middle of its size, so where the reference prints a range the
+workbook prints its middle; the estimate is one row instead of a best and a worst case, at
+the pace of the last five working days, which the test computes again from the reference's
+own hours; and the sheets moved where their readers asked. The reference itself was edited
+once, in 4.4.0, where its readers asked for a different file: the first table of Attività
+and section 5 of the summary.
 
 1. **Riepilogo**, the sheet most readers stop at: where the release stands (agreed delivery,
-   delivery expected today, delay, what the forecast depends on, where the time goes), how the
-   estimate is computed, what is needed from others, progress by theme, how the hours of the
-   project are split today. Not how they should be split to deliver on the agreed date, nor
-   the difference: that column went on the person's request. No charts: the reference had two
-   pies there, taken out on the person's request too.
-2. **Gantt**: one row per item and per milestone, one column per working day, and the hours
-   of each row. Every item done on the days it was worked; every item to do in the order of
-   «Da fare», for the top of its size, at the pace of the estimate, so the last one ends on
-   the expected delivery; the milestones and the agreed delivery as diamonds; today's column
-   in yellow. The first and last day of an item to do are formulas, and the bars conditional
-   formats on them. An item already started is placed like the others, by its place in the
-   queue: the day it was first worked is in its status, «in corso dal 08/10», and not in its
-   bar, which would otherwise cover the days of every item before it. With stages, the rows
-   are grouped by stage and by increment: the row of an increment is the sum, the earliest
-   start and the latest end of what composes it, and
-   the milestone that closes a stage says by formula whether it is «in tempo», «a rischio» or
-   «incompleta». With stages the rows also fold, closed when the file opens: the stages and
-   the milestones in view, a stage's increments under its «+», an increment's components
-   under its own, and the row of a stage spans its items with a bar of its own; that of a
-   group, «Prima di tutto» or «Fuori dalle tappe», also carries the hours of its rows. Two
-   preferences under `gantt` in the state make it lighter: `done: false` leaves out what is
-   closed, and the increments and stages with nothing left to do, but never an increment
-   still to break down or a stage that names a milestone; `from: week` starts the days on the
-   Monday of the digest's week instead of the first day of the project.
+   delivery expected today, delay), what is needed from others, progress by theme, how the
+   hours of the project are split today. The estimate is computed in rows nobody sees, since
+   the expected delivery and the Gantt depend on them: hours left at the middle of each size,
+   divided by the hours a day of the last five working days, less those outside the perimeter
+   and outside the product. Not what the forecast depends on, nor where the time goes, nor how
+   the hours should be split to deliver on the agreed date: each went on the person's
+   request. No charts either.
+2. **Gantt**: the plan its readers agreed on. Columns ID, Attività, Owner, Stato, Inizio, Fine,
+   Ore, then the calendar: one column per working day for the four weeks before the digest's
+   and the four after it, and one column per week before them, from the week the project
+   started, and after them, to the last date of the sheet. The milestones come first: the
+   agreed delivery, with `release.owner`, the expected one with its delay and `gantt.owner`,
+   then those declared and those of the phases, by date; the milestone of a phase that falls on
+   the agreed delivery is that delivery and has no row. With `gantt.requests`, the open waits
+   on the people it names follow, under «COSA SERVE DA ALTRI», each with a purple bar from the
+   day it was asked to the day it is needed by, red after that up to today. Then the work:
+   every item done on the days it was worked, on the Friday before when that was a Saturday or
+   a Sunday; every item to do in the order of «Da fare», for the hours of its estimate, at the
+   pace of the estimate, so the last one ends on the expected delivery. Statuses read «Da
+   iniziare», «In corso», «Rallentata», «Bloccata», «Chiusa», each with its colour, and the
+   date of reference is a red line. A blocked item says what it waits for and from whom,
+   «Bloccata da ambiente preprod (team infrastruttura)»: the `what` of each wait up to its
+   first comma, and its `owner`. The first and last day of an item to do are formulas, and the
+   bars conditional formats on them; a column of a week holds a bar when the item touches that
+   week. An item already started is placed like the others, by its place in the queue: the day
+   it was first worked is in its status, «In corso dal 08/10», and not in its bar, which would
+   otherwise cover the days of every item before it. With stages, which the sheet calls phases,
+   the rows are grouped by phase and by increment: a phase reads its code and its name, «F2»
+   and «Gli avvisi ai clienti» for a roadmap that names it «F2 · Gli avvisi ai clienti», or its
+   identifier and its name; the row of an increment is the sum, the earliest start and the
+   latest end of what composes it, and the milestone of a phase says by formula, on the rows of
+   its phase, whether it is «In tempo», «A rischio» or «Incompleta». A phase in `gantt.outline`
+   reads «Da dettagliare» on the dates declared, with no hours and nothing under it. With
+   stages the rows also fold, closed when the file opens: the milestones, the requests and the
+   phases in view, a phase's increments under its «+», an increment's components under its own,
+   and the row of a phase spans its items with a bar of its own; that of a group, «Prima di
+   tutto» or «Fuori dalle fasi», also carries the hours of its rows. The preferences under
+   `gantt` in the state make it lighter: `done: false` leaves out what is closed, and the
+   increments and stages with nothing left to do, but never an increment still to break down;
+   `done: recent` does the same and shows, in a group «Chiuso dal …» at the head of the work,
+   folded, the items closed since the first day shown day by day; `from: window` drops the
+   weeks before that day, `from: week` starts the calendar on the Monday of the digest's week.
 3. **Attività**: the next week, what is left in the perimeter, what was done in it since the
    start, what is outside it. Every item, nothing cut short. The next week is every item to
    do whose days on the Gantt touch the five working days after the digest's, from Monday to
@@ -337,12 +381,15 @@ first table of Attività and section 5 of the summary.
    included. An item in the declared plan says what the plan says of it, on each day planned;
    any other says its first and last day and its hours, «dal 15/10 al 19/10, 12 ore».
 4. **Ore lavorate**: the hours by period, as shares, outside the product by category, and day
-   by day from the start. Every other number follows from the last table.
+   by day from the start, folded by month and by week, a week across two months split in two:
+   the months and the weeks in view when the file opens, with their totals. Every other number
+   follows from the days of the last table.
 5. **Come leggerlo**: the dates every formula starts from, in yellow, and the legend.
 
 Every derived cell is a formula, written with the value the script computed for it, so the
 file reads the same in a preview and in a spreadsheet. The sheets are protected without a
-password, except a Gantt that folds: Excel opens no group on a protected sheet. Where a
+password, except Ore lavorate and a Gantt that folds: Excel opens no group on a protected
+sheet. Where a
 number cannot be computed, the cell says «non stimabile»; an empty list has one row,
 «Nessuna.», which no count includes.
 
@@ -370,7 +417,8 @@ anchor the chain of hashes.
 ## What not to do
 
 - Do not edit an artifact, the parking lot included.
-- Do not edit a snapshot, or the hours of a day already sent.
+- Do not edit a snapshot. A day already sent is corrected in the state file, never in the
+  snapshot, and only when the person says it was wrong.
 - Do not send, upload or publish the workbook. Pushing the store is the script's, to a
   private repository; the copy is for the person.
 - Do not put a date, an estimate or an hour into an artifact.
@@ -379,7 +427,8 @@ anchor the chain of hashes.
 
 The path of the snapshot and of the copy, and whether the store was pushed; what changed
 since the last workbook; the items the inventory named and the person said were not worked
-on; any disagreement between sources the script reported, and any contradiction found, each
-as the line ready for the parking lot; the result of the validator.
+on; the days already sent that the script counted again; any disagreement between sources the
+script reported, and any contradiction found, each as the line ready for the parking lot; the
+result of the validator.
 
 Then add the two closing blocks required by the preamble.
