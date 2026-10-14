@@ -113,6 +113,21 @@ listed with the names of its keys and never their values. Every session closes w
 declaration in `sessioni/`: what it committed, what it leaves uncommitted, what it leaves
 outside the repositories.
 
+## Review before presenting, and before committing
+
+Every plan is reviewed before it is presented, and every diff before it is committed or
+merged, by the framework plugin's `framework-data-ai:critic` subagent: read only, it returns
+for each point the unverified assumption, the hidden cost and what is missing, and for a
+diff that cites a `CHG` whether it stays inside what must not change. Give it the diff as a
+file and the absolute path of the `CHG`. Present the work with its objections, answered or
+left with why. Exempt: the parking-lot line of rule 4, the `SIG` appended to `LOG`, and the
+commit a script makes of its own output.
+
+If the subagent is not available, run a general-purpose agent told to follow
+`FRAMEWORK_PATH/agents/critic.md` with read-only tools (write here where this project's
+framework checkout or plugin lives), and say so. If you cannot run a subagent at all, say
+that the review did not run. A review that did not run is said, never skipped in silence.
+
 ## Mandatory updates
 
 After changing the code, update:

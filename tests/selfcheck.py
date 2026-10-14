@@ -7434,6 +7434,55 @@ def _exc007():
         "one without a part"]
 
 
+@check("the critic ships with the plugin, read only, and every rule that runs it names the same agent")
+def _the_critic_ships_with_the_plugin():
+    # It lived in this repository's `.claude/agents/`, which Claude Code loads only for a
+    # session working here: every project that adopted the framework went without it, and
+    # nothing said so. A plugin's agents are the ones in `agents/` at its root, named
+    # `<plugin>:<agent>`. One copy, so that the sessions working here and the projects that
+    # adopt the framework are reviewed by the same text.
+    problems = []
+    agent = ROOT / "agents" / "critic.md"
+    if not agent.exists():
+        return ["agents/critic.md is missing: the plugin ships no critic"]
+    try:
+        meta = front_matter(agent.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError as e:
+        return [f"agents/critic.md: the front matter is not YAML, so Claude Code reads no agent "
+                f"from it: {str(e).splitlines()[0]}"]
+    if meta.get("name") != "critic":
+        problems.append(f"agents/critic.md is named {meta.get('name')!r}")
+    listed = meta.get("tools", "")
+    tools = {str(t).strip() for t in (listed if isinstance(listed, list)
+                                      else str(listed).split(",")) if str(t).strip()}
+    if tools != {"Read", "Grep", "Glob"}:
+        problems.append(f"the critic's tools are {sorted(tools)}: it reads, and nothing else, so "
+                        "that it cannot repair what it criticises")
+    ignored = {"permissionMode", "hooks", "mcpServers", "initialPrompt"} & set(meta)
+    if ignored:
+        problems.append(f"{sorted(ignored)} in the critic's front matter, which a plugin agent "
+                        "ignores: a line that reads as applied and is not")
+    if (ROOT / ".claude" / "agents" / "critic.md").exists():
+        problems.append(".claude/agents/critic.md exists again: here it would win over the "
+                        "plugin's, and the two copies would drift")
+    plugin = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text())["name"]
+    name = f"{plugin}:critic"
+    for rel in ("references/preamble.md", "templates/AGENTS.md", "skills/cycle/SKILL.md",
+                "skills/audit/SKILL.md"):
+        if name not in (ROOT / rel).read_text(encoding="utf-8"):
+            problems.append(f"{rel} does not name `{name}`: the rule that runs the critic and "
+                            "the agent it runs have to be the same one")
+    # The rule is written twice, for sessions running a skill and for those running none, and
+    # the two have to exempt the same writes or one of them asks for what the other forbids.
+    for rel in ("references/preamble.md", "templates/AGENTS.md"):
+        text = (ROOT / rel).read_text(encoding="utf-8")
+        section = text[text.index(name):][:2500] if name in text else ""
+        for exempt in ("parking", "SIG", "script"):
+            if exempt not in section:
+                problems.append(f"{rel}: the review rule does not exempt the {exempt} write")
+    return problems
+
+
 @check("every status a change or an entry can have is either done or not, for the exchange")
 def _exchange_maps_every_status():
     # Two meanings of "closed" already exist, the digest's and this one, and the second is

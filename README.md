@@ -20,6 +20,7 @@ decisions, products, initiatives and corpus, live in that project's repository, 
 | `templates/` | One template per artifact, each with its anti-patterns at the bottom |
 | `schemas/` | The artifact catalog and what each type is allowed to be. `artifact-types.yaml` is the source; `generate.py` projects it into the JSON Schemas, into `FRAMEWORK.md §7` and into `templates/README.md` |
 | `skills/` | The skills themselves. `audit/` also carries the gate: `scripts/validate.py`, `scripts/migrate.py`, `scripts/attest.py` (how a person attests a reading), `scripts/exchange.py` (what waits in the exchange between sessions) and `checks.yaml` |
+| `agents/` | The subagents the plugin ships. `critic.md` is an external reviewer, read only, that reviews every plan before it is presented and every diff before it is committed or merged: for each point the unverified assumption, the hidden cost and what is missing. Invoked as `framework-data-ai:critic` |
 | `src/framework_data_ai/` | Shared reading and resolution, the artifact contracts and a separate code-observation layer, used by the opt-in verification profiles. Loaded from this checkout; no package installation required |
 | `ci/` | Legacy PR template/workflow, optional trusted-base documentary controller, contribution-policy and CODEOWNERS adoption examples; see `references/contributions.md` |
 | `references/` | Shared by the skills: the common preamble, the routing table, the operating-mode and evidence rules, the contribution trust boundary and the adoption procedure |

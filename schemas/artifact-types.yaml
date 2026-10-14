@@ -1560,7 +1560,7 @@
 # what a mandate creates outside them has a list and an end. MINOR by the rule at the top: an
 # optional file, `.framework/sessions.yaml`, seven warnings that run only where it declares a
 # place, a command, and a derived view one field shorter. No type or field of an artifact
-# moves; `templates/AGENTS.md` gains an optional section.
+# moves; `templates/AGENTS.md` gains two sections, one of them optional.
 #
 # THE CAUSE, measured in the first project to run one documentation session beside several
 # code sessions: every rule said where to put things and none said when to take them away.
@@ -1597,6 +1597,18 @@
 # steps over a reading exactly as before. `--emit-index --check` reports each
 # `product.index.yaml` out of date once, after adopting: regenerate it.
 #
+# THE CRITIC SHIPS WITH THE PLUGIN, AND RUNS EVERY TIME. The read-only reviewer lived in
+# `.claude/agents/` of this repository, which Claude Code loads only for a session working
+# here: a project that adopted the framework never had it, and nothing said so. It is
+# `agents/critic.md` now, invoked as `framework-data-ai:critic`, and it reviews a plan or a
+# diff, a diff against the `CHG` it cites. The preamble has every plan reviewed before it is
+# shown and every diff before it is handed back, so a run that writes costs two reviews; the
+# brief of `cycle` asks it of the code session, with the absolute paths of the critic and of
+# the `CHG`, and the result goes in the verification; `templates/AGENTS.md` carries the rule
+# to sessions that run no skill, with the same exemptions. Where the subagent is missing, a
+# general-purpose agent follows the file with read-only tools and the run says so; where none
+# can run, the run says the review did not.
+#
 # `migrate.py` NOW NAMES THE CHECKS THE CATALOG HAS GAINED since the declared version, read
 # out of the two catalogs, beside the findings.
 #
@@ -1610,10 +1622,13 @@
 #   EXC006  a name the framework does not read, or the exchange inside a git repository;
 #   EXC007  a resource row or a closing declaration that cannot be read.
 #
-# ADOPTION. `FW001` reports the new number at `warn`: `migrate.py --adopt`. Regenerate the
-# views with `--emit-index`, once. Then, when wanted, write `.framework/sessions.yaml`, and
-# the section of `templates/AGENTS.md` into the project's own: the rule has to reach sessions
-# that run no skill. A project without the file sees nothing else move.
+# ADOPTION. Update the installed plugin: a copy taken before this version has no critic, and a
+# session started before the update does not see it until it restarts. `FW001` reports the new
+# number at `warn`: `migrate.py --adopt`. Regenerate the views with `--emit-index`, once. Copy
+# the section on review of `templates/AGENTS.md` into the project's own, with the path of its
+# framework, and have a person reread and attest it, as for any living document. Then, when
+# wanted, write `.framework/sessions.yaml` and copy the section on the exchange too. A project
+# without that file sees nothing else move.
 version: "4.6.0"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.

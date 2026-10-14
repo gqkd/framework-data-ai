@@ -138,6 +138,33 @@ applies even though nobody asked you to write anything, and it says it there rat
 here because that rule has to reach an agent answering a question with no skill running,
 which never reaches this file.
 
+## The critic: every plan before it is shown, every diff before it is handed back
+
+A plan or a diff nobody else has read looks the same as a reviewed one, so every run has both
+read by the plugin's `framework-data-ai:critic` subagent, which only reads, before the person
+sees them:
+
+- **a plan** -- the proposal table above, a classification, a brief, any work you are about
+  to ask the person to approve -- before you show it. Its rows or its numbered points are
+  what the critic answers on, one block each.
+- **a diff** -- what the run wrote, after the validator and before the two closing blocks.
+  Write `git diff` of the files you touched to a file in your scratchpad and pass its path,
+  with the absolute path of the `CHG` it cites: the critic cannot run git, and in a code
+  session the `CHG` sits in another repository.
+
+Show the objections with what you did about each: answered by a change, or left standing,
+with why. Exempt: the two writes above that need no asking, a `SIG` appended to `LOG` and a
+line in the parking lot, and the commit a script makes of its own output.
+
+If the subagent is not in this session -- the plugin was installed or updated after the
+session started, or the framework is read from a checkout with no plugin enabled -- run a
+general-purpose agent told to read `agents/critic.md` in the framework directory this file
+sits in, the parent of `references/`, and follow it with Read, Grep and Glob only, and say
+that this is what ran. Where no subagent can run at all, say that the review did not run. A
+review that did not run is said, in the handing back and, when the project declares an
+exchange, in the closing declaration: the failure this rule exists for is a reviewer nobody
+noticed had stopped running.
+
 ## Closing move
 
 Any skill that wrote something ends by running the validator, and reports what it says:

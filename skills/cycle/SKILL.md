@@ -225,6 +225,11 @@ Done when          CHG-NNN §how-we-know-it-worked
                    the artifacts in AGENTS.md "mandatory updates" are updated
                    the validator passes with no errors
                    a new EVR, if an AI component was touched
+                   the diff reviewed before it is committed by framework-data-ai:critic,
+                   or by a general agent following <framework>/agents/critic.md read only,
+                   given <absolute path of CHG-NNN>; its objections, answered or left
+                   with why, in the verification handed back (verifica.md, with an
+                   exchange)
 ```
 
 **Where the brief goes.** When `.framework/sessions.yaml` declares `exchange:`, write the
@@ -247,6 +252,9 @@ Delivery           <absolute path>/in-arrivo/CHG-NNN/, under the fixed names: ve
 
 `references/contributions.md`, *The exchange between sessions*, is where each of those is
 described, and the place to read before writing the block for the first time.
+
+Write `<framework>` and the path of the `CHG` as absolute paths when you produce the brief:
+the code session works from another repository, and may not have the plugin enabled.
 
 Two levels of evaluation exist and merging them is a costly mistake. **Task acceptance** is
 `CHG §how-we-know-it-worked` plus the validator plus the project's tests: did this change
