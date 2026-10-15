@@ -7684,6 +7684,363 @@ def _migrate_names_new_checks():
     return problems
 
 
+_AGENTS_BODY = """---
+schema: framework/agents-control-plane/v1
+last_review: 2026-01-01 10:00
+---
+
+# Instructions for agents
+
+## Non negotiable rules
+
+1. Ours, numbered our way.
+
+## Mandatory updates
+
+Our table.
+
+## Commands
+
+```bash
+## a comment in a fence, not a heading
+make test
+```
+"""
+
+
+def _write_sections(migrate, root: Path, plan: dict) -> None:
+    path = root / "AGENTS.md"
+    path.write_text(migrate.apply_sections(path.read_text(encoding="utf-8"), plan)[0],
+                    encoding="utf-8")
+
+
+@check("--adopt brings the framework's sections of AGENTS.md, and leaves what the project wrote")
+def _adopt_writes_the_framework_sections():
+    # A RULE THAT TRAVELS BY HAND REACHES THE PROJECTS WHOSE PEOPLE READ RELEASE NOTES. The
+    # review section of 4.6.0 reached a project only if somebody pasted it, with a path written
+    # over a placeholder, into the one file a session running no skill reads.
+    migrate = _load(ROOT / "skills" / "audit" / "scripts" / "migrate.py", "migrate_sections")
+    problems = []
+    template = (ROOT / migrate.TEMPLATE_REL).read_text(encoding="utf-8")
+    marked = {s["id"]: s for s in migrate.sections(template) if s["id"]}
+    if set(marked) != {"review", "exchange"}:
+        problems.append(f"the template marks {sorted(marked)} as the framework's, expected "
+                        "the review and the exchange")
+    for sid, s in marked.items():
+        left = set(re.findall(r"\b[A-Z]+_[A-Z_]+\b", migrate.render(s["text"], None)))
+        if left - set(migrate.PLACEHOLDERS):
+            problems.append(f"section {sid!r} carries {sorted(left - set(migrate.PLACEHOLDERS))}, "
+                            "which `migrate.py` does not fill")
+    if marked.get("exchange", {}).get("requires") != ["exchange"]:
+        problems.append("the exchange section does not require an exchange: --adopt would "
+                        "write it into every project")
+    # What the template says to whoever fills a marked section is a blockquote, and `render`
+    # drops every one: a blockquote further down would be content, dropped in silence.
+    for sid, s in marked.items():
+        blocks = [b for b in s["text"].split("\n\n")[1:] if b.strip()]
+        quoted = [i for i, b in enumerate(blocks) if b.lstrip().startswith(">")]
+        if quoted and quoted != list(range(len(quoted))):
+            problems.append(f"section {sid!r} has a blockquote after its text begins: "
+                            "`migrate.py` drops every blockquote of a marked section")
+    if migrate.SESSIONS_KEYS != _load(VALIDATE, "validate_sessions_keys").SESSIONS_KEYS:
+        problems.append("migrate.py and validate.py disagree on the keys of "
+                        ".framework/sessions.yaml")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = _Repo(Path(tmp) / "docs")
+        root = repo.path
+        repo.write("AGENTS.md", _AGENTS_BODY)
+        repo.commit("day one", "2026-01-01T10:00:00+00:00")
+        fw_path = migrate.framework_path(root, ROOT)[0]
+
+        plan = {e["id"]: e for e in migrate.section_plan(root, ROOT, None)["sections"]}
+        if plan.get("exchange", {}).get("action") != "skipped":
+            problems.append(f"with no exchange declared the exchange section is "
+                            f"{plan.get('exchange')}, expected skipped")
+        review = plan.get("review", {})
+        if (review.get("action"), review.get("where"), review.get("anchor")) \
+                != ("add", "before", "Mandatory updates"):
+            problems.append(f"the review section is planned as {plan.get('review')}, expected "
+                            "added before the project's 'Mandatory updates'")
+
+        # The report run writes nothing; the plan is what `--adopt` would do.
+        r = subprocess.run([sys.executable, str(ROOT / "skills/audit/scripts/migrate.py"),
+                            "--root", str(root), "--json"], capture_output=True, text=True)
+        try:
+            listed = {e["id"]: e["action"] for e in json.loads(r.stdout)["agents"]["sections"]}
+        except (ValueError, KeyError, TypeError):
+            listed = None
+        if listed != {"review": "add", "exchange": "skipped"}:
+            problems.append(f"the report lists {listed}, expected review add and exchange "
+                            f"skipped: {(r.stdout + r.stderr)[-300:]}")
+        if r.returncode != 1:
+            problems.append(f"a project on this version with a section to write exits "
+                            f"{r.returncode}: 0 says there is nothing to do")
+        if (root / "AGENTS.md").read_text(encoding="utf-8") != _AGENTS_BODY:
+            problems.append("the report run wrote AGENTS.md: only --adopt writes")
+
+        # Uncommitted lines in AGENTS.md are somebody's: --adopt writes nothing at all.
+        repo.write("AGENTS.md", _AGENTS_BODY + "\nA line nobody committed.\n")
+        r = subprocess.run([sys.executable, str(ROOT / "skills/audit/scripts/migrate.py"),
+                            "--root", str(root), "--adopt"], capture_output=True, text=True)
+        if "not committed" not in r.stdout or "A line nobody committed." not in \
+                (root / "AGENTS.md").read_text(encoding="utf-8") or "## Review" in \
+                (root / "AGENTS.md").read_text(encoding="utf-8"):
+            problems.append("--adopt over an AGENTS.md with uncommitted changes did not refuse "
+                            f"and leave it: {r.stdout[-300:]}")
+        repo.write("AGENTS.md", _AGENTS_BODY)
+
+        repo.write(".framework/sessions.yaml", "exchange: ../_ours\n")
+        plan = migrate.section_plan(root, ROOT, None)
+        _write_sections(migrate, root, plan)
+        text = (root / "AGENTS.md").read_text(encoding="utf-8")
+        have = [s["heading"] for s in migrate.sections(text)]
+        if have != ["Non negotiable rules", "Sessions and the exchange",
+                    "Review before presenting, and before committing", "Mandatory updates",
+                    "Commands"]:
+            problems.append(f"after writing, the sections are {have}")
+        for must, why in (("`../_ours`", "the declared exchange"),
+                          (f"`{fw_path}/agents/critic.md`", "the framework's path"),
+                          ("<!-- framework-section: review -->", "the marker"),
+                          ("last_review: 2026-01-01 10:00", "the front matter, untouched"),
+                          ("1. Ours, numbered our way.", "the project's own sections")):
+            if must not in text:
+                problems.append(f"after writing, {why} is not in AGENTS.md ({must})")
+        for must_not in ("EXCHANGE_PATH", "FRAMEWORK_PATH", "\n> "):
+            if must_not in text:
+                problems.append(f"after writing, {must_not.strip()!r} is still in AGENTS.md: a "
+                                "placeholder or an instruction to whoever fills the template")
+        if migrate.section_plan(root, ROOT, None)["sections"]:
+            problems.append("a second migration plans more work on sections just written")
+
+        # The previous template's text with only the placeholders filled: nobody edited it,
+        # so the new text replaces it. One word changed by the project: it is theirs.
+        old = template.replace("Give it the diff as a", "Hand it the diff as a")
+        unedited = text.replace("Give it the diff as a", "Hand it the diff as a")
+        repo.write("AGENTS.md", unedited)
+        plan = {e["id"]: e for e in migrate.section_plan(root, ROOT, old)["sections"]}
+        if plan.get("review", {}).get("action") != "update":
+            problems.append(f"an unedited copy of the previous text is planned as "
+                            f"{plan.get('review')}, expected update")
+        _write_sections(migrate, root, migrate.section_plan(root, ROOT, old))
+        if (root / "AGENTS.md").read_text(encoding="utf-8") != text:
+            problems.append("updating an unedited section did not give the new text back")
+        repo.write("AGENTS.md", unedited.replace("the absolute path", "the full path"))
+        plan = {e["id"]: e for e in migrate.section_plan(root, ROOT, old)["sections"]}
+        if plan.get("review", {}).get("action") != "left":
+            problems.append(f"a section the project edited is planned as "
+                            f"{plan.get('review')}, expected left")
+
+        # A hand copy under the same heading, with no marker: found, and not doubled; and
+        # put in its place only when somebody asks for it by name.
+        hand = _AGENTS_BODY.replace("## Mandatory updates",
+                                    "## Review before presenting, and before committing\n\n"
+                                    "Our own wording of the rule.\n\n## Mandatory updates")
+        repo.write("AGENTS.md", hand)
+        plan = {e["id"]: e for e in migrate.section_plan(root, ROOT, None)["sections"]}
+        if plan.get("review", {}).get("action") != "left":
+            problems.append(f"a hand copy under the same heading is planned as "
+                            f"{plan.get('review')}, expected left")
+        forced = migrate.section_plan(root, ROOT, None, replace={"review"})
+        after, _ = migrate.apply_sections(hand, forced)
+        if "Our own wording" in after or after.count("## Review before presenting") != 1:
+            problems.append("--replace-section review did not put the template's text in "
+                            "place of the hand copy, once")
+
+        # The template's text with the paths the project wrote: kept on the next migration,
+        # whatever machine runs it. Without its marker, it gets one.
+        tpl_review = next(x for x in migrate.sections(template) if x["id"] == "review")
+        own = migrate.render(tpl_review["text"], {"FRAMEWORK_PATH": ROOT.as_posix()})
+        unmarked = "\n".join(line for line in own.split("\n")
+                             if not migrate.SECTION_MARK.match(line.strip()))
+        repo.write("AGENTS.md", _AGENTS_BODY.replace("## Mandatory updates",
+                                                     unmarked + "\n\n## Mandatory updates"))
+        plan = migrate.section_plan(root, ROOT, None)
+        review = next((e for e in plan["sections"] if e["id"] == "review"), {})
+        if review.get("action") != "update" or f"{ROOT.as_posix()}/agents/critic.md" not in \
+                review.get("text", "") or "<!-- framework-section: review -->" not in \
+                review.get("text", ""):
+            problems.append(f"a copy with the project's own path and no marker is planned as "
+                            f"{review.get('action')}: expected an update that keeps the path "
+                            "and adds the marker")
+        repo.write("AGENTS.md", _AGENTS_BODY.replace("## Mandatory updates",
+                                                     own + "\n\n## Mandatory updates"))
+        if any(e["id"] == "review" for e in migrate.section_plan(root, ROOT, None)["sections"]):
+            problems.append("the template's text with the project's own path is planned for "
+                            "work: a value the project wrote is not an edit")
+        # A path that leads to no framework here may hold where it was written: said, and
+        # kept, or two machines would rewrite it back and forth.
+        repo.write("AGENTS.md", _AGENTS_BODY.replace(
+            "## Mandatory updates",
+            migrate.render(tpl_review["text"], {"FRAMEWORK_PATH": "../nowhere"})
+            + "\n\n## Mandatory updates"))
+        plan = migrate.section_plan(root, ROOT, None)
+        if any(e["id"] == "review" for e in plan["sections"]):
+            problems.append(f"a path leading to no framework here is planned for work: "
+                            f"{[(e['id'], e['action']) for e in plan['sections']]}")
+        if not any("../nowhere" in n for n in plan.get("notes", [])):
+            problems.append("a path leading to no framework here is not said in the report")
+        # A rule elsewhere that names the critic is not a copy of the section.
+        repo.write("AGENTS.md", _AGENTS_BODY.replace(
+            "1. Ours, numbered our way.",
+            "1. Ours, numbered our way.\n2. Run `framework-data-ai:critic` on every plan."))
+        review = next((e for e in migrate.section_plan(root, ROOT, None)["sections"]
+                       if e["id"] == "review"), {})
+        if review.get("action") != "add":
+            problems.append(f"a rule that names the critic made the review section "
+                            f"{review.get('action')}: expected add")
+        # A copy that kept the template's blockquote is still to clean, filled or not.
+        quoted = tpl_review["text"].replace("FRAMEWORK_PATH", ROOT.as_posix())
+        repo.write("AGENTS.md", _AGENTS_BODY.replace("## Mandatory updates",
+                                                     quoted + "\n\n## Mandatory updates"))
+        review = next((e for e in migrate.section_plan(root, ROOT, None)["sections"]
+                       if e["id"] == "review"), {})
+        if review.get("action") != "update" or "\n> " in review.get("text", "\n> "):
+            problems.append("a filled copy that kept the template's blockquote is not cleaned")
+        # Under another heading, with no marker: not added beside it.
+        renamed = unmarked.replace("## Review before presenting, and before committing",
+                                   "## Revisione prima di presentare")
+        repo.write("AGENTS.md", _AGENTS_BODY.replace("## Mandatory updates",
+                                                     renamed + "\n\n## Mandatory updates"))
+        review = next((e for e in migrate.section_plan(root, ROOT, None)["sections"]
+                       if e["id"] == "review"), {})
+        if review.get("action") != "left" or "Revisione" not in review.get("at", ""):
+            problems.append(f"a copy under another heading is planned as "
+                            f"{review.get('action')}: the rule would be in the file twice")
+        after, _ = migrate.apply_sections(
+            (root / "AGENTS.md").read_text(encoding="utf-8"),
+            migrate.section_plan(root, ROOT, None, replace={"review"}))
+        if "Revisione" in after or after.count("framework-data-ai:critic") != 1:
+            problems.append("--replace-section on a copy under another heading did not put "
+                            "the template's text in its place, once")
+
+        # What `start` made by copying the body as it was: blockquote and placeholder in it.
+        raw = _AGENTS_BODY.replace("## Mandatory updates",
+                                   tpl_review["text"] + "\n\n## Mandatory updates")
+        repo.write("AGENTS.md", raw)
+        written, _ = migrate.apply_sections(raw, migrate.section_plan(root, ROOT, None))
+        if "FRAMEWORK_PATH" in written or "\n> " in written or \
+                f"`{fw_path}/agents/critic.md`" not in written:
+            problems.append("a raw copy of the template's section, as `start` made it, was not "
+                            "filled and cleaned by the migration")
+
+        # The copy 4.6.0 asked people to make by hand: the text of that template, the path
+        # written over its placeholder, the lines broken elsewhere by an editor. It is
+        # unedited, so it moves to the new text -- recognised from the framework's history,
+        # with no previous tree, as on a run that repeats on the same version.
+        shown = subprocess.run(["git", "-C", str(ROOT), "show", "a4f49e6:templates/AGENTS.md"],
+                               capture_output=True, text=True)
+        was = next((x for x in migrate.sections(shown.stdout)
+                    if x["heading"].startswith("Review before presenting")), None)
+        if shown.returncode or was is None:
+            problems.append("NOT RUN, the 4.6.0 copy: a4f49e6 is not in this history")
+        else:
+            copied = migrate.render(was["text"], {"FRAMEWORK_PATH": ROOT.as_posix()})
+            copied = copied.replace("it returns\nfor each", "it\nreturns for each")
+            repo.write("AGENTS.md", _AGENTS_BODY.replace(
+                "## Mandatory updates", copied + "\n\n## Mandatory updates"))
+            plan = migrate.section_plan(root, ROOT, None)
+            review = next((e for e in plan["sections"] if e["id"] == "review"), {})
+            if review.get("action") != "update" or f"`{ROOT.as_posix()}/agents/critic.md`" \
+                    not in review.get("text", ""):
+                problems.append(f"the 4.6.0 hand copy, lines rebroken, is planned as "
+                                f"{review.get('action')}: expected an update keeping its path")
+            # Reworded by hand: left, and replaced only by name, with the path still read.
+            reworded = copied.replace("Exempt:", "Not reviewed:")
+            repo.write("AGENTS.md", _AGENTS_BODY.replace(
+                "## Mandatory updates", reworded + "\n\n## Mandatory updates"))
+            forced = {e["id"]: e for e in migrate.section_plan(
+                root, ROOT, None, replace={"review"})["sections"]}
+            if forced.get("review", {}).get("action") != "update" or \
+                    f"`{ROOT.as_posix()}/agents/critic.md`" not in \
+                    forced.get("review", {}).get("text", ""):
+                problems.append("--replace-section on a reworded copy lost the path it carried")
+
+        # The exchange comes from where it is declared: a copy naming another place is out of
+        # date, and a place with a space in it is a place.
+        repo.write(".framework/sessions.yaml", "exchange: ../the exchange\n")
+        repo.write("AGENTS.md", _AGENTS_BODY)
+        _write_sections(migrate, root, migrate.section_plan(root, ROOT, None))
+        if any(e["id"] == "exchange" for e in migrate.section_plan(root, ROOT, None)["sections"]):
+            problems.append("an exchange whose path has a space is planned again after being "
+                            "written: the tool does not recognise its own text")
+        repo.write(".framework/sessions.yaml", "exchange: ../moved\n")
+        plan = {e["id"]: e for e in migrate.section_plan(root, ROOT, None)["sections"]}
+        if plan.get("exchange", {}).get("action") != "update" or "`../moved`" not in \
+                plan.get("exchange", {}).get("text", ""):
+            problems.append(f"an exchange declared elsewhere after adopting is planned as "
+                            f"{plan.get('exchange', {}).get('action')}: the copy would keep "
+                            "the old place")
+
+        # `exchange:` with nothing after it declares nothing; it is not the place "None".
+        repo.write(".framework/sessions.yaml", "exchange:\n")
+        plan = {e["id"]: e for e in migrate.section_plan(root, ROOT, None)["sections"]}
+        if plan.get("exchange", {}).get("action") != "skipped":
+            problems.append(f"an empty exchange is planned as "
+                            f"{plan.get('exchange', {}).get('action')}: expected skipped")
+        repo.write(".framework/sessions.yaml", "exchange: ../moved\n")
+
+        # The marker above two sections: which one is the framework's is not guessed.
+        text = (root / "AGENTS.md").read_text(encoding="utf-8")
+        repo.write("AGENTS.md", text.replace("## Mandatory updates",
+                                             "<!-- framework-section: review -->\n"
+                                             "## Mandatory updates"))
+        plan = {e["id"]: e for e in migrate.section_plan(root, ROOT, None)["sections"]}
+        if plan.get("review", {}).get("action") != "left":
+            problems.append(f"a marker above two sections is planned as "
+                            f"{plan.get('review', {}).get('action')}, expected left")
+        # A heading inside a `~~~` fence is code, not a section.
+        repo.write("AGENTS.md", _AGENTS_BODY.replace("```bash", "~~~bash").replace("```\n", "~~~\n"))
+        if [x["heading"] for x in migrate.sections((root / "AGENTS.md").read_text())][-1] \
+                != "Commands":
+            problems.append("a `## ` line inside a ~~~ fence was read as a heading")
+        repo.write(".framework/sessions.yaml", "exchange: ../_ours\n")
+
+        # A value the validator refuses is not a place, and is not written as one.
+        repo.write(".framework/sessions.yaml", "exchange: /srv/somewhere\n")
+        repo.write("AGENTS.md", _AGENTS_BODY)
+        plan = {e["id"]: e for e in migrate.section_plan(root, ROOT, None)["sections"]}
+        if plan.get("exchange", {}).get("action") != "skipped":
+            problems.append(f"an absolute exchange is planned as {plan.get('exchange')}: "
+                            "expected skipped, with the validator's reason")
+
+        bad = subprocess.run([sys.executable, str(ROOT / "skills/audit/scripts/migrate.py"),
+                              "--root", str(root), "--replace-section", "nonsense"],
+                             capture_output=True, text=True)
+        if "nonsense" not in bad.stdout or bad.returncode != 1:
+            problems.append("--replace-section with an id the template does not mark was "
+                            "ignored in silence")
+
+        # End to end: `--adopt` against a clean committed framework writes the number and the
+        # section together, which is what a project runs. The file's line endings stay CRLF.
+        if subprocess.run(["git", "-C", str(ROOT), "status", "--porcelain"],
+                          capture_output=True, text=True).stdout.strip():
+            return problems + ["NOT RUN, the end to end half: the working tree is dirty, and "
+                               "`--adopt` binds committed bytes. Commit and run again"]
+        clone = Path(tmp) / "trusted"
+        c = subprocess.run(["git", "clone", "-q", "--local", "--no-hardlinks", str(ROOT),
+                            str(clone)], capture_output=True, text=True)
+        if c.returncode:
+            return problems + ["could not clone the framework for the adoption: " + c.stderr]
+        repo.write(".framework/sessions.yaml", "exchange: ../_ours\n")
+        (root / "AGENTS.md").write_bytes(_AGENTS_BODY.replace("\n", "\r\n").encode())
+        repo.commit("an exchange", "2026-01-02T10:00:00+00:00")
+        r = subprocess.run([sys.executable, str(ROOT / "skills/audit/scripts/migrate.py"),
+                            "--root", str(root), "--framework", str(clone), "--adopt"],
+                           capture_output=True, text=True)
+        text = (root / "AGENTS.md").read_bytes().decode("utf-8")
+        if text.replace("\r\n", "").count("\n"):
+            problems.append("--adopt rewrote the line endings of an AGENTS.md written with CRLF")
+        if r.returncode or "<!-- framework-section: review -->" not in text or \
+                "<!-- framework-section: exchange" not in text:
+            problems.append(f"--adopt on a clean framework did not write both sections "
+                            f"(exit {r.returncode}): {r.stdout[-400:]}")
+        elif "attest.py" not in r.stdout:
+            problems.append("--adopt wrote AGENTS.md and did not say that a person rereads "
+                            "and attests it")
+    return problems
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 @check("contribution authority, artifact resolution and code-observation contracts")

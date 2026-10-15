@@ -46,7 +46,16 @@ a same-version no-op establishes independent contribution authority.
 
 Review new findings and historical repairs separately; preserve annotations only while
 their findings still exist (`AN001`). `FW001`, `FW002` and `FW003` identify version and pin
-work. With explicit approval, add `--adopt`: it changes `framework.yaml` and nothing else.
+work. With explicit approval, add `--adopt`: it changes `framework.yaml` and the framework's
+sections of `AGENTS.md`, the ones marked `<!-- framework-section: ... -->` in the template,
+and nothing else. The report lists those sections with the text to be written: a missing
+one is added; one nobody edited is brought to the new text, keeping the framework's path
+written in it (noted when it leads to no framework on this machine) and taking the exchange
+from `.framework/sessions.yaml`; an edited one is left and named (`--replace-section <id>`
+replaces it when asked). When there
+is a section to write, `--adopt` refuses while `AGENTS.md` has uncommitted changes, and puts
+`framework.yaml` back if `AGENTS.md` cannot be written. Afterwards commit both, and a person
+rereads and attests `AGENTS.md` like any living document.
 A pinned project needs a clean committed target Git checkout; a Gitless export cannot move
 its pin. The strict profiles also require the actual approved Git objects; a package alone
 cannot authenticate them.

@@ -30,6 +30,7 @@ whoever bumps the version has to write.
 import argparse
 from contextlib import contextmanager
 import json
+import os
 import re
 import subprocess
 import sys
@@ -332,6 +333,431 @@ def new_checks(old_catalog: dict, new_catalog: dict) -> list[dict]:
             if code not in old and (spec or {}).get("level") != "retired"]
 
 
+AGENTS_REL = "AGENTS.md"
+TEMPLATE_REL = "templates/AGENTS.md"
+SESSIONS_REL = ".framework/sessions.yaml"
+SESSIONS_KEYS = {"exchange"}
+# The line directly above a heading of `templates/AGENTS.md` that makes the section the
+# framework's: above, as `<!-- section: ... -->` marks a mandatory section of a document, and
+# a different word, because it means something else. It travels into the project with the
+# section, so that the next migration finds the section under a heading somebody renamed.
+SECTION_MARK = re.compile(r"^<!--\s*framework-section:\s*([a-z][a-z0-9-]*)"
+                          r"((?:\s+requires=[a-z-]+)*)\s*-->\s*$")
+FENCE = re.compile(r"^\s*(```|~~~)")
+# What the template leaves to whoever fills it, and what this tool writes in. The exchange is
+# declared in `.framework/sessions.yaml`, so that is where its value always comes from: a
+# copy that says another place is out of date, not the project's choice. The framework's
+# path is the project's to write, and a value it wrote is kept.
+PLACEHOLDERS = ("FRAMEWORK_PATH", "EXCHANGE_PATH")
+DECLARED = {"EXCHANGE_PATH"}
+
+
+def sections(text: str) -> list[dict]:
+    """The `## ` sections of a Markdown file: heading, marker, and the lines they span.
+
+    A section starts at its marker when the line above its heading is one. The front matter
+    and fenced code are not read for headings: `## ` is a YAML comment in the first, and
+    anything at all in the second.
+    """
+    lines = text.split("\n")
+    i = 0
+    if lines and lines[0].strip() == "---":
+        for j in range(1, len(lines)):
+            if lines[j].strip() == "---":
+                i = j + 1
+                break
+    out, fence = [], None
+    for n in range(i, len(lines)):
+        line = lines[n]
+        f = FENCE.match(line)
+        if f and (fence is None or f.group(1) == fence):
+            fence = None if fence else f.group(1)
+            continue
+        if fence or not line.startswith("## "):
+            continue
+        mark = SECTION_MARK.match(lines[n - 1].strip()) if n > i else None
+        begin = n - 1 if mark else n
+        if out:
+            out[-1]["end"] = begin
+        out.append({"heading": line[3:].strip(), "start": begin, "end": len(lines),
+                    "id": mark.group(1) if mark else None,
+                    "requires": re.findall(r"requires=([a-z-]+)", mark.group(2)) if mark else []})
+    for s in out:
+        body = lines[s["start"]:s["end"]]
+        while body and not body[-1].strip():
+            body.pop()
+        s["text"] = "\n".join(body)
+    return out
+
+
+def _normal(text: str) -> str:
+    """Trailing spaces and runs of blank lines do not make two copies of a section differ."""
+    return re.sub(r"\n{3,}", "\n\n",
+                  "\n".join(line.rstrip() for line in text.strip().split("\n")))
+
+
+def _flat(text: str) -> str:
+    """The words of a section, for comparing two copies: the marker line, which a copy made by
+    hand does not have, and where the lines break, which an editor changes, do not count."""
+    kept = [line for line in text.split("\n") if not SECTION_MARK.match(line.strip())]
+    return " ".join(" ".join(kept).split())
+
+
+def render(text: str, fill: dict | None, quotes: bool = False) -> str:
+    """A template section as it goes into a project: what the template says to whoever fills
+    it -- its blockquotes, the only thing a marked section may put in one -- dropped, and the
+    placeholders written in. `fill=None` leaves them; `quotes=True` keeps the blockquotes, for
+    recognising a copy that `start` made by copying the body as it was."""
+    kept = [line for line in text.split("\n") if quotes or not line.lstrip().startswith(">")]
+    out = _normal("\n".join(kept))
+    for name, value in (fill or {}).items():
+        out = out.replace(name, value)
+    return out
+
+
+def written_values(template_section: str, project_section: str,
+                   quotes_too: bool = True) -> dict | None:
+    """What the project wrote for each placeholder, when its copy is this template's section
+    and nothing else, however its lines break; None when somebody changed a word. A
+    placeholder still written as itself comes back as itself: the copy was never filled.
+    `quotes_too` also recognises a copy that kept the template's blockquotes, which is a copy
+    still to clean, never one already in its final form."""
+    flat = _flat(project_section)
+    for quotes in ((False, True) if quotes_too else (False,)):
+        pattern, seen = [], set()
+        for piece in re.split(f"({'|'.join(PLACEHOLDERS)})",
+                              _flat(render(template_section, None, quotes))):
+            if piece in PLACEHOLDERS:
+                pattern.append(f"(?P={piece})" if piece in seen else f"(?P<{piece}>[^`]+?)")
+                seen.add(piece)
+            else:
+                pattern.append(re.escape(piece))
+        m = re.fullmatch("".join(pattern), flat)
+        if m:
+            return m.groupdict()
+    return None
+
+
+def loose_values(template_section: str, project_section: str) -> dict:
+    """The placeholders a copy somebody edited still lets be read, by the code span around
+    each: `FRAMEWORK_PATH/agents/critic.md` finds the path in any wording. A span that is the
+    placeholder alone would match any code span, so it is not read."""
+    flat, found = _flat(project_section), {}
+    for span in re.findall(r"`[^`]*`", _flat(render(template_section, None))):
+        for name in PLACEHOLDERS:
+            if name in span and span != f"`{name}`" and name not in found:
+                rx = re.escape(span).replace(re.escape(name), "([^`]+?)", 1)
+                m = re.search(rx, flat)
+                if m:
+                    found[name] = m.group(1)
+    return found
+
+
+def template_history(framework: Path, limit: int = 80) -> list[str]:
+    """Every text `templates/AGENTS.md` has had, newest first, out of the framework's history.
+
+    A copy is unedited when it is the template's text of some version, not only of the one the
+    project declares: the same number has shipped two templates, a run that repeats on the
+    same version has no previous tree, and a project may have copied an older one. An export
+    with no history gives nothing, and only the previous tree, when there is one, is known.
+    """
+    key = str(framework)
+    if key in _HISTORY:
+        return _HISTORY[key]
+    shas = git(["log", "--format=%H", f"-n{limit}", "--", TEMPLATE_REL], framework)
+    out = []
+    if shas.returncode == 0 and shas.stdout.split():
+        batch = subprocess.run(
+            ["git", "cat-file", "--batch"], cwd=framework, capture_output=True,
+            input="".join(f"{sha}:{TEMPLATE_REL}\n" for sha in shas.stdout.split()).encode())
+        data, at = batch.stdout, 0
+        while batch.returncode == 0 and at < len(data):
+            eol = data.index(b"\n", at)
+            head = data[at:eol].split()
+            at = eol + 1
+            if len(head) == 3 and head[1] == b"blob":
+                size = int(head[2])
+                out.append(data[at:at + size].decode("utf-8", "replace"))
+                at += size + 1
+    _HISTORY[key] = list(dict.fromkeys(out))
+    return _HISTORY[key]
+
+
+_HISTORY: dict[str, list[str]] = {}
+
+
+def framework_path(root: Path, framework: Path) -> tuple[str, bool]:
+    """The framework's path as `AGENTS.md` will say it, and whether it holds on this machine
+    only. Relative when the two checkouts sit side by side, so that the line holds on every
+    machine that keeps them that way; absolute otherwise, because `../../..` towards a plugin
+    cache is a path nobody can read or check. Written where the project has none: a value it
+    wrote is kept, and the report says when it leads to no framework on this machine."""
+    try:
+        rel = Path(os.path.relpath(framework, root)).as_posix()
+    except ValueError:                  # two drives on Windows: there is no relative path
+        return framework.as_posix(), True
+    if rel.startswith("../") and ".." not in rel[3:]:
+        return rel, False
+    return framework.as_posix(), True
+
+
+def exchange_declared(root: Path, framework: Path) -> tuple[str | None, str | None]:
+    """The `exchange:` value, or why there is none that can be written into `AGENTS.md`.
+
+    The validator's reading, with its words: it stops on a file that is not a mapping or
+    carries a key it does not know, and refuses a value that is a place on one machine or
+    inside the documentation (`exchange.declared`, read from the framework's package rather
+    than restated). What the validator stops on is not a place to write down.
+    """
+    path = root / SESSIONS_REL
+    if not path.exists():
+        return None, None
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except (OSError, UnicodeError, yaml.YAMLError) as e:
+        return None, f"{SESSIONS_REL} does not parse: {str(e).strip().splitlines()[0]}"
+    if not isinstance(data, dict):
+        return None, f"{SESSIONS_REL}: the top level has to be a mapping"
+    unknown = sorted(set(data) - SESSIONS_KEYS)
+    if unknown:
+        return None, f"{SESSIONS_REL}: unknown key(s) {', '.join(map(repr, unknown))}"
+    if data.get("exchange") is None:      # absent, or `exchange:` with nothing after it
+        return None, None
+    _, problem = _exchange_rule(framework).declared(data["exchange"], root)
+    return (None, f"{SESSIONS_REL}: {problem}") if problem else (str(data["exchange"]).strip(), None)
+
+
+def _exchange_rule(framework: Path):
+    """`exchange.py` of the framework being adopted, in a namespace of its own, the way
+    `validate.py` loads its package: two checkouts in one process never share modules."""
+    import hashlib
+    import importlib
+    import importlib.util
+    name = "_framework_data_ai_" + hashlib.sha256(str(framework).encode()).hexdigest()[:16]
+    if name not in sys.modules:
+        spec = importlib.util.spec_from_file_location(
+            name, framework / "src/framework_data_ai/__init__.py",
+            submodule_search_locations=[str(framework / "src/framework_data_ai")])
+        core = importlib.util.module_from_spec(spec)
+        sys.modules[name] = core
+        spec.loader.exec_module(core)
+    return importlib.import_module(f"{name}.exchange")
+
+
+def _find(have: list[dict], sid: str | None, heading: str) -> dict | None:
+    """By the marker, else by the heading: a copy made by hand has no marker."""
+    return (next((p for p in have if sid and p["id"] == sid), None)
+            or next((p for p in have if p["heading"].lower() == heading.lower()), None))
+
+
+def _words(text: str) -> set[str]:
+    return set(re.findall(r"[a-z]{4,}", _flat(text).lower()))
+
+
+def _resembles(template_section: str, have: list[dict]) -> dict | None:
+    """An unmarked section of the project that reads like a copy of this one under another
+    heading: most of the template's words are in it. Adding beside it would put the rule in
+    the file twice. A rule elsewhere that only names the critic shares a handful of words,
+    and is not mistaken for it; a copy translated whole shares almost none, and is not found.
+    """
+    words = _words(render(template_section, None)) - set(map(str.lower, PLACEHOLDERS))
+    if not words:
+        return None
+    return next((p for p in have if not p["id"]
+                 and len(words & _words(p["text"])) >= 0.6 * len(words)), None)
+
+
+def _leads_to_framework(root: Path, value: str) -> bool:
+    """Whether a path written in `AGENTS.md` reaches a framework on this machine: the one
+    thing about it anything can check. Said in the report, never acted on: the value is
+    committed for every machine, and one where it does not hold -- a CI runner, a colleague
+    with the plugin elsewhere -- is not the one to rewrite it for the others."""
+    where = Path(value).expanduser()
+    where = where if where.is_absolute() else root / where
+    return (where / "agents" / "critic.md").is_file()
+
+
+def marked_ids(framework: Path) -> set[str]:
+    return {s["id"] for s in sections((framework / TEMPLATE_REL).read_text(encoding="utf-8"))
+            if s["id"]}
+
+
+def section_plan(root: Path, framework: Path, old_template: str | None,
+                 replace=()) -> dict:
+    """What `--adopt` will do to the framework's sections of the project's `AGENTS.md`.
+
+    THE FRAMEWORK'S SECTIONS ARRIVE WITH THE VERSION, NOT BY HAND. A rule the framework
+    added to `templates/AGENTS.md` reached a project only if somebody copied it, with its
+    path filled in, into the one file a session without a skill reads -- so it reached the
+    projects whose people read the release notes. The sections marked in the template are the
+    framework's: one missing from the project is added; one that is the template's text, of
+    this version or any earlier one, with only the placeholders filled, is brought to the new
+    text keeping the path the project wrote and taking the exchange from where it is declared;
+    one somebody edited is left and named, because the edit is the project's -- which is also
+    how a project declines one: keep the marker and the heading, and write why -- unless
+    `replace` names it. Unmarked sections -- the commands, the table of sources -- are the
+    project's, and are read only to place a section.
+    """
+    plan = {"path": AGENTS_REL, "exists": (root / AGENTS_REL).is_file(), "sections": []}
+    if not plan["exists"]:
+        return plan
+    template = (framework / TEMPLATE_REL).read_text(encoding="utf-8")
+    have = sections((root / AGENTS_REL).read_text(encoding="utf-8"))
+    known = [sections(t) for t in dict.fromkeys(
+        [*([old_template] if old_template else []), *template_history(framework)])]
+    exchange, unusable = exchange_declared(root, framework)
+    path, local = framework_path(root, framework)
+    fill = {"FRAMEWORK_PATH": path}
+    if exchange:
+        fill["EXCHANGE_PATH"] = exchange
+    tpl = sections(template)
+    for n, s in enumerate(tpl):
+        if not s["id"]:
+            continue
+        entry = {"id": s["id"], "heading": s["heading"]}
+        unmet = [r for r in s["requires"] if r != "exchange" or not exchange]
+        doubled = [p for p in have if p["id"] == s["id"]]
+        mine = _find(have, s["id"], s["heading"])
+        if unmet:
+            entry.update(action="skipped", at=(
+                (unusable or "no exchange declared in " + SESSIONS_REL)
+                if unmet == ["exchange"] else f"needs {', '.join(unmet)}, which this tool does "
+                                              "not know"))
+            if mine:
+                entry["at"] += ("; the copy in AGENTS.md is left as it is" + (
+                    ", and the template says to delete it where no exchange is declared"
+                    if unmet == ["exchange"] and not unusable else ""))
+            plan["sections"].append(entry)
+            continue
+        if len(doubled) > 1:
+            entry.update(action="left", at=(
+                f"the marker is above {len(doubled)} sections: "
+                f"{', '.join(repr(p['heading']) for p in doubled)}. Keep it above one"))
+            plan["sections"].append(entry)
+            continue
+        if mine is None:
+            alike = _resembles(s["text"], have)
+            if alike and s["id"] in replace:
+                kept = {k: v for k, v in loose_values(s["text"], alike["text"]).items()
+                        if k not in DECLARED}
+                entry.update(action="update", text=render(s["text"], {**fill, **kept}),
+                             at=(f"replaces \"{alike['heading']}\", which read like a copy "
+                                 "of it, as --replace-section asks: its own words are lost"),
+                             anchor=alike["heading"], marker=None, where="replace",
+                             forced=True)
+                plan["sections"].append(entry)
+                continue
+            if alike:
+                entry.update(action="left", at=(
+                    f"\"{alike['heading']}\" reads like a copy of it under another heading, "
+                    "so it is not added beside it. If it is this rule: `--adopt "
+                    f"--replace-section {s['id']}` puts the template's text in its place, or "
+                    f"`<!-- framework-section: {s['id']} -->` on the line above that heading "
+                    "keeps its words as the project's edit"))
+                plan["sections"].append(entry)
+                continue
+            after = next((p for t in tpl[n + 1:] if (p := _find(have, t["id"], t["heading"]))),
+                         None)
+            before = next((p for t in reversed(tpl[:n])
+                           if (p := _find(have, t["id"], t["heading"]))), None)
+            entry.update(action="add", text=render(s["text"], fill),
+                         at=(f"before \"{after['heading']}\"" if after
+                             else f"after \"{before['heading']}\"" if before else "at the end"),
+                         anchor=(after or before or {}).get("heading"),
+                         where="before" if after else "after" if before else "end")
+            if local and "FRAMEWORK_PATH" in s["text"]:
+                entry["at"] += f"; the framework's path is {path}, true on this machine only"
+            plan["sections"].append(entry)
+            continue
+
+        def holds(values: dict) -> dict:
+            """The values a new text keeps: what the project wrote in them."""
+            return {k: v for k, v in values.items() if v != k and k not in DECLARED}
+
+        def say_where(values: dict) -> None:
+            given = values.get("FRAMEWORK_PATH")
+            if given and given != "FRAMEWORK_PATH" and not _leads_to_framework(root, given):
+                plan.setdefault("notes", []).append(
+                    f"the framework's path in the section {s['heading']!r}, {given}, leads to "
+                    "no framework on this machine. It is kept: it may hold where it was "
+                    "written. If it holds nowhere, correct it by hand.")
+
+        values = written_values(s["text"], mine["text"], quotes_too=False)
+        if values is not None and mine["id"] and all(v != k for k, v in values.items()) and all(
+                values[k] == fill.get(k) for k in values if k in DECLARED):
+            say_where(values)
+            continue                    # this version's text, with the project's values
+        if values is None:
+            for candidate in [s, *(_find(old, s["id"], s["heading"]) for old in known)]:
+                values = (written_values(candidate["text"], mine["text"])
+                          if candidate else None)
+                if values is not None:
+                    break
+        forced = values is None and s["id"] in replace
+        if forced:
+            values = loose_values(s["text"], mine["text"])
+        if values is None:
+            entry.update(action="left", at=(
+                f"\"{mine['heading']}\" is edited in the project: left as it is. "
+                f"`--adopt --replace-section {s['id']}` puts the template's text in its place"))
+            plan["sections"].append(entry)
+            continue
+        kept = holds(values)
+        entry.update(action="update", text=render(s["text"], {**fill, **kept}),
+                     at=(f"replaces \"{mine['heading']}\""
+                         + (", an edited copy, as --replace-section asks: its own words are "
+                            "lost" if forced else "")),
+                     anchor=mine["heading"], marker=mine["id"], where="replace", forced=forced)
+        say_where(values)
+        if local and "FRAMEWORK_PATH" in s["text"] and "FRAMEWORK_PATH" not in kept:
+            entry["at"] += f"; {path} holds on this machine only"
+        plan["sections"].append(entry)
+    return plan
+
+
+def agents_dirty(root: Path) -> str | None:
+    """Why `AGENTS.md` cannot be written now, or None. Several sessions share one working
+    tree: a line this tool writes beside one somebody has not committed is a line nobody can
+    tell apart from theirs. Staged and untracked count; a project outside git has no commit
+    to protect, and is written."""
+    r = git(["status", "--porcelain", "--", AGENTS_REL], root)
+    if r.returncode == 0 and r.stdout.strip():
+        return (f"not adopted, and nothing written: {AGENTS_REL} has changes that are not "
+                "committed. Commit them, or set them aside, and adopt again: what `--adopt` "
+                "writes there has to be a change of its own, for a person to reread and attest.")
+    return None
+
+
+def apply_sections(text: str, plan: dict) -> tuple[str, list[str]]:
+    """The plan applied to the text of `AGENTS.md`, one section at a time, rereading between
+    them; and the headings written. Nothing is written to disk here, so that the number and
+    the sections go in together or not at all. The front matter is not touched: `last_review`
+    is a person's."""
+    done = []
+    for entry in plan["sections"]:
+        if entry["action"] not in ("add", "update"):
+            continue
+        lines = text.split("\n")
+        have = sections(text)
+        block = entry["text"].split("\n")
+        at = _find(have, entry.get("marker") or (entry["id"] if entry["where"] == "replace"
+                                                 else None), entry.get("anchor") or "")
+        if entry["where"] == "replace":
+            lines[at["start"]:at["start"] + at["text"].count("\n") + 1] = block
+        elif entry["where"] == "before":
+            lines[at["start"]:at["start"]] = block + [""]
+        elif entry["where"] == "after":
+            stop = at["start"] + at["text"].count("\n") + 1
+            lines[stop:stop] = ["", *block]
+        else:
+            while lines and not lines[-1].strip():
+                lines.pop()
+            lines += ["", *block, ""]
+        text = "\n".join(lines)
+        done.append(entry["heading"])
+    return text, done
+
+
 def retired_pins(root: Path, framework: Path) -> list[dict]:
     """The `checks:` lines of the project that pin a code the new catalog has retired.
 
@@ -481,7 +907,12 @@ def verdict(report: dict) -> int:
     """
     if report["problems"]:
         return 1
-    if report.get("adopted") or report["up_to_date"]:
+    if report.get("adopted"):
+        return 0
+    if any(e["action"] in ("add", "update")
+           for e in (report.get("agents") or {}).get("sections", [])):
+        return 1
+    if report["up_to_date"]:
         return 0
     return 1 if report["new"] or report["version_line"] or report["problems"] else 0
 
@@ -499,7 +930,11 @@ def main() -> int:
                           help="trusted complete previous export/checkout; version checked, commit provenance not authenticated")
     previous.add_argument("--from-commit", help="exact previous framework Git commit; overrides the project pin")
     ap.add_argument("--adopt", action="store_true",
-                    help="write the new framework_version into the project")
+                    help="write the new framework_version into the project, and the "
+                         "framework's sections of its AGENTS.md")
+    ap.add_argument("--replace-section", action="append", default=[], metavar="ID",
+                    help="with --adopt: put the template's text in place of a section of "
+                         "AGENTS.md the report lists as left (edited, or copied by hand)")
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args()
 
@@ -531,6 +966,7 @@ def main() -> int:
     report = {"project": str(root), "declared": declared, "current": current,
               "up_to_date": False, "notes": [], "already_there": [], "new": [], "gone": [],
               "version_line": [], "accepted": [], "problems": [], "new_checks": []}
+    old_template = None
 
     if unreadable and not args.from_version:
         report["problems"].append(unreadable)
@@ -549,7 +985,8 @@ def main() -> int:
         # current version is the state every repository is supposed to end up in, and a tool
         # that returns 1 for it cannot be put in a pipeline: the run that says "nothing to
         # do" and the run that says "the history is shallow and I could not compare" would
-        # be indistinguishable to whoever wired it up.
+        # be indistinguishable to whoever wired it up. A section of `AGENTS.md` still to
+        # write is something to do, and `verdict` says so: still not a failure to compare.
         report["up_to_date"] = True
     elif semver(declared) > semver(current):
         report["problems"].append(
@@ -570,6 +1007,8 @@ def main() -> int:
                 before, now = (catalog(t) for t in (old_tree, framework))
                 if before is not None and now is not None:
                     report["new_checks"] = new_checks(before, now)
+                if (old_tree / TEMPLATE_REL).is_file():
+                    old_template = (old_tree / TEMPLATE_REL).read_text(encoding="utf-8")
                 old = findings(old_tree / VALIDATE_REL, root)
                 new = findings(framework / VALIDATE_REL, root)
                 if origin.get("commit"):
@@ -622,12 +1061,33 @@ def main() -> int:
         except (RuntimeError, OSError, ValueError, KeyError, yaml.YAMLError) as e:
             report["problems"].append(f"could not compare the {declared} and {current} validators: {e}")
 
+    # Read whether or not the version moved: a project that declares an exchange after
+    # adopting is owed the section as much as one that crosses the version adding it.
+    if not report["problems"]:
+        try:
+            unknown = sorted(set(args.replace_section) - marked_ids(framework))
+            if unknown:
+                report["problems"].append(
+                    f"--replace-section {', '.join(unknown)}: not a section the template "
+                    f"marks as the framework's ({', '.join(sorted(marked_ids(framework)))})")
+            report["agents"] = section_plan(root, framework, old_template,
+                                            replace=set(args.replace_section))
+        except (OSError, UnicodeError, ImportError, AttributeError) as e:
+            report["problems"].append(f"could not read {AGENTS_REL}, its template or the "
+                                      f"framework's reading of the exchange: {e}")
+    pending = [e for e in (report.get("agents") or {}).get("sections", [])
+               if e["action"] in ("add", "update")]
+
     if args.adopt:
+        if not report["problems"] and pending:
+            problem = agents_dirty(root)
+            if problem:
+                report["problems"].append(problem)
         if not report["problems"]:
             problem = adoption_problem(root, framework, current)
             if problem:
                 report["problems"].append(problem)
-        if report["new"] or report["problems"]:
+        if report["new"]:
             report["problems"].append(
                 "not adopted. `--adopt` writes the new number, which is the claim that the "
                 "migration is done; do it after the findings under NEW are gone. A finding "
@@ -637,15 +1097,45 @@ def main() -> int:
                 "clears it, and it stops counting as outstanding. That file is the honest "
                 "path through this guard, and it exists so that writing the number by hand "
                 "is not.")
+        elif report["problems"]:
+            if not any(p.startswith("not adopted") for p in report["problems"]):
+                report["problems"].append("not adopted, and nothing written, for the reason "
+                                          "above.")
         else:
             head = git(["rev-parse", "HEAD"], framework)
             top = git(["rev-parse", "--show-toplevel"], framework)
             commit = (head.stdout.strip() if head.returncode == 0 and top.returncode == 0
                       and Path(top.stdout.strip()).resolve() == framework else None)
+            # Both or neither. The sections are prepared before the number is written and
+            # written only once it is; if they cannot be, the number goes back to what it was.
+            original = (root / AGENTS_REL).read_bytes().decode("utf-8") if pending else ""
+            agents_text, written = (apply_sections(original.replace("\r\n", "\n"),
+                                                   report["agents"])
+                                    if pending else (None, []))
+            if written and "\r\n" in original:   # the file's line endings stay the file's
+                agents_text = agents_text.replace("\n", "\r\n")
+            before = cfg.read_bytes() if cfg.exists() else None
             problem = adopt(cfg, current, commit,
                             drop=[p["code"] for p in retired_pins(root, framework)])
             if problem:
                 report["problems"].append(problem)
+            elif written:
+                staged = root / (AGENTS_REL + ".migrate")
+                try:
+                    # Written beside and moved over: an interruption leaves the old file.
+                    staged.write_bytes(agents_text.encode("utf-8"))
+                    os.replace(staged, root / AGENTS_REL)
+                    report["adopted"] = current
+                    report["agents_written"] = written
+                except OSError as e:
+                    staged.unlink(missing_ok=True)
+                    if before is None:
+                        cfg.unlink(missing_ok=True)
+                    else:
+                        cfg.write_bytes(before)
+                    report["problems"].append(
+                        f"not adopted, and nothing written: {AGENTS_REL} could not be written "
+                        f"({e}), so {cfg.name} was put back as it was.")
             else:
                 report["adopted"] = current
 
@@ -658,7 +1148,9 @@ def main() -> int:
     print(f"Framework: {current}" + (f"  (old validator from {report['commit']})"
                                      if report.get("commit") else ""))
     if report["up_to_date"]:
-        print(f"\nAlready on {current}: nothing to migrate.")
+        print(f"\nAlready on {current}: nothing to migrate"
+              + (f", and {len(pending)} of the framework's sections of {AGENTS_REL} to write, "
+                 "below: `--adopt`." if pending and not report.get("adopted") else "."))
     for p in report["problems"]:
         print(f"\n! {p}")
     if report["notes"]:
@@ -693,8 +1185,31 @@ def main() -> int:
             if f.get("accepted"):
                 print(f"       why it stays: {f['accepted']['reason']}")
                 print(f"       cleared by:   {f['accepted']['clears_when']}")
+    agents = report.get("agents")
+    if agents and agents["sections"]:
+        print(f"\n-- THE FRAMEWORK'S SECTIONS OF {AGENTS_REL} ({len(agents['sections'])}) "
+              + "-" * 20)
+        print("   `--adopt` writes ADD and UPDATE with the number; LEFT and SKIPPED are not "
+              "written")
+        for e in agents["sections"]:
+            print(f"   {e['action'].upper():<8}{e['heading']}\n       {e.get('at') or e.get('why')}")
+            if e.get("text") and not report.get("agents_written"):
+                for line in e["text"].split("\n"):
+                    print(f"       | {line}".rstrip())
+    for note in (agents or {}).get("notes", []):
+        print(f"\n{AGENTS_REL}: {note}")
+    if agents and not agents["exists"]:
+        print(f"\n{AGENTS_REL}: not in the project, so no section of it is written. `start` "
+              "creates it from the template.")
     if report.get("adopted"):
         print(f"\nAdopted: {cfg} now declares {report['adopted']}")
+    if report.get("agents_written"):
+        print(f"\n{AGENTS_REL}: written {', '.join(repr(h) for h in report['agents_written'])}. "
+              "It is a living document. Commit it with framework.yaml, as the adoption; then a "
+              "person rereads it and attests with `skills/audit/scripts/attest.py --root "
+              f"<project> {AGENTS_REL} --scope \"...\"`, and the attestation is committed on "
+              "its own. Until then the validator reports the change: `LC006` once it is "
+              "committed, `PR005` on a pull request.")
     print()
     return verdict(report)
 

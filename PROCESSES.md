@@ -57,7 +57,7 @@ is being exercised.
 | P-09 | Incident and recovery | runnable, integration still to build | UF, DEV, ADMIN, UB where it matters commercially | `LOG`, `RB`, `RLM`, `RSK`, `DEC`, `CHG` | `requirement`, `cycle`, `release`, `audit` |
 | P-10 | Reconciling the architecture with the real system | manual | DEV, ADMIN | `ARC`, `RLM`, `DEC`, `OPEN` | `audit` (second pass) |
 | P-11 | Semantic audit | runnable | ADMIN, DEV, UB for the commercial parts | every authoritative pair | `audit` |
-| P-12 | Adopting a version of the framework | runnable | ADMIN | `framework.yaml`, the migrated artifacts, the indices | `audit`: `scripts/migrate.py`, `--emit-index` |
+| P-12 | Adopting a version of the framework | runnable | ADMIN | `framework.yaml`, the framework's sections of `AGENTS.md`, the migrated artifacts, the indices | `audit`: `scripts/migrate.py`, `--emit-index` |
 | P-13 | Superseding a decision | manual | whoever writes the new `DEC`, `ADMIN` where the cascade reaches the substrate | the new `DEC`, the superseded one's `status`, the entries that depended on it | `requirement` or `resolve` writes it, `audit` reports what stayed behind |
 | P-14 | Weekly business status | runnable | ADMIN assembles; business actors decide or act where requested | `_meta/business/SAL-NNN`, and nothing else: it writes no artifact | `business` |
 | P-15 | Presenting the product outside the project | runnable | ADMIN assembles; UB hands it over | `_meta/presentation/PRS-NNN/`, and nothing else: it writes no artifact | `presentation` |
@@ -780,7 +780,7 @@ flowchart TB
   art --> idx["--emit-index"]
   idx --> val["validator"]
   val --> approval["Explicit adoption approval"]
-  approval --> adopt["migrate.py --adopt<br/>version and existing pin only"]
+  approval --> adopt["migrate.py --adopt<br/>version, existing pin,<br/>framework's sections of AGENTS.md"]
   adopt -. "independent opt-in" .-> memory["Memory commands and gaps report"]
 ```
 
@@ -802,7 +802,10 @@ migration by construction, and `--adopt` is what clears them.
 It also prints the migration note for every version crossed, read out of
 `schemas/artifact-types.yaml` where each one is written beside the number it explains, and
 `--adopt` writes the new `framework_version` into the project — but refuses while anything
-is still under *new*, because that number is the claim that the migration is done.
+is still under *new*, because that number is the claim that the migration is done. With the
+number it writes the framework's sections of `AGENTS.md`, the ones the template marks, and
+nothing else of that file: added when missing, brought to the new text while nobody edited
+them.
 
 A finding that is never going to leave, because it is a defect of the validator or a state
 this project has examined and decided to keep, goes in `.framework/expected-findings.yaml`
@@ -813,6 +816,11 @@ annotation matching no finding is an error, so the file cannot quietly become a 
 exemptions.
 
 ### What stays by hand
+
+Rereading `AGENTS.md` after `--adopt` wrote the framework's sections in it, and attesting it
+with `attest.py`: the tool writes the rule, and only a person can say the file still reads
+true with it. And deciding about a section the report leaves, because the project edited it:
+keep the edit, or replace it with `--replace-section`, which is the person's call.
 
 `references/adoption.md` separates this upgrade from the choices that follow it. Strict CI
 trust inputs, the contribution policy a project writes for its own mandates and remote

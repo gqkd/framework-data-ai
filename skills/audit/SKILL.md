@@ -504,6 +504,34 @@ version by hand is not. The migration itself is not automated and should not be 
 definition, a document that used to validate and no longer does, and every rule on this page
 about what you may repair and what you must propose applies to each one of them.
 
+The one document `--adopt` writes besides `framework.yaml` is `AGENTS.md`, and only its
+**framework's sections**: those with `<!-- framework-section: <id> -->` on the line above
+their heading in `templates/AGENTS.md`. They carry rules a session running no skill has to
+see, and before they travelled with the version they reached a project only if somebody
+copied them by hand. The report lists them, with the text to be written, whether or not the
+version moves, and exits 1 while one is to write:
+
+- **add** — missing; written before the next section of the template the project has.
+- **update** — the words of the template of this version or of any earlier one in the
+  framework's git history, however the lines break, with only the placeholders filled:
+  nobody edited it. The framework's path written in it is kept, and noted when it leads to no
+  framework on this machine; the exchange is taken from `.framework/sessions.yaml`, so a copy
+  naming another place is an update too.
+- **left** — edited in the project, the marker above two sections, or an unmarked section
+  that reads like a copy under another heading. The edit is the project's, and editing is
+  also how a project declines a section: keep the marker and the heading, and write why.
+  `--replace-section <id>` with `--adopt` puts the template's text in its place, keeping the
+  framework's path it can still read. Show the person both texts and let them choose: a copy
+  made by hand under the 4.6.0 note is usually this case, and usually wants the replacement.
+- **skipped** — `requires=exchange` and no exchange the validator accepts.
+
+When there is a section to write, `--adopt` refuses while `AGENTS.md` has uncommitted changes,
+and writes `AGENTS.md` only once the number is written, putting the number back if it
+cannot. Show the list when you propose `--adopt`;
+afterwards propose the commit of `AGENTS.md` with `framework.yaml` and the `review_scope`
+sentence for the person who attests it. You do not run `attest.py`. No check of the validator
+reports a missing or edited section: the list is where it shows.
+
 If the tool reports that no commit ever declared the version the project pins, the checkout
 is shallow or the project pins a version that never shipped. Say which, do not guess a
 starting point: a comparison against the wrong baseline reports the whole repository as

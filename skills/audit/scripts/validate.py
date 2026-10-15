@@ -318,7 +318,7 @@ def load_exchange(root: Path) -> tuple[str | None, Path | None]:
     if unknown:
         sys.exit(f"{path}: unknown key(s) {', '.join(map(repr, unknown))}. This file holds: "
                  f"{', '.join(sorted(SESSIONS_KEYS))}.")
-    if "exchange" not in data:
+    if data.get("exchange") is None:     # absent, or `exchange:` with nothing after it
         return None, None
     place, problem = _exchange.declared(data["exchange"], root)
     if problem:

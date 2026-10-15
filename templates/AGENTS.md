@@ -9,6 +9,13 @@ last_review: YYYY-MM-DD HH:MM
 # review_scope: written beside `last_review` by `attest.py`, after a person rereads a
 # document that already exists: what the reading covered and what it did not. Not on
 # day one, because a creation is not a reading.
+# A section with `<!-- framework-section: ... -->` on the line above its heading is the
+# framework's: `migrate.py --adopt` adds it when it is missing and brings it to the new text
+# while its words are a template's, keeping the framework's path written in it. Edit it --
+# or, to decline it, keep the marker and the heading and write why -- and the next migration
+# leaves it and says so. Keep the marker line, above one section: `migrate.py` lists one
+# above two, no check of the validator sees any of this, and without the marker the section
+# is found only by its heading.
 classification: internal
 ---
 
@@ -98,12 +105,14 @@ from static observations and hypotheses. Deferred sources still require actual r
 their captured hashes. Partial graphs cannot exclude impact; reading reports do not attest
 comprehension, human review or production verification.
 
+<!-- framework-section: exchange requires=exchange -->
 ## Sessions and the exchange
 
-> Keep this section only if `.framework/sessions.yaml` declares `exchange:`; delete it
-> otherwise.
+> Keep this section only if `.framework/sessions.yaml` declares `exchange:`, and write its
+> value for `EXCHANGE_PATH`; delete the section otherwise. `migrate.py` lists a value that
+> differs from the declared one and `--adopt` corrects it; no check of the validator does.
 
-This project hands material between sessions through `../_scambio`, outside every
+This project hands material between sessions through `EXCHANGE_PATH`, outside every
 repository: one folder per element in `in-arrivo/`, named by its identifier, with the fixed
 names of the framework's `references/contributions.md`, *The exchange between sessions*. A
 brief is read from there and a delivery written there, never copied out of a scratchpad.
@@ -113,20 +122,24 @@ listed with the names of its keys and never their values. Every session closes w
 declaration in `sessioni/`: what it committed, what it leaves uncommitted, what it leaves
 outside the repositories.
 
+<!-- framework-section: review -->
 ## Review before presenting, and before committing
+
+> Write for `FRAMEWORK_PATH` where this project's framework checkout or plugin lives,
+> relative to this repository when the two sit side by side. No check reads it.
 
 Every plan is reviewed before it is presented, and every diff before it is committed or
 merged, by the framework plugin's `framework-data-ai:critic` subagent: read only, it returns
 for each point the unverified assumption, the hidden cost and what is missing, and for a
 diff that cites a `CHG` whether it stays inside what must not change. Give it the diff as a
 file and the absolute path of the `CHG`. Present the work with its objections, answered or
-left with why. Exempt: the parking-lot line of rule 4, the `SIG` appended to `LOG`, and the
-commit a script makes of its own output.
+left with why. Exempt: the parking-lot line, the `SIG` appended to `LOG`, and the commit a
+script makes of its own output.
 
 If the subagent is not available, run a general-purpose agent told to follow
-`FRAMEWORK_PATH/agents/critic.md` with read-only tools (write here where this project's
-framework checkout or plugin lives), and say so. If you cannot run a subagent at all, say
-that the review did not run. A review that did not run is said, never skipped in silence.
+`FRAMEWORK_PATH/agents/critic.md` with read-only tools, and say so. If you cannot run a
+subagent at all, say that the review did not run. A review that did not run is said, never
+skipped in silence.
 
 ## Mandatory updates
 

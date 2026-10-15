@@ -178,7 +178,9 @@ exchange: ../_scambio
 Not in `framework.yaml`, for the reason the annotations are not there either: a key that file
 does not know stops every validator released before it, the one `migrate.py` rebuilds and
 the one a CI job pins alike. A hidden path is invisible to all of them, so the file can be
-written the day the project adopts this version, or any day after.
+written the day the project adopts this version, or any day after. The day it is written,
+`migrate.py --root <documentation> --adopt` puts the section on the exchange into
+`AGENTS.md`: nothing runs it by itself, and until it runs the report lists the section.
 
 The value is committed and read on every machine with a clone, so an absolute path, one
 starting with `~`, or one that falls inside the documentation repository stops the validator
@@ -325,6 +327,6 @@ It is earlier than what the digest counts as closed, a change at `verified`, and
 what a mandate created outside the repositories serves the work up to the merge. A change
 that two documents declare is done only when both say so. All seven are warnings.
 
-The rule has to reach sessions that run no skill, which only the project's `AGENTS.md` does:
-say there that the project declares an exchange, that briefs and deliveries go through it,
-and that every session closes with its declaration.
+The rule has to reach sessions that run no skill, which only the project's `AGENTS.md` does.
+The template's section *Sessions and the exchange* says it, and `migrate.py --adopt` writes
+it there, with the declared place, once `.framework/sessions.yaml` declares one.

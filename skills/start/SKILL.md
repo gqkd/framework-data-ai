@@ -161,6 +161,15 @@ the name every later document copies, and a name inferred here propagates silent
 placeholder that survives into a real repository reads as a real value to anything that
 does not know the template.
 
+`AGENTS.md` is the exception to leaving the body: its sections marked
+`<!-- framework-section: ... -->` are the framework's. Keep them with their marker line, drop
+their blockquotes, and write for `FRAMEWORK_PATH` the framework's path, relative to the
+project when the two checkouts sit side by side and absolute otherwise. The exchange section
+goes only where `.framework/sessions.yaml` declares one, which on day one it does not: drop
+it, and `migrate.py --adopt` writes it on the day the file is written. No check sees a
+section filled wrong; `migrate.py` lists one that is not a template's text, and from then on
+maintains them.
+
 **Create `STACK.md` if the corpus named a single tool, and it almost certainly did.** Every
 tool on an architecture slide goes into **§unratified**, never into §chosen: it was chosen by
 whoever drew the slide, and a `DEC` for it does not exist. On the corpus this framework was

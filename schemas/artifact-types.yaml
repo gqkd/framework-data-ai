@@ -1629,7 +1629,68 @@
 # framework, and have a person reread and attest it, as for any living document. Then, when
 # wanted, write `.framework/sessions.yaml` and copy the section on the exchange too. A project
 # without that file sees nothing else move.
-version: "4.6.0"
+#
+# 4.6.0 -> 4.7.0. The framework's sections of `AGENTS.md` arrive with the version.
+#
+# THE CAUSE. 4.6.0 put the rule on the critic in `templates/AGENTS.md`, the one file a
+# session running no skill reads, and the way it reached a project was a person copying it in
+# by hand with the framework's path written over a placeholder. A rule that needs a hand to
+# travel reaches the projects whose people read the release notes, and this one existed
+# because a reviewer had stopped running unnoticed.
+#
+# THE SECTIONS. A section of the template with `<!-- framework-section: <id> -->` on the line
+# above its heading is the framework's -- above, like `<!-- section: -->`, and a different
+# word because it means something else. The line can add `requires=exchange`, met when
+# `.framework/sessions.yaml` declares an `exchange:` the validator accepts. Two are marked: the
+# review and the exchange, the two sections that carry a rule of the framework and nothing of
+# the project. Their placeholders are `FRAMEWORK_PATH` and `EXCHANGE_PATH`; what the template
+# says to whoever fills them is in blockquotes, and a marked section puts nothing else in one.
+# Every other section is the project's.
+#
+# `migrate.py` READS THEM AND `--adopt` WRITES THEM, with the number: the sections are
+# prepared before it, written once it is, and `framework.yaml` is put back if they cannot be.
+# A marked section missing from the project's `AGENTS.md` is added before the next section of
+# the template the project has. One it has, found by its marker or else by its heading, is
+# UPDATE when its words are those of the template of this version or of any earlier one --
+# however its lines break, with only the placeholders filled, as a copy `start` made or one
+# made by hand without changing a word -- and when it still carries the template's
+# blockquotes. The earlier templates are read from the framework's git history, and from the
+# previous tree when the version moves; a plugin copy with no history knows only that one.
+# The framework's path written in a copy is kept, and the report says when it leads to no
+# framework on the machine running it: the value is committed for every machine, and the one
+# where it does not hold is not the one to rewrite it for the others. The exchange is always
+# taken from `.framework/sessions.yaml`, so a copy naming another place is out of date.
+# Without a marker a copy gets one. One somebody edited is LEFT and named, and so is a marker
+# above two sections and an unmarked section that reads like a copy under another heading --
+# most of the template's words in it -- which would otherwise be added beside and doubled.
+# Editing is also how a project declines a section: keep the marker and the heading, and
+# write why. `--replace-section <id>` puts the template's text in place of a LEFT one,
+# keeping the framework's path it can still read. `FRAMEWORK_PATH`, where the project wrote
+# none, is relative when the two checkouts sit side by side and absolute otherwise, and the
+# report says when it holds on one machine only.
+# The report lists ADD, UPDATE, LEFT and SKIPPED with the text to be written, whether or not
+# the version moves. When there is a section to write, `--adopt` refuses while `AGENTS.md` has
+# uncommitted changes, staged and untracked included. No front matter is touched.
+#
+# MINOR, and one exit code moves: `migrate.py` on a project already on this version exits 1
+# while a section is to write, where it exited 0. It is something to do, and the run that
+# could not compare still says so apart, among the problems. A project that declares an
+# exchange after adopting runs `--adopt` again.
+#
+# NO CHECK OF THE VALIDATOR SEES A MISSING OR EDITED SECTION, a marker removed, or a path
+# that leads nowhere: `migrate.py`'s list sees the first two, and an empty one is the repair
+# done; it notes the third, on the machine it runs on, without counting it. The validator stays about whether the documents are true. It now reads
+# `exchange:` with nothing after it as no exchange, as `migrate.py` does: it read it as a
+# place called `None`.
+#
+# ADOPTION. This replaces the hand copy the 4.6.0 note asks for. `migrate.py --root
+# <project>`, read the sections it lists, `--adopt`. Commit `AGENTS.md` with `framework.yaml`,
+# have a person reread it and attest with `attest.py`, and commit the attestation on its own:
+# until then `LC006` reports it once committed, `PR005` on a pull request. A hand copy whose
+# words differ from every template's is LEFT: `--adopt --replace-section review`, once the
+# person has seen what it replaces. That is the likely case for a copy made under the 4.6.0
+# note, whose template asked, inside the text, to write the path there.
+version: "4.7.0"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of
