@@ -22,7 +22,8 @@
 # `framework-data-ai/`, as they sit on a person's machine. Inside the project the validator would
 # read the framework's own files as the project's -- its fixtures, its decisions, its numbers --
 # and inside `.framework/` the checkout would empty the project's folder of the same name. Pin
-# `ref:` to the version the project declares, as in `pull-request.yml`.
+# `ref:` to the version the project declares, as in `pull-request.yml` -- `v4.8.1` or later: the
+# install steps read `constraints.txt`, which no earlier tag holds.
 #
 # WHAT IT COSTS. On every push to the main line, two checkouts and two runs of the validator
 # per commit of the push -- the tree after it and the tree before it -- so that only what the
@@ -68,7 +69,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - run: python -m pip install -r framework-data-ai/requirements.txt
+      - run: python -m pip install -r framework-data-ai/requirements.txt -c framework-data-ai/constraints.txt
 
       - name: what this branch adds against the main line (BR001-BR003)
         env:
@@ -121,7 +122,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - run: python -m pip install -r framework-data-ai/requirements.txt
+      - run: python -m pip install -r framework-data-ai/requirements.txt -c framework-data-ai/constraints.txt
 
       - name: how each commit reached the main line
         env:

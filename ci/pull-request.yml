@@ -59,6 +59,11 @@ jobs:
           # afterwards is a release label on a commit that was never released. On one of
           # those, pin the commit; `FW003` reports a report produced by any other one, so
           # the commit form is the one that binds either way.
+          #
+          # AND NOTHING BEFORE `v4.8.1`. The install step below reads `constraints.txt`, which
+          # no earlier tag holds: pinned there, `pip` fails. A project declaring an older
+          # version pins `v4.8.1` or a later commit -- and `framework_commit` with it, or
+          # `FW003` reports the mismatch -- or drops `-c` from its copy of the step.
           ref: COMMIT_OR_TAG
           path: framework-data-ai
           # The framework's history as well: `FW003` tells a pin that never existed from a

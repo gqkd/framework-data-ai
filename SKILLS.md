@@ -295,8 +295,9 @@ filling a document: the skill elicits what you know instead of inventing what it
   `skills/audit/scripts/migrate.py` says which finding is which, by running both validators
   over the same repository. A repository that wants the declaration to **bind** writes
   `framework_commit` beside it, and `FW003` reports a report produced by any other commit;
-  historical versions have Git tags. Complete source exports and dependency constraints
-  are now tested distribution inputs; automatic installation/fleet pin updates are not.
+  historical versions have Git tags. Complete source exports, and the validator's dependencies
+  pinned in `constraints.txt` that the framework's own CI installs, are tested distribution
+  inputs; automatic installation/fleet pin updates are not.
   `references/adoption.md` separates upgrade, explicit memory use and forward-only
   enrichment. The audit skill owns this procedure, not a skill of its own.
 - **A baseline for the behaviour evals.** They show what a skill did; they do not show what

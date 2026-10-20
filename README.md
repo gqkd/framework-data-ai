@@ -395,8 +395,9 @@ without `status` and `owners` for as long as it did. The self check runs in CI h
 
 
 - **Automatic distribution and fleet adoption.** Complete checkouts/Git exports are now
-  tested packages, with generated dependency constraints and inventory. They do not install
-  themselves or update project pins; there is no new PyPI release or automatic deployment.
+  tested packages, with the validator's dependencies pinned in `constraints.txt`, kept by hand.
+  They do not install themselves or update project pins; there is no new PyPI release or
+  automatic deployment.
 
   Pinning is no longer part of that gap. A project can write `framework_commit` beside its
   `framework_version`, and `FW003` compares it with the commit doing the checking; versions

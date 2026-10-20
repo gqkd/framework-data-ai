@@ -1,5 +1,6 @@
 # Optional documentary-only example, not a required PR check or a code-test workflow.
-# Copy after reviewing references/contributions.md, replacing OWNER and FULL_FRAMEWORK_SHA,
+# Copy after reviewing references/contributions.md, replacing OWNER and FULL_FRAMEWORK_SHA --
+# the full sha of a commit at `v4.8.1` or later, the first to hold the constraints.txt it installs with --
 # adopting the policy and configuring protected default-branch / CODEOWNERS review.
 name: inspect documentary contribution
 on:

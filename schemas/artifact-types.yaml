@@ -1817,7 +1817,25 @@
 # `.github/workflows/` in place of `pull-request.yml`, with `vars.DOCS_REVIEWER` set; in the
 # repository's settings allow merge commits only, and turn on deleting the head branch after a
 # merge -- which releases nothing by itself: a claim goes with `work.py release`.
-version: "4.8.0"
+#
+# 4.8.0 -> 4.8.1. The file the CI assets install from is back.
+#
+# `ci/pull-request.yml` and `ci/contribution.yml` install with `-c constraints.txt`, and the file
+# had never been on this line of history: it was left behind with the script that generated it,
+# so `pip` failed in every project that copied either workflow -- the controller of the strict
+# profile among them. `constraints.txt` is restored at the root, kept by hand now, pinning what
+# the validator imports; `ci/branches.yml` and this framework's own workflow install with it too,
+# so the selfcheck runs on the versions projects install. A new check in the selfcheck says when
+# a workflow installs from a file the framework does not have, which is how this went unseen.
+#
+# PATCH: no document, check or skill moves. ADOPTION: no tag before `v4.8.1` holds the file, so a
+# project that copied `pull-request.yml` or `branches.yml` pins `ref:` to `v4.8.1` or a later
+# commit, and `framework_commit` with it, or `FW003` reports the mismatch; `contribution.yml` pins
+# the full sha of such a commit. A project that stays on an older version instead drops `-c` from
+# its copy of `pull-request.yml`, which is the legacy, low-permission asset; the strict
+# controller is the one that needs the pinned versions. The workflows' own comments say the same,
+# because they are what a project copying them reads.
+version: "4.8.1"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of

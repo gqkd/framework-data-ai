@@ -140,14 +140,16 @@ autonomous installer, binary bundling or background service, and no third-party 
 redistributed.
 
 ```bash
-python3 -m pip install -r /path/to/framework/requirements.txt
+python3 -m pip install -r /path/to/framework/requirements.txt -c /path/to/framework/constraints.txt
 python3 /path/to/framework/schemas/generate.py --check
 python3 /path/to/framework/schemas/generate_memory.py --check
 python3 /path/to/framework/tests/selfcheck.py
 ```
 
-Use an isolated environment. Rerun the full suite after any dependency update. Version
-ranges do not pin wheel hashes or OS packages and are not a vulnerability audit.
+Use an isolated environment. Rerun the full suite after any dependency update.
+`constraints.txt` pins the versions of what the validator imports, the ones the framework's own
+CI tests; it does not pin wheel hashes, OS packages or the rendering libraries, and it is not a
+vulnerability audit.
 
 Rollback the **tool** by selecting the preserved previous checkout and its environment; the
 migration command intentionally refuses to disguise a downgrade as a forward adoption. A

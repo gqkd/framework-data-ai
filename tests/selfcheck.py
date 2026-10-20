@@ -7457,6 +7457,32 @@ def _ci_assets_keep_the_framework_beside():
     return problems
 
 
+@check("every file a workflow installs from is in the framework")
+def _ci_install_files_exist():
+    # The CI assets asked for `constraints.txt` for weeks after it was left behind, and `pip`
+    # failed in every project that copied them; nothing here read the line.
+    problems = []
+    seen = [0]
+    flows = [*(ROOT / "ci").glob("*.yml"), *(ROOT / ".github" / "workflows").glob("*.yml")]
+    for wf in flows:
+        jobs = (yaml.safe_load(wf.read_text(encoding="utf-8")) or {}).get("jobs") or {}
+        for job, spec in jobs.items():
+            for step in spec.get("steps") or []:
+                installs = [l for l in str(step.get("run", "")).splitlines() if "pip install" in l]
+                seen[0] += len(installs)
+                for m in re.finditer(r"\s(?:-r|-c|--requirement|--constraint)[=\s]+(\S+)",
+                                     " ".join(installs)):
+                    path = m.group(1)
+                    for prefix in ("framework-data-ai/", ".framework/"):
+                        path = path.removeprefix(prefix)
+                    if not (ROOT / path).is_file():
+                        problems.append(f"{wf.relative_to(ROOT)}, job {job}: installs from "
+                                        f"{m.group(1)}, which the framework does not have")
+    if not flows or not seen[0]:
+        problems.append("no workflow, or no `pip install` in one: the check is not running")
+    return problems
+
+
 @check("every checkout in the CI assets a project copies fetches the full history")
 def _ci_assets_fetch_history():
     # `_ci_fetches_history` above asserts it for this framework's own suite. These are the
