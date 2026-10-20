@@ -42,6 +42,7 @@ import hashlib
 import importlib
 import importlib.util
 import json
+import os
 import re
 import subprocess
 import sys
@@ -82,6 +83,7 @@ if _CORE_NAME not in sys.modules:
 _artifacts = importlib.import_module(f"{_CORE_NAME}.artifacts")
 _references = importlib.import_module(f"{_CORE_NAME}.references")
 _exchange = importlib.import_module(f"{_CORE_NAME}.exchange")
+_branches = importlib.import_module(f"{_CORE_NAME}.branches")
 
 # Public compatibility aliases: old callers keep importing validate.py directly.
 Artifact = _artifacts.Artifact
@@ -324,6 +326,36 @@ def load_exchange(root: Path) -> tuple[str | None, Path | None]:
     if problem:
         sys.exit(f"{path}: {problem}")
     return str(data["exchange"]).strip(), place
+
+
+def load_work(root: Path, report: "Report") -> dict | None:
+    """`.framework/work.yaml`, the declaration that documentation is written on branches.
+
+    None where the file does not exist, which is every project that does not work that way.
+    A key this version does not read is `WK001` and not a stop: the file is new, read by
+    nothing older than 4.8.0, and the version that adds the next key must not stop this one.
+    What does not parse still stops, because a declaration that cannot be read is the one
+    that would leave `BR003` silent and read as satisfied.
+    """
+    path = root / _branches.WORK
+    if not path.exists():
+        return None
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except (yaml.YAMLError, UnicodeError) as e:
+        sys.exit(f"{path}: does not parse as YAML.\n{str(e).strip()}")
+    if not isinstance(data, dict):
+        sys.exit(f"{path}: the top level has to be a mapping")
+    people = data.get("people")
+    if people is not None and not isinstance(people, (dict, list)):
+        sys.exit(f"{path}: `people` is a mapping or a list of names, and a single value would "
+                 "read as no list at all -- anybody accepted as `--who`.")
+    for key in sorted(set(map(str, data)) - _branches.WORK_KEYS):
+        report.add("WK001", _branches.WORK,
+                   f"`{key}` is not a key this version reads, so it does nothing here. This "
+                   f"file holds: {', '.join(sorted(_branches.WORK_KEYS))}. A newer version may "
+                   "read it; until the project declares that version, it is only text.")
+    return data
 
 
 # WHERE A PROJECT SAYS "I LOOKED AT THIS FINDING AND DECIDED", AND WHY IT IS NOT IN
@@ -847,6 +879,41 @@ def split_attestation(text: str) -> tuple[str, str]:
     return "\n".join(kept), "\n".join(lines[i] for i in sorted(inside))
 
 
+def attested_text(text: str, rel: str) -> str:
+    """What a reading of `rel` vouches for: the document without its attestation block, and
+    without the body of the regions `--emit-index` writes into that file.
+
+    A GENERATED REGION IS CHECKED, NOT READ. Its content is derived from the other registers
+    and `--emit-index --check` says whether it is what they derive to; a person attesting the
+    file vouches for the prose around it. Counted as text, the union at the root changed
+    whenever any register gained an entry, and every such change made the root `OPEN.md` owe
+    a reading of lines nobody wrote -- on one branch at a time that is noise, and on several
+    branches it is a conflict in the one file all of them touch, followed by a reattestation
+    of the largest document in the repository after every merge.
+
+    ONLY THE REGIONS THE GENERATOR OWNS, IN THE FILE WHERE IT WRITES THEM, AND ONLY WHERE A
+    CHECK STANDS IN FOR THE READING. The markers accept any name, and `--check` passes over a
+    name it does not produce: excluding every marked region would let text written by hand
+    between two markers with an invented name leave `LC006`, `PR005` and `attest.py`'s refusal
+    at once. A region with another name, the union's markers copied into a product's register,
+    or a root `OPEN.md` that is not an open register -- the generator writes nothing into it --
+    stays attested text. The markers themselves stay too: removing them is an edit. And what
+    stands in for the reading is `GEN001`, on every run, which compares the region with what
+    the registers derive to; `--emit-index --check` alone runs only where somebody asks for it.
+    """
+    kept, _ = split_attestation(text)
+    owned = GENERATED_REGIONS.get(rel.replace("\\", "/"))
+    if not owned:
+        return kept
+    kind, names = owned
+    lo, hi = _front_matter_lines(text)
+    if not any(re.match(rf"""^artifact_type:\s*["']?{re.escape(kind)}["']?\s*(#.*)?$""", line)
+               for line in text.split("\n")[lo:hi]):
+        return kept
+    return REGION.sub(lambda m: m.group("open") + m.group("close")
+                      if m.group("name") in names else m.group(0), kept)
+
+
 def attestation_spans(lines: list[str], lo: int, hi: int) -> list[tuple[int, int]]:
     """The half open index ranges of the attestation block, inside lines `lo:hi`.
 
@@ -933,8 +1000,13 @@ class Repository:
     in_head: set[str]                    # files under the root that HEAD holds, root-relative
     has_head: bool
     _commits: dict[str, list[tuple[str, datetime]]] | None = None
+    _parents: dict[str, list[str]] = field(default_factory=dict)
+    _when: dict[str, datetime] = field(default_factory=dict)
+    _touching: dict[str, set[str]] = field(default_factory=dict)
     _batch: subprocess.Popen | None = None
+    _check: subprocess.Popen | None = None
     _blobs: dict[str, str | None] = field(default_factory=dict)
+    _oids: dict[str, str | None] = field(default_factory=dict)
 
     @classmethod
     def open(cls, root: Path) -> "Repository | None":
@@ -976,19 +1048,29 @@ class Repository:
 
         One `git log` for the whole history, and only when a check needs it: a run with no
         attested document, or one that only regenerates the indices, does not pay for it.
+
+        `--cc`, OR A MERGE TOUCHES NOTHING. Without it `git log --name-only` lists no file for
+        a merge commit, so text written while resolving a conflict -- or the combination of two
+        sides that both changed a document -- belonged to no commit, and the walk below went
+        past it to an older one on either side. With it a merge lists the files that differ
+        from every one of its parents, which is exactly the set the merge itself produced; a
+        file taken whole from one side is that side's and is not listed. The parents are read
+        in the same pass, because the walk has to compare a merge with each of them.
         """
         if self._commits is None:
             commits: dict[str, list[tuple[str, datetime]]] = {}
             if self.has_head:
-                log = _git(["log", "--format=%x00%H%x00%aI", "--name-only", "--no-renames"],
-                           self.root)
+                log = _git(["log", "--format=%x00%H%x00%aI%x00%P", "--cc", "--name-only",
+                            "--no-renames"], self.root)
                 if log is None or log.returncode != 0:
                     refuse(f"{self.root} is inside a repository whose history could not be "
                            f"read: {_last_line(log)}. Nothing was checked.")
                 sha = when = ""
                 for line in log.stdout.splitlines():
                     if line.startswith("\x00"):
-                        _, sha, when = line.split("\x00")
+                        _, sha, when, parents = line.split("\x00")
+                        self._parents[sha] = parents.split()
+                        self._when[sha] = datetime.fromisoformat(when)
                         continue
                     path = line.strip()
                     if path:
@@ -996,9 +1078,30 @@ class Repository:
             self._commits = commits
         return self._commits
 
+    def touching(self, rel: str) -> set[str]:
+        """The commits the history lists for `rel`, as a set: the walk asks it at every step."""
+        key = self.prefix + rel
+        if key not in self._touching:
+            self._touching[key] = {sha for sha, _ in self.commits.get(key, [])}
+        return self._touching[key]
+
+    def when(self, sha: str) -> datetime:
+        """The author instant of a commit the history listed."""
+        self.commits
+        return self._when[sha]
+
+    def head(self) -> str | None:
+        r = _git(["rev-parse", "--verify", "-q", "HEAD"], self.root)
+        return r.stdout.strip() if r is not None and r.returncode == 0 else None
+
     def commits_of(self, rel: str) -> list[tuple[str, datetime]]:
         """The commits touching `rel`, newest first, each with its author instant."""
         return self.commits.get(self.prefix + rel, [])
+
+    def parents_of(self, sha: str) -> list[str]:
+        """The parents of a commit the history above listed: two or more for a merge."""
+        self.commits
+        return self._parents.get(sha, [])
 
     def dirty(self) -> set[str]:
         """Paths under the root with uncommitted changes, relative to the root."""
@@ -1058,6 +1161,29 @@ class Repository:
                    "Nothing was checked.")
             return None, None, None, False   # unreachable: `refuse` exits
 
+    def oid(self, rev: str, rel: str) -> str | None:
+        """The object `rel` is at `rev`, or None: enough to tell two versions apart without
+        reading either, which matters at every merge the walk passes for a file of half a
+        megabyte."""
+        key = f"{rev}:{self.prefix}{rel}"
+        if key in self._oids:
+            return self._oids[key]
+        oid: str | None = None
+        try:
+            if self._check is None:
+                self._check = subprocess.Popen(
+                    ["git", "-C", str(self.root), "cat-file", "--batch-check"],
+                    stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+            self._check.stdin.write((key + "\n").encode("utf-8"))
+            self._check.stdin.flush()
+            header = self._check.stdout.readline().decode("utf-8", "replace").split()
+            if len(header) >= 2 and header[1] == "blob":
+                oid = header[0]
+        except (OSError, ValueError):
+            oid = None
+        self._oids[key] = oid
+        return oid
+
     def blob(self, rev: str, rel: str) -> str | None:
         """The file at `rev`, or None when it is not there. One process serves them all."""
         key = f"{rev}:{self.prefix}{rel}"
@@ -1082,13 +1208,14 @@ class Repository:
         return text
 
     def close(self) -> None:
-        if self._batch is not None:
-            try:
-                self._batch.stdin.close()
-                self._batch.wait(timeout=10)
-            except (OSError, subprocess.SubprocessError):
-                pass
-            self._batch = None
+        for proc in (self._batch, self._check):
+            if proc is not None:
+                try:
+                    proc.stdin.close()
+                    proc.wait(timeout=10)
+                except (OSError, subprocess.SubprocessError):
+                    pass
+        self._batch = self._check = None
 
 
 def _last_line(r: subprocess.CompletedProcess | None) -> str:
@@ -1216,6 +1343,75 @@ def check_review_not_ahead(attestations: list[Attestation], now: datetime,
                    "with `attest.py`, which writes the instant it runs at, with its offset.")
 
 
+def last_text_change(repo: Repository, rel: str) -> tuple[str, datetime, str] | None:
+    """The newest commit that changed what a reading of `rel` vouches for.
+
+    Returns the sha, its author instant and what it did: `born` for the commit that brought
+    the file into the history, `text`, `text and stamp` when the same commit moved the
+    attestation block as well, or `merge`. None when no commit touched the file. `LC006` and
+    `attest.py` both read this, so the commit a finding names and the commit an attestation
+    says it covers are found the same way.
+
+    A commit whose only change is the attestation block, or the body of a region the generator
+    owns, is stepped over: the first is a reading and the second is `GEN001`'s. The walk goes
+    back over as many of them as there are.
+
+    IT FOLLOWS THE LINE THE TEXT CAME DOWN, NOT THE LOG. From HEAD, one parent at a time: at a
+    merge that took the file whole from one side, the side whose object is the same. Read in log
+    order instead, two branches interleave by date, and a merge that kept one side's version
+    while the other side's newer commits were thrown away named those commits -- text no longer
+    in the file -- as the change; a side that deleted the file made the walk stop as though the
+    file had gone. On a history with no merge the line is the log, and nothing differs.
+
+    A MERGE RECORDS NO READING. A merge the history lists for this file produced a version that
+    differs from each of its parents, and that version is text nobody attested as a whole:
+    taking one side's prose and the other side's stamp puts a reading of one text on top of
+    another. So it counts as a change at its own author instant, and the one exception is a
+    merge equal to one of its parents in everything but a generated region -- the union taken
+    from the other side and nothing else -- which changed no attested text at all: the walk
+    goes on down that parent.
+    """
+    touching = repo.touching(rel)
+    if not touching:
+        return None
+    sha, seen = repo.head(), set()
+    while sha is not None and sha not in seen:
+        seen.add(sha)
+        parents = repo.parents_of(sha)
+        if sha not in touching:
+            if len(parents) > 1:
+                here = repo.oid(sha, rel)
+                sha = next((p for p in parents if repo.oid(p, rel) == here), parents[0])
+            else:
+                sha = parents[0] if parents else None
+            continue
+        when = repo.when(sha)
+        after = repo.blob(sha, rel)
+        if after is None:
+            return None                  # deleted on this line; what was attested went with it
+        if len(parents) > 1:
+            text, block = attested_text(after, rel), split_attestation(after)[1]
+            versions = [(p, repo.blob(p, rel)) for p in parents]
+            if all(b is None for _, b in versions):
+                return sha, when, "born"
+            same = next((p for p, b in versions if b is not None
+                         and attested_text(b, rel) == text
+                         and split_attestation(b)[1] == block), None)
+            if same is None:
+                return sha, when, "merge"
+            sha = same                   # one side's text and stamp, the other's union
+            continue
+        before = repo.blob(parents[0], rel) if parents else None
+        if before is None:
+            return sha, when, "born"
+        if attested_text(before, rel) == attested_text(after, rel):
+            sha = parents[0]             # the attestation block, or a generated region, alone
+            continue
+        moved = split_attestation(before)[1] != split_attestation(after)[1]
+        return sha, when, "text and stamp" if moved else "text"
+    return None
+
+
 def check_review_gap(attestations: list[Attestation], repo: Repository | None,
                      report: Report, changed: set[str] | None = None) -> tuple[int, list]:
     """A living document changed after the instant it says somebody read it.
@@ -1247,6 +1443,12 @@ def check_review_gap(attestations: list[Attestation], repo: Repository | None,
     is correct and is said in the message, because somebody looking at that finding has to
     know why it was not excluded.
 
+    TWO MORE SINCE 4.8.0, AND ONE THING THAT IS NO LONGER EXCLUDED. A commit that changes only
+    the body of a region the generator owns is stepped over like a reading, because `GEN001`
+    checks that body on every run; and a merge equal to one parent in everything but such a
+    region is not a change. A merge that produced a version neither parent had used to belong
+    to no commit at all, and now counts: `last_text_change` has the walk.
+
     NO FLOOR, AND THE GAP IS STATED RATHER THAN JUDGED. Any threshold would have lost the low
     end of the case that produced this: gaps from 45 minutes to 21 days in one repository.
     What replaces it is the ordering, which is by gap and not by path, because thirty findings
@@ -1267,31 +1469,20 @@ def check_review_gap(attestations: list[Attestation], repo: Repository | None,
     for att in attestations:
         a = att.artifact
         rel = a.rel.replace("\\", "/")
-        history = repo.commits_of(rel)
-        if not history:
-            continue                     # untracked: nothing recorded, nothing to compare
-        content = None
-        for sha, when in history:
-            after = repo.blob(sha, rel)
-            before = repo.blob(f"{sha}^", rel)
-            if after is None or before is None:
-                break                    # the commit that brought the file in is not a change
-            kept_before, block_before = split_attestation(before)
-            kept_after, block_after = split_attestation(after)
-            if kept_before == kept_after:
-                continue                 # the attestation block alone moved: a reading
-            content = (sha, when, block_before != block_after)
-            break
-        if content is None:
-            continue
-        sha, when, moved_stamp = content
+        change = last_text_change(repo, rel)
+        if change is None or change[2] == "born":
+            continue                     # untracked, or only ever imported: not a change
+        sha, when, kind = change
         attested, _ = att.instant
         if _minute(when) <= _minute(attested):
             continue
-        why = (" That commit moved the attestation block and changed something else as well, "
-               "so it counts: recording a reading is not a modification, and this was both."
-               if moved_stamp else "")
-        found.append((when - attested, a, sha, when, why))
+        why = {"text and stamp": " That commit moved the attestation block and changed "
+                                 "something else as well, so it counts: recording a reading "
+                                 "is not a modification, and this was both.",
+               "merge": " That commit is a merge, and the version it produced differs from "
+                        "both sides: a merge records no reading, so whoever attested either "
+                        "side has not read what came out of putting them together."}.get(kind, "")
+        found.append((when - attested, a, sha, when, why, kind))
 
     # BY GAP AND NOT BY PATH. The lesson is one version old: a document came out first in a
     # generated view because its directory sorted before the others, and being first was read
@@ -1303,7 +1494,7 @@ def check_review_gap(attestations: list[Attestation], repo: Repository | None,
     # thirty. Reporting both would put the same document twice on the pull request that has
     # the best reason to exist.
     found.sort(key=lambda x: x[0], reverse=True)
-    for gap, a, sha, when_changed, why in found:
+    for gap, a, sha, when_changed, why, _ in found:
         if changed is not None and a.rel.replace("\\", "/") in changed:
             continue
         size = _gap_size(gap)
@@ -1446,14 +1637,17 @@ def check_pr_review(gaps: list, changed: set[str] | None, report: Report) -> Non
     """
     if changed is None or not gaps:
         return
-    mine = [(gap, a) for gap, a, _, _, _ in gaps
+    mine = [(gap, a, kind) for gap, a, _, _, _, kind in gaps
             if a.rel.replace("\\", "/") in changed]
     if not mine:
         return
-    listed = "; ".join(f"`{a.rel}` ({_gap_size(gap)})" for gap, a in mine)
+    listed = "; ".join(f"`{a.rel}` ({_gap_size(gap)}"
+                       f"{', changed by a merge, which records no reading' if kind == 'merge' else ''})"
+                       for gap, a, kind in mine)
     report.add("PR005", "the change set",
                f"{len(mine)} living document(s) in this change set were last changed after the "
-               f"instant they attest, and this change set does not move it: {listed}. That may "
+               f"instant they attest, and no reading in this change set covers them as they "
+               f"stand: {listed}. That may "
                "be right: a typo in a sentence nobody has to reread is a change, and no check "
                "can tell it from a change of meaning. What it cannot be is unnoticed. If what "
                "the document says has moved, the reading is cheapest now, while whoever wrote "
@@ -3740,6 +3934,118 @@ def check_exchange(root: Path, declared: str | None, place: Path | None, arts: l
     return "read"
 
 
+def check_branch(root: Path, base: str, arts: list[Artifact], registry: dict, scan: dict,
+                 repo: "Repository | None", work: dict | None, report: Report) -> None:
+    """What this branch adds, against the main line it will land on: `BR001`-`BR003`.
+
+    THREE TREES, OR MORE. The working tree, which is the branch as it stands; the tip of `base`,
+    which is what it will meet; and every best common ancestor of the two, which together say
+    what the branch created rather than inherited. They are read from git objects (`branches.snapshot`), by
+    the discovery the rest of this file uses, so a document means one thing on all three.
+
+    WHAT A BRANCH ADDS, AND NOTHING ELSE. A repository has history these checks cannot undo:
+    open decisions closed by three accepted `DEC`s before anybody worked on branches, numbers
+    declared twice in two products. Comparing whole trees would report those on every branch
+    forever, and an error that can never clear is one that gets switched off. So `BR001` asks
+    about identifiers the branch declares and its starting point did not, and `BR002` and
+    `BR003` about what the branch has that the main line does not -- the second by state, so
+    that both still hold after the branch has merged the main line into itself.
+    """
+    if repo is None:
+        refuse(f"--base {base}: {root} is not inside a git repository, and a branch is "
+               "compared with its main line through the history. Nothing was checked.")
+    try:
+        tip = _branches.resolve(root, base)
+        head = _branches.View.of(arts, registry)
+        main = _branches.View.of(_branches.snapshot(root, tip, registry, scan), registry)
+        # Every common ancestor, not the one git picks: when the main line holds a commit of
+        # another line this branch also holds -- an earlier commit of the branch landed by a pull
+        # request, then the main line merged in -- there are two, and either alone would count
+        # what the other declares as created here.
+        start = _branches.shared(root, tip, "HEAD", registry, scan)
+    except _branches.BranchError as e:
+        refuse(f"--base {base}: {e}. Name a ref this clone has -- `origin/main` after a "
+               "fetch -- and a history that holds both it and HEAD. Nothing was checked.")
+        return                           # unreachable: `refuse` exits
+    id_form = ReferenceIndex([], registry).id_re
+
+    def where(key: tuple[str, str]) -> str:
+        return head.declared[key][0]
+
+    def named(key: tuple[str, str]) -> str:
+        scope, ident = key
+        return ident if scope == "*" else f"{ident} ({scope.removeprefix('product:')})"
+
+    mine = {k for k in head.ids() - start if id_form.fullmatch(k[1])}
+    for key in sorted(mine & main.ids()):
+        report.add("BR001", where(key),
+                   f"{named(key)} is declared here and did not exist where this branch left "
+                   f"the main line, and {base} declares it as well, in "
+                   f"{', '.join(main.declared[key])}. Two things now carry one name. Renumber "
+                   "the one this branch created before it lands -- it is cited only in this "
+                   "branch's files -- and reserve the new number with `work.py reserve`, "
+                   "which is how two branches stop computing the same next number.")
+
+    for rel, dec in sorted(head.decisions.items()):
+        if rel in main.decisions or dec.meta.get("status") == "superseded":
+            continue
+        dec_id = dec.id if isinstance(dec.id, str) else rel
+        replaced = {s for s in as_list(dec.meta.get("supersedes")) if isinstance(s, str)}
+        for ref in as_list(dec.meta.get("derives_from")):
+            if not isinstance(ref, str) or ref not in main.entries or not main.closed(ref):
+                continue
+            closers = main.closers(ref)
+            if closers & replaced:
+                continue                 # reopened on purpose: it supersedes the closer
+            if dec_id in closers and ("*", dec_id) in start:
+                continue                 # one the branch inherited, renamed or moved
+            row = main.entries.get(ref, {})
+            how = (f"by {', '.join(sorted(closers))}" if closers
+                   else f"with status `{row.get('status')}`")
+            report.add("BR002", dec.rel,
+                       f"{dec_id} derives from {ref}, which {base} has already closed {how}. "
+                       "The question was decided on another branch while this one was "
+                       "deciding it. Put the two side by side: if they say the same thing, "
+                       "this one goes and the cascade cites the decision already there; if "
+                       "this one says something new, it is a new decision -- `supersedes` the "
+                       "one it replaces, or derives from a new entry. Which of the two holds "
+                       "is for whoever decides that matter, not for the branch.")
+
+    if work is None:
+        return
+    # Whose branch this is, for the reservations: the branch checked out, or in a pull request
+    # job, where the checkout is detached, the head the host names.
+    current = _git(["rev-parse", "--abbrev-ref", "HEAD"], root)
+    branch = current.stdout.strip() if current is not None and current.returncode == 0 else ""
+    if branch in ("", "HEAD"):
+        branch = os.environ.get("GITHUB_HEAD_REF", "")
+    fresh = {k for k in head.ids() - main.ids() - start if id_form.fullmatch(k[1])}
+    for key in sorted(fresh):
+        scope, ident = key
+        tag = ident if scope == "*" else f"{scope.removeprefix('product:')}/{ident}"
+        ref = f"{_branches.RESERVED_REF}{tag}"
+        kind = _git(["cat-file", "-t", ref], root)
+        if kind is None or kind.returncode != 0 or kind.stdout.strip() != "tag":
+            # Absent, or a lightweight tag: a name somebody pushed, which says for whom nothing.
+            report.add("BR003", where(key),
+                       f"{named(key)} is new on this branch and no reservation for it is "
+                       f"visible here ({ref}, an annotated tag `work.py reserve` makes). The "
+                       f"project declares {_branches.WORK}, so every new number is reserved "
+                       "before it is written, and git refuses a second tag with the same name, "
+                       "which is what keeps two branches off one number. If it was reserved, "
+                       "fetch the reservations: `git fetch origin '+refs/tags/id/*:refs/tags/id/*'`.")
+            continue
+        held = _git(["for-each-ref", "--format=%(contents)", ref], root)
+        owner = _branches.message_fields(held.stdout if held is not None else "").get("branch")
+        if not owner or (branch and owner != branch):
+            report.add("BR003", where(key),
+                       f"{named(key)} is new on this branch, and its reservation ({ref}) was "
+                       f"made for {owner or 'no branch it names'}. The number is somebody "
+                       "else's, or nobody's: the likeliest way two branches meet on one number "
+                       "is the second writing the next free one while the first holds it. "
+                       "Reserve a number of your own, from this branch, and renumber.")
+
+
 def projects_folder(root: Path) -> Path:
     """The folder holding the documentation repository and its neighbours: the parent of the
     repository's top, which is the parent of `root` unless the documentation is a subfolder."""
@@ -3765,6 +4071,14 @@ GENERATED_MARK = "Generated by `validate.py --emit-index`"
 REGION = re.compile(r"(?P<open><!-- generated: (?P<name>[a-z-]+) -->\n)"
                     r".*?"
                     r"(?P<close>\n<!-- /generated -->)", re.S)
+
+# The regions `build_regions` writes, by the file it writes them into, relative to the root,
+# with the type that file has to declare for the generator to write there. `attested_text`
+# leaves exactly these out of what a reading vouches for, `GEN001` compares them on every run,
+# and the selfcheck holds this list and the generator to each other in both directions: a
+# region the generator starts writing somewhere else is attested text until it is named here,
+# and a name left here after the generator stops writing it is a failure, not a hole.
+GENERATED_REGIONS = {"OPEN.md": ("open-register", ("open-union",))}
 
 # `§1` is grouped by this and by nothing else, because it is the cost that says which entry
 # to look at first. A view that reordered them would be a different file with the same
@@ -3874,6 +4188,33 @@ def build_regions(root: Path, arts: list[Artifact]) -> dict[Path, dict[str, str]
     lines += table(lambda r: r[2] is None
                    and NO_PRODUCTS in as_list(r[1].get("products")))
     return {target: {"open-union": "\n".join(lines).rstrip()}}
+
+
+def check_generated_regions(root: Path, arts: list[Artifact], report: Report) -> None:
+    """A region the generator owns whose body is not what the registers derive to: `GEN001`.
+
+    ON EVERY RUN, BECAUSE THE READING NO LONGER COVERS IT. Since 4.8.0 the body of the union at
+    the root is left out of the text an attestation vouches for, so that a branch adding an
+    entry does not make every other branch reread the largest document in the repository.
+    What stands in for the reading is this comparison. `--emit-index --check` makes the same
+    one, and it runs only where somebody passes it; without this, a union edited by hand, or
+    one left behind by a register that moved, would be checked by nothing on the ordinary path
+    -- and the union is the list an agent is sent to first.
+    """
+    for path, regions in build_regions(root, arts).items():
+        if not path.exists():
+            continue
+        current = path.read_text(encoding="utf-8")
+        rel = str(path.relative_to(root)).replace("\\", "/")
+        for m in REGION.finditer(current):
+            name = m.group("name")
+            if name in regions and current[m.end("open"):m.start("close")] != regions[name]:
+                report.add("GEN001", rel,
+                           f"the generated region `{name}` is not what the registers derive to "
+                           "now. It is left out of what an attestation of this file vouches "
+                           "for, because it is derived; this is the check that stands in for "
+                           "the reading. Regenerate it with `validate.py --emit-index`, and if "
+                           "somebody wrote in it by hand, that text belongs outside the markers.")
 
 
 def build_indices(root: Path, arts: list[Artifact]) -> dict[Path, str]:
@@ -4011,6 +4352,10 @@ def main() -> int:
     ap.add_argument("--changed-files", type=Path,
                     help="a file of paths the change set touches, one per line, relative "
                          "to --root. `-` reads standard input")
+    # The main line a branch will land on. With it, `BR001`-`BR003` compare what this
+    # branch adds; without it they do not run. See check_branch.
+    ap.add_argument("--base",
+                    help="the ref this branch will land on, e.g. origin/main")
     ap.add_argument("--profile", choices=("legacy", "strict-contribution", "strict-release"), default="legacy",
                     help="explicit opt-in; strict reads caller-trusted Git objects, not project worktrees")
     ap.add_argument("--trust-input", type=Path,
@@ -4111,6 +4456,11 @@ def main() -> int:
     check_cross_product(arts, report)
     check_roadmap(arts, report)
     exchange = check_exchange(root, *exchange_declared, arts, references, repo, report)
+    if not (args.emit_index and not args.check):
+        check_generated_regions(root, arts, report)  # a run that rewrites them has the answer
+    work = load_work(root, report)
+    if args.base is not None:
+        check_branch(root, args.base, arts, registry, scan, repo, work, report)
     # Last, and it has to be: an annotation is a statement about the set of findings, so it
     # cannot be joined until every check has finished producing them.
     if annotations_rel is not None:

@@ -275,8 +275,30 @@ checks:
       ONE PREREQUISITE ON HOW BRANCHES LAND. The honest procedure is two commits, content and
       then attestation, and a squash merge folds them into one: that commit changes text and
       stamp together, and this check counts it, correctly, with the sentence saying why. A
-      merge commit or a rebase merge keeps the two apart. A project that squashes attests on
-      the branch that lands, after the squash, or accepts the finding.
+      merge commit or a rebase merge keeps the two apart -- and a merge commit is itself a
+      change wherever the main line moved the same document meanwhile, by the paragraph
+      below, so a branch is brought up to date and reread before it lands. A project that
+      squashes attests on the branch that lands, after the squash, or accepts the finding.
+
+      A MERGE RECORDS NO READING. The history is read with `--cc`, so a merge lists the files
+      it produced -- the ones that differ from every parent -- and such a file counts as
+      changed at the merge's author instant. Before 4.8.0 a merge listed nothing and the walk
+      went past it to an older commit on either side, which let a clean merge put one side's
+      prose under the other side's newer stamp and call it read. The one merge that is not a
+      change is the one equal to a parent in everything but a generated region. A branch kept
+      up to date by merging the main line therefore owes a reading of every living document
+      both sides changed, after the merge: that is what the combination is. The walk follows
+      the line the text came down -- at a merge that took the file whole from one side, that
+      side -- so the commits of a side whose version was thrown away are not named.
+
+      THE REGIONS THE GENERATOR OWNS ARE NOT ATTESTED TEXT. The body of the union at the root,
+      between `<!-- generated: open-union -->` and `<!-- /generated -->` in the root `OPEN.md`,
+      is derived from the other registers and checked by `GEN001` on every run; a commit that
+      changes only that body is stepped over like an attestation, and so is the root `OPEN.md`
+      only when it is an open register, which is when the generator writes there. Only that name in that file:
+      markers with any other name, or the union's markers copied into a product's register,
+      enclose attested text, because `--check` passes over a name it does not produce and the
+      exclusion would otherwise be a place to write by hand with no check at all.
 
       AND THE COMMIT THAT INTRODUCES A FILE IS NOT A CHANGE TO IT. A repository whose history
       begins after its documents do -- which is every project that adopted git once the
@@ -1095,7 +1117,7 @@ checks:
 
   PR005:
     level: warn
-    title: a change set edits a living document and does not move its `last_review`
+    title: a change set edits a living document that no reading covers as it stands
     prevents: >
       The state `LC006` measures, from being reached. That check reports a living document
       changed after the instant it attests, at an audit, addressed to whoever is auditing, weeks
@@ -1482,6 +1504,81 @@ checks:
       the names of its keys cannot be rotated when it turns up somewhere; a closing
       declaration without one of its three parts -- committed, not committed, outside the
       repositories -- leaves the next session reading transcripts to learn whose a line is.
+
+  GEN001:
+    level: warn
+    title: a region the generator owns is not what the registers derive to
+    prevents: >
+      A view read as the registers when it is not. The union at the root is the list an agent
+      is sent to first, and since 4.8.0 an attestation of the root `OPEN.md` does not vouch for
+      it, because it is derived and on several branches it changed under every reading. This
+      is what vouches for it instead, on every run: the body between the markers compared with
+      what `--emit-index` would write. `--emit-index --check` says the same, only where it is
+      passed; without this, a union written by hand or left behind would be checked by
+      nothing on the ordinary path. A warning, because the repair is one command; turning it
+      off leaves the union read by nobody, because the exclusion does not depend on it.
+
+  # ── Documentation written on branches ──────────────────────────────────────────────────
+  #
+  # Run only with `--base <ref>`: the main line a branch is compared with. A run without it
+  # sees none of these, so a repository that does not work on branches sees nothing move. At
+  # `error`, like the `PR` checks, and MINOR for the same reason they were: they run only
+  # when somebody asks for the comparison. What they compare is what a branch adds -- never
+  # the history both sides share, where several decisions on one entry and numbers declared
+  # twice before anybody reserved them are facts that nobody can undo.
+  BR001:
+    level: error
+    title: an identifier this branch created exists on the main line too
+    prevents: >
+      Two things with one name. Each branch is clean on its own -- the next free number when
+      each was written -- and the collision exists only once both are on one line, where it is
+      a warning between two files (`ID001`), two rows of `entries:` that YAML folds into one
+      without a word, or two body rows nothing compares. Renumbering after the fact is an edit
+      to every file that cites the number, on a branch and outside it. "Created here" is what
+      the branch declares and no common ancestor with the main line did, so the check holds
+      until the branch is brought up to date. `work.py sync` refuses to merge a main line that
+      would bring the second one in; a plain `git merge`, or the "Update branch" button of a
+      pull request, does not refuse, and after it nothing but `ID001` sees the collision --
+      which is why branches are brought up to date with `sync` only. Compared per product for
+      the families the catalog numbers per product (`RSK`, `INC`, `SIG`, `ANA`), across the
+      repository for the rest. An `OD` or `KI` counts as declared where `entries:` holds it,
+      not where a register's body cites it.
+  BR002:
+    level: error
+    title: a decision this branch adds closes an entry the main line has already closed
+    prevents: >
+      The same question decided twice, the second time without knowing about the first. Two
+      people resolving one open decision write two `DEC`s that say the same thing in different
+      words, or different things, and once both are accepted nothing on the main line says
+      which one is the answer: `closed_by` keeps the last, and the cascade of each cites its
+      own. Read by state and not by history, so it still holds after the branch has merged the
+      main line: a decision absent from the main line whose `derives_from` names an entry the
+      main line gives as closed -- by its row, or by an accepted decision deriving from it --
+      unless the new decision `supersedes` the one that closed it, which is the honest way to
+      reopen a question. Decisions both sides already share are not compared.
+  BR003:
+    level: error
+    title: an identifier this branch created was not reserved for it
+    prevents: >
+      The number nobody else could see. The next free number is computed by whoever writes
+      it, on what they have, and two branches computing it at the same moment agree; a
+      reservation is a tag pushed before the number is written, and git refuses a second tag
+      with the same name, so two people cannot hold one number. The reservation has to be an
+      annotated tag made for this branch -- `work.py reserve` writes the branch in its message,
+      and a lightweight tag says for whom nothing: the likeliest collision is the second person writing the next free number
+      while the first holds it, and a reservation anybody made would clear that one too. Only
+      where the project declares `.framework/work.yaml`: a repository that does not reserve is
+      not asked to. Read from the tags the run can see, so a checkout has to fetch them --
+      `fetch-depth: 0` on actions/checkout does -- and the branch from HEAD, or from
+      `GITHUB_HEAD_REF` where the checkout is detached. It does not stop anybody deleting or
+      forcing a tag; it sees what a branch writes.
+  WK001:
+    level: warn
+    title: a key in .framework/work.yaml that this version does not read
+    prevents: >
+      A setting that does nothing, read as one that does. A warning and not a stop, unlike an
+      unknown key in `sessions.yaml`: the file is read only by 4.8.0 and later, and the next
+      version adding a key must not stop this one.
 
 # ON THE PROSE COUPLED CHECKS. There are none left. REG002 and REG003 used to read the body
 # of `OPEN.md` -- the `### OD-NNN` headings and the "Cost to reverse" and "Default in force"

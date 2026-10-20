@@ -421,6 +421,58 @@ then the `ICG` is what moves — but an `ICG` is `immutable`, so that is a new o
 supersedes it, not an edit. Propose, do not apply: which of the two is wrong is exactly the
 question.
 
+## Documentation written on branches
+
+When `.framework/work.yaml` exists, the documentation is written one piece of work per branch,
+and each branch lands through a pull request. `skills/audit/scripts/work.py` carries the
+mechanics, and none of it is yours to run without the person's word:
+
+```bash
+W="${CLAUDE_PLUGIN_ROOT:?}/skills/audit/scripts/work.py"
+python3 "$W" --root <project> open --who "<name>" --branch od-042 OD-042   # claim, branch, worktree
+python3 "$W" --root <project> reserve DEC --who "<name>"                   # before writing a number
+python3 "$W" --root <project> list                                         # who works on what
+python3 "$W" --root <project> sync                                         # bring the branch up to date
+python3 "$W" --root <project> release OD-042 --who "<name>"                # when the work is over
+```
+
+`--who` is the person's name as they give it; never read it from `git config`. A claim
+refused is an answer, not an obstacle: say who holds it and since when, and let the person
+decide whether to join that branch, wait, or speak to them. Never write a new identifier
+before `reserve` has returned it, and reserve from the work branch that will write it: the
+reservation names the branch, and `BR003` asks that it be this one. A family numbered per
+product (`RSK`, `INC`, `SIG`, `ANA`) is reserved with `--product`, and claimed as
+`<product>:<ID>` -- `platform` or `repository` in place of the product where its register is
+filed outside one; a product the branch itself creates can reserve once its manifest is there.
+
+Nothing is written on the main checkout of a project that declares `.framework/work.yaml`,
+the parking-lot line included: it goes on the branch of the work in which it was found, and
+a session with no work open opens one for it. Bring a branch up to date with `sync` only,
+never with a plain `git merge` or the "Update branch" button of a pull request: those merge
+without refusing a number both sides created. `sync` also brings in, first, commits someone
+pushed to the same work branch from another clone, and refuses there too a number both created:
+after a fast-forward the main line comes in the same run, after a merge on the next one.
+
+`sync` resolves only what is mechanical and stops on content. A file it leaves in conflict is
+two texts of which one holds, and when the text is a decision's, which one holds is for
+whoever decides that matter: show both, with their branch and author, and ask. After a merge,
+the living documents it produced owe a reading -- a merge records no reading, and `LC006` says
+so -- which the person attests.
+
+Before a pull request is proposed for merging, fetch, and run the validator against the main
+line as the remote has it now -- a stale `origin/main` passes what the real one would not:
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT:?}/skills/audit/scripts/work.py" --root <project> list   # fetches
+python3 "${CLAUDE_PLUGIN_ROOT:?}/skills/audit/scripts/validate.py" --root <project> --base origin/main
+```
+
+`BR001` is a number this branch created that the main line has too: renumber this branch's,
+with a new reservation. `BR002` is a decision deciding an entry the main line has already
+closed: put the two decisions side by side for the person, and do not choose. `BR003` is a
+number written without a reservation. `ci/branches.yml` runs the same comparison on every pull
+request, and opens an issue for what reaches the main line without one.
+
 ## The exchange between sessions
 
 When `.framework/sessions.yaml` declares `exchange:`, sessions hand each other material in a

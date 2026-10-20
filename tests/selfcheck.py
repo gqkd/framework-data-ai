@@ -15,6 +15,7 @@ just broken something.
 
 from __future__ import annotations
 
+import argparse
 import atexit
 import collections
 import contextlib
@@ -6268,7 +6269,10 @@ class _Repo:
 
     def git(self, *args: str, env: dict | None = None) -> str:
         e = dict(os.environ, GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@example.com",
-                 GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@example.com")
+                 GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@example.com",
+                 # The person's own git configuration stays out: `merge.ff=only` or a merge
+                 # driver there would change what these histories are.
+                 GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_NOSYSTEM="1")
         e.update(env or {})
         r = subprocess.run(["git", "-C", str(self.path), *args], capture_output=True,
                            text=True, env=e)
@@ -6640,6 +6644,273 @@ def _review_gap_on_the_block():
             problems.append(f"adding `review_scope` without moving `last_review` produced "
                             f"{sorted(repo.attestation_codes())}: the migration step has to be "
                             "free of findings or nobody takes it")
+    return problems
+
+
+WORK = ROOT / "skills" / "audit" / "scripts" / "work.py"
+
+
+def _open_register(entries: dict, review: str = "2026-06-01 09:00", parked: str = "",
+                   union: str = "old union") -> str:
+    """A root register: the map, a parking lot with room at its tail, and the union."""
+    rows = "".join(f"  {k}:\n    status: {s}\n    cost_to_reverse: low\n    default_in_force: none\n"
+                   f"    products: [all]\n" for k, s in entries.items())
+    return ("---\nschema: framework/open-register/v1\nartifact_type: open-register\n"
+            "lifecycle: living\nstatus: active\nproducts: [all]\nowners: [o]\n"
+            f"created: 2026-06-01 09:00\nlast_review: {review}\nclassification: internal\n"
+            "entries:\n" + rows + "---\n\n# Open\n\n## Parking lot\n\n- first line\n" + parked +
+            f"\n## Union\n\n<!-- generated: open-union -->\n{union}\n<!-- /generated -->\n")
+
+
+def _decision(i: str, derives: str, **extra) -> str:
+    meta = dict(schema="framework/decision-record/v1", artifact_type="decision-record", id=i,
+                lifecycle="immutable", status="accepted", scope="architecture",
+                products="[all]", owners="[o]", created="2026-06-02",
+                derives_from=f"[{derives}]")
+    meta.update(extra)
+    return _fm(**meta) + f"# {i}\n"
+
+
+@check("a merge records no reading: what it produced is a change, a side taken whole is not, and the union the generator owns is not attested text")
+def _review_gap_on_merges():
+    # Two branches that both touch a living document meet in a merge, and before `--cc` the
+    # merge listed no file: the walk went past it to an older commit on either side, so the
+    # combination of two texts -- or one side's prose under the other side's stamp -- was
+    # attested by whichever stamp happened to survive. And read in log order, the two sides
+    # interleaved: a side whose version a resolution threw away was named as the change, and a
+    # side that deleted the file silenced the check on the version that was kept.
+    problems = []
+    v = _load(VALIDATE, "validate_for_merges")
+    attest = _load(ATTEST, "attest_for_merges")
+    body = "Alpha.\n\n\n\nBeta.\n\n\n\nGamma."
+    doc = "products/p/PBR.md"
+    D = lambda when: {"GIT_AUTHOR_DATE": when, "GIT_COMMITTER_DATE": when}
+
+    def text(review: str, scope: str, words: str = body) -> str:
+        return _brief("p", review, scope=scope, body=words)
+
+    def edit(repo: _Repo, rel: str, *pairs: tuple[str, str]) -> None:
+        t = (repo.path / rel).read_text(encoding="utf-8")
+        for old, new in pairs:
+            if old not in t:
+                raise RuntimeError(f"the case is not what it says: {old!r} is not in {rel}")
+            t = t.replace(old, new, 1)
+        repo.write(rel, t)
+
+    def fresh(tmp: str, name: str) -> _Repo:
+        repo = _Repo(Path(tmp) / name)
+        repo.write(doc, text("2026-06-01 09:00", "the whole file"))
+        repo.write("products/p/notes.txt", "one\n")
+        repo.commit("first", "2026-06-01T09:00:00+02:00")
+        return repo
+
+    def attest_main(repo: _Repo, rel: str, scope: str):
+        return subprocess.run([sys.executable, str(ATTEST), "--root", str(repo.path), rel,
+                               "--scope", scope], capture_output=True, text=True)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        # 1. The branch changes and attests; the main line moves elsewhere. The merge takes the
+        # document whole from the branch, and the branch attested it.
+        repo = fresh(tmp, "taken-whole")
+        repo.git("checkout", "-q", "-b", "work")
+        edit(repo, doc, ("Alpha.", "Alpha, on the branch."))
+        repo.commit("branch: text", "2026-06-02T09:00:00+02:00")
+        edit(repo, doc, ("last_review: 2026-06-01 09:00", "last_review: 2026-06-02 10:00 +02:00"),
+             ("review_scope: the whole file", "review_scope: the whole file, after Alpha"))
+        repo.commit("branch: attest", "2026-06-02T10:05:00+02:00")
+        repo.git("checkout", "-q", "main")
+        repo.write("products/p/notes.txt", "two\n")
+        repo.commit("main: another file", "2026-06-03T09:00:00+02:00")
+        repo.git("checkout", "-q", "work")
+        repo.git("merge", "-q", "--no-edit", "main", env=D("2026-06-04T09:00:00+02:00"))
+        if repo.attestation_codes():
+            problems.append(f"a merge that took the document whole from the branch produced "
+                            f"{sorted(repo.attestation_codes())}")
+
+        # 2. The main line changes the same document elsewhere; the merge is clean and what it
+        # produced is neither side's text. LC006 names the merge, attest.py names the same
+        # commit, and PR005 says that it is a merge.
+        repo.git("checkout", "-q", "main")
+        edit(repo, doc, ("Gamma.", "Gamma, on main."))
+        repo.commit("main: text", "2026-06-05T09:00:00+02:00")
+        repo.git("checkout", "-q", "work")
+        repo.git("merge", "-q", "--no-edit", "main", env=D("2026-06-06T09:00:00+02:00"))
+        merged = repo.git("rev-parse", "HEAD")
+        found = repo.findings("LC006")
+        if len(found) != 1 or "is a merge" not in found[0]["message"] \
+                or merged[:12] not in found[0]["message"]:
+            problems.append(f"a clean merge of two changes to one attested document produced "
+                            f"{found}: one LC006 naming the merge")
+        r = v.Repository.open(repo.path)
+        named = attest.content_commit(r, doc)
+        r.close()
+        if not named or named[0] != merged or "a merge" not in named[2]:
+            problems.append(f"attest.py would say it attests {named}: the merge LC006 names")
+        changed = Path(tmp) / "changed.txt"
+        changed.write_text(doc + "\n")
+        rc, out, _ = repo.validate("--changed-files", str(changed))
+        pr005 = [f for f in (out or {}).get("findings", []) if f["code"] == "PR005"]
+        if len(pr005) != 1 or "changed by a merge" not in pr005[0]["message"]:
+            problems.append(f"PR005 on a change set whose document a merge changed said "
+                            f"{pr005}: that it was a merge, which records no reading")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        # 3. One side's prose under the other side's stamp, in a clean merge: the branch changes
+        # the text and does not reread, the main line attests its own version and changes no
+        # text. Neither side moved what the other did, so git merges without a word.
+        repo = fresh(tmp, "two-halves")
+        repo.git("checkout", "-q", "-b", "work")
+        edit(repo, doc, ("Beta.", "Beta, changed on the branch and not reread."))
+        repo.commit("branch: text", "2026-06-02T09:00:00+02:00")
+        repo.git("checkout", "-q", "main")
+        edit(repo, doc, ("last_review: 2026-06-01 09:00", "last_review: 2026-06-03 10:00 +02:00"),
+             ("review_scope: the whole file", "review_scope: the whole file, read on main"))
+        repo.commit("main: attest", "2026-06-03T10:05:00+02:00")
+        repo.git("checkout", "-q", "work")
+        repo.git("merge", "-q", "--no-edit", "main", env=D("2026-06-04T09:00:00+02:00"))
+        t = (repo.path / doc).read_text(encoding="utf-8")
+        if "2026-06-03 10:00" not in t or "not reread" not in t:
+            problems.append("the clean merge did not produce the branch's text under main's stamp")
+        elif not repo.findings("LC006"):
+            problems.append("a merge that put main's stamp on the branch's unread text was read "
+                            "as a reading")
+        r = attest_main(repo, doc, "the whole file, after the merge")
+        if r.returncode:
+            problems.append(f"attest.py refused a document after a committed merge: {r.stderr}")
+        repo.git("checkout", "-q", "--", doc)
+
+        # attest.py refuses while a merge is in progress.
+        repo.git("checkout", "-q", "main")
+        edit(repo, doc, ("Gamma.", "Gamma, on main again."))
+        repo.commit("main: text", "2026-06-05T09:00:00+02:00")
+        repo.git("checkout", "-q", "work")
+        repo.git("merge", "-q", "--no-commit", "--no-ff", "main", env=D("2026-06-06T09:00:00+02:00"))
+        r = attest_main(repo, doc, "the whole file, in the middle of a merge")
+        if r.returncode != 2 or "merge is in progress" not in r.stderr:
+            problems.append(f"attest.py during a merge gave exit {r.returncode}: it has to refuse")
+        repo.git("merge", "--abort")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        # 4. A resolution that keeps the branch's version whole, while the main line's newer
+        # change is thrown away: the file came down the branch, and main's commit is not in it.
+        repo = fresh(tmp, "thrown-away")
+        repo.git("checkout", "-q", "-b", "work")
+        edit(repo, doc, ("Beta.", "Beta, on the branch."))
+        repo.commit("branch: text", "2026-06-02T09:00:00+02:00")
+        edit(repo, doc, ("last_review: 2026-06-01 09:00", "last_review: 2026-06-02 10:00 +02:00"),
+             ("review_scope: the whole file", "review_scope: the whole file, after Beta"))
+        repo.commit("branch: attest", "2026-06-02T10:05:00+02:00")
+        repo.git("checkout", "-q", "main")
+        edit(repo, doc, ("Beta.", "Beta, on main, later."))
+        repo.commit("main: text", "2026-06-05T09:00:00+02:00")
+        repo.git("checkout", "-q", "work")
+        repo.git("merge", "-q", "-s", "ours", "--no-edit", "main", env=D("2026-06-06T09:00:00+02:00"))
+        if repo.attestation_codes():
+            problems.append(f"a merge that kept the branch's version whole named the main line's "
+                            f"discarded commit: {sorted(repo.attestation_codes())}")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        # 5. The main line deletes the document; the branch changed it and did not reread; the
+        # merge keeps the branch's version. The deletion is not on the line the text came down.
+        repo = fresh(tmp, "kept-after-delete")
+        repo.git("checkout", "-q", "-b", "work")
+        edit(repo, doc, ("Beta.", "Beta, on the branch, not reread."))
+        repo.commit("branch: text", "2026-06-02T09:00:00+02:00")
+        repo.git("checkout", "-q", "main")
+        repo.git("rm", "-q", doc)
+        repo.commit("main: delete", "2026-06-05T09:00:00+02:00")
+        repo.git("checkout", "-q", "work")
+        try:
+            repo.git("merge", "-q", "--no-edit", "main", env=D("2026-06-06T09:00:00+02:00"))
+        except RuntimeError:
+            repo.git("add", doc)
+            repo.git("commit", "-q", "--no-edit", env=D("2026-06-06T09:00:00+02:00"))
+        if not (repo.path / doc).exists():
+            problems.append("the modify/delete case did not keep the document")
+        elif not repo.findings("LC006"):
+            problems.append("a document kept after the other side deleted it, changed and not "
+                            "reread, was silent: the deletion is not on its line")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        # 6. The real union: an open register at the root, regenerated by `--emit-index` when
+        # an entry is added to another register. A branch attested the root; the main line
+        # added an entry elsewhere; the merge brings main's union and nothing else.
+        repo = _Repo(Path(tmp) / "union")
+        repo.write("OPEN.md", _open_register({"OD-001": "open"}))
+        repo.write("platform/OPEN.md", _open_register({"OD-002": "open"}).replace(
+            "products: [all]\nowners", "products: [none]\nowners", 1))
+        repo.validate("--emit-index")
+        repo.commit("first", "2026-06-01T09:00:00+02:00")
+        repo.git("checkout", "-q", "-b", "work")
+        edit(repo, "OPEN.md", ("last_review: 2026-06-01 09:00", "last_review: 2026-06-02 10:00 +02:00"))
+        repo.commit("branch: attest", "2026-06-02T10:05:00+02:00")
+        repo.git("checkout", "-q", "main")
+        edit(repo, "platform/OPEN.md", ("  OD-002:\n", "  OD-003:\n    status: open\n    cost_to_reverse: low\n"
+                                         "    default_in_force: none\n    products: [all]\n  OD-002:\n"))
+        repo.validate("--emit-index")
+        repo.commit("main: an entry, and the union regenerated", "2026-06-03T09:00:00+02:00")
+        repo.git("checkout", "-q", "work")
+        repo.git("merge", "-q", "--no-edit", "main", env=D("2026-06-04T09:00:00+02:00"))
+        root = (repo.path / "OPEN.md").read_text(encoding="utf-8")
+        if "OD-003" not in root:
+            problems.append("the merge did not bring main's union, so the case proves nothing")
+        elif [f for f in repo.findings("LC006") if f["path"] == "OPEN.md"]:
+            problems.append("a merge equal to the branch in everything but main's union made the "
+                            "root register stale")
+        if repo.findings("GEN001"):
+            problems.append("GEN001 on a union that is what the registers derive to")
+        repo.write("OPEN.md", root.replace("OD-003", "OD-999", 1))
+        repo.commit("edit the union by hand", "2026-06-05T09:00:00+02:00")
+        if not repo.findings("GEN001"):
+            problems.append("a union edited by hand was checked by nothing on the ordinary run")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        # 7. Only the union, in the file the generator writes it into, when that file is the
+        # register the generator writes into.
+        repo = _Repo(Path(tmp) / "names")
+        region = lambda name, body: f"<!-- generated: {name} -->\n{body}\n<!-- /generated -->"
+        repo.write("OPEN.md", _open_register({"OD-001": "open"}).replace(
+            "<!-- /generated -->\n", "<!-- /generated -->\n\n" + region("invented", "x") + "\n", 1))
+        repo.write("products/p/OPEN.md", _open_register({"OD-002": "open"}))
+        repo.commit("first", "2026-06-01T09:00:00+02:00")
+        edit(repo, "OPEN.md", ("x\n<!-- /generated -->", "written by hand\n<!-- /generated -->"))
+        edit(repo, "products/p/OPEN.md", ("old union", "written by hand"))
+        repo.commit("edit an invented region and a product's copy of the union", "2026-06-02T09:00:00+02:00")
+        found = {f["path"] for f in repo.findings("LC006")}
+        if found != {"OPEN.md", "products/p/OPEN.md"}:
+            problems.append(f"LC006 fired on {sorted(found)}: text between markers the generator "
+                            "does not own, or in a file it does not write into, is attested text")
+        brief = _brief("p", "2026-06-01 09:00", body=region("open-union", "one"))
+        other = _Repo(Path(tmp) / "not-a-register")
+        other.write("OPEN.md", brief)
+        other.commit("first", "2026-06-01T09:00:00+02:00")
+        other.write("OPEN.md", brief.replace("\none\n", "\ntwo\n", 1))
+        other.commit("edit", "2026-06-02T09:00:00+02:00")
+        if not other.findings("LC006"):
+            problems.append("the union's markers in a root OPEN.md that is not an open register "
+                            "were left out of the attested text: the generator writes nothing there")
+        r = subprocess.run([sys.executable, str(ATTEST), "--root", str(repo.path), "OPEN.md",
+                            "--scope", "the whole file"], capture_output=True, text=True)
+        repo.git("checkout", "-q", "--", "OPEN.md")
+        edit(repo, "OPEN.md", ("old union", "a union not yet committed"))
+        r = subprocess.run([sys.executable, str(ATTEST), "--root", str(repo.path), "OPEN.md",
+                            "--scope", "the whole file, again"], capture_output=True, text=True)
+        if r.returncode != 2:
+            problems.append("attest.py accepted a working tree whose union differs from HEAD: "
+                            "commit the regenerated union first, then attest")
+
+    # The list the exclusion reads and the list the generator writes, both ways.
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        register = v.Artifact(root / "OPEN.md", "OPEN.md",
+                              {"artifact_type": "open-register", "entries": {}}, "")
+        written = {str(p.relative_to(root)): set(names)
+                   for p, names in v.build_regions(root, [register]).items()}
+        declared = {rel: set(names) for rel, (_, names) in v.GENERATED_REGIONS.items()}
+        if written != declared:
+            problems.append(f"build_regions writes {written} and GENERATED_REGIONS names "
+                            f"{declared}: an excluded region the generator does not write is "
+                            "text no check reads")
     return problems
 
 
@@ -7142,6 +7413,50 @@ def _attestation_fields_agree():
     return problems
 
 
+@check("the CI assets check the framework out beside the project, never inside the root they validate")
+def _ci_assets_keep_the_framework_beside():
+    # Inside the project the validator read the framework's own files as the project's -- its
+    # fixtures numbered DEC-001, its prose without front matter -- and every pull request job
+    # went red; inside `.framework/` the checkout emptied the project's folder of that name.
+    problems = []
+    for name in ("pull-request.yml", "branches.yml"):
+        wf = yaml.safe_load((ROOT / "ci" / name).read_text(encoding="utf-8"))
+        for job, spec in (wf.get("jobs") or {}).items():
+            project = framework = None
+            for step in spec.get("steps") or []:
+                if str(step.get("uses", "")).startswith("actions/checkout"):
+                    w = step.get("with") or {}
+                    if "framework-data-ai" in str(w.get("repository", "")):
+                        framework = w.get("path")
+                    else:
+                        project = w.get("path")
+            if not project or not framework or framework.startswith(project + "/") \
+                    or framework.startswith("."):
+                problems.append(f"ci/{name}, job {job}: project in {project!r}, framework in "
+                                f"{framework!r}: they go side by side, neither inside the other "
+                                "nor in a hidden folder of the project's")
+            # Every call names its root: without one the validator reads `.`, the workspace that
+            # holds both checkouts, which is the failure this check is for.
+            lines = [line for step in spec.get("steps") or []
+                     for line in str(step.get("run", "")).replace("\\\n", " ").splitlines()]
+            names = {m.group(1) for line in lines
+                     for m in [re.match(r"\s*([A-Za-z_]\w*)=\S*validate\.py\s*$", line)] if m}
+            calls = [line for line in lines
+                     if not re.match(r"\s*[A-Za-z_]\w*=\S*validate\.py\s*$", line)
+                     and ("validate.py" in line
+                          or any(re.search(rf"\$\{{?{n}\b", line) for n in names))]
+            if not calls:
+                problems.append(f"ci/{name}, job {job}: no validator call found, so the check "
+                                "below proves nothing")
+            for call in calls:
+                root = re.search(r"--root(?:\s+|=)(\S+)", call)
+                if not root or root.group(1) not in {project, '"/tmp/at-$sha"', '"/tmp/before-$sha"'}:
+                    problems.append(f"ci/{name}, job {job}: a validator call with "
+                                    f"{root.group(0) if root else 'no --root'}, not the project's "
+                                    f"checkout {project!r}")
+    return problems
+
+
 @check("every checkout in the CI assets a project copies fetches the full history")
 def _ci_assets_fetch_history():
     # `_ci_fetches_history` above asserts it for this framework's own suite. These are the
@@ -7565,6 +7880,759 @@ def _exchange_annotations_travel():
         if any(f["code"].startswith(("EXC", "AN")) for f in (out or {}).get("findings", [])):
             problems.append(f"without the exchange: {[f['code'] for f in out['findings']]}, "
                             "expected no EXC and no AN001")
+    return problems
+
+
+@check("BR001-BR003 compare what a branch adds with the main line, and nothing they share")
+def _branch_checks():
+    # Two people resolving one open decision, each with the next free number: the case the
+    # checks exist for, and the history both sides share, which they must never report.
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = _Repo(Path(tmp) / "r")
+        repo.write("OPEN.md", _open_register({"OD-001": "open", "OD-003": "open"}))
+        # History nobody can undo: one entry closed by two accepted decisions.
+        repo.write("decisions/DEC-010.md", _decision("DEC-010", "OD-003"))
+        repo.write("decisions/DEC-011.md", _decision("DEC-011", "OD-003"))
+        repo.commit("base", "2026-06-01T09:00:00+02:00")
+        repo.git("checkout", "-q", "-b", "work/a")
+        repo.write("decisions/DEC-012-branch.md", _decision("DEC-012", "OD-001"))
+        repo.write("OPEN.md", _open_register({"OD-001": "open", "OD-002": "open", "OD-003": "open"}))
+        repo.commit("branch", "2026-06-02T09:00:00+02:00")
+        repo.git("checkout", "-q", "main")
+        repo.write("decisions/DEC-012-main.md", _decision("DEC-012", "OD-001"))
+        repo.write("OPEN.md", _open_register({"OD-001": "decided", "OD-002": "open", "OD-003": "open"}))
+        repo.commit("main decides", "2026-06-02T10:00:00+02:00")
+        repo.git("checkout", "-q", "work/a")
+
+        def codes(*extra):
+            rc, out, err = repo.validate(*extra)
+            if out is None:
+                raise RuntimeError(f"no report (exit {rc}): {err}")
+            return sorted((f["code"], f["path"]) for f in out["findings"]
+                          if f["code"][:2] in ("BR", "WK"))
+
+        if codes():
+            problems.append(f"without --base the branch checks ran: {codes()}")
+        got = codes("--base", "main")
+        want = [("BR001", "OPEN.md"), ("BR001", "decisions/DEC-012-branch.md"),
+                ("BR002", "decisions/DEC-012-branch.md")]
+        if got != want:
+            problems.append(f"two sides creating DEC-012 and OD-002 and deciding OD-001 gave "
+                            f"{got}, expected {want}; and OD-003, closed twice before the "
+                            "branch existed, must not appear")
+
+        # After the main line is merged in, the collision is gone from the comparison --
+        # `work.py sync` is what refuses to make that merge -- and BR002 still holds.
+        repo.git("checkout", "-q", "main")
+        repo.git("branch", "-q", "work/b", "HEAD~1")
+        repo.git("checkout", "-q", "work/b")
+        repo.write("decisions/DEC-013.md", _decision("DEC-013", "OD-001"))
+        repo.commit("another decision on OD-001", "2026-06-03T09:00:00+02:00")
+        repo.git("merge", "-q", "--no-edit", "main", env={"GIT_AUTHOR_DATE": "2026-06-04T09:00:00+02:00",
+                                                         "GIT_COMMITTER_DATE": "2026-06-04T09:00:00+02:00"})
+        got = codes("--base", "main")
+        if got != [("BR002", "decisions/DEC-013.md")]:
+            problems.append(f"a branch that merged the main line and still decides an entry "
+                            f"the main line closed gave {got}: BR002 is read by state")
+        # Reopening on purpose is a supersession, and is not reported.
+        repo.write("decisions/DEC-013.md", _decision("DEC-013", "OD-001", supersedes="[DEC-012]"))
+        repo.commit("supersede", "2026-06-05T09:00:00+02:00")
+        if codes("--base", "main"):
+            problems.append(f"a decision that supersedes the one that closed the entry gave "
+                            f"{codes('--base', 'main')}")
+
+        # BR003: only where the project declares work.yaml, and a tag clears it.
+        repo.write(".framework/work.yaml", "people:\n  Owner: {}\nlater_key: 1\n")
+        repo.commit("declare", "2026-06-05T10:00:00+02:00")
+        got = codes("--base", "main")
+        if got != [("BR003", "decisions/DEC-013.md"), ("WK001", ".framework/work.yaml")]:
+            problems.append(f"a new number with no reservation, and an unknown key, gave {got}")
+        repo.git("tag", "id/DEC-013")
+        if ("BR003", "decisions/DEC-013.md") not in codes("--base", "main"):
+            problems.append("a lightweight tag, which says for whom nothing, cleared BR003")
+        repo.git("tag", "-d", "id/DEC-013")
+        repo.git("tag", "-a", "id/DEC-013", "-m", "reserve DEC-013\n\nwho: Owner\nbranch: work/b\n")
+        if codes("--base", "main") != [("WK001", ".framework/work.yaml")]:
+            problems.append("a reservation made for this branch did not clear BR003")
+
+        rc, out, err = repo.validate("--base", "no-such-ref")
+        if rc != 2 or out is not None:
+            problems.append(f"--base naming a ref that does not exist gave exit {rc}: it has "
+                            "to refuse, not report")
+    return problems
+
+
+_WORK_ENV = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.com",
+             "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.com",
+             "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
+
+
+def _g(where: Path, *args: str, ok: bool = True) -> subprocess.CompletedProcess:
+    r = subprocess.run(["git", "-C", str(where), *args], capture_output=True, text=True,
+                       env={**os.environ, **_WORK_ENV})
+    if ok and r.returncode:
+        raise RuntimeError(f"git {' '.join(args)} in {where.name}: {r.stderr}")
+    return r
+
+
+def _work_origin(tmp: Path) -> tuple[Path, Path, Path]:
+    """A remote and two clones of it, side by side under different parents, whose root
+    register carries the union as the generator writes it."""
+    origin = tmp / "origin.git"
+    subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(origin)], check=True,
+                   env={**os.environ, **_WORK_ENV})
+    seed = _Repo(tmp / "seed")
+    seed.write(".framework/work.yaml", "people:\n  Owner: {}\n  Junior: {}\n")
+    seed.write("OPEN.md", _open_register({"OD-001": "open", "OD-002": "open"}))
+    seed.write("platform/OPEN.md", _open_register({"OD-003": "open"}).replace(
+        "products: [all]\nowners", "products: [none]\nowners", 1))
+    seed.validate("--emit-index")
+    seed.commit("base", "2026-06-01T09:00:00+02:00")
+    seed.git("remote", "add", "origin", str(origin))
+    seed.git("push", "-q", "origin", "main")
+    clones = []
+    for parent in ("projects", "other"):
+        c = tmp / parent / "docs"
+        c.parent.mkdir(parents=True)
+        subprocess.run(["git", "clone", "-q", str(origin), str(c)], check=True,
+                       env={**os.environ, **_WORK_ENV})
+        clones.append(c)
+    return origin, clones[0], clones[1]
+
+
+def _work(root: Path, *args: str, env: dict | None = None) -> tuple[int, str]:
+    r = subprocess.run([sys.executable, str(WORK), "--root", str(root), "--retries", "1",
+                        "--pause", "0", *args], capture_output=True, text=True,
+                       env={**os.environ, **_WORK_ENV, **(env or {})})
+    return r.returncode, r.stdout + r.stderr
+
+
+def _commit_all(where: Path, msg: str) -> None:
+    _g(where, "add", "-A")
+    _g(where, "commit", "-qm", msg)
+
+
+@check("work.py: one claim per element and one holder per number, refused to whoever pushes second")
+def _work_claims_and_reserves():
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        _, a, b = _work_origin(Path(tmp))
+        rc, out = _work(a, "open", "--who", "Owner", "--branch", "od-001", "OD-001")
+        tree = a.parent / "docs--od-001"
+        if rc or not tree.is_dir():
+            problems.append(f"the first claim failed or made no worktree beside the checkout "
+                            f"(exit {rc}): {out}")
+        rc, out = _work(b, "open", "--who", "Junior", "--branch", "mine", "OD-001", "--no-worktree")
+        if rc != 1 or "claimed by Owner on work/od-001" not in out:
+            problems.append(f"a second claim on OD-001 gave exit {rc}: {out!r}. It has to be "
+                            "refused with who holds it and where")
+        rc, out = _work(b, "open", "--who", "Junior", "--branch", "od-001", "OD-002", "--no-worktree")
+        if rc == 0:
+            problems.append("a second `open` naming an existing branch went through: the branch "
+                            "is created with a lease that requires it not to exist")
+        for args, why in ((("open", "--who", "Junior", "--branch", "x", "OD-009",
+                            "--no-worktree"), "an element nobody declared"),
+                          (("open", "--who", "Nobody", "--branch", "x", "OD-002",
+                            "--no-worktree"), "a person work.yaml does not name"),
+                          (("reserve", "DEC", "--who", "Junior"), "a reservation from the main line"),
+                          (("reserve", "RSK", "--who", "Owner"), "a per-product family without --product")):
+            rc, out = _work(b if why != "a per-product family without --product" else tree, *args)
+            if rc != 2:
+                problems.append(f"{why} gave exit {rc}: refused, with exit 2: {out[-200:]!r}")
+        rc, out = _work(b, "open", "--who", "Junior", "--branch", "od-002", "OD-002", "--no-worktree")
+        _g(b, "checkout", "-q", "work/od-002")
+        rc1, out1 = _work(tree, "reserve", "DEC", "--who", "Owner", "--count", "2")
+        rc2, out2 = _work(b, "reserve", "DEC", "--who", "Junior")
+        if rc1 or rc2 or "DEC-001, DEC-002" not in out1 or "DEC-003" not in out2:
+            problems.append(f"two people reserving DEC got {out1!r} and {out2!r}: three "
+                            "numbers, none shared")
+        rc, out = _work(tree, "reserve", "RSK", "--product", "platform", "--who", "Owner")
+        if rc or "platform:RSK-001" not in out or _g(a, "rev-parse", "-q", "--verify",
+                                                      "refs/tags/id/platform/RSK-001", ok=False).returncode:
+            problems.append(f"a per-product reservation was not made under its scope: {out!r}")
+        rc, out = _work(tree, "reserve", "RSK", "--product", "atlsa", "--who", "Owner")
+        if rc != 2:
+            problems.append("a reservation under a product nobody declares was made")
+        (tree / "products" / "atlas").mkdir(parents=True)
+        (tree / "products" / "atlas" / "product.yaml").write_text(
+            "schema: framework/product-manifest/v1\nartifact_type: product-manifest\n"
+            "products: [atlas]\n")
+        _commit_all(tree, "a product created on the branch")
+        rc, out = _work(tree, "reserve", "RSK", "--product", "atlas", "--who", "Owner")
+        if rc or "atlas:RSK-002" not in out or _g(a, "rev-parse", "-q", "--verify",
+                                                   "refs/tags/id/atlas/RSK-002", ok=False).returncode:
+            problems.append(f"a product created on the branch could not reserve its first number, "
+                            f"or it was not filed under the product: {out!r}")
+        rc, out = _work(b, "list")
+        if rc or "work/od-001" not in out or "claims: OD-001" not in out:
+            problems.append(f"list does not show the branch and its claim: {out!r}")
+        rc, out = _work(b, "release", "OD-001", "--who", "Junior")
+        if rc != 2:
+            problems.append("somebody else's claim was released without `--theirs`")
+        # A third clone sees the claim before it is released and taken again: its tag then
+        # points at an object the remote no longer has, and a plain fetch refuses to move it.
+        c = Path(tmp) / "third" / "docs"
+        c.parent.mkdir(parents=True)
+        subprocess.run(["git", "clone", "-q", str(Path(tmp) / "origin.git"), str(c)], check=True,
+                       env={**os.environ, **_WORK_ENV})
+        _work(c, "list")
+        rc, out = _work(tree, "release", "OD-001", "--who", "Owner")
+        rc2, out2 = _work(b, "open", "--who", "Junior", "--branch", "after", "OD-001",
+                          "--no-worktree")
+        if rc or rc2:
+            problems.append(f"after its holder released it, OD-001 could not be claimed: {out2!r}")
+        rc, out = _work(c, "list")
+        rows, current = {}, None
+        for line in out.splitlines():
+            if line.startswith("work/"):
+                current = line.split(":", 1)[0]
+                rows[current] = []
+            elif current and line.startswith("  claims:"):
+                rows[current] += [t.strip() for t in line.split(":", 1)[1].split(",")]
+        if rc or "OD-001" not in rows.get("work/after", []) or "OD-001" in rows.get("work/od-001", []):
+            problems.append(f"a clone that saw a released claim taken again could not list, or "
+                            f"listed the old holder: {rows or out!r}")
+        rc, out = _work(tree, "reserve", "DEC", "--who", "Owner")
+        if "DEC-004" not in out:
+            problems.append(f"a released claim gave back a number, or reservations were "
+                            f"deleted: {out!r}")
+    return problems
+
+
+def _work_sync_modify_delete(tree: Path, b: Path) -> list[str]:
+    """A file one side deleted and the other changed: left for a person, and `--continue`
+    refuses until it is resolved and no marker is staged."""
+    problems = []
+    _g(b, "pull", "-q", "origin", "main")
+    (b / "notes.md").write_text("one\n")
+    _commit_all(b, "a note")
+    _g(b, "push", "-q", "origin", "main")
+    _work(tree, "sync", "--no-push")
+    (tree / "notes.md").write_text("one, changed on the branch\n")
+    _commit_all(tree, "branch changes the note")
+    _g(b, "rm", "-q", "notes.md")
+    _commit_all(b, "main deletes the note")
+    _g(b, "push", "-q", "origin", "main")
+    rc, out = _work(tree, "sync", "--no-push")
+    if rc != 1 or "deleted on the side merged in" not in out:
+        problems.append(f"a modify/delete conflict was resolved by the script (exit {rc}): {out!r}")
+    rc, out = _work(tree, "sync", "--continue", "--no-push")
+    if rc != 2:
+        problems.append("`--continue` with a file still unmerged went through")
+    _g(tree, "add", "notes.md")
+    (tree / "OPEN.md").write_text((tree / "OPEN.md").read_text() + "\n<<<<<<< HEAD\nx\n")
+    _g(tree, "add", "OPEN.md")
+    rc, out = _work(tree, "sync", "--continue", "--no-push")
+    if rc != 2 or "conflict markers" not in out:
+        problems.append(f"`--continue` with markers staged went through: {out!r}")
+    # Resolved for real, while another session moved `origin/main` under this merge: the merge
+    # `sync` began is still the one `--continue` finishes.
+    text = (tree / "OPEN.md").read_text()
+    (tree / "OPEN.md").write_text(text[:text.rindex("\n<<<<<<< HEAD\nx\n")] + "\n")
+    _g(tree, "add", "OPEN.md")
+    _g(b, "pull", "-q", "origin", "main", ok=False)
+    (b / "later.md").write_text("later\n")
+    _commit_all(b, "the main line moves on")
+    _g(b, "push", "-q", "origin", "main")
+    _g(tree, "fetch", "-q", "origin")
+    rc, out = _work(tree, "sync", "--continue", "--no-push")
+    if rc != 0 or "Merged" not in out:
+        problems.append(f"`--continue` refused the merge `sync` began once origin/main had moved: "
+                        f"{out!r}")
+    return problems
+
+
+@check("work.py sync merges the main line, resolves only what is mechanical, and leaves every other conflict whole")
+def _work_sync():
+    problems = []
+    x = _load(WORK, "work_for_sync")
+    with tempfile.TemporaryDirectory() as tmp:
+        _, a, b = _work_origin(Path(tmp))
+        _work(a, "open", "--who", "Owner", "--branch", "od-001", "OD-001")
+        tree = a.parent / "docs--od-001"
+        rc, out = _work(tree, "sync", "--no-push")
+        if rc or "already contains" not in out:
+            problems.append(f"a branch already up to date was not said to be: {out!r}")
+
+        # The branch decides OD-001, adds a parking line and attests; the main line adds a
+        # parking line and an entry elsewhere, regenerates the union, and attests too. Every
+        # conflict is in the root register, which carries the generator's mark in its union.
+        text = (tree / "OPEN.md").read_text()
+        text = text.replace("  OD-001:\n    status: open", "  OD-001:\n    status: decided", 1)
+        text = text.replace("- first line\n", "- first line\n- a line from the branch\n"
+                            "- **Cost to reverse:** low\n", 1)
+        text = text.replace("last_review: 2026-06-01 09:00", "last_review: 2026-06-02 10:00 +02:00", 1)
+        (tree / "OPEN.md").write_text(text)
+        _commit_all(tree, "branch works")
+        _g(b, "pull", "-q", "origin", "main")
+        text = (b / "OPEN.md").read_text()
+        text = text.replace("- first line\n", "- first line\n- a line from main\n"
+                            "- **Cost to reverse:** low\n", 1)
+        text = text.replace("last_review: 2026-06-01 09:00", "last_review: 2026-06-03 10:00 +02:00", 1)
+        (b / "OPEN.md").write_text(text)
+        plat = (b / "platform" / "OPEN.md").read_text().replace(
+            "  OD-003:\n", "  OD-004:\n    status: open\n    cost_to_reverse: low\n"
+            "    default_in_force: none\n    products: [all]\n  OD-003:\n", 1)
+        (b / "platform" / "OPEN.md").write_text(plat)
+        subprocess.run([sys.executable, str(VALIDATE), "--root", str(b), "--emit-index",
+                        "--stale-days", "36500"], capture_output=True)
+        _commit_all(b, "main moves")
+        _g(b, "push", "-q", "origin", "main")
+        rc, out = _work(tree, "sync", "--no-push")
+        text = (tree / "OPEN.md").read_text()
+        if rc or "<<<<<<<" in text:
+            problems.append(f"conflicts that are an attestation block, two parking lines and the "
+                            f"union were not resolved (exit {rc}): {out}")
+        elif "status: decided" not in text or "a line from the branch" not in text:
+            problems.append("sync lost the branch's version of the root register: the union "
+                            "carries the generator's mark, and the file is not the generator's")
+        elif not ("- a line from the branch\n- **Cost to reverse:** low\n- a line from main\n"
+                  "- **Cost to reverse:** low" in text):
+            problems.append("lines both sides added were not all kept, in order: a repeated "
+                            "label is not a duplicate of the other side's")
+        elif "2026-06-02 10:00" not in text or "OD-004" not in text:
+            problems.append("sync kept the wrong stamp, or did not regenerate the union")
+        elif "OPEN.md" not in out or "attest" not in out:
+            problems.append("sync did not name the root register, whose text came from both "
+                            f"sides, among the readings owed: {out!r}")
+
+        # A file one side deleted and the other changed is a person's.
+        try:
+            problems += _work_sync_modify_delete(tree, b)
+        except RuntimeError as e:
+            problems.append(f"the modify/delete case did not run to its end: {e}")
+
+        # A collision is refused before anything is merged.
+        _g(b, "pull", "-q", "origin", "main")
+        (b / "decisions").mkdir(exist_ok=True)
+        (b / "decisions" / "DEC-009-main.md").write_text(_decision("DEC-009", "OD-002"))
+        _commit_all(b, "main creates DEC-009")
+        _g(b, "push", "-q", "origin", "main")
+        (tree / "decisions").mkdir(exist_ok=True)
+        (tree / "decisions" / "DEC-009-branch.md").write_text(_decision("DEC-009", "OD-001"))
+        _commit_all(tree, "branch creates DEC-009")
+        head = _g(tree, "rev-parse", "HEAD").stdout
+        rc, out = _work(tree, "sync", "--no-push")
+        if rc != 1 or "DEC-009" not in out or head != _g(tree, "rev-parse", "HEAD").stdout:
+            problems.append(f"both sides creating DEC-009 was merged, or not named (exit {rc}): "
+                            f"{out!r}")
+
+    # Content in conflict is left with its three versions; unreadable markers leave the file.
+    text = "\n".join(["# Doc", "", "<<<<<<< HEAD", "ours", "||||||| base", "base", "=======",
+                      "theirs", ">>>>>>> origin/main", ""])
+    resolved, left, _ = x.resolve(text, "products/p/PBR.md")
+    if left != 1 or "||||||| base" not in resolved:
+        problems.append(f"a conflict in content was resolved by the script: {resolved!r}")
+    fm = "\n".join(["---", "<<<<<<< HEAD", "status: a", "||||||| base", "=======",
+                    "status: b", ">>>>>>> origin/main", "---", ""])
+    if x.resolve(fm, "products/p/PBR.md")[1] != 1:
+        problems.append("two keys added at one place of the front matter were both kept")
+    spans = "\n".join(["---", "entries:", "<<<<<<< HEAD", "  - x", "last_review: 1", "||||||| base",
+                       "  - y", "last_review: 0", "=======", "  - z", "last_review: 2",
+                       ">>>>>>> origin/main", "---", ""])
+    if x.resolve(spans, "products/p/PBR.md")[1] != 1:
+        problems.append("a conflict spanning a list and the stamp was resolved as an attestation")
+    yml = "\n".join(["a: 1", "<<<<<<< HEAD", "b: 2", "||||||| base", "=======", "c: 3",
+                     ">>>>>>> origin/main", ""])
+    if x.resolve(yml, ".framework/expected-findings.yaml")[1] != 1:
+        problems.append("lines added at one place of a YAML file were joined by the script")
+    for broken in ("<<<<<<< HEAD\nx\n", "<<<<<<< HEAD\nx\n=======\ny\n>>>>>>> m\n"):
+        try:
+            x.resolve(broken, "products/p/PBR.md")
+            problems.append(f"markers it cannot read were resolved: {broken!r}")
+        except x.Unreadable:
+            pass
+    return problems
+
+
+@check("work.py: a push whose answer was lost is not read as somebody else's")
+def _work_lost_answers():
+    # The server of one project drops a share of its connections. A push that landed and whose
+    # answer was lost, tried again, is refused -- the tag is there, as ours -- and that refusal
+    # read as "taken" burned a number and claimed somebody had the element. The remote is asked.
+    problems = []
+    x = _load(WORK, "work_for_lost_answers")
+    real = x.subprocess.run
+
+    def lossy(cmd, *a, **k):
+        r = real(cmd, *a, **k)
+        if "push" in cmd and r.returncode == 0:
+            return subprocess.CompletedProcess(cmd, 128, "", "fatal: the remote end hung up unexpectedly")
+        return r
+
+    with tempfile.TemporaryDirectory() as tmp:
+        _, a, _ = _work_origin(Path(tmp))
+        _work(a, "open", "--who", "Owner", "--branch", "od-001", "OD-001", "--no-worktree")
+        _g(a, "checkout", "-q", "work/od-001")
+        args = argparse.Namespace(root=a, remote="origin", main="main", retries=3, pause=0,
+                                  prefix="DEC", who="Owner", count=1, product=None)
+        x.subprocess.run = lossy
+        out = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(out):
+                rc = x.cmd_reserve(x.Project(args), args)
+        except SystemExit as e:
+            rc = e.code
+        finally:
+            x.subprocess.run = real
+        held = _g(a, "ls-remote", "origin", "refs/tags/id/*").stdout
+        if rc != 0 or "DEC-001" not in out.getvalue() or "DEC-002" in held:
+            problems.append(f"a reservation whose answer was lost gave exit {rc} and "
+                            f"{out.getvalue()!r}, with {held.split() if held else 'nothing'} on "
+                            "the remote: one number, reported as reserved")
+        args = argparse.Namespace(root=a, remote="origin", main="main", retries=3, pause=0,
+                                  ids=["OD-002"], who="Owner", branch="od-002", no_worktree=True)
+        x.subprocess.run = lossy
+        out = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(out):
+                rc = x.cmd_open(x.Project(args), args)
+        except SystemExit as e:
+            rc = e.code
+        finally:
+            x.subprocess.run = real
+        if rc != 0 or "Somebody pushed first" in out.getvalue():
+            problems.append(f"a claim whose answer was lost was reported as another's: "
+                            f"{out.getvalue()!r}")
+
+        # The other way round: the first attempt never reaches the remote, the second does. The
+        # tag made here has to be there for the second attempt to push.
+        attempts = []
+
+        def dropped_once(cmd, *a, **k):
+            if "push" in cmd and not attempts:
+                attempts.append(cmd)
+                return subprocess.CompletedProcess(cmd, 128, "", "fatal: unable to access: Connection reset")
+            return real(cmd, *a, **k)
+
+        args = argparse.Namespace(root=a, remote="origin", main="main", retries=3, pause=0,
+                                  prefix="DEC", who="Owner", count=1, product=None)
+        x.subprocess.run = dropped_once
+        out = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(out):
+                rc = x.cmd_reserve(x.Project(args), args)
+        except SystemExit as e:
+            rc = e.code
+        finally:
+            x.subprocess.run = real
+        if rc != 0 or "Reserved: DEC-002" not in out.getvalue():
+            problems.append(f"a push that never landed was not tried again (exit {rc}): "
+                            f"{out.getvalue()!r}")
+
+        # A remote that answers neither the push nor the question: the number may be there, and
+        # the person is told so rather than that it is not.
+        def silent(cmd, *a, **k):
+            if "push" in cmd or "ls-remote" in cmd:
+                return subprocess.CompletedProcess(cmd, 128, "", "fatal: Could not read from remote")
+            return real(cmd, *a, **k)
+
+        x.subprocess.run = silent
+        err = io.StringIO()
+        try:
+            with contextlib.redirect_stderr(err), contextlib.redirect_stdout(io.StringIO()):
+                rc = x.cmd_reserve(x.Project(args), args)
+        except SystemExit as e:
+            rc = e.code
+        finally:
+            x.subprocess.run = real
+        if rc != 2 or "may or may not have landed" not in err.getvalue():
+            problems.append(f"a remote that never answered was reported as having refused "
+                            f"(exit {rc}): {err.getvalue()!r}")
+        for cmd, ns in (("open", argparse.Namespace(root=a, remote="origin", main="main",
+                                                     retries=1, pause=0, ids=["OD-003"],
+                                                     who="Owner", branch="unanswered",
+                                                     no_worktree=True)),
+                        ("release", argparse.Namespace(root=a, remote="origin", main="main",
+                                                        retries=1, pause=0, ids=["OD-001"],
+                                                        who="Owner", theirs=False))):
+            x.subprocess.run = silent
+            err = io.StringIO()
+            try:
+                with contextlib.redirect_stderr(err), contextlib.redirect_stdout(io.StringIO()):
+                    rc = getattr(x, f"cmd_{cmd}")(x.Project(ns), ns)
+            except SystemExit as e:
+                rc = e.code
+            finally:
+                x.subprocess.run = real
+            said = err.getvalue()
+            if rc != 2 or "may" not in said or (cmd == "open" and "worktree add" in said):
+                problems.append(f"`{cmd}` against a remote that never answered said {said!r}")
+            if cmd == "open":
+                _g(a, "branch", "-D", "work/unanswered", ok=False)
+    return problems
+
+
+def _work_sync_edges_cases() -> list[str]:
+    problems = []
+    x = _load(WORK, "work_for_sync_edges")
+    with tempfile.TemporaryDirectory() as tmp:
+        _, a, b = _work_origin(Path(tmp))
+        _work(a, "open", "--who", "Owner", "--branch", "od-001", "OD-001")
+        tree = a.parent / "docs--od-001"
+        _g(b, "pull", "-q", "origin", "main")
+        (b / ".gitattributes").write_text("*.csv binary\n")
+        (b / "data.csv").write_text("a,b\n1,2\n")
+        _commit_all(b, "a table git does not merge by line")
+        _g(b, "push", "-q", "origin", "main")
+        _work(tree, "sync", "--no-push")
+        (tree / "data.csv").write_text("a,b\n1,3\n")
+        _commit_all(tree, "branch changes the table")
+        (b / "data.csv").write_text("a,b\n1,4\n")
+        _commit_all(b, "main changes the table")
+        _g(b, "push", "-q", "origin", "main")
+        rc, out = _work(tree, "sync", "--no-push")
+        if rc != 1 or "without markers" not in out or "1,4" in (tree / "data.csv").read_text() \
+                and "1,3" not in (tree / "data.csv").read_text():
+            problems.append(f"a file in conflict without markers was resolved by the script "
+                            f"(exit {rc}): {out!r}")
+        _g(tree, "merge", "--abort", ok=False)
+        here = _g(tree, "rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
+        _g(tree, "checkout", "-q", "-b", "elsewhere", "HEAD~1")
+        (tree / "other.md").write_text("on another branch\n")
+        _commit_all(tree, "a commit somewhere else")
+        _g(tree, "checkout", "-q", here)
+        _g(tree, "merge", "--no-commit", "--no-ff", "-q", "elsewhere", ok=False)
+        if _g(tree, "rev-parse", "-q", "--verify", "MERGE_HEAD", ok=False).returncode:
+            problems.append("the case did not produce a merge in progress, so it proves nothing")
+        else:
+            rc, out = _work(tree, "sync", "--continue", "--no-push")
+            if rc != 2 or "not the one `sync` began" not in out:
+                problems.append(f"`--continue` finished a merge `sync` did not begin: {out!r}")
+            _g(tree, "merge", "--abort", ok=False)
+    commented = "\n".join(["---", "<<<<<<< HEAD", "last_review: 2026-06-02 10:00", "||||||| base",
+                            "last_review: 2026-06-01 09:00", "=======",
+                            "last_review: 2026-06-03 10:00", "  # covered only §1", ">>>>>>> origin/main",
+                            "---", ""])
+    if x.resolve(commented, "products/p/PBR.md")[1] != 1:
+        problems.append("a comment under `last_review` on one side was dropped as part of the "
+                        "stamp: it is text, by the validator's own reading of the block")
+    return problems
+
+
+@check("work.py sync leaves a file without markers, and a merge it did not begin, to a person")
+def _work_sync_edges():
+    try:
+        return _work_sync_edges_cases()
+    except RuntimeError as e:
+        return [f"the cases did not run to their end: {e}"]
+
+
+@check("work.py sync, refused because the branch moved while it merged, says to sync again, and that works")
+def _work_sync_raced():
+    problems = []
+    x = _load(WORK, "work_for_sync_race")
+    real = x.subprocess.run
+    with tempfile.TemporaryDirectory() as tmp:
+        _, a, b = _work_origin(Path(tmp))
+        _work(a, "open", "--who", "Owner", "--branch", "od-001", "OD-001")
+        tree = a.parent / "docs--od-001"
+        (b / "main.md").write_text("the main line moves\n")
+        _commit_all(b, "main moves")
+        _g(b, "push", "-q", "origin", "main")
+        _g(b, "fetch", "-q", "origin")
+        _g(b, "checkout", "-q", "-b", "work/od-001", "origin/work/od-001")
+        raced = []
+
+        def race(cmd, *a2, **k):
+            if "push" in cmd and any("refs/heads/work/od-001" in c for c in cmd) and not raced:
+                raced.append(1)
+                (b / "theirs.md").write_text("pushed while the other clone merged\n")
+                _commit_all(b, "a commit on the same branch, meanwhile")
+                _g(b, "push", "-q", "origin", "work/od-001")
+            return real(cmd, *a2, **k)
+
+        args = argparse.Namespace(root=tree, remote="origin", main="main", retries=1, pause=0,
+                                  cont=False, no_push=False)
+        x.subprocess.run = race
+        out = io.StringIO()
+        try:
+            with contextlib.redirect_stdout(out):
+                rc = x.cmd_sync(x.Project(args), args)
+        except SystemExit as e:
+            rc = e.code
+        finally:
+            x.subprocess.run = real
+        if rc != 1 or "pushed from elsewhere" not in out.getvalue():
+            problems.append(f"a push refused because the branch moved said {out.getvalue()!r}")
+        rc, said = _work(tree, "sync")
+        if rc or not (tree / "theirs.md").exists():
+            problems.append(f"the sync it says to run did not bring the other clone's commit in: {said!r}")
+    return problems
+
+
+@check("work.py sync on one branch shared by two clones: a number both created is refused, a main line both merged is not")
+def _work_sync_shared_branch():
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        _, a, b = _work_origin(Path(tmp))
+        _work(a, "open", "--who", "Owner", "--branch", "od-001", "OD-001")
+        tree = a.parent / "docs--od-001"
+        # The branch has a commit of its own before the main line moves, so that the two merges
+        # below have two best common ancestors: that commit and the main line's tip.
+        (tree / "branch.md").write_text("on the branch\n")
+        _commit_all(tree, "a commit on the branch")
+        _g(tree, "push", "-q", "origin", "work/od-001")
+        _g(b, "fetch", "-q", "origin")
+        _g(b, "checkout", "-q", "-b", "work/od-001", "origin/work/od-001")
+        # The main line creates a number; both clones merge it, one without pushing.
+        m = Path(tmp) / "m"
+        subprocess.run(["git", "clone", "-q", str(Path(tmp) / "origin.git"), str(m)], check=True,
+                       env={**os.environ, **_WORK_ENV})
+        (m / "decisions").mkdir()
+        (m / "decisions" / "DEC-020.md").write_text(_decision("DEC-020", "OD-002"))
+        _commit_all(m, "main creates DEC-020")
+        _g(m, "push", "-q", "origin", "main")
+        # Dated apart, so that the two merges of the same parents are two commits.
+        rc1, out1 = _work(b, "sync", "--no-push", env={"GIT_AUTHOR_DATE": "2026-06-10T09:00:00+02:00",
+                                                       "GIT_COMMITTER_DATE": "2026-06-10T09:00:00+02:00"})
+        rc2, out2 = _work(tree, "sync", env={"GIT_AUTHOR_DATE": "2026-06-10T10:00:00+02:00",
+                                             "GIT_COMMITTER_DATE": "2026-06-10T10:00:00+02:00"})
+        rc3, out3 = _work(b, "sync")
+        if rc1 or rc2 or rc3 or "both created" in out3 or "come in first" not in out3:
+            problems.append(f"two clones that both merged the main line were refused as having "
+                            f"created its numbers (exits {rc1} {rc2} {rc3}): {out3!r}")
+        # Both write the same new number on the branch itself: refused before anything merges.
+        for where in (tree, b):
+            if _g(where, "pull", "-q", "--ff-only", "origin", "work/od-001", ok=False).returncode:
+                problems.append(f"{where.name}: could not fast-forward to the shared branch")
+                return problems
+        (tree / "decisions" / "DEC-030-a.md").write_text(_decision("DEC-030", "OD-001"))
+        _commit_all(tree, "DEC-030 here")
+        _g(tree, "push", "-q", "origin", "work/od-001")
+        (b / "decisions" / "DEC-030-b.md").write_text(_decision("DEC-030", "OD-001"))
+        _commit_all(b, "DEC-030 there")
+        head = _g(b, "rev-parse", "HEAD").stdout
+        rc, out = _work(b, "sync")
+        if rc != 1 or "both created DEC-030" not in out or head != _g(b, "rev-parse", "HEAD").stdout:
+            problems.append(f"two clones creating DEC-030 on one branch were merged (exit {rc}): {out!r}")
+    return problems
+
+
+@check("work.py says which refusal it met, and the CI script tells a new error from a standing one")
+def _work_refusals_and_ci_comparison():
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        origin, a, b = _work_origin(Path(tmp))
+        # A remote that refuses claims by rule: not a race, and not reported as one.
+        hook = origin / "hooks" / "pre-receive"
+        hook.write_text("#!/bin/sh\nwhile read old new ref; do case \"$ref\" in refs/tags/claim/*) "
+                        "echo 'claims are not accepted here' >&2; exit 1;; esac; done\nexit 0\n")
+        hook.chmod(0o755)
+        rc, out = _work(a, "open", "--who", "Owner", "--branch", "od-001", "OD-001", "--no-worktree")
+        if rc != 2 or "a hook, a protection or a permission" not in out:
+            problems.append(f"a claim refused by a hook was reported as a race (exit {rc}): {out!r}")
+        hook.unlink()
+
+        # A work branch someone else pushed to: `sync` brings their commits in first.
+        rc, out = _work(a, "open", "--who", "Owner", "--branch", "od-001", "OD-001")
+        if rc:
+            problems.append(f"the claim after the hook was removed failed: {out!r}")
+            return problems
+        tree = a.parent / "docs--od-001"
+        _g(b, "fetch", "-q", "origin")
+        _g(b, "checkout", "-q", "-b", "work/od-001", "origin/work/od-001")
+        (b / "theirs.md").write_text("from the other clone\n")
+        _commit_all(b, "a commit on the same work branch")
+        _g(b, "push", "-q", "origin", "work/od-001")
+        _g(b, "checkout", "-q", "main")
+        (b / "main.md").write_text("the main line moves\n")
+        _commit_all(b, "main moves")
+        _g(b, "push", "-q", "origin", "main")
+        rc, out = _work(tree, "sync")
+        if rc or "moved forward" not in out or not (tree / "theirs.md").exists() \
+                or not (tree / "main.md").exists():
+            problems.append(f"a sync on a work branch someone else pushed to did not move forward "
+                            f"to their commits and then bring the main line in (exit {rc}): {out!r}")
+        # Two clones taking turns on one branch converge: the other clone, behind by the merge
+        # just pushed, moves forward to it without a merge of its own.
+        _g(b, "checkout", "-q", "work/od-001")
+        _g(b, "pull", "-q", "--ff-only", "origin", "work/od-001")
+        if _g(b, "rev-parse", "HEAD").stdout != _g(tree, "rev-parse", "HEAD").stdout:
+            problems.append("the second clone could not fast-forward to the first's merge")
+        _g(b, "checkout", "-q", "main")
+        merges = _g(tree, "rev-list", "--merges", "--count", f"HEAD~{0}").stdout.strip()
+        if int(merges) != 1:
+            problems.append(f"{merges} merge commits after one fast-forward and one merge of the "
+                            "main line: a fast-forward makes none")
+        # The remote refusing the branch by rule is a hook's, and said to be.
+        hook.write_text("#!/bin/sh\nwhile read old new ref; do case \"$ref\" in refs/heads/work/*) "
+                        "echo 'work branches are frozen' >&2; exit 1;; esac; done\nexit 0\n")
+        hook.chmod(0o755)
+        (b / "main2.md").write_text("again\n")
+        _commit_all(b, "main moves again")
+        _g(b, "push", "-q", "origin", "main")
+        rc, out = _work(tree, "sync")
+        if rc != 1 or "a hook or a protection rule" not in out:
+            problems.append(f"a work branch refused by a hook was not said to be: {out!r}")
+        hook.unlink()
+
+        # A claim on a product that has since gone is still released by its holder.
+        _g(a, "tag", "-a", "claim/gone/RSK-001", "-m", "claim gone/RSK-001\n\nwho: Owner\nbranch: work/x\n",
+           "origin/main")
+        _g(a, "push", "-q", "origin", "refs/tags/claim/gone/RSK-001")
+        rc, out = _work(a, "release", "gone:RSK-001", "--who", "Owner")
+        if rc:
+            problems.append(f"a claim on a product no longer declared could not be released: {out!r}")
+
+    # The comparison the main-line job makes, run on reports written here.
+    wf = yaml.safe_load((ROOT / "ci" / "branches.yml").read_text(encoding="utf-8"))
+    run = next(st["run"] for st in wf["jobs"]["main"]["steps"]
+               if str(st.get("name", "")).startswith("how each commit"))
+    script = run[run.index("<<'PY'\n") + 7:run.index("\nPY\n")]
+    with tempfile.TemporaryDirectory() as tmp:
+        t = Path(tmp)
+        err = {"code": "REF001", "path": "a.md", "message": "standing", "level": "error"}
+        new = {"code": "REF001", "path": "b.md", "message": "new", "level": "error"}
+        (t / "s.py").write_text(script)
+        (t / "after.json").write_text(json.dumps({"findings": [err, new]}))
+        (t / "before.json").write_text(json.dumps({"findings": [err]}))
+        (t / "empty.json").write_text("")
+
+        def compare(before: str, parent: str) -> str:
+            return subprocess.run([sys.executable, str(t / "s.py"), str(t / "after.json"),
+                                   str(t / before), "abc123def456", parent],
+                                  capture_output=True, text=True).stdout
+        out = compare("before.json", "p")
+        if "b.md" not in out or "a.md" in out:
+            problems.append(f"the main-line job did not keep to the error the commit brought: {out!r}")
+        out = compare("empty.json", "p")
+        if "could not be validated" not in out or "b.md" in out:
+            problems.append(f"a tree before that could not be validated was not said, or its "
+                            f"errors were posted as new: {out!r}")
+        out = compare("empty.json", "")
+        if "could not be validated" in out or "a.md" not in out:
+            problems.append(f"a first commit, which has no tree before it, got a false notice or "
+                            f"lost its errors: {out!r}")
+    return problems
+
+
+@check("BR003 asks that the reservation be this branch's")
+def _branch_reservations_are_owned():
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = _Repo(Path(tmp) / "r")
+        repo.write(".framework/work.yaml", "people:\n  Owner: {}\n")
+        repo.write("OPEN.md", _open_register({"OD-001": "open"}))
+        repo.commit("base", "2026-06-01T09:00:00+02:00")
+        repo.git("checkout", "-q", "-b", "work/mine")
+        repo.write("decisions/DEC-001.md", _decision("DEC-001", "OD-001"))
+        repo.commit("a decision", "2026-06-02T09:00:00+02:00")
+        repo.git("tag", "-a", "id/DEC-001", "-m", "reserve DEC-001\n\nwho: Junior\nbranch: work/theirs\n")
+        codes = [f["code"] for f in repo.validate("--base", "main")[1]["findings"]]
+        if codes.count("BR003") != 1:
+            problems.append(f"a number reserved for another branch cleared BR003: {codes}")
+        repo.git("tag", "-d", "id/DEC-001")
+        repo.git("tag", "-a", "id/DEC-001", "-m", "reserve DEC-001, for nobody in particular")
+        codes = [f["code"] for f in repo.validate("--base", "main")[1]["findings"]]
+        if codes.count("BR003") != 1:
+            problems.append(f"an annotated tag naming no branch cleared BR003: {codes}")
+        repo.git("tag", "-d", "id/DEC-001")
+        repo.git("tag", "-a", "id/DEC-001", "-m", "reserve DEC-001\n\nwho: Owner\nbranch: work/mine\n")
+        codes = [f["code"] for f in repo.validate("--base", "main")[1]["findings"]]
+        if "BR003" in codes:
+            problems.append(f"a reservation for this branch did not clear BR003: {codes}")
     return problems
 
 

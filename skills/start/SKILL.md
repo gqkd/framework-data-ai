@@ -131,7 +131,9 @@ sequence across all of them: `OD-001` exists once in the repository, wherever it
 
 The root register also carries the `§5` region that `validate.py --emit-index` fills with
 the union of every register under a heading per product. Copy it from the template with the
-markers in place; a root register created without them simply never gets the view.
+markers in place; a root register created without them simply never gets the view. Then run
+`--emit-index` once the registers are written: until it runs, the region holds the template's
+placeholder, and `GEN001` says so on every run.
 
 **`_meta/` holds what is about the framework rather than about the product**, and the root
 holds documents only. Where the corpus ended up is whatever step 2 settled: under

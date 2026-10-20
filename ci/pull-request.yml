@@ -28,6 +28,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          # The project and the framework side by side, in `docs/` and `framework-data-ai/`:
+          # inside the project the validator would read the framework's files as the project's,
+          # and inside `.framework/` the checkout would empty the project's folder of that name.
+          path: docs
+          # The branch as it was written, and not the merge GitHub synthesizes for a pull
+          # request. From 4.8.0 a merge records no reading: validated on the synthetic merge,
+          # every document both the branch and the base changed would be reported as changed by
+          # a commit that exists only for this run.
+          ref: ${{ github.event.pull_request.head.sha }}
           # THE WHOLE HISTORY, FOR TWO REASONS. The base branch has to be there for the diff
           # below. And from 4.0.0 the checks on `last_review` read the commit behind every
           # attested line: in a one-commit clone that commit is absent, so the validator
@@ -51,7 +60,7 @@ jobs:
           # those, pin the commit; `FW003` reports a report produced by any other one, so
           # the commit form is the one that binds either way.
           ref: COMMIT_OR_TAG
-          path: .framework
+          path: framework-data-ai
           # The framework's history as well: `FW003` tells a pin that never existed from a
           # checkout that moved by asking whether the commit is in it, and in a one-commit
           # clone every commit is absent. `migrate.py` reconstructs the previous validator
@@ -63,14 +72,14 @@ jobs:
         with:
           python-version: "3.12"
 
-      - run: python -m pip install -r .framework/requirements.txt -c .framework/constraints.txt
+      - run: python -m pip install -r framework-data-ai/requirements.txt -c framework-data-ai/constraints.txt
 
       - name: which files this change set touches
         env:
           BASE_REF: ${{ github.base_ref }}
-          HEAD_SHA: ${{ github.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          git diff --name-only \
+          git -C docs diff --name-only \
             "origin/$BASE_REF...$HEAD_SHA" > /tmp/changed.txt
           cat /tmp/changed.txt
 
@@ -87,7 +96,7 @@ jobs:
           # The newline between title and body is already a newline: YAML resolves the
           # escape in the double quoted value above.
           printf '%s' "$PR_TEXT" > /tmp/pr.txt
-          python3 .framework/skills/audit/scripts/validate.py \
-            --root . \
+          python3 framework-data-ai/skills/audit/scripts/validate.py \
+            --root docs \
             --pr-text-file /tmp/pr.txt \
             --changed-files /tmp/changed.txt

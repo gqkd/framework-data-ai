@@ -116,16 +116,17 @@ def rewrite(text: str, stamp: str, scope: str) -> str:
 
 
 def content_commit(repo: v.Repository, rel: str) -> tuple[str, datetime, str] | None:
-    """The newest commit that changed the attested text of `rel`, or brought the file in."""
-    for sha, when in repo.commits_of(rel):
-        after = repo.blob(sha, rel)
-        before = repo.blob(f"{sha}^", rel)
-        if after is None or before is None:
-            return sha, when, "brought the file into the history"
-        if v.split_attestation(before)[0] == v.split_attestation(after)[0]:
-            continue                         # an attestation alone: not the text
-        return sha, when, "last changed its text"
-    return None
+    """The newest commit that changed the attested text of `rel`, or brought the file in.
+
+    Found by the walk `LC006` uses, so the commit named here is the one a finding would name.
+    """
+    change = v.last_text_change(repo, rel)
+    if change is None:
+        return None
+    sha, when, kind = change
+    return sha, when, {"born": "brought the file into the history",
+                       "merge": "put two versions of it together (a merge)"}.get(
+                           kind, "last changed its text")
 
 
 def main() -> int:
@@ -159,6 +160,15 @@ def main() -> int:
         v.refuse(f"{root} is not inside a git repository. The instant written here is bound "
                  "to the commit that will carry it, and there is no history for that commit "
                  "to enter.")
+
+    # NOT IN THE MIDDLE OF A MERGE. The stamp would be written into the merge commit, which
+    # records no reading: `LC006` counts what a merge produced as a change at the merge's own
+    # instant, so the reading would be reported as not done. Finish the merge, then attest.
+    merging = v._git(["rev-parse", "--verify", "-q", "MERGE_HEAD"], root)
+    if merging is not None and merging.returncode == 0:
+        v.refuse("a merge is in progress. Commit it first -- `work.py sync --continue`, or "
+                 "`git commit` -- then reread and attest: a stamp written into a merge commit "
+                 "is not a reading, because a merge records none.")
 
     text = doc.read_text(encoding="utf-8")
     meta, _, err = v.parse_front_matter(text)

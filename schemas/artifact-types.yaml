@@ -1690,7 +1690,134 @@
 # words differ from every template's is LEFT: `--adopt --replace-section review`, once the
 # person has seen what it replaces. That is the likely case for a copy made under the 4.6.0
 # note, whose template asked, inside the text, to write the path there.
-version: "4.7.0"
+#
+# 4.7.0 -> 4.8.0. Documentation written on branches, by several people.
+#
+# THE CASE. A documentation repository about to be written by more than one person, where one
+# person already ran several sessions at once on one working tree and one main line, and
+# coordinated them by hand: a number taken twice in one register, a session finding another's
+# decisions in the working tree and renumbering its own, a commit held back because another
+# session had the file open. Two people resolving one open decision on two branches, each with
+# the next free number, would make it worse: two `DEC-042` files, or two rows of `entries:` that
+# YAML folds into one without a word, and two decisions for one question once both land. The
+# way out is one piece of work per branch, kept up to date by merging the main line into it --
+# never a rebase, which needs a forced push and rewrites the commits the exchange names -- and
+# landing through a pull request. That repository had no merge commit, which is why two things
+# in the attestation checks that are wrong for this shape had never shown.
+#
+# A MERGE RECORDS NO READING. The history was read with `git log --name-only`, which lists no
+# file for a merge, and the walk of `LC006` read the commits of a file in log order. A clean
+# merge that kept one side's prose under the other side's newer stamp was read as attested;
+# a resolution that kept one side's version named the other side's discarded commit as the
+# change; a side that deleted the file silenced the check on the version kept. The log is now
+# read with `--cc`, so a merge lists the files it produced -- those that differ from every
+# parent -- and `last_text_change` walks from HEAD down the line the text came: at a merge that
+# took the file whole from one side, that side, told by the object id without reading either
+# version. A file a merge produced counts as changed at the merge's author instant, unless it
+# equals a parent in everything but a generated region. `attest.py` names the commit it covers
+# by the same walk, and refuses while a merge is in progress: a stamp written into a merge
+# commit is not a reading. `PR005` says when the change came from a merge.
+#
+# THE UNION AT THE ROOT IS NOT ATTESTED TEXT, AND `GEN001` IS WHAT VOUCHES FOR IT. The body of
+# the `open-union` region of the root `OPEN.md` is derived from the other registers; counted as
+# text, it made the largest document in a repository owe a reading for lines nobody wrote every
+# time any register gained an entry, and on several branches it did so after every merge.
+# `attested_text` leaves out the regions `build_regions` writes, in the file it writes them
+# into and only when that file is the type it writes into -- `GENERATED_REGIONS`, held to the
+# generator in both directions by the selfcheck -- and nothing else: a region with another name,
+# the union's markers copied into a product's register, stays attested text. What replaces the
+# reading is `GEN001`, on every run, comparing the body with what `--emit-index` would write;
+# `--emit-index --check` alone runs only where somebody passes it. A git conflict on the union
+# still happens when two branches add entries; `work.py sync` resolves it by regenerating. The
+# parking lot is attested text as before, so a branch that touched the root `OPEN.md` still owes
+# a reading after a merge that brought the main line's parking lines in.
+#
+# PREVENTION IS A TAG. `skills/audit/scripts/work.py` claims an element with `claim/<ID>` and
+# reserves a number with `id/<ID>` (`<product>/<ID>` for the families numbered per product),
+# annotated and pushed. Git refuses to replace a tag without force, and two pushes creating one
+# tag at once are decided by the remote, so among people who use it two cannot hold one claim
+# or one number; somebody forcing a push or deleting a tag by hand is not stopped -- the checks
+# see what a branch then writes, and 4.9.0 filters what agents run. The branch is created in
+# the same atomic push as its claims, with a lease requiring that it not exist yet, and its
+# worktree beside the main checkout, so that `../_scambio` and the framework beside it mean the
+# same thing from both. Reservations are never deleted; claims are removed by `release`, by
+# their holder or with `--theirs`. `sync` brings in first commits pushed to the same work branch
+# from another clone -- by fast-forward, and then the main line in the same run, or by a merge,
+# and the main line on the next run; each merge refuses an identifier both sides created since
+# any common ancestor, and resolves three things: a
+# file the generator writes whole, a conflict entirely inside an attestation block, and lines
+# both sides added at one place of a Markdown body, all kept. It stops on everything else -- any
+# other conflict, a file one side deleted, a file that is not text, markers it cannot parse --
+# because that is content and is a person's; and before merging it refuses a main line that
+# created an identifier the branch created too. The "Update branch" button of a pull request
+# merges without that refusal, and after it only `ID001` sees a collision: branches are brought
+# up to date with `sync`. It keeps a file's line endings, and after any failed push asks the
+# remote what it now holds: a push that landed and lost its answer, tried again, is refused, and
+# that refusal is not somebody else's claim. `src/framework_data_ai/branches.py` is how both it
+# and the validator read a tree: its blobs under the project's directory, read by the same
+# discovery as the working tree -- not `git archive`, which honours `export-ignore`.
+#
+# DETECTION IS `--base`. `BR001` an identifier the branch created that the main line has;
+# `BR002` a decision absent from the main line that decides an entry the main line closed,
+# unless it supersedes the decision that closed it; `BR003` a new identifier without a
+# reservation made for this branch -- an annotated tag whose message names it -- only where
+# `.framework/work.yaml` exists. They compare what a branch adds and
+# never the history both sides share, where several decisions on one entry are facts nobody can
+# undo. `ci/branches.yml` runs them on every pull request and, on every push to the main line,
+# opens an issue for a commit that arrived outside a pull request, a merge that produced text
+# neither side had, or a `BR002` against the first parent. It blocks nothing: on a plan without
+# branch protection, seeing it within minutes is what there is. Both workflows check the project
+# and the framework out side by side, in `docs/` and `framework-data-ai/`: inside the project the
+# validator read the framework's files as the project's, and inside `.framework/` the checkout
+# emptied the project's folder of that name. `ci/pull-request.yml` now checks out the head of
+# the pull request rather than GitHub's synthetic merge, which under the rule above would report
+# every document both sides changed as changed by a commit that exists only for that run; the
+# cost is that an error existing only in the combination is no longer seen before landing:
+# `branches.yml`, which replaces it, validates the combined tree on the main line afterwards,
+# and a project on `pull-request.yml` alone sees it in neither job.
+#
+# `.framework/work.yaml` IS A NEW FILE AND NOT A KEY. The keys of `sessions.yaml` are closed and
+# a validator older than a key stops on it -- the one a project pins, the one `migrate.py`
+# rebuilds. This file is invisible to every validator before this one, and its own keys are open
+# the other way: an unknown one is `WK001`, a warning, so that the next version can add one
+# without stopping this one. `people:` names who writes, and `work.py` refuses a `--who` it does
+# not list; `branch_prefix` defaults to `work/`.
+#
+# MINOR, AND WHY -- A JUDGMENT, AND THE ADOPTING PROJECT'S TO CONTEST. No document that
+# validated stops validating under the default run: `BR001`-
+# `BR003` are at `error` and run only with `--base`, as `PR001`-`PR003` were at 2.7.0; `GEN001`
+# and `WK001` are warnings. The stamp on the root `OPEN.md` does vouch for less than before --
+# the union is out of it -- and that is the one place this version "starts meaning something
+# else": it is argued here rather than passed over. What leaves the reading is text no person
+# wrote, and a check takes its place on every run, so nothing that was vouched for is left
+# unvouched -- as long as `GEN001` runs: a project that turns it off leaves the union read by
+# nobody, and should know it is choosing that. Where `.framework/expected-findings.yaml` says `require_all: true` the warnings
+# matter more: a new `LC006` on a document both sides of a past merge changed, or a `GEN001`, is
+# an `AN003`; and an annotation on an `LC006` of the root `OPEN.md` that only regenerations of
+# the union caused now matches no finding, which is an `AN001`. Both are `error`, both are the
+# project's annotations meeting a check that sees more truly, and that is the opt-in the
+# annotation file has been since 3.1.0.
+#
+# WHAT IT COSTS, UNDER THE OPEN QUESTION ABOVE. A repository that works on branches owes a
+# reading of every living document both sides changed after each merge of the main line into a
+# branch, and before the branch lands; that is a cost in agent behaviour and in a person's time
+# that no level of this scheme names. `sync` names those documents as `LC006` does, so the
+# root `OPEN.md` is among them only when its text, not its union, came from both sides. `GEN001`
+# reports the union after every register write until `--emit-index` runs, which under
+# `require_all` is an `AN003` each time. `git log --cc` compares trees once per merge, and the
+# walk asks one object id per merge it passes, per attested document; neither is measured on a
+# history with many merges.
+#
+# ADOPTION. `migrate.py --root <project>` and `--adopt`. Then: the `AN001`s it lists on the
+# root `OPEN.md` are annotations to remove; the `LC006`s on documents a past merge produced are
+# readings owed; a `GEN001` is one `--emit-index`. Every project that copied
+# `ci/pull-request.yml` copies it again: the copy made before this version empties `.framework/`
+# and validates GitHub's synthetic merge. To write on branches, write `.framework/work.yaml` (an
+# empty mapping, or `people:`) in its own commit, after `--adopt`; copy `ci/branches.yml` into
+# `.github/workflows/` in place of `pull-request.yml`, with `vars.DOCS_REVIEWER` set; in the
+# repository's settings allow merge commits only, and turn on deleting the head branch after a
+# merge -- which releases nothing by itself: a claim goes with `work.py release`.
+version: "4.8.0"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of

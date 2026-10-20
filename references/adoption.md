@@ -122,7 +122,9 @@ next. The check that recognises each step is named beside it.
    values without an offset stay valid; the command no longer produces them. The two commits
    of the honest procedure have to reach the default branch as two: a squash merge folds
    them into one that changes text and stamp together, and `LC006` counts it. Merge commits
-   or rebase merges keep them apart.
+   or rebase merges keep them apart. From 4.8.0 a merge commit that produced a version of a
+   document neither side had is itself a change, so a branch that the main line overtook on a
+   document is brought up to date and reread before it lands.
 3. **Fetch the full history where the validator runs.** `4.0.0` reads the commit behind
    every attested line and refuses to run in a shallow clone, with exit 2 and a message.
    No check reports this: the validator stops. `fetch-depth: 0` on every `actions/checkout`

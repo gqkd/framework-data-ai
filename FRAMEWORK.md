@@ -449,7 +449,10 @@ is false. Compared at the minute, with no tolerance, and equality is not after. 
 the instant goes **`review_scope`**, one sentence saying what the reading covered and what
 it did not. The two fields are the attestation block, written together by `attest.py` after
 the content is committed, and they are the only two fields a commit may change without
-`LC006` counting it as a change to the text; a YAML comment is text. `LC008` reports a note
+`LC006` counting it as a change to the text; a YAML comment is text. The one other thing a
+commit may change without counting is the body of the union the generator writes into the root
+`OPEN.md`, which no reading vouches for and `GEN001` checks on every run; and a merge that
+produced a version neither side had counts, because a merge records no reading. `LC008` reports a note
 that is empty on a document attested after its creation, identical across the documents one
 commit attested, or unchanged from the previous attestation of the same document, and says
 of itself that it is a proxy: a sentence written to differ passes it.

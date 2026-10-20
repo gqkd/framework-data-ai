@@ -1,0 +1,230 @@
+# Documentation written on branches: what each pull request adds, and what reached the main
+# line without one.
+#
+# Copy to `.github/workflows/branches.yml` in a project that declares `.framework/work.yaml`
+# and writes its documentation through `skills/audit/scripts/work.py`: one piece of work, one
+# branch, one pull request. It replaces `pull-request.yml`, whose job is its first one: copy one
+# or the other, not both.
+#
+# EVERY PULL REQUEST SAYS WHAT AUTHORIZES IT. The pull request context below runs `PR001`: a
+# documentation pull request that implements no `CHG` carries `no-chg: <reason>` in its body,
+# written by a person -- what the reason is, is the review's to judge.
+#
+# IT DOES NOT BLOCK ANYTHING, AND IT SAYS SO. On a hosting plan without branch protection --
+# GitHub's free plan for a private repository -- nothing stops a push to the main line or a
+# merge from the button of a pull request that is not up to date. What can be had for nothing
+# is to see it within minutes: the pull request carries a red check, and a commit that reached
+# the main line outside a pull request, or a merge that produced text neither side had, opens
+# an issue. Where the plan has branch protection, make the `pull-request` job a required check
+# as well; this file stays the same.
+#
+# THE PROJECT AND THE FRAMEWORK ARE CHECKED OUT SIDE BY SIDE, in `docs/` and
+# `framework-data-ai/`, as they sit on a person's machine. Inside the project the validator would
+# read the framework's own files as the project's -- its fixtures, its decisions, its numbers --
+# and inside `.framework/` the checkout would empty the project's folder of the same name. Pin
+# `ref:` to the version the project declares, as in `pull-request.yml`.
+#
+# WHAT IT COSTS. On every push to the main line, two checkouts and two runs of the validator
+# per commit of the push -- the tree after it and the tree before it -- so that only what the
+# commit brought is reported. A push of many commits at once is that many times as long.
+
+name: branches
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  pull-request:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: docs
+          # The branch as it was written, not the merge GitHub synthesizes for a pull request:
+          # the comparison below is with the main line, and against the synthetic merge the
+          # point where the branch left the main line is the main line's own tip.
+          ref: ${{ github.event.pull_request.head.sha }}
+          # All history, every branch and every tag: the attestation checks read the commit
+          # behind every attested line, `--base` needs the main line, and `BR003` reads the
+          # reservations, which are tags.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/checkout@v4
+        with:
+          repository: OWNER/framework-data-ai
+          ref: COMMIT_OR_TAG
+          path: framework-data-ai
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: python -m pip install -r framework-data-ai/requirements.txt
+
+      - name: what this branch adds against the main line (BR001-BR003)
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          python3 framework-data-ai/skills/audit/scripts/validate.py --root docs --base "origin/$BASE_REF"
+
+      - name: the generated views are what the branch derives to
+        run: |
+          python3 framework-data-ai/skills/audit/scripts/validate.py --root docs --emit-index --check
+
+      - name: the pull request context (PR001-PR005)
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          # Through the environment, never interpolated into the command: see
+          # pull-request.yml for why, and for `%s` rather than `%b`.
+          PR_TEXT: "${{ github.event.pull_request.title }}\n${{ github.event.pull_request.body }}"
+        run: |
+          git -C docs diff --name-only "origin/$BASE_REF...$HEAD_SHA" > /tmp/changed.txt
+          printf '%s' "$PR_TEXT" > /tmp/pr.txt
+          python3 framework-data-ai/skills/audit/scripts/validate.py --root docs \
+            --pr-text-file /tmp/pr.txt --changed-files /tmp/changed.txt
+
+  main:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    # The one job that writes anything, and what it writes is an issue. `pull-requests: read`
+    # to ask which pull request a commit came from; nothing here can push.
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: docs
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/checkout@v4
+        with:
+          repository: OWNER/framework-data-ai
+          ref: COMMIT_OR_TAG
+          path: framework-data-ai
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: python -m pip install -r framework-data-ai/requirements.txt
+
+      - name: how each commit reached the main line
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+          FORCED: ${{ github.event.forced }}
+        run: |
+          set -u
+          : > /tmp/alerts.md
+          if [ "$FORCED" = "true" ]; then
+            echo "- the main line was force-pushed from \`$BEFORE\` to \`$AFTER\`: commits that were on it may be gone, and what replaced them was not compared with anything." >> /tmp/alerts.md
+          fi
+          # The first push of the branch has no "before", and after a forced push it is not in
+          # this clone: look at the last commit only.
+          if [ "$BEFORE" = "0000000000000000000000000000000000000000" ] || \
+             ! git -C docs cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            range="$AFTER^!"
+          else
+            range="$BEFORE..$AFTER"
+          fi
+          if ! commits=$(git -C docs rev-list --first-parent "$range"); then
+            echo "- the commits of this push could not be listed ($range): nothing was compared." >> /tmp/alerts.md
+            commits=""
+          fi
+          V=framework-data-ai/skills/audit/scripts/validate.py
+          for sha in $commits; do
+            if ! merged=$(gh api "repos/$REPO/commits/$sha/pulls" \
+                            --jq '[.[] | select(.merged_at != null)] | length'); then
+              echo "- \`$sha\`: GitHub did not say which pull request it came from; look at it by hand." >> /tmp/alerts.md
+            elif [ "$merged" = "0" ]; then
+              echo "- \`$sha\` reached the main line outside a pull request: nobody reviewed it, and nothing compared it with the main line before it landed." >> /tmp/alerts.md
+            fi
+            # The tree after this commit, validated whole and against the main line before it,
+            # and the tree before it, so that only what this commit brought is said: a new error
+            # of the combined tree, a merge that produced text nobody read (`LC006` naming this
+            # commit), a decision closing an entry already closed.
+            parent=$(git -C docs rev-parse -q --verify "$sha^1" || true)
+            if ! git -C docs worktree add -q --detach "/tmp/at-$sha" "$sha"; then
+              echo "- \`$sha\`: could not be checked out to be validated." >> /tmp/alerts.md
+              continue
+            fi
+            python3 "$V" --root "/tmp/at-$sha" ${parent:+--base "$parent"} --json \
+              > "/tmp/at-$sha.json" || true
+            : > "/tmp/before-$sha.json"
+            if [ -n "$parent" ]; then
+              if git -C docs worktree add -q --detach "/tmp/before-$sha" "$parent"; then
+                python3 "$V" --root "/tmp/before-$sha" --json > "/tmp/before-$sha.json" || true
+              fi
+            fi
+            python3 - "/tmp/at-$sha.json" "/tmp/before-$sha.json" "$sha" "$parent" >> /tmp/alerts.md <<'PY'
+          import json, sys
+          after, before, sha, parent = sys.argv[1:5]
+          def findings(path):
+              try:
+                  return json.load(open(path))["findings"]
+              except (OSError, ValueError, KeyError):
+                  return None
+          # A first commit has no tree before it: everything it brings is new.
+          now, then = findings(after), (findings(before) if parent else [])
+          if now is None:
+              print(f"- `{sha}`: the validator gave no report on the tree after it.")
+              sys.exit(0)
+          if then is None:
+              # Without the tree before it there is nothing to tell a new error from a standing
+              # one: say so, and keep to what this commit names by itself.
+              print(f"- `{sha}`: the tree before it could not be validated, so its errors are "
+                    "not compared; only what names this commit is listed.")
+          known = {(f["code"], f["path"], f["message"]) for f in then or []}
+          for f in now:
+              new = then is not None and (f["code"], f["path"], f["message"]) not in known
+              if (f["level"] == "error" and new) or f["code"] == "BR002" or (
+                      f["code"] == "LC006" and sha[:12] in f["message"]):
+                  print(f"- `{sha}`: {f['code']} {f['path']}: {f['message']}")
+          PY
+          done
+          cat /tmp/alerts.md
+
+      - name: open or update the issue when something reached the main line unseen
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # The person who reads these, as a repository variable: Settings, Secrets and
+          # variables, Actions, Variables, `DOCS_REVIEWER` = their GitHub login. Without it the
+          # issue is opened with nobody assigned, and GitHub notifies whoever watches the
+          # repository -- not necessarily anybody.
+          ASSIGNEE: ${{ vars.DOCS_REVIEWER }}
+        run: |
+          if [ ! -s /tmp/alerts.md ]; then exit 0; fi
+          {
+            echo "What reached the main line in push \`$GITHUB_SHA\` and was not seen on its way in."
+            echo
+            cat /tmp/alerts.md
+            echo
+            echo "Nothing was reverted. A commit outside a pull request is reviewed now; a merge that produced text is reread, and its living documents attested, in a new piece of work; two decisions on one entry are put side by side by whoever decides that matter."
+          } > /tmp/issue.md
+          title="Main line: reached without being seen"
+          open=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "in:title \"$title\"" \
+                   --json number --jq '.[0].number // empty' || true)
+          if [ -n "$open" ]; then
+            gh issue comment "$open" --repo "$GITHUB_REPOSITORY" --body-file /tmp/issue.md
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" \
+              --body-file /tmp/issue.md ${ASSIGNEE:+--assignee "$ASSIGNEE"}
+          fi
