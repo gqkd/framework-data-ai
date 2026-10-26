@@ -10,6 +10,15 @@ from pathlib import Path
 import jsonschema
 import yaml
 
+try:
+    from .. import strict_yaml
+except ImportError:      # loaded by its path, outside the package: `schemas/generate_memory.py`
+    import importlib.util as _util
+    _spec = _util.spec_from_file_location(
+        "framework_data_ai_strict_yaml", Path(__file__).resolve().parents[1] / "strict_yaml.py")
+    strict_yaml = _util.module_from_spec(_spec)
+    _spec.loader.exec_module(strict_yaml)
+
 FRAMEWORK = Path(__file__).resolve().parents[3]
 CONTRACT_PATH = FRAMEWORK / "schemas/memory-contracts.yaml"
 
@@ -21,20 +30,10 @@ def contract() -> dict:
 
 @lru_cache(maxsize=8)
 def _read_contract(content: bytes) -> dict:
-    class UniqueKeys(yaml.SafeLoader):
-        pass
-
-    def mapping(loader, node, deep=False):
-        result = {}
-        for key_node, value_node in node.value:
-            key = loader.construct_object(key_node, deep=deep)
-            if key in result:
-                raise ValueError("duplicate key in memory contract")
-            result[key] = loader.construct_object(value_node, deep=deep)
-        return result
-
-    UniqueKeys.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, mapping)
-    return yaml.load(content, Loader=UniqueKeys)
+    try:
+        return strict_yaml.load(content)
+    except strict_yaml.DuplicateKey:
+        raise ValueError("duplicate key in memory contract") from None
 
 
 def canonical(value) -> bytes:

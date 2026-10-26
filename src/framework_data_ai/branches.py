@@ -57,6 +57,9 @@ RESERVED_REF = "refs/tags/id/"
 # The branch of a join, after the prefix: where living documents are rewritten, and the one
 # branch the additive check does not read.
 JOIN = "ricongiungimento-"
+# The branch of parking lines alone, after the prefix: a thread without elements, which writes
+# only lines added to the body of the open registers.
+PARKING = "parcheggio-"
 # A delegation: who stands in for an admin until it is revoked, named by a slug of the name,
 # since a ref carries no spaces and the names in `people` do. The whole name is in the message.
 DELEGATION_REF = "refs/tags/delega/"

@@ -9292,6 +9292,163 @@ def _threads_write_by_adding():
     return problems
 
 
+@check("in the additive mode sync keeps the keys both sides added to one map, puts back what a thread only added, and a parking branch writes parking lines alone")
+def _sync_additive_rules():
+    # Two rules `sync` has only in the additive mode, and only for the main line coming in: keys
+    # both sides added to one map of the front matter are all kept, and lines a thread only
+    # added are put back over what the main line changed, where they stand by themselves. Both
+    # hold only if the front matter they leave reads with every key once.
+    problems = []
+    x = _load(WORK, "work_for_additive_rules")
+    H, B_, T, E = "<<<<<<< HEAD", "||||||| base", "=======", ">>>>>>> origin/main"
+
+    def doc(*lines: str) -> str:
+        return "\n".join(lines) + "\n"
+
+    entries = ["---", "schema: x", "entries:", "  OD-001:", "    status: open"]
+    union = doc(*entries, H, "  OD-003:", "    status: open", B_, T, "  OD-004:",
+                "    status: open", E, "---", "# Open")
+    for additive, want in ((True, 0), (False, 1)):
+        got, left, _ = x.resolve(union, "OPEN.md", additive=additive)
+        if left != want or (not left and not ("OD-003" in got and "OD-004" in got)):
+            problems.append(f"keys both sides added to entries, additive={additive}: {left} left")
+    for name, text in (
+            ("one key added by both sides", doc(*entries, H, "  OD-003:", "    status: open", B_,
+                                                T, "  OD-003:", "    status: decided", E, "---")),
+            ("a key the front matter already has", doc(*entries, H, "  OD-001:",
+                                                       "    status: decided", B_, T, "  OD-004:",
+                                                       "    status: open", E, "---"))):
+        if x.resolve(text, "OPEN.md", additive=True)[1] != 1:
+            problems.append(f"{name}: resolved, and the front matter would hold a key twice")
+
+    parking = ["---", "a: 1", "---", "# §1 · Open", "", "### OD-001 · x", "text", "",
+               "# §3 · Parking lot", ""]
+    hunk = [H, "- one", "- two", "- mine", B_, "- one", "- two", T, "- one, sorted", E]
+    got, left, _ = x.resolve(doc(*parking, *hunk), "OPEN.md", additive=True)
+    if left or "- one, sorted\n- mine" not in got or "- two" in got:
+        problems.append(f"a parking line the thread added over lines the main line sorted: "
+                        f"{left} left, {got[-80:]!r}")
+    join = [H, "- one, sorted", B_, "- one", "- two", T, "- one", "- two", "- mine", E]
+    got, left, _ = x.resolve(doc(*parking, *join), "OPEN.md", additive=True, branch_ours=False)
+    if left or "- one, sorted\n- mine" not in got:
+        problems.append(f"the same in a join, where the thread is the side merged in: {left} left")
+    if x.resolve(doc(*parking[:8], *hunk), "OPEN.md", additive=True)[1] != 1:
+        problems.append("a line added outside the parking lot, not a whole entry, was put back")
+    if x.resolve(doc(*parking, *hunk), "products/p/PBR.md", additive=True)[1] != 1:
+        problems.append("lines a thread added were put back in a file that is not an open register")
+    two = [H, "- one", "- x", "- two", "- y", B_, "- one", "- two", T, "- one, sorted", E]
+    if x.resolve(doc(*parking, *two), "OPEN.md", additive=True)[1] != 1:
+        problems.append("lines a thread added at two places of one hunk were put back together")
+    person = ["---", H, "a: 2", B_, "a: 1", T, "a: 3", E, "---", *parking[3:]]
+    got, left, _ = x.resolve(doc(*person, *hunk), "OPEN.md", additive=True)
+    if left != 1 or "- one, sorted\n- mine" not in got:
+        problems.append(f"a hunk left to a person in the front matter undid the parking line put "
+                        f"back in the body: {left} left")
+    block = [H, "- one", "### OD-009 · new", "text", B_, "- one", T, "- one, moved", E]
+    for after, want in (("### OD-002 · y", 0), ("plain text", 1)):
+        got, left, _ = x.resolve(doc(*parking[:8], *block, after), "OPEN.md", additive=True)
+        if left != want:
+            problems.append(f"a whole entry the thread added, followed by {after!r}: {left} left")
+    front = ["---", "entries:", "  OD-001:", H, "    status: open", "  OD-009:",
+             "    status: open", B_, "    status: open", T, "    status: decided", E, "---"]
+    got, left, _ = x.resolve(doc(*front), "OPEN.md", additive=True)
+    if left or "status: decided\n  OD-009:" not in got:
+        problems.append(f"a whole key of entries the thread added over a state the main line "
+                        f"changed: {left} left")
+    for name, text in (
+            ("a level-one heading in the base before the line the thread added",
+             doc(*parking, H, "- one", "# §4 · Closed", "- mine", B_, "- one", "# §4 · Closed", T,
+                 "# §4 · Chiuse", E)),
+            ("a whole entry followed by another hunk",
+             doc(*parking[:8], *block, "", H, "x", B_, "y", T, "z", E)),
+            ("an empty base in the front matter, the main line at another indentation",
+             doc("---", "entries:", "  OD-001:", H, "    note: x", B_, T, "  OD-002:",
+                 "    status: open", E, "---")),
+            ("the main line's side leaving the indentation of entries",
+             doc("---", "entries:", "  OD-001:", H, "    status: open", "  OD-009:",
+                 "    status: open", B_, "    status: open", T, "    status: open", "owners: [x]",
+                 E, "---")),
+            ("a date that cannot be one in the keys added",
+             doc(*entries, H, "  OD-003:", "    when: 2026-09-31", B_, T, "  OD-004:",
+                 "    status: open", E, "---"))):
+        try:
+            if x.resolve(text, "OPEN.md", additive=True)[1] != (2 if "another hunk" in name else 1):
+                problems.append(f"{name}: resolved by a rule")
+        except ValueError as err:
+            problems.append(f"{name}: {err}")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        _, a, b = _work_origin(tmp / "o")
+        roles = "mode: additive\npeople: [Owner, Junior]\nadmins: [Owner]\n"
+        (a / ".framework" / "work.yaml").write_text(roles)
+        (a / ".framework" / "sessions.yaml").write_text("exchange: ../_scambio\n")
+        _commit_all(a, "additive")
+        _g(a, "push", "-q", "origin", "main")
+        rc, out = _work(a, "open", "--who", "Owner", "--branch", "notes", "--no-worktree")
+        if rc or not _g(a, "ls-remote", "origin", "refs/heads/work/parcheggio-notes").stdout:
+            problems.append(f"a piece of work without elements is not a parking branch: {out[-200:]!r}")
+        rc, out = _work(a, "open", "--who", "Owner", "--branch", "parcheggio-x", "OD-002",
+                        "--no-worktree")
+        if rc != 2:
+            problems.append(f"a thread with elements opened under a parking branch's name gave "
+                            f"exit {rc}")
+        # Both sides add an entry at the end of `entries:`: the main line, and a thread.
+        rc, out = _work(a, "open", "--who", "Owner", "--branch", "t", "OD-001")
+        tree = a.parent / "docs--t"
+        row = lambda k: f"  {k}:\n    status: open\n    cost_to_reverse: low\n" \
+                        f"    default_in_force: none\n    products: [all]\n---\n"
+        for where, key in ((tree, "OD-004"), (b, "OD-003")):
+            if where == b:
+                _g(b, "pull", "-q", "origin", "main")
+            reg = where / "OPEN.md"
+            text = reg.read_text()
+            reg.write_text(text.replace("    products: [all]\n---\n",
+                                        "    products: [all]\n" + row(key), 1))
+            _commit_all(where, key)
+        _g(b, "push", "-q", "origin", "main")
+        rc, out = _work(tree, "sync", "--no-push")
+        text = (tree / "OPEN.md").read_text()
+        if rc or "OD-003:" not in text or "OD-004:" not in text or "<<<<<<<" in text:
+            problems.append(f"sync in the additive mode left two entries added at one place of "
+                            f"entries for a person (exit {rc}): {out[-300:]!r}")
+
+        # BR005 on a parking branch: lines added to the body of an open register, and nothing else.
+        repo = _Repo(tmp / "park")
+        repo.write(".framework/work.yaml", roles)
+        repo.write(".framework/sessions.yaml", "exchange: ../_scambio\n")
+        repo.write("OPEN.md", _open_register({"OD-001": "open"}))
+        repo.write("decisions/DEC-002.md", _decision("DEC-002", "OD-001"))
+        repo.commit("base", "2026-06-01T09:00:00+02:00")
+        repo.git("checkout", "-q", "-b", "work/parcheggio-x")
+        base = (repo.path / "OPEN.md").read_text()
+        for name, body, extra, want in (
+                ("a parking line", base.replace("- first line\n", "- first line\n- parked\n"),
+                 None, 0),
+                ("a reading attested", base.replace("last_review: 2026-06-01 09:00",
+                                                    "last_review: 2026-06-02 09:00"), None, 0),
+                ("a state in the front matter", base.replace("    status: open", "    status: parked"),
+                 None, 1),
+                ("a new file", base, ("decisions/DEC-001.md", _decision("DEC-001", "OD-001")), 1)):
+            repo.write("OPEN.md", body)
+            if extra:
+                repo.write(*extra)
+            repo.commit(name, "2026-06-02T09:00:00+02:00")
+            got = [f for f in (repo.validate("--base", "main")[1] or {}).get("findings", [])
+                   if f["code"] == "BR005"]
+            if len(got) != want:
+                problems.append(f"{name} on a parking branch: {len(got)} BR005, expected {want}")
+            if extra:
+                (repo.path / extra[0]).unlink()
+        (repo.path / "decisions" / "DEC-002.md").unlink()
+        repo.commit("a decision deleted", "2026-06-02T10:00:00+02:00")
+        got = [f["path"] for f in (repo.validate("--base", "main")[1] or {}).get("findings", [])
+               if f["code"] == "BR005"]
+        if "decisions/DEC-002.md" not in got:
+            problems.append(f"a decision deleted on a parking branch gave no BR005: {got}")
+    return problems
+
+
 @check("BR003 asks that the reservation be this branch's")
 def _branch_reservations_are_owned():
     problems = []

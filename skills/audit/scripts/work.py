@@ -41,7 +41,10 @@ the next run. `sync` does each
 merge and resolves exactly three things: a file the generator writes whole, taken from the side
 merged in and regenerated; a conflict that lies entirely inside an attestation block, which keeps this
 branch's and is reread after; and lines both sides only added at one place of a Markdown body,
-all kept, this branch's first. Everything else stops it -- a conflict anywhere else, a file one
+all kept, this branch's first. In the additive mode, when the main line comes in, two more: keys
+both sides added to one map of the front matter, all kept; and lines a thread only added to an
+open register, put back over what the main line changed, where they stand by themselves -- see
+`resolve`. Everything else stops it -- a conflict anywhere else, a file one
 side deleted, a file that is not text, a conflict it cannot parse -- because it is content and is
 a person's. Before merging it refuses a main line that created an identifier this branch created
 too -- the main line, or the branch's own commits pushed from another clone: once both are in one
@@ -59,6 +62,8 @@ done because the invocation or the repository does not allow it.
 from __future__ import annotations
 
 import argparse
+import difflib
+import importlib
 import json
 import os
 import re
@@ -72,6 +77,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import validate as v  # noqa: E402  (the validator's helpers, not its main)
 
 B = v._branches
+S = importlib.import_module(f"{v._CORE_NAME}.strict_yaml")
 SLUG = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 # Git's own words are read below -- a refusal, a lease that failed -- so git speaks one language.
 ENV = {**os.environ, "LC_ALL": "C", "LANG": "C", "GIT_TERMINAL_PROMPT": "0"}
@@ -325,8 +331,17 @@ def cmd_open(p: Project, args) -> int:
     if args.branch.startswith(B.JOIN):
         v.refuse(f"`--branch {args.branch}`: `{B.JOIN}` is the name of a join's branch, where "
                  "living documents are rewritten and the additive check does not read.")
-    branch = p.prefix + args.branch
+    if args.ids and args.branch.startswith(B.PARKING):
+        v.refuse(f"`--branch {args.branch}`: `{B.PARKING}` is the name of a branch of parking "
+                 "lines alone, which claims no element and, in the additive mode, is checked as "
+                 "such.")
     p.fetch()
+    # In the additive mode a piece of work without an element is a parking branch, and it is
+    # known by its name: no claims is also what a thread whose claims were released looks like.
+    short = args.branch
+    if not args.ids and main_roles(p).get("mode") == "additive" and not short.startswith(B.PARKING):
+        short = B.PARKING + short
+    branch = p.prefix + short
     main = p.view(p.base)
     wanted = [p.element(w) for w in dict.fromkeys(args.ids)]
     for key, tag in wanted:
@@ -389,7 +404,7 @@ def cmd_open(p: Project, args) -> int:
     outcome, said = p.push(refspecs, expect,
                            ("--atomic", f"--force-with-lease=refs/heads/{branch}:"))
     if outcome == "unknown":
-        path = p.worktree_for(args.branch)
+        path = p.worktree_for(short)
         there = (f"make the worktree: `git worktree add {path} {branch}` and "
                  f"`git -C {path} branch --set-upstream-to {p.remote}/{branch}`"
                  if not args.no_worktree else
@@ -419,7 +434,7 @@ def cmd_open(p: Project, args) -> int:
             say(f"  {branch} exists on {p.remote}: choose another `--branch`.")
         return 1
 
-    path = p.worktree_for(args.branch)
+    path = p.worktree_for(short)
     if not args.no_worktree:
         if path.exists():
             v.refuse(f"{path} exists. The claim and the branch are on {p.remote}; make the "
@@ -701,24 +716,133 @@ def _attestation_part(lines: list[str]) -> bool:
     return all(i in inside or not line.strip() for i, line in enumerate(lines))
 
 
-def resolve(text: str, rel: str) -> tuple[str, int, list[str]]:
+# A key of a YAML mapping at the start of a line; an entry of a register; the heading of one.
+KEY_LINE = re.compile(r"^(?P<indent> *)(?:'[^']*'|\"[^\"]*\"|[^\s#:'\"-][^:]*):(?:\s|$)")
+ENTRY_KEY = re.compile(r"^(?P<indent> +)[A-Z]{2,3}-\d+:\s*$")
+ENTRY_HEADING = re.compile(r"^###\s+(?:OD|KI)-\d+")
+
+
+def _whole_keys(lines: list[str]) -> int | None:
+    """The indentation of `lines` when they are whole keys of one mapping, each with what is
+    indented under it; None otherwise."""
+    first = KEY_LINE.match(lines[0]) if lines else None
+    if first is None:
+        return None
+    indent = len(first.group("indent"))
+    for line in lines[1:]:
+        lead = len(line) - len(line.lstrip(" "))
+        if line.strip() and not (lead > indent or (lead == indent and KEY_LINE.match(line))):
+            return None
+    return indent
+
+
+def _keys_of(lines: list[str], indent: int) -> dict | None:
+    """The keys `lines` hold, read as YAML with every key written once; None if they do not
+    read so."""
+    try:
+        got = S.load("\n".join(line[indent:] for line in lines))
+    except (v.yaml.YAMLError, ValueError, TypeError):    # DuplicateKey, or a date like 2026-09-31
+        return None
+    return got if isinstance(got, dict) else None
+
+
+def _added(base: list[str], side: list[str]) -> list[str] | None:
+    """The lines `side` added to `base`, when it only added: every line of the base still
+    there, in its order."""
+    ops = difflib.SequenceMatcher(None, base, side, autojunk=False).get_opcodes()
+    if any(tag in ("replace", "delete") for tag, *_ in ops):
+        return None
+    return [line for tag, _, _, j1, j2 in ops if tag == "insert" for line in side[j1:j2]]
+
+
+def _thread_added(p: dict, branch_ours: bool, start: int, inside_fm: bool,
+                  ours_lines: list[str], after: str | None) -> list[str] | None:
+    """The main line's side with the lines the thread added after it, in an open register, when
+    the main line changed or removed lines of the base, the thread only added, in one place,
+    and what it added stands by itself: parking lines, under the level-one heading that starts
+    with `# §3`; a whole entry, in the body from its heading to the next heading, `---` or the
+    end of the file, or in the front matter a whole key of `entries:`, with the main line's side
+    still inside `entries:`. None otherwise, and the hunk is a person's: a line under an entry
+    the main line moved would land, with no conflict, under another."""
+    thread, main = (p["ours"], p["theirs"]) if branch_ours else (p["theirs"], p["ours"])
+    if not p["base"] or main == p["base"]:
+        return None
+    ops = difflib.SequenceMatcher(None, p["base"], thread, autojunk=False).get_opcodes()
+    inserts = [i1 for tag, i1, *_ in ops if tag == "insert"]
+    if len(inserts) != 1:
+        return None
+    added = _added(p["base"], thread)
+    if not added:
+        return None
+    if inside_fm:
+        first = ENTRY_KEY.match(added[0])
+        if first is None or _whole_keys(added) != len(first.group("indent")):
+            return None
+        indent = len(first.group("indent"))
+        parent = next((l for l in reversed(ours_lines[:start])
+                       if l.strip() and len(l) - len(l.lstrip(" ")) < indent), "")
+        inside = all(len(l) - len(l.lstrip(" ")) >= indent for l in main if l.strip())
+        return main + added if parent.strip() == "entries:" and inside else None
+    heading = next((l for l in reversed(ours_lines[:start]) if l.startswith("# ")), "")
+    # Still under `# §3` where the thread wrote, and where the result puts it: no level-one
+    # heading in the base before that point, nor on the main line's side.
+    parked = (heading.startswith("# §3")
+              and not any(l.startswith("# ") for l in p["base"][:inserts[0]] + main))
+    whole = bool(ENTRY_HEADING.match(added[0])) and (
+        after is None or after.startswith("#") or after.strip() == "---")
+    return main + added if parked or whole else None
+
+
+def _front_matter_reads(text: str) -> bool:
+    lo, hi = v._front_matter_lines(text)
+    if hi <= lo:
+        return True
+    try:
+        S.load("\n".join(text.split("\n")[lo:hi]))
+    except (v.yaml.YAMLError, ValueError, TypeError):
+        return False
+    return True
+
+
+def resolve(text: str, rel: str, additive: bool = False,
+            branch_ours: bool = True) -> tuple[str, int, list[str]]:
     """Resolve the hunks of one file that are mechanical. Returns the text, how many hunks
     are left for a person, and one line per hunk saying what was done with it. Raises
-    `Unreadable` for markers it cannot parse, and the file is then left whole for a person."""
+    `Unreadable` for markers it cannot parse, and the file is then left whole for a person.
+
+    `additive` -- a merge of the main line in a project in the additive mode -- adds two rules:
+    keys both sides added to one map of the front matter are all kept, and lines a thread only
+    added are put back over what the main line changed, where they stand by themselves (see
+    `_thread_added`). Either one holds only if the front matter it leaves reads as YAML with
+    every key written once; otherwise the file is resolved without them. `branch_ours` says
+    which side is the thread: `ours` in `sync`, `theirs` in a join, where the main line is."""
     parts = _hunks(text)
     ours = "\n".join(l for p in parts for l in ([p] if isinstance(p, str) else p["ours"]))
+    ours_lines = ours.split("\n")
     lo, hi = v._front_matter_lines(ours)
     names = v.GENERATED_REGIONS.get(rel, (None, ()))[1]
     regions = [(ours[:m.start()].count("\n"), ours[:m.end()].count("\n"))
                for m in v.REGION.finditer(ours) if m.group("name") in names]
-    out, left, done, at = [], 0, [], 0
-    for p in parts:
+    out, left, done, at, ruled = [], 0, [], 0, False
+    # What the front matter would read with every hunk left to a person taken from this branch:
+    # the check of the two rules, which a hunk with its markers still in would make fail.
+    probe: list[str] = []
+    register = rel.rsplit("/", 1)[-1] == "OPEN.md"
+    for n, p in enumerate(parts):
         if isinstance(p, str):
             out.append(p)
+            probe.append(p)
             at += 1
             continue
         start = at
         inside_fm = lo <= start < hi
+        indent = _whole_keys(p["ours"]) if additive and inside_fm and not p["base"] else None
+        # What the result puts after this hunk: a plain line, the end, or a hunk, whose side in
+        # the result is not known yet -- and then a whole entry is not taken as standing alone.
+        after = next(((q if isinstance(q, str) else "\0") for q in parts[n + 1:]
+                      if not isinstance(q, str) or q.strip()), None)
+        thread = (_thread_added(p, branch_ours, start, inside_fm, ours_lines, after)
+                  if additive and register else None)
         if inside_fm and all(_attestation_part(p[k]) for k in ("ours", "base", "theirs")):
             chosen, why = p["ours"], "attestation block: this branch's, to be reread after the merge"
         elif any(a < start < b for a, b in regions):
@@ -729,16 +853,29 @@ def resolve(text: str, rel: str) -> tuple[str, int, list[str]]:
             # a repeated table header or field label is not a duplicate of the entry it heads.
             chosen = p["ours"] + p["theirs"]
             why = "lines both sides added at one place of the body: all kept, this branch's first"
+        elif (indent is not None and p["theirs"] and _whole_keys(p["theirs"]) == indent
+              and (both := _keys_of(p["ours"] + p["theirs"], indent)) is not None
+              and len(both) == len(_keys_of(p["ours"], indent) or {})
+              + len(_keys_of(p["theirs"], indent) or {})):
+            chosen, why, ruled = (p["ours"] + p["theirs"],
+                                  "keys both sides added to one map: all kept", True)
+        elif thread is not None:
+            chosen, why, ruled = (thread, "lines the thread only added, put back over what the "
+                                          "main line changed", True)
         else:
             out += [p["open"], *p["ours"], p["base_mark"], *p["base"], THEIRS, *p["theirs"],
                     p["close"]]
+            probe += p["ours"]
             left += 1
             at += len(p["ours"])
             done.append(f"line {start + 1}: content, left for a person")
             continue
         out += chosen
+        probe += chosen
         at += len(p["ours"])
         done.append(f"line {start + 1}: {why}")
+    if ruled and not _front_matter_reads("\n".join(probe)):
+        return resolve(text, rel)        # the two rules left keys twice: a person reads it
     return "\n".join(out), left, done
 
 
@@ -810,6 +947,9 @@ def cmd_sync(p: Project, args) -> int:
             if git(p.root, "merge-base", "--is-ancestor", p.base, "HEAD", check=False).returncode == 0:
                 say(f"{branch} already contains {p.base}.")
                 return 0
+        # The two rules of the additive mode are for the main line coming into a thread, not for
+        # the thread's own commits from another clone.
+        additive = into == p.base and main_roles(p).get("mode") == "additive"
         both = _collisions(p, "HEAD", into)
         if both:
             say(f"Not merged: this branch and {into} both created {', '.join(both)}. Once both "
@@ -869,7 +1009,7 @@ def cmd_sync(p: Project, args) -> int:
                     # `binary`), a change of mode, markers of another size. Never this branch's
                     # by default.
                     raise Unreadable("in conflict and without markers")
-                resolved, left, done = resolve(text, rel)
+                resolved, left, done = resolve(text, rel, additive=additive)
             except UnicodeDecodeError:
                 left_files.append(rel)
                 say(f"{rel}: not text, left for a person.")
@@ -997,7 +1137,9 @@ def main() -> int:
     o.add_argument("ids", nargs="*", help="the elements this work decides or closes: OD-042, "
                                           "or atlas:RSK-012 for a family numbered per product")
     o.add_argument("--who", required=True)
-    o.add_argument("--branch", required=True, help="the name after the prefix: od-042")
+    o.add_argument("--branch", required=True, help="the name after the prefix: od-042; in the "
+                                                   "additive mode, with no element, it becomes "
+                                                   "parcheggio-<name>")
     o.add_argument("--no-worktree", action="store_true")
 
     r = sub.add_parser("reserve", help="reserve the next numbers of an identifier family")
