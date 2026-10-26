@@ -13,5 +13,15 @@
     "architecture",
     "decision-records",
     "adr"
-  ]
+  ],
+  "userConfig": {
+    "allowed_dirs": {
+      "type": "string",
+      "multiple": true,
+      "required": false,
+      "default": [],
+      "title": "Folders the write guard also allows",
+      "description": "Where sessions in the working folder may write besides their repository, its worktrees, the exchange and Claude Code's own folders. Absolute paths, or relative to the folder that holds the repositories. See references/workstation.md."
+    }
+  }
 }

@@ -1,0 +1,17 @@
+{
+  "description": "The framework's write guard: inside the working folder, Write, Edit and NotebookEdit reach only the session's repository and its worktrees, the exchange, Claude Code's own folders and the folders of the allowed_dirs option. See references/workstation.md.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -I \"${CLAUDE_PLUGIN_ROOT}/hooks/guard.py\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

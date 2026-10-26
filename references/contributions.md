@@ -184,12 +184,19 @@ written the day the project adopts this version, or any day after. The day it is
 
 The value is committed and read on every machine with a clone, so an absolute path, one
 starting with `~`, or one that falls inside the documentation repository stops the validator
-with the repair. Code sessions must be able to write there: how a project lets them (a hook,
-a permission) is the project's, and the framework never relies on material copied by hand
-out of a session's scratchpad. On a machine where the place does not exist, a CI runner
-being the ordinary case, nothing about it is checked and the report says so in a line; an
-annotation in `.framework/expected-findings.yaml` about the exchange is not reported as
-obsolete there, since nothing looked.
+with the repair. Code sessions must be able to write there. In the working folder the plugin's
+write guard lets a session write, outside its repository and that repository's worktrees, only
+`_scambio` beside it, what Claude Code keeps for the session and the folders of the plugin
+option `allowed_dirs`; the documentation repository also the place it declares, once
+committed, when that is a folder beside it that is not a repository
+(`references/workstation.md`). A project that declares another place names it `_scambio`, or
+has every person add it to `allowed_dirs`. The guard only stops: Claude Code still asks before
+a write outside the session's folder, and how a project lets its sessions write in the
+exchange without asking (a permission, an added directory) is the project's. The framework
+never relies on material copied by hand out of a session's scratchpad. On a machine where the
+place does not exist, a CI runner being the ordinary case, nothing about it is checked and
+the report says so in a line; an annotation in `.framework/expected-findings.yaml` about the
+exchange is not reported as obsolete there, since nothing looked.
 
 ### One folder per element, with fixed names
 

@@ -16,6 +16,7 @@ just broken something.
 from __future__ import annotations
 
 import argparse
+import ast
 import atexit
 import collections
 import contextlib
@@ -7876,6 +7877,168 @@ def _the_reviser_ships_with_the_plugin():
         if f"[{cls}]" not in critic or f"*{cls}*" not in text:
             problems.append(f"the class {cls!r} is not both in the critic's output and among "
                             "those the reviser sorts")
+    return problems
+
+
+@check("the write guard stops a write outside the working area, and only in the working folder")
+def _the_write_guard_holds():
+    # A plugin's hooks run in every session of everyone who has the plugin enabled, and inside
+    # every subagent. In the working folder -- a repository with `.framework/` and the ones
+    # beside it -- the guard lets a session write its repository and that repository's
+    # worktrees, the exchange, what Claude Code keeps for the session and the folders the
+    # person lists; anywhere else it says nothing. Only exit 2 stops a call: an import the
+    # machine lacks, or one a `PYTHONPATH` breaks, would exit 1 and let every write through, so
+    # the guard has the standard library alone and runs isolated.
+    problems = []
+    guard = ROOT / "hooks" / "guard.py"
+    hooks = json.loads((ROOT / "hooks" / "hooks.json").read_text(encoding="utf-8"))
+    run_on = [(e.get("matcher", ""), h.get("command", ""))
+              for e in hooks.get("hooks", {}).get("PreToolUse", []) for h in e.get("hooks", [])]
+    if not any(set(m.split("|")) >= {"Write", "Edit", "NotebookEdit"}
+               and "python3 -I \"${CLAUDE_PLUGIN_ROOT}/hooks/guard.py\"" in c for m, c in run_on):
+        problems.append(f"hooks/hooks.json runs no isolated guard on Write, Edit and "
+                        f"NotebookEdit: {run_on}")
+    imported = set()
+    for node in ast.walk(ast.parse(guard.read_text(encoding="utf-8"))):
+        if isinstance(node, ast.Import):
+            imported |= {a.name.split(".")[0] for a in node.names}
+        elif isinstance(node, ast.ImportFrom) and node.module and not node.level:
+            imported.add(node.module.split(".")[0])
+    if imported - set(sys.stdlib_module_names):
+        problems.append(f"hooks/guard.py imports {sorted(imported - set(sys.stdlib_module_names))}"
+                        ": where it is missing the guard exits 1, and the write goes through")
+    option = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text()).get("userConfig")
+    if "allowed_dirs" not in (option or {}):
+        problems.append("plugin.json declares no `allowed_dirs` option: the person has no way "
+                        "to allow a folder but to switch the guard off")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(os.path.realpath(tmp))
+        work, scratch, config, temp = (tmp / "work", tmp / "scratch", tmp / "config",
+                                       tmp / "temp")
+        docs, code = _Repo(work / "docs"), _Repo(work / "code")
+        elsewhere = _Repo(tmp / "elsewhere" / "project")
+        for r in (docs, code, elsewhere):
+            r.commit("start", "2026-01-01T10:00:00")
+        (docs.path / ".framework").mkdir()
+        docs.git("worktree", "add", "-q", str(work / "docs--x"))
+        # `a-locked` sorts before the repositories: a session in `code` looks into it first.
+        for d in (work / "_scambio", work / "other", work / "a-locked", scratch):
+            d.mkdir()
+        (docs.path / "link").symlink_to(work / "other")
+        slug = lambda p: re.sub(r"[^A-Za-z0-9]", "-", str(p))
+        uid = getattr(os, "getuid", lambda: None)()
+        session_scratch = temp / f"claude-{uid}" / slug(docs.path) / "s1" / "scratchpad"
+
+        def run(session: Path, payload: dict, allowed: str = "",
+                env: dict | None = None) -> tuple[int, str]:
+            r = subprocess.run([sys.executable, "-I", str(guard)], input=json.dumps(payload),
+                               capture_output=True, text=True,
+                               env={**os.environ, "CLAUDE_PROJECT_DIR": str(session),
+                                    "CLAUDE_CONFIG_DIR": str(config),
+                                    "CLAUDE_CODE_TMPDIR": str(temp),
+                                    "CLAUDE_PLUGIN_OPTION_ALLOWED_DIRS": allowed, **(env or {})})
+            return r.returncode, r.stderr
+
+        def write(path, **extra) -> dict:
+            return {"tool_name": "Write", "tool_input": {"file_path": str(path)}, **extra}
+
+        memory = config / "projects"
+        cases = (
+            ("its own repository", docs.path, write(docs.path / "a.md"), "", 0),
+            ("a worktree of its repository", docs.path, write(work / "docs--x" / "a.md"), "", 0),
+            ("the main checkout, from a worktree", work / "docs--x", write(docs.path / "a.md"),
+             "", 0),
+            ("the exchange", code.path, write(work / "_scambio" / "a.md"), "", 0),
+            ("the scratchpad it is given", docs.path,
+             write(scratch / "a.md", scratchpad_dir=str(scratch)), "", 0),
+            *((("the scratchpad of its session, not given", docs.path,
+                 write(session_scratch / "a.md", session_id="s1"), "", 0),
+               ("the scratchpad of another session", docs.path,
+                 write(session_scratch / "a.md", session_id="s2"), "", 2)) if uid is not None
+              else ()),
+            ("its project's memory", docs.path,
+             write(memory / slug(docs.path) / "memory" / "m.md"), "", 0),
+            ("the memory of its main checkout, from a worktree", work / "docs--x",
+             write(memory / slug(docs.path) / "memory" / "m.md"), "", 0),
+            ("another project's memory", docs.path, write(memory / "p" / "memory" / "m.md"),
+             "", 2),
+            ("a plan", docs.path, write(config / "plans" / "p.md"), "", 0),
+            ("a folder of the option, as a JSON list", docs.path,
+             write(work / "other" / "a.md"), json.dumps(["other"]), 0),
+            ("a folder of the option, one per line", docs.path, write(work / "other" / "a.md"),
+             f"{scratch}\nother", 0),
+            ("another repository of the working folder", code.path,
+             write(docs.path / "a.md"), "", 2),
+            ("a folder beside the repositories", docs.path, write(work / "other" / "a.md"),
+             "", 2),
+            ("a link inside the repository to a folder outside", docs.path,
+             write(docs.path / "link" / "a.md"), "", 2),
+            ("a path that climbs out with `..`", docs.path,
+             write(f"{docs.path}/../other/a.md"), "", 2),
+            ("Claude Code's settings", docs.path, write(config / "settings.json"), "", 2),
+            ("a notebook outside", docs.path, {"tool_name": "NotebookEdit", "tool_input": {
+                "notebook_path": str(work / "other" / "n.ipynb")}}, "", 2),
+            ("a call with no path it knows", docs.path,
+             {"tool_name": "NotebookEdit", "tool_input": {"path": str(docs.path / "n.ipynb")}},
+             "", 2),
+            ("anything, from a repository outside the working folder", elsewhere.path,
+             write(work / "other" / "a.md"), "", 0),
+            ("anything, from the parent folder, which is no repository", work,
+             write(work / "other" / "a.md"), "", 0))
+        locked = work / "a-locked"
+        try:
+            # A folder beside the repositories nobody can look into is not an error that
+            # turns the guard off. Run as root, the case is not exercised: root looks anyway.
+            locked.chmod(0)
+            for what, session, payload, allowed, want in cases:
+                got, said = run(session, payload, allowed)
+                if got != want:
+                    problems.append(f"the guard exits {got} on {what}, expected {want}: "
+                                    f"{said.strip()[-200:]}")
+                elif got == 2 and "ask the person" not in said:
+                    problems.append(f"the guard stops {what} without saying to ask the person")
+        finally:
+            locked.chmod(0o755)
+
+        # The place `.framework/sessions.yaml` declares is the exchange of the repository that
+        # declares it, of no other, once committed -- the file on disk is one the session may
+        # write -- and only as a folder beside it that is not a repository.
+        shared = write(work / "shared" / "a.md")
+        docs.write(".framework/sessions.yaml", "exchange: ../shared  # beside the others\n")
+        if run(docs.path, shared)[0] != 2:
+            problems.append("the guard takes the exchange from a sessions.yaml nobody committed")
+        docs.commit("the exchange", "2026-01-02T10:00:00")
+        if run(docs.path, shared)[0] != 0:
+            problems.append("the guard stops a write in the exchange the repository declares")
+        if run(code.path, shared)[0] != 2:
+            problems.append("the guard lets a code repository write in the place another "
+                            "repository declares as its exchange")
+        for value, target in (("..", work / "x.md"), ("../code", code.path / "a.md"),
+                              (str(work / "other"), work / "other" / "a.md"),
+                              ("../other/..", work / "x.md")):
+            docs.write(".framework/sessions.yaml", f"exchange: {value}\n")
+            docs.commit(f"exchange {value}", "2026-01-03T10:00:00")
+            if run(docs.path, write(target))[0] != 2:
+                problems.append(f"the guard takes `exchange: {value}` as a place to write: "
+                                "only a folder beside the repository that is not one counts")
+        # The scratchpad where Claude Code puts it with no `CLAUDE_CODE_TMPDIR`, in the
+        # temporary folder, and under a `CLAUDE_CODE_TMPDIR` without `claude-<uid>`.
+        if uid is not None:
+            plain = tmp / "plain"           # `tempfile` passes over a TMPDIR that is not there
+            plain.mkdir()
+            for env, place in (({"CLAUDE_CODE_TMPDIR": "", "TMPDIR": str(plain)},
+                                plain / f"claude-{uid}"), ({}, temp)):
+                target = place / slug(docs.path) / "s1" / "scratchpad" / "a.md"
+                if run(docs.path, write(target, session_id="s1"), env=env)[0] != 0:
+                    problems.append(f"the guard stops a write in the session's scratchpad at "
+                                    f"{target.relative_to(tmp)}")
+        # Nor is `_scambio` a way out when it is a link to the parent folder.
+        (work / "_scambio").rmdir()
+        (work / "_scambio").symlink_to(work)
+        if run(code.path, write(work / "x.md"))[0] != 2:
+            problems.append("the guard takes `_scambio`, a link to the parent folder, as the "
+                            "exchange: every folder beside the repositories is open")
     return problems
 
 
