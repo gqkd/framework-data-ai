@@ -19,11 +19,11 @@ decisions, products, initiatives and corpus, live in that project's repository, 
 | `PROCESSES.md` | The operating processes: who does what, what each one leaves written, and which of them the tooling actually carries today. Diagrammed, one per process |
 | `templates/` | One template per artifact, each with its anti-patterns at the bottom |
 | `schemas/` | The artifact catalog and what each type is allowed to be. `artifact-types.yaml` is the source; `generate.py` projects it into the JSON Schemas, into `FRAMEWORK.md §7` and into `templates/README.md` |
-| `skills/` | The skills themselves. `audit/` also carries the gate: `scripts/validate.py`, `scripts/migrate.py`, `scripts/attest.py` (how a person attests a reading), `scripts/exchange.py` (what waits in the exchange between sessions), `scripts/work.py` (documentation written on branches: claims, reservations, bringing a branch up to date) and `checks.yaml` |
+| `skills/` | The skills themselves. `audit/` also carries the gate: `scripts/validate.py`, `scripts/migrate.py`, `scripts/attest.py` (how a person attests a reading), `scripts/exchange.py` (what waits in the exchange between sessions), `scripts/work.py` (documentation written on branches: claims, reservations, delegations, bringing a branch up to date), `scripts/todo.py` (in the additive mode, what there is to do and the threads computed from the main line) and `checks.yaml` |
 | `agents/` | The subagents the plugin ships. `critic.md` is an external reviewer, read only, that reviews every plan before it is presented and every diff before it is committed or merged: each objection classed as on the proposal, on the substance or out of scope, and only those on the substance written in full. `reviser.md` stands between a session and the critic: it runs it, fixes the objections on the proposal in the files it is told it may write, has its fixes reviewed again when they were many or an objection needed a person, at most three passes, and hands back in a few lines what a person has to settle. Invoked as `framework-data-ai:critic` and `framework-data-ai:reviser` |
 | `src/framework_data_ai/` | Shared reading and resolution, the artifact contracts and a separate code-observation layer, used by the opt-in verification profiles. Loaded from this checkout; no package installation required |
 | `ci/` | Legacy PR template/workflow, optional trusted-base documentary controller, contribution-policy and CODEOWNERS adoption examples; see `references/contributions.md` |
-| `hooks/` | The hooks the plugin brings into every session where it is installed as a plugin, not through the symlink. `guard.py` is the write guard: in the working folder, Write, Edit and NotebookEdit reach only the session's repository and its worktrees, the exchange, Claude Code's own folders and the folders of the `allowed_dirs` option. See `references/workstation.md` |
+| `hooks/` | The hooks the plugin brings into every session where it is installed as a plugin, not through the symlink. `guard.py` is the write guard: in the working folder, Write, Edit and NotebookEdit reach only the session's repository and its worktrees, the exchange, Claude Code's own folders and the folders of the `allowed_dirs` option. `session_start.py` puts the to-do in a few lines in the context of a session that starts in a project in the additive mode. See `references/workstation.md` |
 | `references/` | Shared by the skills: the common preamble, the routing table, the operating-mode and evidence rules, the contribution trust boundary, the adoption procedure and what a workstation needs |
 | `tests/selfcheck.py` | The framework checked against itself. Runs in CI |
 | `tests/memory/` | Frozen acceptance inputs, deterministic memory tests and phase reports. Model evaluation results are separate |
@@ -250,7 +250,7 @@ python3 skills/audit/scripts/validate.py --root ../my-project --emit-index
 <!-- generated: counts -->
 *Generated from `schemas/artifact-types.yaml` and `skills/audit/checks.yaml`. Edit those, not this line.*
 
-**30 artifact types. 111 checks** (28 error, 81 warn, 2 info), each catalogued with the failure it prevents written next to it, and 1 retired code whose number is never reused.
+**30 artifact types. 112 checks** (28 error, 82 warn, 2 info), each catalogued with the failure it prevents written next to it, and 1 retired code whose number is never reused.
 <!-- /generated -->
 
 The count above is generated, and it is generated because the one that used to be here was

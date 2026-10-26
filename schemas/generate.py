@@ -349,6 +349,14 @@ def build(name: str, spec: dict, registry: dict) -> dict:
                                         "minItems": 0 if (opts or {}).get("may_be_empty") else 1,
                                         "uniqueItems": True}]}
 
+    # FIELDS THAT FORECAST WHAT A PIECE OF WORK WILL CHANGE: `<path>#<anchor>`, several. The
+    # shape an open entry's `affects` has in its map, so that one field name has one form.
+    anchor = {"type": "string", "pattern": r"^[^\s#]+(#.+)?$"}
+    for field in spec.get("anchor_fields", []):
+        if field in properties:
+            raise SystemExit(f"{name}.anchor_fields: {field!r} is already declared elsewhere")
+        properties[field] = {"type": "array", "items": anchor, "minItems": 1}
+
     for field, definition in (spec.get("memory_fields") or {}).items():
         if field in properties or field in spec.get("required", []) or field in spec.get("required_if_active", []):
             raise SystemExit(f"{name}.memory_fields: {field!r} must be optional and declared once")

@@ -2301,10 +2301,19 @@ types:
         # decided in one sitting, which `depends_on` cannot say because it orders them. It
         # belongs on both entries, and no check enforces that -- when only one declares it,
         # nothing here can tell which of the two is the one that is wrong.
+        #
+        # `affects` is the forecast the additive mode computes its threads from: the
+        # documents, and the sections of them, that deciding or closing the entry will change,
+        # as `<path>#<anchor>` -- a key of a register that is a map, a section marker, or the
+        # path alone for the whole document. A forecast, not a record: at the join what counts
+        # is the effects the thread wrote. A validator older than the field reads it as
+        # `FM002`, so it is written only where the project pins this version or later.
         fields:
           required: [status]
           optional: [cost_to_reverse, default_in_force, trigger, closed_by]
-          lists: [depends_on, decide_with, products]
+          lists: [depends_on, decide_with, products, affects]
+          list_items:
+            affects: "^[^\\s#]+(#.+)?$"
           enums:
             status: [open, decided, superseded, parked]
             cost_to_reverse: [high, medium, low]
@@ -2969,6 +2978,10 @@ types:
     # matter once references had a shape: the type most likely to carry a qualified
     # reference was the one type whose reference field nothing was checking.
     id_fields: [derives_from]
+    # The same forecast as an open entry's `affects`, in the same shape: one field name, one
+    # form. The code paths are not repeated here; the to-do reads them from the change's
+    # mandate in the contribution policy, where there is one.
+    anchor_fields: [affects]
     sections: [what-changes, what-must-not-change, how-we-know-it-worked]
 
   cycle-plan:

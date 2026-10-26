@@ -9449,6 +9449,284 @@ def _sync_additive_rules():
     return problems
 
 
+TODO = ROOT / "skills" / "audit" / "scripts" / "todo.py"
+
+
+def _register(entries: dict, products: str | None = None) -> str:
+    """An open register whose entries carry the fields given, each as written."""
+    rows = "".join(f"  {k}:\n" + "".join(f"    {f}: {val}\n" for f, val in fields.items())
+                   for k, fields in entries.items())
+    return ("---\nschema: framework/open-register/v1\nartifact_type: open-register\n"
+            "lifecycle: living\nstatus: active\n" + (f"products: {products}\n" if products else "")
+            + "owners: [o]\ncreated: 2026-06-01 09:00\nlast_review: 2026-06-01 09:00\n"
+            "entries:\n" + rows + "---\n\n# Open\n\n" + "".join(f"### {k} · {k.lower()} title\n\n"
+                                                             for k in entries))
+
+
+@check("the to-do computes the threads from the main line, keeps an open thread fixed, and says when a join is needed")
+def _todo_computes_threads():
+    # The threads are a pure function of the main line's registers and of the claims of the
+    # threads already open: nodes to do joined by `decide_with`, a shared anchor, overlapping
+    # mandates, or a product a node without anchors touches whole; what waits on the branch of
+    # a thread ready is after the join, what waits on a thread not ready is after that thread.
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        origin = tmp / "origin.git"
+        subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(origin)], check=True,
+                       env={**os.environ, **_WORK_ENV})
+        seed = _Repo(tmp / "seed")
+        seed.write(".framework/work.yaml",
+                   "mode: additive\npeople: [Owner, Junior]\nadmins: [Owner]\n")
+        seed.write(".framework/sessions.yaml", "exchange: ../_scambio\n")
+        seed.write(".framework/contribution-policy.json", json.dumps({"mandates": {
+            "products/e/changes/CHG-010-x.md": {"paths": {"repository:product:e:api": ["src/a"]}},
+            "products/e/changes/CHG-011-x.md": {"paths": {"repository:product:e:api": ["src/a/b"]}},
+            "products/f/changes/CHG-020-x.md": {"paths": {"documents": ["products/f/contracts"]}}}}))
+        seed.write("OPEN.md", _register({
+            "OD-020": {"status": "open", "products": "[all]"},
+            "OD-021": {"status": "open", "products": "[none]"},
+            "OD-022": {"status": "open", "products": "[none]"}}, products="[all]"))
+        regs = {
+            "a": {"OD-001": {"status": "open", "affects": "[products/a/ARC.md#current]"},
+                  "OD-002": {"status": "open"}},
+            "b": {"OD-010": {"status": "open", "affects": "[products/b/PBR.md]"},
+                  "OD-011": {"status": "open", "depends_on": "[OD-010]",
+                             "affects": "[products/b/WF.md#x]"},
+                  "KI-012": {"status": "open", "affects": "[products/b/WF.md#y]"},
+                  "KI-013": {"status": "open", "affects": "[products/b/PBR.md#intro]"}},
+            "d": {"OD-030": {"status": "open", "decide_with": "[OD-031]",
+                             "affects": "[products/d/A.md]"},
+                  "OD-031": {"status": "open", "decide_with": "[OD-030]",
+                             "affects": "[products/d/B.md]"}},
+            "f": {"OD-040": {"status": "open", "affects": "[products/f/contracts/DC-001.md#k]"}},
+            "g": {"OD-050": {"status": "open", "affects": "[products/g/A.md]"},
+                  "OD-051": {"status": "open", "affects": "[products/g/A.md]"},
+                  "OD-052": {"status": "open", "depends_on": "[OD-050]",
+                             "affects": "[products/g/B.md]"}},
+            "h": {"KI-060": {"status": "open", "affects": "[products/h/Y.md]"}},
+            "i": {"OD-070": {"status": "open", "affects": "[products/i/A.md]"}}}
+        for prod, entries in regs.items():
+            seed.write(f"products/{prod}/OPEN.md", _register(entries))
+
+        def chg(i, prod, status, affects="", derives=""):
+            fields = dict(schema="framework/change-contract/v1", artifact_type="change-contract",
+                          lifecycle="immutable", status=status, id=i, products=f"[{prod}]",
+                          owners="[o]", created="2026-06-01")
+            if affects:
+                fields["affects"] = affects
+            if derives:
+                fields["derives_from"] = derives
+            seed.write(f"products/{prod}/changes/{i}-x.md", _fm(**fields) + f"# {i} title\n")
+        # An entry whose row says open, closed by a decision accepted: no node.
+        seed.write("decisions/DEC-070-x.md", _decision("DEC-070", "OD-070"))
+        chg("CHG-001", "b", "approved", "[products/b/PBR.md#intro]")
+        chg("CHG-002", "b", "draft")
+        chg("CHG-010", "e", "approved", "[products/e/X.md]")
+        chg("CHG-011", "e", "approved", "[products/e/Y.md]")
+        chg("CHG-020", "f", "approved", "[products/f/Z.md]")
+        chg("CHG-030", "h", "approved", "[products/h/X.md]", "[INC-001]")
+        rmp = lambda prod, requires: _fm(
+            schema="framework/roadmap/v1", artifact_type="roadmap", lifecycle="living",
+            status="active", products=f"[{prod}]", owners="[o]", created="2026-06-01",
+            last_review="2026-06-01 09:00").replace("---\n\n", "delivery_stages:\n  s1:\n"
+            "    name: first\n    after: []\n    increments: [INC-001]\nincrements:\n  INC-001:\n"
+            f"    state: committed\n    depends_on: []\n    requires: {requires}\n"
+            "    changes: []\n---\n\n", 1) + "# Roadmap\n\n### INC-001 · first\n"
+        seed.write("products/c/RMP.md", rmp("c", "[]"))
+        # A product a claim on its increments can name: declared by its manifest.
+        seed.write("products/c/product.yaml",
+                   "schema: framework/product-manifest/v1\nartifact_type: product-manifest\n"
+                   "lifecycle: living\nstatus: active\nproducts: [c]\nname: c\n"
+                   "one_liner: A thing.\nowners: [o]\ncreated: 2026-06-01 09:00\n"
+                   "last_review: 2026-06-01 09:00\nstage:\n  phase: F5\n  block: A\n")
+        seed.write("products/h/RMP.md", rmp("h", "[KI-060]"))
+        seed.commit("base", "2026-06-01T09:00:00+02:00")
+        seed.git("remote", "add", "origin", str(origin))
+        seed.git("push", "-q", "origin", "main")
+        a = tmp / "projects" / "docs"
+        a.parent.mkdir()
+        subprocess.run(["git", "clone", "-q", str(origin), str(a)], check=True,
+                       env={**os.environ, **_WORK_ENV})
+
+        def todo() -> dict:
+            r = subprocess.run([sys.executable, str(TODO), "--root", str(a), "--json"],
+                               capture_output=True, text=True, env={**os.environ, **_WORK_ENV})
+            try:
+                return json.loads(r.stdout)
+            except ValueError:
+                problems.append(f"todo.py gave no JSON (exit {r.returncode}): {r.stderr[-300:]}")
+                return {}
+
+        threads = lambda got: {t["name"]: [i for n in t["nodes"] for i in n["ids"]]
+                               for t in got.get("threads", [])}
+        got = todo()
+        want = {"a-od-001": ["OD-001", "OD-002"], "b-ki-012": ["KI-012"],
+                "b-od-010": ["OD-010", "KI-013", "CHG-001"], "c-inc-001": ["c/INC-001"],
+                "d-od-030": ["OD-030", "OD-031"], "e-chg-010": ["CHG-010", "CHG-011"],
+                "f-od-040": ["OD-040", "CHG-020"], "g-od-050": ["OD-050", "OD-051"],
+                "h-ki-060": ["KI-060"], "radice-od-021": ["OD-021", "OD-022"]}
+        if threads(got) != want:
+            problems.append(f"the threads computed are {threads(got)}, expected {want}")
+        if got.get("drafts") != ["CHG-002"] or got.get("unanchored") != [["OD-020"]] \
+                or got.get("waiting") != {"b": 1, "g": 1, "h": 1} or got.get("join") != "not yet":
+            problems.append(f"drafts, unanchored, waiting or join read wrong: "
+                            f"{ {k: got.get(k) for k in ('drafts', 'unanchored', 'waiting', 'join')} }")
+        mixed = [t for t in got.get("threads", []) if t["name"] == "b-od-010"]
+        if not mixed or not mixed[0]["mixed"] or not any("PBR.md" in w for w in mixed[0]["why"]):
+            problems.append(f"a decision and a change with one anchor not said mixed, or not why: "
+                            f"{mixed}")
+
+        # Two threads taken, one decided whole, one in part; a parking branch; an abandoned one.
+        for branch, ids in (("b-od-010", ("OD-010", "CHG-001")), ("g-od-050", ("OD-050", "OD-051"))):
+            _work(a, "open", "--who", "Owner", "--branch", branch, *ids)
+            tree = a.parent / f"docs--{branch}"
+            prod = branch[0]
+            reg = tree / "products" / prod / "OPEN.md"
+            first = ids[0]
+            reg.write_text(reg.read_text().replace(f"  {first}:\n    status: open",
+                                                   f"  {first}:\n    status: decided"))
+            if prod == "b":
+                (tree / "_filoni" / branch).mkdir(parents=True)
+                (tree / "_filoni" / branch / "effetti.md").write_text(
+                    "# Effetti\n\n## products/b/PBR.md\n- Da: OD-010\n- Diventa vero: x\n"
+                    "- Perché: y\n")
+            _commit_all(tree, f"{first} decided")
+            _g(tree, "push", "-q", "origin", f"work/{branch}")
+        # An increment taken, `c/INC-001` as its claim names it, decomposed on its branch by an
+        # effect on its anchor.
+        _work(a, "open", "--who", "Junior", "--branch", "c-inc-001", "c:INC-001")
+        inc = a.parent / "docs--c-inc-001"
+        (inc / "_filoni" / "c-inc-001").mkdir(parents=True)
+        (inc / "_filoni" / "c-inc-001" / "effetti.md").write_text(
+            "# Effetti\n\n## products/c/RMP.md#INC-001\n- Da: INC-001\n- Diventa vero: x\n"
+            "- Perché: y\n")
+        _commit_all(inc, "INC-001 decomposed")
+        _g(inc, "push", "-q", "origin", "work/c-inc-001")
+        _work(a, "open", "--who", "Junior", "--branch", "notes")
+        park = a.parent / "docs--parcheggio-notes"
+        reg = park / "products" / "a" / "OPEN.md"
+        reg.write_text(reg.read_text() + "\n- a parking line\n")
+        _commit_all(park, "parked")
+        _g(park, "push", "-q", "origin", "work/parcheggio-notes")
+        # An abandoned branch that closes what a change waits for counts for nothing.
+        _g(a, "checkout", "-q", "-b", "old")
+        reg = a / "products" / "h" / "OPEN.md"
+        reg.write_text(reg.read_text().replace("  KI-060:\n    status: open",
+                                               "  KI-060:\n    status: decided"))
+        _commit_all(a, "KI-060 closed on a branch nobody holds")
+        _g(a, "push", "-q", "origin", "old:work/old")
+        _g(a, "checkout", "-q", "main")
+        _g(a, "fetch", "-q", "origin")
+        got = todo()
+        opened = got.get("open", {})
+        ready = {k: v.get("ready") for k, v in opened.items()}
+        if ready != {"work/b-od-010": True, "work/g-od-050": False, "work/parcheggio-notes": True,
+                     "work/c-inc-001": True}:
+            problems.append(f"readiness of the threads open: {ready}")
+        if set(threads(got)) != set(want) - {"b-od-010", "g-od-050", "c-inc-001"}:
+            problems.append(f"open threads computed again: {sorted(threads(got))}")
+        if got.get("waiting", {}).get("h") != 1:
+            problems.append(f"an abandoned branch closing what a change waits for moved it: "
+                            f"{got.get('waiting')}")
+        after_thread = sorted((i["ids"][0], tuple(i["threads"])) for i in got.get("after_thread", []))
+        if after_thread != [("KI-013", ("work/b-od-010",)), ("OD-052", ("work/g-od-050",))]:
+            problems.append(f"what waits for a thread open: {after_thread}")
+        if got.get("after_join") != [["OD-011"]] or got.get("join") != "needed":
+            problems.append(f"what waits on a thread ready is not after the join, or the join is "
+                            f"not needed: {got.get('after_join')}, {got.get('join')}")
+        if got.get("abandoned") != ["work/old"] or opened.get("work/b-od-010", {}).get("effects") != 1:
+            problems.append(f"a branch without claims, or the effects waiting: "
+                            f"{got.get('abandoned')}, {got.get('effects')}")
+
+        # The join, by its thresholds.
+        x = _load(TODO, "todo_for_join")
+        limits = {"effects_per_section": 3, "ready_days": 3}
+        for args, want_state in (((True, [], {}), "needed"), ((False, [5], {}), "advised"),
+                                 ((False, [0], {"a.md#x": 4}), "advised"),
+                                 ((False, [0], {"a.md#x": 3}), "possible"),
+                                 ((False, [], {"a.md#x": 9}), "not yet")):
+            if x.join_state(*args, limits) != want_state:
+                problems.append(f"join_state{args} is {x.join_state(*args, limits)}, expected "
+                                f"{want_state}")
+
+        # The hook says the to-do in a project in the additive mode, and nothing elsewhere.
+        hook = ROOT / "hooks" / "session_start.py"
+        # The pins written from the hook's own threshold, not as numbers: a project at the
+        # first version that knows the mode, and one a version below it.
+        since = _load(hook, "session_start_for_pins").SINCE
+        pin = lambda version: "framework_version: " + ".".join(map(str, version)) + "\n"
+        (a / "framework.yaml").write_text(pin(since))
+        older = tmp / "older"
+        (older / ".framework").mkdir(parents=True)
+        (older / ".git").mkdir()
+        (older / ".framework" / "work.yaml").write_text("mode: additive\n")
+        (older / "framework.yaml").write_text(pin((since[0], since[1] - 1, 0)))
+        (tmp / "seed" / ".framework" / "work.yaml").write_text("people: [Owner]\n")
+        # Where the to-do cannot be computed, one line says why.
+        broken = tmp / "broken"
+        (broken / ".framework").mkdir(parents=True)
+        subprocess.run(["git", "init", "-q", str(broken)], check=True, env={**os.environ, **_WORK_ENV})
+        (broken / ".framework" / "work.yaml").write_text("mode: additive\n")
+        # The reason is the line that names what is missing, where there is one.
+        reason = _load(hook, "session_start_for_reasons").reason
+        for lines, want in ((["Needs jsonschema:  pip install jsonschema", "It is not optional."],
+                             "Needs jsonschema"), ([], "with no message"),
+                            (["a", "the last"], "the last")):
+            if want not in reason(lines, 1):
+                problems.append(f"the hook's reason for {lines} is {reason(lines, 1)!r}")
+        for where, said in ((a, "Join: needed"), (tmp / "seed", None), (older, None),
+                            (broken, "neither origin/main nor main")):
+            r = subprocess.run([sys.executable, "-I", str(hook)], input="{}", capture_output=True,
+                               text=True, env={**os.environ, **_WORK_ENV,
+                                               "CLAUDE_PROJECT_DIR": str(where)})
+            if r.returncode or (said and said not in r.stdout) or (not said and r.stdout.strip()):
+                problems.append(f"the SessionStart hook in {where.name}: exit {r.returncode}, "
+                                f"{r.stdout[-200:]!r}")
+    return problems
+
+
+@check("AFF001 says an anchor that names nothing, where it can still compute a thread, and affects has one form")
+def _affects_anchors():
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = _Repo(Path(tmp) / "docs")
+        repo.write("products/p/OPEN.md", _register({
+            "OD-001": {"status": "open", "affects": "[products/p/MISSING.md]"},
+            "OD-002": {"status": "open", "affects": "[products/p/OPEN.md#OD-999]"},
+            "OD-003": {"status": "open", "affects": "[products/p/OPEN.md#OD-001, STACK.md]"},
+            "OD-004": {"status": "decided", "affects": "[products/p/MISSING.md]"},
+            "OD-005": {"status": "parked", "affects": "[STACK.md#nope]"},
+            "OD-006": {"status": "open", "affects": "[STACK.md#chosen]"},
+            "OD-007": {"status": "open", "affects": "[products/p/MISSING.md]"}}))
+        # OD-007's row says open, and a decision accepted closes it: not read.
+        repo.write("decisions/DEC-007-x.md", _decision("DEC-007", "OD-007"))
+        repo.write("STACK.md", _fm(schema="framework/operational-stack/v1",
+                                   artifact_type="operational-stack", lifecycle="living",
+                                   status="active", owners="[o]", created="2026-06-01",
+                                   last_review="2026-06-01 09:00")
+                   + "# Stack\n\n<!-- section: chosen -->\n## Chosen\n\nx\n")
+        chg = lambda i, status, affects: _fm(
+            schema="framework/change-contract/v1", artifact_type="change-contract",
+            lifecycle="immutable", status=status, id=i, products="[p]", owners="[o]",
+            created="2026-06-01", affects=affects) + f"# {i}\n"
+        repo.write("products/p/changes/CHG-001-x.md", chg("CHG-001", "approved",
+                                                          "[products/p/MISSING.md]"))
+        repo.write("products/p/changes/CHG-002-x.md", chg("CHG-002", "implemented",
+                                                          "[products/p/MISSING.md]"))
+        repo.write("products/p/changes/CHG-003-x.md", chg("CHG-003", "draft", "STACK.md"))
+        got = {(f["path"], f["message"].split(",")[0]) for f in repo.findings("AFF001")}
+        want = {("products/p/OPEN.md", "entry OD-001"), ("products/p/OPEN.md", "entry OD-002"),
+                ("products/p/OPEN.md", "entry OD-005"),
+                ("products/p/changes/CHG-001-x.md", "CHG-001")}
+        if got != want:
+            problems.append(f"AFF001 at {sorted(got)}, expected {sorted(want)}")
+        if not any(f["path"] == "products/p/changes/CHG-003-x.md" for f in repo.findings("FM002")):
+            problems.append("`affects` written as one value on a change is not FM002: one field "
+                            "name, one form")
+    return problems
+
+
 @check("BR003 asks that the reservation be this branch's")
 def _branch_reservations_are_owned():
     problems = []

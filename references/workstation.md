@@ -2,8 +2,8 @@
 
 What a machine needs before a person writes documentation or code with the framework, the
 hooks the plugin brings into every session, and the rules on where an agent may write. Read
-it once per machine, and again when the plugin's version changes: the hooks follow the
-plugin, not the version a project pins.
+it once per machine, and again when the plugin's version changes: the hooks follow the plugin,
+and the version a project pins decides only whether the to-do hook speaks.
 
 ## What to install
 
@@ -81,6 +81,16 @@ It sees Write, Edit and NotebookEdit only: a command run through Bash, or a tool
 server that writes files, writes wherever the operating system lets it. The limit for Bash
 is the rule below, which an agent follows and nothing enforces; the sandbox Claude Code
 offers for Bash is what can enforce it, and its configuration is not in this document yet.
+
+**The to-do at the start of a session** (`hooks/session_start.py`, a `SessionStart` hook). In a
+project whose `.framework/work.yaml` declares `mode: additive`, and that pins in `framework.yaml`
+the version that brought the mode or a later one -- or pins none --, it runs `skills/audit/scripts/todo.py --summary` and puts its lines in the session's context:
+the threads open and who has them, the threads to take, whether a join is needed, the effects
+waiting by document. Anywhere else it says nothing. The whole to-do is
+`python3 <framework>/skills/audit/scripts/todo.py --root <documentation>`; where the hook could
+not compute it -- the scripts' dependencies missing, no main line in the clone -- it says so in
+one line, with the reason. The summary is computed by the plugin's `todo.py`; a `<framework>`
+checkout at another version may compute the whole to-do differently.
 
 **Updating the plugin changes the sessions of the working folder** -- reinstalling it, as the
 README says, and starting the session again -- whatever version a project pins and with no

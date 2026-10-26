@@ -47,6 +47,14 @@
           "uniqueItems": true
         }
       ]
+    },
+    "affects": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[^\\s#]+(#.+)?$"
+      },
+      "minItems": 1
     }
   },
   "required": [

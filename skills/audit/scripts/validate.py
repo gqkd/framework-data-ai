@@ -4287,25 +4287,64 @@ def check_effects(root: Path, arts: list[Artifact], registry: dict, report: Repo
         for line, problem in problems:
             report.add("EFF001", rel, f"line {line}: {problem}")
         for eff in effects:
-            target = living.get(eff.path)
-            if target is None:
-                report.add("EFF001", rel, f"line {eff.line}: {eff.path} is not a living document "
-                           "of this tree: an effect is what a living document should say, and a "
-                           "new file or an immutable one is written directly.")
-                continue
-            if eff.anchor:
-                maps = _effects.ANCHOR_MAPS.get(target.type or "", ())
-                keys = {str(k) for m in maps for k in as_map(target.meta.get(m))}
-                spec = registry["types"].get(target.type or "", {})
-                # Read as `SEC001` reads them: a marker anywhere in the body.
-                marks = set(SECTION_MARK.findall(target.body)) if spec.get("sections") else set()
-                if eff.anchor not in keys | marks:
-                    report.add("EFF001", rel,
-                               f"line {eff.line}: `#{eff.anchor}` is neither a key of "
-                               f"{eff.path}{' (' + ', '.join(maps) + ')' if maps else ''} nor a "
-                               f"section its type declares: the to-do could not tell which "
-                               "effects meet. Without an anchor, the effect is on the whole "
-                               "document.")
+            problem = _anchor_problem(eff.path, eff.anchor, living, registry)
+            if problem:
+                report.add("EFF001", rel, f"line {eff.line}: {problem}" + (
+                    " An effect is what a living document should say; a new file or an immutable "
+                    "one is written directly." if eff.path not in living else ""))
+
+
+def _anchor_problem(path: str, anchor: str | None, living: dict, registry: dict) -> str | None:
+    """Why `<path>#<anchor>` names nothing an effect or a forecast can meet on, or None: the
+    path of a living document, and the key of an entry of a register that is a map, or a
+    section marker of a type that declares its sections, or no anchor for the whole document."""
+    target = living.get(path)
+    if target is None:
+        return f"{path} is not a living document of this tree."
+    if not anchor:
+        return None
+    maps = _effects.ANCHOR_MAPS.get(target.type or "", ())
+    keys = {str(k) for m in maps for k in as_map(target.meta.get(m))}
+    spec = registry["types"].get(target.type or "", {})
+    # Read as `SEC001` reads them: a marker anywhere in the body.
+    marks = set(SECTION_MARK.findall(target.body)) if spec.get("sections") else set()
+    if anchor in keys | marks:
+        return None
+    return (f"`#{anchor}` is neither a key of {path}"
+            f"{' (' + ', '.join(maps) + ')' if maps else ''} nor a section its type declares, "
+            "so nothing could tell which pieces of work meet on it. Without an anchor, it is the "
+            "whole document.")
+
+
+def check_affects(arts: list[Artifact], registry: dict, report: Report) -> None:
+    """`AFF001`: every anchor an open entry or a change forecasts in `affects` exists.
+
+    The one input of the computed threads a person writes: two pieces of work are in one
+    thread when they forecast one anchor, so an anchor that names nothing separates what
+    meets, or joins what does not. Read only where it can still compute a thread -- an entry
+    `open` or `parked`, a change `draft` or `approved` -- since a join that rewrites a section
+    must not leave a warning on a closed entry or an immutable change nobody may touch again."""
+    living = {a.rel.replace("\\", "/"): a for a in arts if a.meta.get("lifecycle") == "living"}
+    # Closed as the to-do reads it: by its row, or by a decision accepted.
+    view = _branches.View.of(arts, registry)
+    for a in sorted(arts, key=lambda a: a.rel):
+        if a.type == "open-register":
+            owners = [(f"entry {k}", row.get("affects")) for k, row
+                      in as_map(a.meta.get("entries")).items()
+                      if isinstance(row, dict) and row.get("status") in ("open", "parked")
+                      and not view.closed(str(k))]
+        elif a.type == "change-contract" and a.meta.get("status") in ("draft", "approved"):
+            owners = [(a.id or a.rel, a.meta.get("affects"))]
+        else:
+            continue
+        for who, anchors in owners:
+            for anchor in as_list(anchors):
+                if not isinstance(anchor, str):
+                    continue
+                path, _, mark = anchor.partition("#")
+                problem = _anchor_problem(path, mark or None, living, registry)
+                if problem:
+                    report.add("AFF001", a.rel, f"{who}, `affects: {anchor}`: {problem}")
 
 
 # What a decision or an approval leaves in the front matter: a `DEC` accepted, a `CHG` approved
@@ -4769,6 +4808,7 @@ def main() -> int:
     if not (args.emit_index and not args.check):
         check_generated_regions(root, arts, report)  # a run that rewrites them has the answer
     check_effects(root, arts, registry, report)
+    check_affects(arts, registry, report)
     if args.base is not None:
         check_branch(root, args.base, arts, registry, scan, repo, work, report)
     # Last, and it has to be: an annotation is a statement about the set of findings, so it
