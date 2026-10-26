@@ -7824,6 +7824,61 @@ def _the_critic_ships_with_the_plugin():
     return problems
 
 
+@check("the reviser ships with the plugin, runs the critic, and writes without running anything")
+def _the_reviser_ships_with_the_plugin():
+    # It stands between a session and the critic, so that the critic's reports do not fill the
+    # session: it runs the critic, fixes the objections on the proposal and hands back what
+    # needs a person. Edit and Write to fix, Agent to launch the critic, and no Bash: a plugin
+    # agent ignores `permissionMode`, so a shell would give it every command. Agent could
+    # still launch an agent that has one: that it launches the critic and nothing else is its
+    # text's, not a tool's.
+    problems = []
+    agent = ROOT / "agents" / "reviser.md"
+    if not agent.exists():
+        return ["agents/reviser.md is missing: the rules that run the reviser run nothing"]
+    text = agent.read_text(encoding="utf-8")
+    try:
+        meta = front_matter(text) or {}
+    except yaml.YAMLError as e:
+        return [f"agents/reviser.md: the front matter is not YAML, so Claude Code reads no agent "
+                f"from it: {str(e).splitlines()[0]}"]
+    if meta.get("name") != "reviser":
+        problems.append(f"agents/reviser.md is named {meta.get('name')!r}")
+    listed = meta.get("tools", "")
+    tools = {str(t).strip() for t in (listed if isinstance(listed, list)
+                                      else str(listed).split(",")) if str(t).strip()}
+    if tools != {"Read", "Grep", "Glob", "Edit", "Write", "Agent"}:
+        problems.append(f"the reviser's tools are {sorted(tools)}: it reads, fixes the text it "
+                        "was given and launches the critic, and runs no command")
+    ignored = {"permissionMode", "hooks", "mcpServers", "initialPrompt"} & set(meta)
+    if ignored:
+        problems.append(f"{sorted(ignored)} in the reviser's front matter, which a plugin agent "
+                        "ignores: a line that reads as applied and is not")
+    if (ROOT / ".claude" / "agents" / "reviser.md").exists():
+        problems.append(".claude/agents/reviser.md exists: here it would win over the "
+                        "plugin's, and the two copies would drift")
+    plugin = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text())["name"]
+    if f"{plugin}:critic" not in text.split("\n---", 1)[-1]:
+        problems.append(f"agents/reviser.md does not name `{plugin}:critic` in its body: the "
+                        "agent it launches has to be the one the rules name")
+    name = f"{plugin}:reviser"
+    for rel in ("references/preamble.md", "templates/AGENTS.md", "skills/cycle/SKILL.md"):
+        if name not in (ROOT / rel).read_text(encoding="utf-8"):
+            problems.append(f"{rel} does not name `{name}`: the rule that runs the reviser and "
+                            "the agent it runs have to be the same one")
+    # The pull request somebody else wrote is read by the critic alone: the reviser would fix it.
+    if name in (ROOT / "skills" / "audit" / "SKILL.md").read_text(encoding="utf-8"):
+        problems.append("skills/audit/SKILL.md names the reviser: a pull request somebody else "
+                        "wrote is read by the critic, not fixed")
+    # One set of classes: an objection of a class the reviser does not sort is one nobody acts on.
+    critic = (ROOT / "agents" / "critic.md").read_text(encoding="utf-8")
+    for cls in ("proposal", "substance", "out of scope"):
+        if f"[{cls}]" not in critic or f"*{cls}*" not in text:
+            problems.append(f"the class {cls!r} is not both in the critic's output and among "
+                            "those the reviser sorts")
+    return problems
+
+
 @check("every status a change or an entry can have is either done or not, for the exchange")
 def _exchange_maps_every_status():
     # Two meanings of "closed" already exist, the digest's and this one, and the second is
@@ -9039,6 +9094,16 @@ def _adopt_writes_the_framework_sections():
                     not in review.get("text", ""):
                 problems.append(f"the 4.6.0 hand copy, lines rebroken, is planned as "
                                 f"{review.get('action')}: expected an update keeping its path")
+            # Under another heading, with no marker: an earlier text shares fewer words with
+            # today's, and is still a copy of the rule, not a place to add it beside.
+            elsewhere = "## Revisione prima di presentare\n" + copied.split("\n", 1)[1]
+            repo.write("AGENTS.md", _AGENTS_BODY.replace(
+                "## Mandatory updates", elsewhere + "\n\n## Mandatory updates"))
+            review = next((e for e in migrate.section_plan(root, ROOT, None)["sections"]
+                           if e["id"] == "review"), {})
+            if review.get("action") != "left" or "Revisione" not in review.get("at", ""):
+                problems.append(f"the 4.6.0 copy under another heading is planned as "
+                                f"{review.get('action')}: the rule would be in the file twice")
             # Reworded by hand: left, and replaced only by name, with the path still read.
             reworded = copied.replace("Exempt:", "Not reviewed:")
             repo.write("AGENTS.md", _AGENTS_BODY.replace(

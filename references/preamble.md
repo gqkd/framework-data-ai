@@ -138,32 +138,49 @@ applies even though nobody asked you to write anything, and it says it there rat
 here because that rule has to reach an agent answering a question with no skill running,
 which never reaches this file.
 
-## The critic: every plan before it is shown, every diff before it is handed back
+## The review: every plan before it is shown, every diff before it is handed back
 
 A plan or a diff nobody else has read looks the same as a reviewed one, so every run has both
-read by the plugin's `framework-data-ai:critic` subagent, which only reads, before the person
-sees them:
+reviewed before the person sees them, by the plugin's `framework-data-ai:reviser` subagent. It
+runs `framework-data-ai:critic`, which only reads; it fixes by itself the objections the
+critic classes as slips in the proposal, has its fixes reviewed again when they were many or
+an objection needed a person, at most three passes, and hands back in a few lines what needs
+a person: the critic's reports, which would fill this session after a few rounds, stay out
+of it.
 
 - **a plan** -- the proposal table above, a classification, a brief, any work you are about
-  to ask the person to approve -- before you show it. Its rows or its numbered points are
-  what the critic answers on, one block each.
+  to ask the person to approve -- before you show it. Write it to a file in your scratchpad,
+  or a brief that goes to the exchange to its place there, pass its path as the one file the
+  reviser may write, and show the plan as that file holds it afterwards. Its rows or its
+  numbered points are what the critic answers on.
 - **a diff** -- what the run wrote, after the validator and before the two closing blocks.
   Write `git diff` of the files you touched to a file in your scratchpad and pass its path,
-  with the absolute path of the `CHG` it cites: the critic cannot run git, and in a code
-  session the `CHG` sits in another repository.
+  the root of the working tree -- the reviser may write there the files the diff touches, and
+  no other -- and the absolute path of the `CHG` it cites: neither agent can run git, and in
+  a code session the `CHG` sits in another repository. A new file is not in `git diff`: add
+  it with `git diff --no-index /dev/null <file>`, which leaves the index alone and exits 1
+  whenever it writes a diff. When the reviser says it changed files, or you change them after
+  the review, run the validator again and write the diff again.
 
-Show the objections with what you did about each: answered by a change, or left standing,
-with why. Exempt: the two writes above that need no asking, a `SIG` appended to `LOG` and a
-line in the parking lot, and the commit a script makes of its own output.
+Pass also a file in your scratchpad for its log: every objection and what the reviser did
+about it are there, for whoever asks. Show what it hands back, with what you did about each
+objection still open: answered by a change, or left standing, with why. One on the substance
+is the person's to settle, and is never presented as settled. Exempt: the two writes above
+that need no asking, a `SIG` appended to `LOG` and a line in the parking lot, and the commit
+a script makes of its own output.
 
-If the subagent is not in this session -- the plugin was installed or updated after the
-session started, or the framework is read from a checkout with no plugin enabled -- run a
-general-purpose agent told to read `agents/critic.md` in the framework directory this file
-sits in, the parent of `references/`, and follow it with Read, Grep and Glob only, and say
-that this is what ran. Where no subagent can run at all, say that the review did not run. A
-review that did not run is said, in the handing back and, when the project declares an
-exchange, in the closing declaration: the failure this rule exists for is a reviewer nobody
-noticed had stopped running.
+If the reviser is not in this session, or says it could not launch the critic, run the
+critic yourself: fix the objections on the proposal, run the validator again, show the
+others, and ask it again on your corrections and on the points it left out only when
+`agents/reviser.md` would, at most three passes. If the critic is
+not in this session either -- the plugin was installed or updated after the session started,
+or the framework is read from a checkout with no plugin enabled -- run a general-purpose
+agent told to read `agents/critic.md` in the framework directory this file sits in, the
+parent of `references/`, and follow it with Read, Grep and Glob only. Say which of the three
+ran. Where no subagent can run at all, say that the review did not run. A review that did
+not run is said, in the handing back and, when the project declares an exchange, in the
+closing declaration: the failure this rule exists for is a reviewer nobody noticed had
+stopped running.
 
 ## Closing move
 

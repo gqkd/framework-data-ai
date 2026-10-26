@@ -411,10 +411,15 @@ in. They are not artifacts and carry no front matter, which is why they are not 
 said must not change. That is field 2 of the `CHG`, it is the most expensive gap in the
 framework, and it is a reading. If you are asked whether a pull request is ready to merge,
 run these, then read that field against the diff and say which of the two you did. The
-plugin's `framework-data-ai:critic` does that reading, and the preamble has it run on every
-diff before it is merged: give it the diff and the `CHG`, and it says, item by item, whether
-the change touches what must not move. Say what it found, and say so if it did not run;
+plugin's `framework-data-ai:critic` does that reading: give it the diff and the `CHG`, and it
+says, item by item, whether the change touches what must not move. Run the critic itself
+here, not the reviser the preamble runs on your own work: the reviser fixes what the critic
+finds, and a pull request somebody else wrote is not yours to fix. Say what it found, and
+say so if it did not run;
 the items it says it could not judge from the diff alone are not read, and are said as such.
+If it says it left objections out, ask a new critic for a resumption with no corrections: the
+diff, the `CHG`, its objections and the points it names. What is still left out after that
+was not read, and is said as such.
 
 The repair for `PR004` is not always the missing update. A classification can be wrong, and
 then the `ICG` is what moves — but an `ICG` is `immutable`, so that is a new one that

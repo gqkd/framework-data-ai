@@ -129,17 +129,24 @@ outside the repositories.
 > relative to this repository when the two sit side by side. No check reads it.
 
 Every plan is reviewed before it is presented, and every diff before it is committed or
-merged, by the framework plugin's `framework-data-ai:critic` subagent: read only, it returns
-for each point the unverified assumption, the hidden cost and what is missing, and for a
-diff that cites a `CHG` whether it stays inside what must not change. Give it the diff as a
-file and the absolute path of the `CHG`. Present the work with its objections, answered or
-left with why. Exempt: the parking-lot line, the `SIG` appended to `LOG`, and the commit a
-script makes of its own output.
+merged, by the framework plugin's `framework-data-ai:reviser` subagent: it runs the read-only
+`framework-data-ai:critic`, fixes by itself the objections that are slips in the text, and
+hands back in a few lines what a person has to settle, with a diff that cites a `CHG` held to
+what must not change. Give it the diff as a file, new files included
+(`git diff --no-index /dev/null <file>`, which exits 1 when it writes one), with the root of
+its working tree, or the plan as a file, the absolute path of the `CHG`, and a file in your
+scratchpad for its log. Whenever its fixes or yours change files, run the tests and the
+validator again and write the diff again. Present the work with what it hands back, each
+objection answered or left with why, and none on the substance presented as settled. Exempt:
+the parking-lot line, the `SIG` appended to `LOG`, and the commit a script makes of its own
+output.
 
-If the subagent is not available, run a general-purpose agent told to follow
-`FRAMEWORK_PATH/agents/critic.md` with read-only tools, and say so. If you cannot run a
-subagent at all, say that the review did not run. A review that did not run is said, never
-skipped in silence.
+If the reviser is not available, or cannot launch the critic, run the critic yourself, or a
+general-purpose agent told to follow `FRAMEWORK_PATH/agents/critic.md` with read-only tools,
+and say so; fix the objections on the proposal, show the others, and ask again on your
+corrections and on the points it left out only when `FRAMEWORK_PATH/agents/reviser.md`
+would, at most three passes. If you cannot run a subagent at all, say that the review did
+not run. A review that did not run is said, never skipped in silence.
 
 ## Mandatory updates
 

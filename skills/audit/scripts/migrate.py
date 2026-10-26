@@ -554,17 +554,21 @@ def _words(text: str) -> set[str]:
     return set(re.findall(r"[a-z]{4,}", _flat(text).lower()))
 
 
-def _resembles(template_section: str, have: list[dict]) -> dict | None:
+def _resembles(template_sections: list[str], have: list[dict]) -> dict | None:
     """An unmarked section of the project that reads like a copy of this one under another
-    heading: most of the template's words are in it. Adding beside it would put the rule in
-    the file twice. A rule elsewhere that only names the critic shares a handful of words,
-    and is not mistaken for it; a copy translated whole shares almost none, and is not found.
+    heading: most of the words of the template's text, of this version or an earlier one, are
+    in it. Adding beside it would put the rule in the file twice. Every earlier text counts, as
+    under the section's own heading: a rule the template rewrote shares fewer words with a copy
+    of the old one. A rule elsewhere that only names the critic shares a handful of words, and
+    is not mistaken for it; a copy translated whole shares almost none, and is not found.
     """
-    words = _words(render(template_section, None)) - set(map(str.lower, PLACEHOLDERS))
-    if not words:
-        return None
-    return next((p for p in have if not p["id"]
-                 and len(words & _words(p["text"])) >= 0.6 * len(words)), None)
+    for text in template_sections:
+        words = _words(render(text, None)) - set(map(str.lower, PLACEHOLDERS))
+        alike = words and next((p for p in have if not p["id"]
+                                and len(words & _words(p["text"])) >= 0.6 * len(words)), None)
+        if alike:
+            return alike
+    return None
 
 
 def _leads_to_framework(root: Path, value: str) -> bool:
@@ -636,7 +640,8 @@ def section_plan(root: Path, framework: Path, old_template: str | None,
             plan["sections"].append(entry)
             continue
         if mine is None:
-            alike = _resembles(s["text"], have)
+            alike = _resembles([s["text"], *(old["text"] for old in (
+                _find(k, s["id"], s["heading"]) for k in known) if old)], have)
             if alike and s["id"] in replace:
                 kept = {k: v for k, v in loose_values(s["text"], alike["text"]).items()
                         if k not in DECLARED}
