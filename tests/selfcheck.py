@@ -8864,6 +8864,8 @@ def _additive_roles():
         tmp = Path(tmp)
         repo = _Repo(tmp / "keys")
         repo.write("OPEN.md", _open_register({"OD-001": "open"}))
+        # The additive mode asks for an exchange: declared, so that each case says one thing.
+        repo.write(".framework/sessions.yaml", "exchange: ../_scambio\n")
 
         def findings(text: str) -> tuple[int, list, str]:
             repo.write(".framework/work.yaml", text)
@@ -9127,6 +9129,166 @@ def _ci_recognises_joins():
             if "as a join by Junior" not in out or "by an admin only" not in out:
                 problems.append(f"a join by somebody who made themselves an admin in it, changing "
                                 f"the roles, went unsaid: {out.strip()!r}")
+    return problems
+
+
+@check("a thread writes by adding, says the rest as effects in _filoni, and its deliveries and integrations are seen from every worktree")
+def _threads_write_by_adding():
+    # In the additive mode a thread's branch writes new files, new entries, parking lines and
+    # states, and everything a living document should say as an effect, in a folder that is
+    # not an artifact. What it changes otherwise is `BR005`; an effect nobody can place is
+    # `EFF001`. The branches here carry a prefix that does not end in `/`.
+    problems = []
+    additive = ("mode: additive\npeople: [Admin, Owner]\nadmins: [Admin]\n"
+                "branch_prefix: lavoro-\n")
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        repo = _Repo(tmp / "docs")
+        repo.write(".framework/work.yaml", additive)
+        repo.write(".framework/sessions.yaml", "exchange: ../_scambio\n")
+        repo.write("OPEN.md", _open_register({"OD-001": "open", "OD-002": "open"}).replace(
+            "## Parking lot\n", "## Parking lot\n<!-- section: parking -->\n").replace(
+            "- first line\n", "- first line\n\n<!-- generated: not-owned -->\nours\n"
+                              "<!-- /generated -->\n"))
+        repo.write("platform/OPEN.md", _open_register({"OD-003": "open"}).replace(
+            "products: [all]\nowners", "products: [none]\nowners", 1))
+        living = dict(lifecycle="living", status="active", owners="[o]", created="2026-06-01",
+                      last_review="2026-06-01 09:00")
+        repo.write("STACK.md", _fm(schema="framework/operational-stack/v1",
+                                   artifact_type="operational-stack", **living)
+                   + "# Stack\n\n<!-- section: chosen -->\n## Chosen\n\nx\n")
+        repo.write("GLOSSARY.md", _fm(schema="framework/glossary/v1", artifact_type="glossary",
+                                      **living) .replace("---\n\n", "terms:\n  cliente attivo:\n"
+                                                         "    definition: x\n---\n\n", 1)
+                   + "# Glossary\n")
+        repo.commit("base", "2026-06-01T09:00:00+02:00")
+
+        def codes(*extra: str) -> list[dict]:
+            out = repo.validate(*extra)[1] or {}
+            return out.get("findings", [])
+
+        # The folder of a thread is not an artifact.
+        repo.write("_filoni/t/revisione.md", "no front matter here\n")
+        if any("_filoni" in f["path"] and f["code"] != "EFF001" for f in codes()):
+            problems.append(f"the folder of a thread was read as documentation: "
+                            f"{[f['code'] for f in codes() if '_filoni' in f['path']]}")
+        # The effects: what can be placed, and what cannot.
+        block = lambda target, src="OD-001", why="- Perché: y\n": (
+            f"## {target}\n- Da: {src}\n- Diventa vero: x\n{why}")
+        repo.write("_filoni/t/effetti.md", "# Effetti\n\na stray line\n\n" + "".join((
+            block("OPEN.md#OD-001"), block("STACK.md#chosen"), block("GLOSSARY.md#cliente attivo"),
+            block("OPEN.md#parking"), block("OPEN.md#nope"), block("products/x/ARC.md"),
+            block("OPEN.md#OD-002", src="a request, no number"), block("OPEN.md", why=""),
+            block("not a path#x"))))
+        got = [f for f in codes() if f["code"] == "EFF001"]
+        said = " ".join(f["message"] for f in got)
+        if len(got) != 6 or not all(w in said for w in (
+                "before the first effect", "`#parking`", "`#nope`", "products/x/ARC.md",
+                "`Perché`", "names no document")) or any(w in said for w in (
+                "a request", "#chosen", "cliente attivo")):
+            problems.append(f"EFF001 on a stray line, a section of a type that declares none, an "
+                            f"anchor that is not there, a document that is not living, a missing "
+                            f"line and a heading with no document, and not on a source, a "
+                            f"declared section or a key with spaces: {said[:600]!r}")
+        (repo.path / "_filoni" / "t" / "effetti.md").unlink()
+        (repo.path / "_filoni" / "t" / "revisione.md").unlink()
+
+        # BR005, against where the branch left the main line.
+        repo.git("checkout", "-q", "-b", "lavoro-t")
+        text = (repo.path / "OPEN.md").read_text()
+        added = (text.replace("- first line\n", "- first line\n- a parking line\n")
+                 .replace("  OD-001:\n    status: open", "  OD-001:\n    status: decided\n"
+                          "    closed_by: [DEC-001]")
+                 .replace("last_review: 2026-06-01 09:00", "last_review: 2026-06-02 09:00")
+                 .replace("old union", "a union regenerated")
+                 .replace("entries:\n", "entries:\n  OD-003:\n    status: open\n"
+                          "    cost_to_reverse: low\n    default_in_force: none\n"
+                          "    products: [all]\n"))
+        for name, body, want in (
+                ("lines, an entry, a state, a reading and the owned union", added, 0),
+                ("a line of the body rewritten",
+                 added.replace("- first line\n", "- first line, rewritten\n"), 1),
+                ("a field of an entry changed",
+                 added.replace("  OD-002:\n    status: open\n    cost_to_reverse: low",
+                               "  OD-002:\n    status: open\n    cost_to_reverse: high"), 1),
+                ("a region the generator does not own rewritten",
+                 added.replace("\nours\n", "\ntheirs\n"), 1)):
+            repo.write("OPEN.md", body)
+            repo.commit(name, "2026-06-02T09:00:00+02:00")
+            got = [f for f in codes("--base", "main") if f["code"] == "BR005"]
+            if len(got) != want:
+                problems.append(f"{name}: {len(got)} BR005, expected {want}: "
+                                f"{[f['message'][:160] for f in got]}")
+        repo.write("OPEN.md", added.replace("<!-- generated: open-union -->\n", ""))
+        repo.commit("the union's marker removed", "2026-06-02T09:30:00+02:00")
+        if not any(f["code"] == "BR005" and f["path"] == "OPEN.md"
+                   for f in codes("--base", "main")):
+            problems.append("removing the marker of the region the generator owns gave no BR005")
+        repo.write("OPEN.md", added)
+        (repo.path / "platform" / "OPEN.md").unlink()
+        repo.commit("a living document deleted", "2026-06-02T10:00:00+02:00")
+        got = [f["path"] for f in codes("--base", "main") if f["code"] == "BR005"]
+        if got != ["platform/OPEN.md"]:
+            problems.append(f"a living document deleted on the branch gave BR005 at {got}")
+        repo.git("checkout", "-q", "-b", "lavoro-ricongiungimento-1")
+        if any(f["code"] == "BR005" for f in codes("--base", "main")):
+            problems.append("BR005 on the branch of a join, where living documents are rewritten")
+        # A branch that left the main line before the mode reached it is not held to it.
+        repo.git("checkout", "-q", "main")
+        repo.write(".framework/work.yaml", "people: [Admin]\n")
+        repo.commit("not yet additive", "2026-06-03T09:00:00+02:00")
+        repo.git("checkout", "-q", "-b", "lavoro-early")
+        repo.write("OPEN.md", (repo.path / "OPEN.md").read_text().replace("- first line\n",
+                                                                         "- changed\n"))
+        repo.write(".framework/work.yaml", additive)
+        repo.commit("early", "2026-06-03T10:00:00+02:00")
+        if any(f["code"] == "BR005" for f in codes("--base", "main")):
+            problems.append("BR005 read the mode from the branch, not from where it left the "
+                            "main line")
+        repo.git("checkout", "-q", "main")
+
+        # The mode with no exchange: nothing a code session learned reaches a thread.
+        (repo.path / ".framework" / "sessions.yaml").unlink()
+        repo.write(".framework/work.yaml", additive)
+        if not any(f["code"] == "WK002" and "exchange" in f["message"] for f in codes()):
+            problems.append("`mode: additive` with no exchange gave no WK002")
+
+        # An integration committed on a thread's branch is in the history of the clone.
+        # Held by the remote-tracking branch alone, as on a machine that fetched the thread.
+        docs, ex, sha = _exchange_docs(tmp / "ex")
+        remote = tmp / "ex" / "origin.git"
+        subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(remote)], check=True,
+                       env={**os.environ, **_WORK_ENV})
+        docs.git("remote", "add", "origin", str(remote))
+        docs.git("checkout", "-q", "-b", "lavoro-t")
+        docs.write("note.md", "x\n")
+        on_branch = docs.commit("integrated on the thread", "2026-10-02T09:00:00+02:00")
+        docs.git("push", "-q", "origin", "lavoro-t")
+        docs.git("fetch", "-q", "origin")
+        docs.git("checkout", "-q", "main")
+        docs.git("branch", "-q", "-D", "lavoro-t")
+        _put(ex, {"integrati/CHG-001/verifica.md": "v",
+                  "integrati/CHG-001/INTEGRATO": f"commit: {on_branch[:12]}\ndate: 2026-10-14\n"
+                                                 "parts:\n  verifica.md: CHG-001 §Verification\n",
+                  "in-arrivo/CHG-002/documentazione.md": "what the documentation should say\n"})
+        if not _exc(docs, "EXC003"):
+            problems.append("outside the additive mode, a commit on a work branch only was "
+                            "taken as in the history")
+        docs.write(".framework/work.yaml", additive)
+        got = _exc(docs, "EXC003")
+        if got:
+            problems.append(f"in the additive mode, an integration committed on a thread's "
+                            f"branch gave EXC003 from the main checkout: {got}")
+        if any("documentazione.md" in f["message"] or "documentazione.md" in f["path"]
+               for f in docs.validate()[1]["findings"] if f["code"].startswith("EXC")):
+            problems.append("documentazione.md is not among the names a code session delivers")
+
+        # The name of a join's branch is not a thread's.
+        _, a, _ = _work_origin(tmp / "origin")
+        rc, out = _work(a, "open", "--who", "Owner", "--branch", "ricongiungimento-1", "OD-001",
+                        "--no-worktree")
+        if rc != 2:
+            problems.append(f"a thread opened under the name of a join's branch gave exit {rc}")
     return problems
 
 

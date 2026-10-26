@@ -322,6 +322,9 @@ def cmd_open(p: Project, args) -> int:
     who = p.who(args.who)
     if not SLUG.match(args.branch):
         v.refuse(f"`--branch {args.branch}`: lower case letters, digits and dashes.")
+    if args.branch.startswith(B.JOIN):
+        v.refuse(f"`--branch {args.branch}`: `{B.JOIN}` is the name of a join's branch, where "
+                 "living documents are rewritten and the additive check does not read.")
     branch = p.prefix + args.branch
     p.fetch()
     main = p.view(p.base)

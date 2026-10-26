@@ -54,6 +54,9 @@ THRESHOLDS = {"items_per_thread": 5, "effects_per_section": 3, "ready_days": 3, 
 # object on the remote can be compared with the one made here.
 CLAIM_REF = "refs/tags/claim/"
 RESERVED_REF = "refs/tags/id/"
+# The branch of a join, after the prefix: where living documents are rewritten, and the one
+# branch the additive check does not read.
+JOIN = "ricongiungimento-"
 # A delegation: who stands in for an admin until it is revoked, named by a slug of the name,
 # since a ref carries no spaces and the names in `people` do. The whole name is in the message.
 DELEGATION_REF = "refs/tags/delega/"

@@ -27,7 +27,10 @@ INCOMING, INTEGRATED, SESSIONS = "in-arrivo", "integrati", "sessioni"
 BRIEF, RESOURCES, MARK = "brief.md", "risorse.md", "INTEGRATO"
 # What a code session delivers, by name. Each one is a part that `INTEGRATO` says the fate of.
 DELIVERED = {"verifica.md": "file", "mr.md": "file", "mr-link.txt": "file",
-             "evidenze": "dir", "contribution-policy.json": "file"}
+             "evidenze": "dir", "contribution-policy.json": "file",
+             # In the additive mode: what the documentation should say, as the code session
+             # learned it, which the thread turns into effects.
+             "documentazione.md": "file"}
 # Written by the sessions about the work rather than delivered as its result: no part, no age.
 OWN = {BRIEF: "file", RESOURCES: "file", SESSIONS: "dir"}
 

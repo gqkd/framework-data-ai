@@ -38,6 +38,7 @@ Requires pyyaml and jsonschema.
 from __future__ import annotations
 
 import argparse
+import difflib
 import hashlib
 import importlib
 import importlib.util
@@ -84,6 +85,7 @@ _artifacts = importlib.import_module(f"{_CORE_NAME}.artifacts")
 _references = importlib.import_module(f"{_CORE_NAME}.references")
 _exchange = importlib.import_module(f"{_CORE_NAME}.exchange")
 _branches = importlib.import_module(f"{_CORE_NAME}.branches")
+_effects = importlib.import_module(f"{_CORE_NAME}.effects")
 
 # Public compatibility aliases: old callers keep importing validate.py directly.
 Artifact = _artifacts.Artifact
@@ -374,17 +376,20 @@ def load_work(root: Path, report: "Report") -> dict | None:
                    f"`{key}` is not a key this version reads, so it does nothing here. This "
                    f"file holds: {', '.join(sorted(_branches.WORK_KEYS))}. A newer version may "
                    "read it; until the project declares that version, it is only text.")
-    check_roles(data, report)
+    check_roles(data, root, report)
     return data
 
 
-def check_roles(work: dict, report: "Report") -> None:
-    """`WK002`: who decides, as `.framework/work.yaml` says it, holds together.
+def check_roles(work: dict, root: Path, report: "Report") -> None:
+    """`WK002`: the roles, and the additive mode, as `.framework/work.yaml` declares them, hold
+    together.
 
-    In the additive mode only the admins, the deputies and whoever holds a delegation decide,
-    and `work.py join` refuses where nobody is named: a mode with nobody to decide is a mode in
-    which everything waits. Outside the mode the deputies, the rereading and the thresholds do
-    nothing, and a file that sets them reads as though they did.
+    An admin or a deputy is among the people, or no `--who` can name them. In the additive mode
+    only the admins, the deputies and whoever holds a delegation decide, and `work.py join`
+    refuses where nobody is named: a mode with nobody to decide is a mode in which everything
+    waits, and one with no exchange is one where nothing a code session learned arrives.
+    Outside the mode the deputies, the rereading and the thresholds do nothing, and a file that
+    sets them reads as though they did.
     """
     people = _branches.names(work.get("people"))
     admins, deputies = _branches.names(work.get("admins")), _branches.names(work.get("deputies"))
@@ -403,6 +408,16 @@ def check_roles(work: dict, report: "Report") -> None:
             report.add("WK002", _branches.WORK,
                        "`mode: additive` with no `admins`: nobody decides an open decision, "
                        "approves a change or joins the threads, and everything waits.")
+        try:
+            sessions = yaml.safe_load((root / SESSIONS).read_text(encoding="utf-8")) or {}
+        except (OSError, UnicodeError, yaml.YAMLError):
+            sessions = {}
+        if not (isinstance(sessions, dict) and sessions.get("exchange")):
+            report.add("WK002", _branches.WORK,
+                       f"`mode: additive` with no `exchange:` in {SESSIONS}: a code session "
+                       "delivers what the documentation should say as `documentazione.md` "
+                       "through the exchange, and without one nothing it learned reaches a "
+                       "thread.")
     else:
         idle = [k for k in ("deputies", "rereading", "thresholds") if work.get(k) is not None]
         if idle:
@@ -3964,7 +3979,8 @@ def check_roadmap(arts: list[Artifact], report: Report) -> None:
 
 
 def check_exchange(root: Path, declared: str | None, place: Path | None, arts: list[Artifact],
-                   references: ReferenceIndex, repo: "Repository | None", report: Report) -> str:
+                   references: ReferenceIndex, repo: "Repository | None", work: dict | None,
+                   report: Report) -> str:
     """`EXC001`-`EXC008`, on the exchange `.framework/sessions.yaml` declares, where it is here.
 
     WHERE IT IS NOT, NOTHING RUNS AND NOTHING IS REPORTED but `EXC008`, which reads the value
@@ -3987,9 +4003,25 @@ def check_exchange(root: Path, declared: str | None, place: Path | None, arts: l
         return "absent"
     ex = _exchange.read(place, declared, report)
 
+    # In the additive mode an integration is committed on a thread's branch, and the exchange is
+    # one per machine: from the main checkout or another thread it is in no history of HEAD
+    # until the join. The work branches of this clone hold it, local or fetched.
+    prefix = str((work or {}).get("branch_prefix") or "work/")
+    additive = (work or {}).get("mode") == "additive"
+
     def in_history(sha: str) -> bool:
         r = _git(["merge-base", "--is-ancestor", sha, "HEAD"], root)
-        return r is not None and r.returncode == 0
+        if r is not None and r.returncode == 0:
+            return True
+        if not additive:
+            return False
+        # Every branch, filtered here: a ref pattern matches a prefix only up to a `/`.
+        held = _git(["for-each-ref", "--contains", sha, "--format=%(refname)", "refs/heads/",
+                     "refs/remotes/"], root)
+        names = held.stdout.split() if held is not None and held.returncode == 0 else []
+        return any(n.startswith(f"refs/heads/{prefix}")
+                   or (n.startswith("refs/remotes/") and n.split("/", 3)[-1].startswith(prefix))
+                   for n in names)
 
     _exchange.check(ex, references.known, _exchange.standing(arts), projects_folder(root),
                     in_history if repo is not None and repo.has_head else None, report)
@@ -3998,7 +4030,7 @@ def check_exchange(root: Path, declared: str | None, place: Path | None, arts: l
 
 def check_branch(root: Path, base: str, arts: list[Artifact], registry: dict, scan: dict,
                  repo: "Repository | None", work: dict | None, report: Report) -> None:
-    """What this branch adds, against the main line it will land on: `BR001`-`BR004`.
+    """What this branch adds, against the main line it will land on: `BR001`-`BR005`.
 
     THREE TREES, OR MORE. The working tree, which is the branch as it stands; the tip of `base`,
     which is what it will meet; and every best common ancestor of the two, which together say
@@ -4076,14 +4108,16 @@ def check_branch(root: Path, base: str, arts: list[Artifact], registry: dict, sc
 
     check_approvers(root, bases, before, head, report)
 
-    if work is None:
-        return
-    # Whose branch this is, for the reservations: the branch checked out, or in a pull request
-    # job, where the checkout is detached, the head the host names.
+    # Whose branch this is, for the reservations and the threads: the branch checked out, or in
+    # a pull request job, where the checkout is detached, the head the host names.
     current = _git(["rev-parse", "--abbrev-ref", "HEAD"], root)
     branch = current.stdout.strip() if current is not None and current.returncode == 0 else ""
     if branch in ("", "HEAD"):
         branch = os.environ.get("GITHUB_HEAD_REF", "")
+    check_additive(root, bases, before, head, branch, report)
+
+    if work is None:
+        return
     fresh = {k for k in head.ids() - main.ids() - start if id_form.fullmatch(k[1])}
     for key in sorted(fresh):
         scope, ident = key
@@ -4109,6 +4143,141 @@ def check_branch(root: Path, base: str, arts: list[Artifact], registry: dict, sc
                        "else's, or nobody's: the likeliest way two branches meet on one number "
                        "is the second writing the next free one while the first holds it. "
                        "Reserve a number of your own, from this branch, and renumber.")
+
+
+def _own_text(a: Artifact) -> list[str]:
+    """The body of a document as its writers wrote it, read as `attested_text` reads it for
+    `LC006`: the content of a region the generator owns, in the file and the type where it
+    writes it, is left out, since `sync` regenerates it on a branch; its markers stay, because
+    removing them is an edit; any other region is text like the rest."""
+    kind, owned = GENERATED_REGIONS.get(a.rel.replace("\\", "/"), (None, ()))
+    owned = owned if a.type == kind else ()
+    return REGION.sub(lambda m: m.group("open") + m.group("close") if m.group("name") in owned
+                      else m.group(0), a.body).splitlines()
+
+
+def _not_additive(old: Artifact, new: Artifact) -> list[str]:
+    """What a branch did to a living document that is not an addition: empty when all it did
+    was add lines to the body, outside the regions the generator owns, add entries to a register
+    that is a map, move an entry's `status` or `closed_by`, or attest a reading."""
+    out = []
+    for key in sorted(set(old.meta) | set(new.meta), key=str):
+        if key in ATTESTATION_FIELDS or old.meta.get(key) == new.meta.get(key):
+            continue
+        if key == "entries" and new.type == "open-register":
+            was, now = as_map(old.meta.get(key)), as_map(new.meta.get(key))
+            for entry in sorted(was, key=str):
+                a, b = was[entry], now.get(entry)
+                if b is None:
+                    out.append(f"entry {entry} removed")
+                elif isinstance(a, dict) and isinstance(b, dict):
+                    moved = sorted({str(f) for f in set(a) | set(b) if a.get(f) != b.get(f)}
+                                   - {"status", "closed_by"})
+                    if moved:
+                        out.append(f"entry {entry}: {', '.join(moved)}")
+                elif a != b:
+                    out.append(f"entry {entry}")
+            continue
+        out.append(f"`{key}`")
+    was, now = _own_text(old), _own_text(new)
+    for tag, i1, i2, _, _ in difflib.SequenceMatcher(None, was, now, autojunk=False).get_opcodes():
+        if tag in ("replace", "delete"):
+            line = next((l.strip() for l in was[i1:i2] if l.strip()), "")
+            out.append(f"body: {'rewrote' if tag == 'replace' else 'removed'} "
+                       f"{'a line' if i2 - i1 == 1 else f'{i2 - i1} lines'} of the main line's "
+                       f"text{f', from {line[:60]!r}' if line else ''}")
+    return out
+
+
+def check_additive(root: Path, bases: list[str], before: list["_branches.View"],
+                   head: "_branches.View", branch: str, report: Report) -> None:
+    """`BR005`: in the additive mode, a thread's branch changes a living document only by adding.
+
+    Against every point where it left the main line, and said only where the change is not an
+    addition against each of them: two clones that have both brought the main line in have two
+    such points, and what one of them already held is not this branch's. A living document the
+    branch deleted or moved is not an addition either. Not on the branch of a join, which is
+    where living documents are rewritten. After a `sync` resolved by hand the point is the main
+    line merged in, so a resolution that drops lines the main line brought is said too.
+    """
+    try:
+        works = [_branches.work_at(root, b) for b in bases]
+    except _branches.BranchError as e:
+        refuse(f"--base: {e}. Nothing was checked.")
+        return
+    if not any(w.get("mode") == "additive" for w in works):
+        return
+    prefix = str(next((w.get("branch_prefix") for w in works if w.get("branch_prefix")),
+                      "work/"))
+    if branch.startswith(prefix) and branch[len(prefix):].startswith(_branches.JOIN):
+        return
+    norm = lambda a: a.rel.replace("\\", "/")
+    found: dict[str, list[str]] = {}
+    for n, view in enumerate(before):
+        here = {}
+        now = {norm(a): a for a in head.arts}
+        for old in view.arts:
+            if old.meta.get("lifecycle") != "living":
+                continue
+            new = now.get(norm(old))
+            here[norm(old)] = (["deleted or moved: a living document leaves the main line at a "
+                                "join"] if new is None else _not_additive(old, new))
+        # Said only where every point the branch left from finds something.
+        found = here if n == 0 else {rel: found[rel] for rel in found if here.get(rel)}
+    for rel, reasons in sorted(found.items()):
+        if not reasons:
+            continue
+        report.add("BR005", rel,
+                   f"changed on this branch other than by adding, against where it left the "
+                   f"main line: {'; '.join(reasons[:4])}"
+                   f"{f' and {len(reasons) - 4} more' if len(reasons) > 4 else ''}. In the "
+                   "additive mode a thread writes new files, new entries, parking lines and "
+                   "states; what a living document should say becomes an effect in "
+                   f"`{_effects.THREADS}/<thread>/{_effects.EFFECTS}`, and the join rewrites the "
+                   "document.")
+
+
+def check_effects(root: Path, arts: list[Artifact], registry: dict, report: Report) -> None:
+    """`EFF001`: the pending effects of every thread, in the format the to-do and the join read.
+
+    Each effect names a living document of this tree and, where it has an anchor, the key of
+    an entry of a register that is a map, or a section marker of a document whose type
+    declares its sections. Where it comes from is said, and not checked against anything: the
+    plan fixes the three lines, not what a source may be.
+    """
+    folder = root / _effects.THREADS
+    if not folder.is_dir():
+        return
+    living = {a.rel.replace("\\", "/"): a for a in arts if a.meta.get("lifecycle") == "living"}
+    for path in sorted(folder.glob(f"*/{_effects.EFFECTS}")):
+        rel = path.relative_to(root).as_posix()
+        try:
+            effects, problems = _effects.read(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError) as e:
+            report.add("EFF001", rel, f"cannot be read: {e}")
+            continue
+        for line, problem in problems:
+            report.add("EFF001", rel, f"line {line}: {problem}")
+        for eff in effects:
+            target = living.get(eff.path)
+            if target is None:
+                report.add("EFF001", rel, f"line {eff.line}: {eff.path} is not a living document "
+                           "of this tree: an effect is what a living document should say, and a "
+                           "new file or an immutable one is written directly.")
+                continue
+            if eff.anchor:
+                maps = _effects.ANCHOR_MAPS.get(target.type or "", ())
+                keys = {str(k) for m in maps for k in as_map(target.meta.get(m))}
+                spec = registry["types"].get(target.type or "", {})
+                # Read as `SEC001` reads them: a marker anywhere in the body.
+                marks = set(SECTION_MARK.findall(target.body)) if spec.get("sections") else set()
+                if eff.anchor not in keys | marks:
+                    report.add("EFF001", rel,
+                               f"line {eff.line}: `#{eff.anchor}` is neither a key of "
+                               f"{eff.path}{' (' + ', '.join(maps) + ')' if maps else ''} nor a "
+                               f"section its type declares: the to-do could not tell which "
+                               "effects meet. Without an anchor, the effect is on the whole "
+                               "document.")
 
 
 # What a decision or an approval leaves in the front matter: a `DEC` accepted, a `CHG` approved
@@ -4567,10 +4736,11 @@ def main() -> int:
     check_stack(arts, report)
     check_cross_product(arts, report)
     check_roadmap(arts, report)
-    exchange = check_exchange(root, *exchange_declared, arts, references, repo, report)
+    work = load_work(root, report)
+    exchange = check_exchange(root, *exchange_declared, arts, references, repo, work, report)
     if not (args.emit_index and not args.check):
         check_generated_regions(root, arts, report)  # a run that rewrites them has the answer
-    work = load_work(root, report)
+    check_effects(root, arts, registry, report)
     if args.base is not None:
         check_branch(root, args.base, arts, registry, scan, repo, work, report)
     # Last, and it has to be: an annotation is a statement about the set of findings, so it

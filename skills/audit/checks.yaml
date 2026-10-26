@@ -1516,6 +1516,17 @@ checks:
       another name is a place code sessions cannot reach unless every person adds it to the
       plugin option `allowed_dirs`. Run wherever `exchange:` is declared, present or not.
 
+  EFF001:
+    level: warn
+    title: a pending effect that the to-do and the join cannot read
+    prevents: >
+      What a thread says a living document should say, lost at the join. An effect is read by
+      a script: the to-do lists it under its document, and the join rewrites the document from
+      it. A heading that names no living document, an anchor that is neither a key of a
+      register nor a section its type declares, a missing `Da`, `Diventa vero` or `Perché`, a
+      line that is none of them: each is an effect nobody can place. What a source may be is
+      not checked.
+
   GEN001:
     level: warn
     title: a region the generator owns is not what the registers derive to
@@ -1533,8 +1544,9 @@ checks:
   #
   # The `BR` checks run only with `--base <ref>`: the main line a branch is compared with. A
   # run without it sees none of them, so a repository that does not work on branches sees
-  # nothing move. At `error`, like the `PR` checks -- all but `BR004`, a warning because
-  # `approvers` is declared and not proven -- and MINOR for the same reason they were: they
+  # nothing move. At `error`, like the `PR` checks -- all but `BR004` and `BR005`, warnings
+  # because `approvers` is declared and not proven, and because what a thread changes is read
+  # again at the join -- and MINOR for the same reason they were: they
   # run only when somebody asks for the comparison. `WK001` and `WK002` are warnings and run
   # on every run where `.framework/work.yaml` exists. What they compare is what a branch adds -- never
   # the history both sides share, where several decisions on one entry and numbers declared
@@ -1596,6 +1608,18 @@ checks:
       `approved` or past it, against every point where it left the main line -- absent there,
       or in none of those states -- with the roles `.framework/work.yaml` gave there and the delegations this clone holds; `approvers` is declared, not proven,
       like `--who`, so a warning that a person reads. Runs with `--base`.
+  BR005:
+    level: warn
+    title: a thread's branch changes a living document other than by adding
+    prevents: >
+      Two threads rewriting one paragraph, met in a merge nobody can read. In the additive
+      mode a thread writes new files, new entries in a register, parking lines and states, and
+      everything a living document should say becomes an effect in `_filoni/<thread>/effetti.md`;
+      the join is the one moment living documents are rewritten. Measured on lines: in the
+      body only lines added, outside the regions the generator owns; in the front matter only
+      new `entries` of a register, the `status` and `closed_by` of an entry, and the two fields
+      an attestation writes. Against every point where the branch left the main line, and not
+      on the branch of a join. Runs with `--base`.
   WK001:
     level: warn
     title: a key, a value or a threshold in .framework/work.yaml that this version does not read
@@ -1606,13 +1630,15 @@ checks:
       one.
   WK002:
     level: warn
-    title: who decides, as .framework/work.yaml says it, does not hold together
+    title: the roles or the additive mode in .framework/work.yaml do not hold together
     prevents: >
-      A role nobody can act under, a mode in which nobody can decide, a setting that does
-      nothing. An admin or a deputy who is not among the people cannot be named with `--who`;
-      the additive mode without people accepts anybody, and without admins leaves every open
-      decision, every approval and every join waiting; the deputies, the rereading and the
-      thresholds are read only in the additive mode.
+      A role nobody can act under, a mode in which nobody can decide or nothing can arrive, a
+      setting that does nothing. An admin or a deputy who is not among the people cannot be
+      named with `--who`; the additive mode without people accepts anybody, without admins
+      leaves every open decision, every approval and every join waiting, and without an
+      exchange in `.framework/sessions.yaml` leaves the code sessions no way to hand a thread
+      what the documentation should say; the deputies, the rereading and the thresholds are
+      read only in the additive mode.
 
 # ON THE PROSE COUPLED CHECKS. There are none left. REG002 and REG003 used to read the body
 # of `OPEN.md` -- the `### OD-NNN` headings and the "Cost to reverse" and "Default in force"

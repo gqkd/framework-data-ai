@@ -209,6 +209,7 @@ _scambio/
     mr.md  mr-link.txt    the text and the link of the merge request
     evidenze/             evidence: logs, outputs, screenshots
     contribution-policy.json
+    documentazione.md     in the additive mode: what the documentation should say, for a thread
     risorse.md            what the work created outside the repositories
     sessioni/2026-10-14-ab12cd34.md   a closing declaration per session
   integrati/CHG-021/      the same folder, moved, with INTEGRATO
@@ -238,8 +239,9 @@ parts:                        # every delivered name in the folder, and where it
 
 `brief.md`, `risorse.md` and `sessioni/` are not parts: they were written about the work, not
 delivered as its result, and a folder with nothing delivered moves with `parts: {}`. The
-commit is the one on the branch the documentation is read from: after a squash or a rebase,
-write the new one. A second delivery for an element already integrated, or a new brief for
+commit is the one on the branch the documentation is read from -- in the additive mode, the
+thread's branch, which the clone's work branches hold until the join: after a squash or a
+rebase, write the new one. A second delivery for an element already integrated, or a new brief for
 it, waits in `in-arrivo/` like the first, so the same identifier can be in both stages;
 integrated, its files join the folder in `integrati/` and `INTEGRATO` becomes a list with one
 block per integration. A file it replaces was integrated by the earlier block's commit,

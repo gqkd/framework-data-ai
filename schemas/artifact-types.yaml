@@ -2115,9 +2115,12 @@ scan:
   # well because `skip_hidden: false` is a legal thing for a project to write and would
   # otherwise turn that file into an `FM001`, which is an error, on the very run it exists
   # to inform.
+  # `_filoni` is the temporary folder of the threads of the additive mode: pending effects,
+  # the reviser's log, deliveries copied from the exchange. Text to version, not artifacts:
+  # no front matter, nothing to attest, gone at the join that reads it.
   skip_dirs: [templates, skills, schemas, references, corpus,
               "_meta/extract", "_meta/business", "_meta/presentation", "_meta/digest",
-              ingest-out,
+              ingest-out, _filoni,
               build, node_modules, __pycache__, ".framework"]
 
   # Documents that speak *about* the framework rather than being produced *by* it.
