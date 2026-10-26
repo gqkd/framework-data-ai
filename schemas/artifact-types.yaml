@@ -1835,7 +1835,146 @@
 # its copy of `pull-request.yml`, which is the legacy, low-permission asset; the strict
 # controller is the one that needs the pinned versions. The workflows' own comments say the same,
 # because they are what a project copying them reads.
-version: "4.8.1"
+#
+# 4.8.1 -> 4.9.0. Several people on one documentation at once, none rewriting what another is
+# rewriting: an additive mode, threads a script computes, and joins. For every project: a critic
+# whose objections have a class, a reviser, and a guard on where agents write.
+#
+# THE ADDITIVE MODE IS THE PROJECT'S CHOICE. `.framework/work.yaml` on the main line declares
+# `mode: additive`, with `admins`, `deputies`, `rereading` and `thresholds`;
+# `references/additive.md` is its rule, once, and the `contribute` skill its procedure. During a
+# thread nobody rewrites a living document: a branch writes new files, new entries, parking lines
+# and changes of state, and what a living document should say becomes a pending effect in
+# `_filoni/<slug>/effetti.md`, which the scan skips and `EFF001` reads. Living documents are
+# rewritten only at a join, which an admin, a deputy or a delegate runs with `work.py join` on a
+# branch of its own: `join --finish` signs that branch with the trailer `Ricongiungimento-di:`, and
+# `join --merge` lands it on the main line by a local merge `--no-ff` that names it. `BR005`, with
+# `--base`, reports a living document changed in a way that is not additive on the branch of a
+# thread or of parking. Between two joins the living documents are behind, and the to-do lists the
+# effects waiting on each.
+#
+# THE THREADS ARE COMPUTED, NEVER DRAWN. `skills/audit/scripts/todo.py` reads the registers of the
+# main line and the remote branches the clone has, without the network. Its nodes are the open
+# entries, one per `decide_with` group, the approved changes and the increments of the current
+# stage still to break down; two nodes to do are one thread when they are one group, forecast one
+# anchor, or are changes whose code paths overlap, and a node with no forecast touches its whole
+# product. The forecast is `affects`, on the entries of the open registers and on a `CHG`: the one
+# input of the threads a person writes, and `AFF001` reports an anchor that points at nothing.
+# `work.py open --thread` takes a thread whole; `open` with no element opens a parking branch, for
+# what belongs to no thread. In a project in the mode the plugin's `SessionStart` hook puts the
+# to-do's summary in the session's context.
+#
+# WHO DECIDES. An admin, a deputy, or whoever holds a delegation -- a tag `delega/<slug>`, which
+# only an admin gives with `work.py delegate` and `revoke` takes back -- decides an open decision,
+# approves a change and runs a join; a contributor takes threads of work only, and prepares a
+# decision as a `DEC` in `proposed` that the join shows. `BR004` reports a decision accepted, or a
+# change approved, whose `approvers` names nobody who decides; `WK002` roles that do not hold
+# together. The job `main` of `ci/branches.yml` reads the roles from the first parent of a join's
+# merge, and in the mode reports whatever reached the main line other than by the join of somebody
+# who decides -- a pull request included -- and rules changed by somebody who is not an admin.
+#
+# THE REREADING CAN BE OPTIONAL. With `rereading: optional`, text whose last change reached the
+# main line through a join is not an `LC006` or a `PR005`, a living document a join brought into
+# being and only joins have touched is not an `LC001`, and on the branches of the mode none of the
+# three speaks. `LC009` reminds of a join's text nobody has read for longer than
+# `thresholds.unread_days`. What a contributor signed, what a fast-forward landed, a commit after
+# the signature and text that reached the main line any other way are read as before. With
+# `rereading: required`, the default, nothing changes.
+#
+# In the mode `sync` keeps the keys two sides added to one map of the front matter, and puts back
+# what a thread only added to an `OPEN` register -- parking lines under `# §3`, whole entries --
+# over what the main line changed or removed. `work.py doctor` says what a machine has of what
+# `references/workstation.md` asks.
+#
+# FOR EVERY PROJECT, WHATEVER ITS MODE. The critic gives each objection a class -- on the proposal,
+# on the substance, outside the scope -- and writes out only those on the substance.
+# `agents/reviser.md` runs it, fixes the objections on the proposal in the files it is told it may
+# write, and hands back to the person what is theirs to decide. The rule that runs it is in the
+# preamble, in the brief of `cycle` and in the `review` section of `AGENTS.md`, which `--adopt`
+# rewrites where nobody edited it by hand; `audit` keeps the critic alone on somebody else's pull
+# request. That section also says not to write outside the session's repository, its worktrees, the
+# exchange and Claude Code's own folders. `EXC008` warns of an exchange other than `_scambio`
+# beside the repository, and `XP009` of a product named like a branch of the mode. `migrate.py`
+# rebuilds a version from its tag `v<version>` where there is one, so the rebuild of 3.0.2, 3.0.3,
+# 3.1.0, 3.2.1, 3.5.1, 3.7.0 and 4.0.0 changes too.
+#
+# THE GUARD FOLLOWS THE PLUGIN, NOT THE PIN. `hooks/guard.py`, a `PreToolUse` hook on Write, Edit
+# and NotebookEdit, holds in the working folder -- a repository with `.framework/` and the
+# repositories beside it -- for every project there, whatever version it pins and whatever its
+# mode: updating the plugin changes the sessions of whoever updates it, with no `--adopt`.
+# Elsewhere it does nothing. A write meant for a folder outside -- deliverables, a memory moved
+# elsewhere -- goes through only when that folder is in the plugin's option `allowed_dirs`. It does
+# not see the shell: `references/workstation.md` recommends the Bash sandbox, in a configuration
+# not yet tried on a machine where the sandbox runs.
+#
+# WHERE THE REST WENT. The note of 4.8.0 says that 4.9.0 filters what agents run. What it filters
+# is what they write: the guard, with the file tools; the sandbox, recommended and untried, with
+# Bash, and with the recommended configuration and no network allowed, by Claude Code's
+# documentation it lets no push or fetch through, so that those stay the person's to run. On a
+# machine without it nothing in this version filters what an agent runs, and for an agent there as
+# for a person the checks see what a branch then writes, as before. What else was planned for this
+# number and is not here goes to 4.10.0: the reconciler that extracts and renumbers, a pre-push
+# hook, the digest that reads the branches, and the strict profile on documentation pull requests
+# without branch protection.
+#
+# MINOR, AND WHY. Every new check -- `AFF001`, `BR004`, `BR005`, `EFF001`, `EXC008`, `LC009`,
+# `WK002`, `XP009` -- is a warning, and `BR004` and `BR005` run only with `--base`. The new keys of
+# `.framework/work.yaml` are `WK001` to a validator of 4.8, a warning, as that file was made for;
+# this version reads them, and stops on a shape it cannot read -- `admins` or `deputies` a single
+# value, `thresholds` not a mapping, a threshold not a whole number from 1 up. `affects` on an
+# entry of an open register is an `FM002` to a validator older than this one, which ignores it on a
+# `CHG`, so it is written only where the project pins 4.9.0 or later. What can become an error is
+# the project's annotations, both at `error`: where `.framework/expected-findings.yaml` says
+# `require_all: true`, a new warning nobody annotated is an `AN003` -- and `AFF001`, `EXC008`,
+# `WK002` and `XP009` can say something in a project that is not in the mode --; and wherever it
+# is, an annotation on a `WK001` that no finding matches any more is an `AN001`. What the mode
+# changes -- what is written where, the rereading -- a project chooses by a line it writes; what
+# arrives without a choice is the critic's format, the `review` section with `--adopt`, and the
+# guard with the plugin.
+#
+# WHAT IT COSTS. Before every Write, Edit and NotebookEdit, in every session of anyone with the
+# plugin enabled, the guard starts a `python3 -I`, which in the working folder asks git twice, for
+# the repository's worktrees and for the exchange it declares; the `SessionStart` hook starts one
+# each time a session starts, and by Claude Code's documentation each time one resumes or is
+# compacted. Not measured. A join reads the branch of each thread it lands and runs the validator
+# on it in a worktree of its own, so it takes longer the more threads it lands. In a project in the
+# mode the to-do runs with that hook. On a synthetic history of 200 joins, telling what the joins
+# brought costs the validator under half a second per run; the to-do with many branches open is not
+# measured.
+#
+# ADOPTION. `migrate.py --root <project>`, then `--adopt`, which refuses while there are findings
+# under NEW, warnings included: an `EXC008` is the exchange renamed `_scambio`, beside the
+# repositories, and `exchange: ../_scambio` in `.framework/sessions.yaml`; an `XP009` a product
+# renamed; a `WK002` the roles made to hold together, or a setting of the mode dropped where the
+# mode is not declared; any of them, otherwise, an annotation. An annotation on a `WK001` for a key
+# this version reads explains nothing any more, and goes; where it was the only `WK001` of the
+# file, it is an `AN001`. `--adopt` rewrites the `review` section of `AGENTS.md`, which a person
+# rereads and attests. Each person updates the plugin, which brings the guard, and lays out the
+# machine as `references/workstation.md` says: one project per parent folder, the exchange at
+# `../_scambio`, the sandbox recommended. A project that declares `.framework/work.yaml` copies
+# `ci/branches.yml` again, with `ref:` at `v4.9.0` -- a copy made before this version does not know
+# a join, and would report each one as a commit outside a pull request --, and each of its people
+# runs `work.py doctor --who "<name>"`.
+#
+# To work in the additive mode, in this order. One: write `affects` on the open entries and on the
+# changes in draft or approved -- one proposal per entry, one confirmation per product --, or start
+# with one thread per product, which is what entries without a forecast give; an entry of the root
+# or the platform register with `products: [all]`, or with no `products`, stays out of every thread
+# until anchored. Two: every pull request and work branch of 4.8, those of step One included, lands
+# or is closed, and its claims are released: in the mode a branch with claims reads as a thread,
+# and a pull request merged after the switch is reported, its text owing a reading. Three: in a
+# commit of its own, write `mode: additive` in `.framework/work.yaml`, with `people` and `admins`,
+# and `exchange: ../_scambio` in `.framework/sessions.yaml` if it is not there; it lands as any
+# commit did before the mode, being the one that starts it. Four: an admin opens a join with no
+# thread, `work.py join --no-threads --who "<name>"`, and runs `migrate.py --adopt` in its
+# worktree, which adds the section of `AGENTS.md` on threads and joins; commits what it wrote --
+# `AGENTS.md`, and `framework.yaml` where it rewrites `framework_commit` --, reread and attested
+# where the rereading is required; then `join --finish` and `join --merge`. `join --merge` pushes a
+# merge commit to the main line directly, which a protection requiring a pull request, a check or a
+# linear history refuses: where the main line is protected that way, either the requirement goes or
+# those who join may bypass it, and the framework does not choose between the two. From then on the
+# main line moves only at a join.
+version: "4.9.0"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of

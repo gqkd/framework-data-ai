@@ -20,9 +20,9 @@
 # of somebody who decides -- a pull request included -- and rules changed by somebody who is
 # not an admin. Where the plan has branch protection, make the `pull-request` job a required
 # check as well; this file stays the same. In the additive mode a join reaches the main line by
-# a local merge, with no pull request, and a required check refuses its push: on a protected
-# main line either the check is not required, or those who join may bypass the protection.
-# The framework does not choose between the two.
+# a local merge, with no pull request, and a protection that requires a pull request, a check
+# or a linear history refuses its push: on a main line protected that way either the requirement
+# goes, or those who join may bypass it. The framework does not choose between the two.
 #
 # THE PROJECT AND THE FRAMEWORK ARE CHECKED OUT SIDE BY SIDE, in `docs/` and
 # `framework-data-ai/`, as they sit on a person's machine. Inside the project the validator would
