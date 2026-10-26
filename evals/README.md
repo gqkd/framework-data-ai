@@ -15,7 +15,11 @@ below.** `presentation` arrived in 4.0.1 with four cases of its own and three tr
 toward `start`, `business` and `none`; `digest` arrived in 4.1.0 with six of its own, one of
 them a trap that `requirement` must not take, and five traps toward `business`, `cycle`,
 `release` and `none`; `contribute` arrived in 4.9.0 with five of its own and two traps, toward
-`cycle` and `resolve`, whose sentences sit closest to its own. The measured cases of `cycle` and
+`cycle` and `resolve`, whose sentences sit closest to its own. All seven run in
+`contribute/team`, a project in the additive mode, the traps by the `fixture` they name: the
+risk they measure exists only in such a project. It has no behaviour cases yet: they need a remote,
+which a fixture can carry inside it as `digest/` does, and the exchange beside the repository,
+which the behaviour runner, copying the fixture alone, does not give; they are left to 4.10.0. The measured cases of `cycle` and
 `resolve` that ask what to do or decide next are at risk from it, and no mark protects them. None of them has been run, and the tables further down were measured on
 the 118 without them: the mark keeps those twenty-five out of the denominators the self check
 compares, so a score is never read against a set it was not measured on. The run that scores

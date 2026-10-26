@@ -5256,6 +5256,9 @@ def _eval_cases_load():
         return problems                      # counts cannot be read from a file that broke
 
     # The shape the runners actually index into, asserted per file rather than assumed.
+    fixtures_doc = loaded.get(Path("evals/trigger/fixtures.yaml"))
+    mapped = (fixtures_doc["fixtures"] if isinstance(fixtures_doc, dict)
+              and isinstance(fixtures_doc.get("fixtures"), dict) else {})
     for rel, doc in loaded.items():
         if rel.name == "fixtures.yaml":
             if not isinstance(doc, dict) or not isinstance(doc.get("fixtures"), dict):
@@ -5290,6 +5293,10 @@ def _eval_cases_load():
                 elif "expect" not in c:
                     problems.append(f"{rel}: {str(where)[:40]!r} has no `expect`, so a run "
                                     "of it cannot be scored either way")
+                elif c.get("fixture") is not None and c["fixture"] not in mapped:
+                    problems.append(f"{rel}: {str(where)[:40]!r} runs in the fixture "
+                                    f"{c['fixture']!r}, which `fixtures.yaml` does not map: "
+                                    "`run.py` stops on it")
     if problems:
         return problems
 
@@ -10304,7 +10311,10 @@ def _exchange_lists_what_waits():
         r = run(repo.path)
         if r.returncode != 0 or "is not on this machine" not in r.stdout:
             problems.append(f"an exchange not yet created: exit {r.returncode}, {r.stdout!r}")
-        now = datetime.now().timestamp()
+        # Noon of today, not now: the listing counts days on the local calendar, and across a
+        # change of the clock `now` less five days of seconds falls an hour into another day when
+        # it is run within an hour of midnight.
+        now = datetime.combine(datetime.now().date(), datetime.min.time()).timestamp() + 12 * 3600
         _put(ex, {"in-arrivo/CHG-001/verifica.md": "v", "in-arrivo/CHG-002/verifica.md": "v",
                   "in-arrivo/OD-001/verifica.md": "v", "in-arrivo/CHG-003/brief.md": "b",
                   "in-arrivo/CHG-001/risorse.md": _RESOURCE_HEAD
@@ -10828,6 +10838,268 @@ def _adopt_additive_section():
                 problems.append(f"{name}: the section added names another framework path than "
                                 f"the review section: {additive().get('text', '')[:300]}")
             (fw / "references" / "additive.md").unlink()
+    return problems
+
+
+@check("the additive mode end to end: adopted as the 4.9.0 note says, a thread and a join, and what the validator, the main-line job, the hook and migrate read of the merges work.py made")
+def _additive_end_to_end():
+    # Each step of 4.9.0 has a check of its own, and some of them read histories written by
+    # hand to look like what `work.py` makes: the main-line job and the rereading read merges
+    # whose subject and trailer a test typed. Here the chain runs as a project runs it, in the
+    # order the note `4.8.1 -> 4.9.0.` gives for the mode -- a project that adopted this version
+    # on branches, the commit that declares the mode, a join with no thread where `--adopt`
+    # adds the section on threads and joins, then a thread and a join -- and what `work.py`
+    # wrote is read by the others: the validator with `rereading: optional` and `required`,
+    # both halves of the main-line job, the hook at the version the registry declares, and
+    # `migrate.py`, which finds nothing left to adopt. Not run: a `framework_commit` rewritten
+    # by `--adopt`, and the push of the commit that declares the mode, which the job reports
+    # as it reported any commit outside a pull request before the mode.
+    problems = []
+    if subprocess.run(["git", "-C", str(ROOT), "status", "--porcelain"],
+                      capture_output=True, text=True).stdout.strip():
+        return ["NOT RUN: the working tree is dirty, and `--adopt` binds committed bytes. "
+                "Commit and run again"]
+    migrate_py = ROOT / "skills" / "audit" / "scripts" / "migrate.py"
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        trusted = tmp / "trusted"
+        c = subprocess.run(["git", "clone", "-q", "--local", "--no-hardlinks", str(ROOT),
+                            str(trusted)], capture_output=True, text=True)
+        if c.returncode:
+            return ["could not clone the framework for the adoption: " + c.stderr]
+
+        def adopt(root: Path) -> str:
+            r = subprocess.run([sys.executable, str(migrate_py), "--root", str(root),
+                                "--framework", str(trusted), "--adopt"], capture_output=True, text=True)
+            if r.returncode:
+                problems.append(f"--adopt in {root.name} (exit {r.returncode}): {r.stdout[-400:]!r}")
+            return (root / "AGENTS.md").read_text()
+
+        def step(why: str, result: tuple[int, str]) -> bool:
+            if result[0]:
+                problems.append(f"{why}: exit {result[0]}: {result[1][-400:]!r}")
+            return not result[0]
+
+        origin = tmp / "origin.git"
+        subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(origin)], check=True,
+                       env={**os.environ, **_WORK_ENV})
+        # A project on branches that adopted 4.9.0 as for any version, its exchange declared,
+        # its anchors written: step One.
+        seed = _Repo(tmp / "seed")
+        seed.write("AGENTS.md", _AGENTS_BODY)
+        seed.write(".framework/work.yaml", "people: [Owner, Junior]\n")
+        seed.write(".framework/sessions.yaml", "exchange: ../_scambio\n")
+        seed.write("products/a/OPEN.md", _register({
+            "OD-001": {"status": "open", "affects": "[products/a/OPEN.md#OD-001]"},
+            "KI-002": {"status": "open", "affects": "[products/a/OPEN.md#KI-002]"}}))
+        seed.commit("before the mode", "2026-06-01T09:00:00+02:00")
+        adopted = adopt(seed.path)
+        if "framework-section: review" not in adopted or "framework-section: additive" in adopted:
+            return problems + ["the adoption before the mode did not write the review section, "
+                               "or wrote the one on threads and joins"]
+        seed.commit("adopt 4.9.0", "2026-06-01T10:00:00+02:00")
+        seed.git("remote", "add", "origin", str(origin))
+        seed.git("push", "-q", "origin", "main")
+        a = tmp / "projects" / "docs"
+        a.parent.mkdir()
+        (a.parent / "_scambio").mkdir()
+        subprocess.run(["git", "clone", "-q", str(origin), str(a)], check=True,
+                       env={**os.environ, **_WORK_ENV})
+
+        # Steps Two and Three: nothing of 4.8 in flight; the commit that declares the mode.
+        (a / ".framework" / "work.yaml").write_text(
+            "mode: additive\npeople: [Owner, Junior]\nadmins: [Owner]\nrereading: optional\n")
+        _commit_all(a, "mode: additive")
+        _g(a, "push", "-q", "origin", "main")
+        # Step Four: a join with no thread, where `--adopt` adds the section on threads and
+        # joins and nothing else; what it wrote committed before `--finish`.
+        if not step("join --no-threads", _work(a, "join", "--who", "Owner", "--no-threads")):
+            return problems
+        first = a.parent / "docs--ricongiungimento-1"
+        before = (first / "AGENTS.md").read_text()
+        after = adopt(first)
+        added = re.findall(r"<!-- framework-section: (\w+)", after)
+        if sorted(added) != sorted(re.findall(r"<!-- framework-section: (\w+)", before) + ["additive"]):
+            return problems + [f"--adopt in the join's worktree wrote the sections {added}, from "
+                               f"{re.findall(r'<!-- framework-section: (\w+)', before)}: the one on "
+                               "threads and joins added, and only it, expected"]
+        _commit_all(first, "adopt: the section on threads and joins")
+        if not (step("join --finish of the adoption", _work(a, "join", "--who", "Owner", "--finish"))
+                and step("join --merge of the adoption", _work(a, "join", "--who", "Owner", "--merge"))):
+            return problems
+        if "framework-section: additive" not in _g(a, "show", "origin/main:AGENTS.md").stdout:
+            problems.append("the adoption's join did not bring the section to the main line")
+
+        # A thread of work, taken by a contributor and written by adding.
+        if not step("open --thread", _work(a, "open", "--who", "Junior", "--thread", "a-ki-002")):
+            return problems
+        tree = a.parent / "docs--a-ki-002"
+        rc, out = _work(tree, "reserve", "KI", "--who", "Junior")
+        new_ki = re.search(r"Reserved: (KI-\d+)", out)
+        if rc or not new_ki:
+            return problems + [f"no KI reserved on the thread (exit {rc}): {out[-200:]!r}"]
+        reg = tree / "products" / "a" / "OPEN.md"
+        text = reg.read_text()
+        closed = text.replace("  KI-002:\n    status: open", "  KI-002:\n    status: decided")
+        added = closed.replace("---\n\n# Open", f"  {new_ki.group(1)}:\n    status: open\n"
+                               "    affects: [products/a/OPEN.md#KI-002]\n---\n\n# Open", 1)
+        if closed == text or added == closed:
+            return problems + ["the register of the thread did not take the edit the check writes"]
+        reg.write_text(added + f"### {new_ki.group(1)} · new\n\n")
+        (tree / "_filoni" / "a-ki-002").mkdir(parents=True)
+        (tree / "_filoni" / "a-ki-002" / "effetti.md").write_text(
+            "# Effetti\n\n## products/a/OPEN.md#KI-002\n- Da: KI-002\n"
+            "- Diventa vero: the title says what was fixed\n- Perché: the thread\n")
+        _commit_all(tree, "KI-002 closed")
+        _g(tree, "push", "-q", "origin", "work/a-ki-002")
+        r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(tree), "--json",
+                            "--base", "origin/main"], capture_output=True, text=True)
+        try:
+            found = {f["code"] for f in json.loads(r.stdout)["findings"]}
+        except (ValueError, KeyError):
+            return problems + [f"the validator with --base on the thread gave no report: {r.stderr[-300:]!r}"]
+        if found & {"AFF001", "BR001", "BR002", "BR003", "BR004", "BR005", "EFF001"}:
+            problems.append(f"a thread written by adding, checked with --base: {sorted(found)}")
+        r = subprocess.run([sys.executable, str(TODO), "--root", str(a), "--json"],
+                           capture_output=True, text=True)
+        try:
+            ready = json.loads(r.stdout)["open"]["work/a-ki-002"]["ready"]
+        except (ValueError, KeyError):
+            ready = None
+        if ready is not True:
+            problems.append(f"the thread pushed is not ready in the to-do (exit {r.returncode}): "
+                            f"{r.stdout[-300:]!r} {r.stderr[-200:]!r}")
+
+        # The join: the living document rewritten from the effect, on the join's branch.
+        if not step("join", _work(a, "join", "--who", "Owner")):
+            return problems
+        second = a.parent / "docs--ricongiungimento-2"
+        reg = second / "products" / "a" / "OPEN.md"
+        reg.write_text(reg.read_text().replace("### KI-002 · ki-002 title",
+                                               "### KI-002 · the title says what was fixed", 1))
+        _commit_all(second, "the effects of a-ki-002")
+        if not (step("join --finish", _work(a, "join", "--who", "Owner", "--finish"))
+                and step("join --merge", _work(a, "join", "--who", "Owner", "--merge"))):
+            return problems
+        if "what was fixed" not in (a / "products" / "a" / "OPEN.md").read_text():
+            problems.append("the main checkout does not hold what the join landed")
+
+        # The validator: the register a join rewrote owes no reading while the rereading is
+        # optional, and the same history owes one once it is required. `LC006` is the one of
+        # the three that can speak here: no living document is born in a join, and `PR005`
+        # runs on a pull request's change set.
+        def owed() -> set[tuple[str, str]] | None:
+            r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(a), "--json",
+                                "--stale-days", "36500"], capture_output=True, text=True)
+            try:
+                return {(f["path"], f["code"]) for f in json.loads(r.stdout)["findings"]
+                        if f["code"] == "LC006"}
+            except (ValueError, KeyError):
+                problems.append(f"the validator on the main line gave no report: {r.stderr[-300:]!r}")
+                return None
+        quiet = owed()
+        if quiet:
+            problems.append(f"with `rereading: optional` what the joins brought owes {sorted(quiet)}")
+        work_yaml = a / ".framework" / "work.yaml"
+        work_yaml.write_text(work_yaml.read_text().replace("optional", "required"))
+        loud = owed()
+        if loud is not None and ("products/a/OPEN.md", "LC006") not in loud:
+            problems.append("with `rereading: required` the register a join rewrote owes no "
+                            "reading: the quiet above proves nothing")
+        _g(a, "checkout", "--", ".framework/work.yaml")
+
+        # The main-line job, on the two merges `join --merge` made, both halves: who joined, read
+        # from the trailer and the roles before the merge; and the tree after the merge validated
+        # against the one before, which here says that a join brings no new error and no `BR002`.
+        # An `LC006` naming the merge cannot arise: `--merge` refuses a join's branch that does
+        # not hold the main line, so each merge equals its second parent, and the walk goes down it.
+        wf = yaml.safe_load((ROOT / "ci" / "branches.yml").read_text(encoding="utf-8"))
+        run = next(st["run"] for st in wf["jobs"]["main"]["steps"]
+                   if str(st.get("name", "")).startswith("how each commit"))
+        (tmp / "s.py").write_text(run[run.index("<<'JOIN'\n") + 9:run.index("\nJOIN\n")])
+        (tmp / "compare.py").write_text(run[run.index("<<'PY'\n") + 7:run.index("\nPY\n")])
+        start = run.index("git -C docs log --format='%(trailers:key=Ricongiungimento-di")
+        trailers = run[start:run.index('"$sha^1..$sha^2"', start) + len('"$sha^1..$sha^2"')]
+        start = run.index('git -C docs show "$parent:.framework/work.yaml"')
+        roles = run[start:run.index('> "/tmp/work-$sha.yaml"', start)]
+        start = run.index('git -C docs diff --name-only "$parent" "$sha"')
+        diff = run[start:run.index('> "/tmp/changed-$sha.txt"', start)]
+        (tmp / "delegations.txt").write_text("")
+        merges = _g(a, "log", "--merges", "--first-parent", "--format=%H", "main").stdout.split()
+        if len(merges) != 2:
+            problems.append(f"{len(merges)} merges on the main line, 2 joins expected")
+        for sha in merges:
+            by, read, changed = tmp / f"by-{sha}", tmp / f"roles-{sha}", tmp / f"changed-{sha}"
+            r = subprocess.run(["bash", "-c", f'{trailers} > "{by}" && {roles} > "{read}" && '
+                                f'{diff} > "{changed}"'], cwd=a.parent, capture_output=True,
+                               text=True, env={**os.environ, **_WORK_ENV, "sha": sha,
+                                               "parent": f"{sha}^1"})
+            if r.returncode or "Owner" not in (by.read_text() if by.exists() else ""):
+                problems.append(f"the main-line job found no signature in the join {sha[:8]}: "
+                                f"{r.stderr[-200:]!r}")
+                continue
+            said = subprocess.run([sys.executable, str(tmp / "s.py"), sha, "0", str(by), str(read),
+                                   str(tmp / "delegations.txt"), str(changed)],
+                                  capture_output=True, text=True)
+            if said.returncode or said.stderr.strip() or said.stdout.strip():
+                problems.append(f"the main-line job on the admin's join {sha[:8]} (exit "
+                                f"{said.returncode}): {said.stdout.strip()!r} {said.stderr[-200:]!r}")
+            reports = []
+            for name, rev, extra in (("at", sha, ["--base", f"{sha}^1"]), ("before", f"{sha}^1", [])):
+                where = tmp / f"{name}-{sha}"
+                _g(a, "worktree", "add", "-q", "--detach", str(where), rev)
+                v = subprocess.run([sys.executable, str(VALIDATE), "--root", str(where), *extra,
+                                    "--json"], capture_output=True, text=True)
+                (tmp / f"{name}-{sha}.json").write_text(v.stdout)
+                reports.append(str(tmp / f"{name}-{sha}.json"))
+            said = subprocess.run([sys.executable, str(tmp / "compare.py"), *reports, sha,
+                                   f"{sha}^1"], capture_output=True, text=True)
+            if said.returncode or said.stderr.strip() or said.stdout.strip():
+                problems.append(f"the main-line job's validation of the join {sha[:8]} (exit "
+                                f"{said.returncode}): {said.stdout.strip()[:400]!r} "
+                                f"{said.stderr[-200:]!r}")
+
+        # The hook, now that the registry declares the version it waits for, and migrate.
+        r = subprocess.run([sys.executable, "-I", str(ROOT / "hooks" / "session_start.py")],
+                           input="{}", capture_output=True, text=True,
+                           env={**os.environ, **_WORK_ENV, "CLAUDE_PROJECT_DIR": str(a)})
+        if "Additive mode, from" not in r.stdout or "to take: a-od-001" not in r.stdout:
+            problems.append(f"the hook in the project adopted did not say the to-do: {r.stdout!r}")
+        r = subprocess.run([sys.executable, str(migrate_py), "--root", str(a),
+                            "--framework", str(trusted)], capture_output=True, text=True)
+        if r.returncode:
+            problems.append(f"migrate.py after the adoption has something left (exit "
+                            f"{r.returncode}): {r.stdout[-400:]!r}")
+    return problems
+
+
+@check("the fixture contribute's prompts run in is in the additive mode, reports nothing, and gives the to-do the four threads its README row names")
+def _contribute_fixture():
+    # `evals/fixtures/README.md` says what `contribute/team` holds, and a sentence nothing
+    # reads goes stale: a generator that failed would leave the corpus without it in silence,
+    # and an anchor lost would fold the four threads into one.
+    team = built("contribute")
+    if team is None:
+        return ["evals/fixtures/generators/additive.py did not build contribute/team"]
+    problems = []
+    r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(team), "--json",
+                        "--stale-days", "36500"], capture_output=True, text=True)
+    try:
+        codes = sorted({f["code"] for f in json.loads(r.stdout)["findings"]})
+    except (ValueError, KeyError):
+        return [f"the validator gave no report on contribute/team: {r.stderr[-300:]!r}"]
+    if codes:
+        problems.append(f"contribute/team reports {codes}, and its README row says nothing")
+    r = subprocess.run([sys.executable, str(TODO), "--root", str(team), "--json"],
+                       capture_output=True, text=True)
+    try:
+        todo = json.loads(r.stdout)
+    except ValueError:
+        return problems + [f"the to-do of contribute/team did not compute: {r.stderr[-300:]!r}"]
+    names = sorted(t["name"] for t in todo.get("threads", []))
+    if not todo.get("additive") or names != ["atlas-chg-001", "atlas-ki-003", "atlas-od-004",
+                                             "atlas-od-012"]:
+        problems.append(f"the to-do of contribute/team computes the threads {names}")
     return problems
 
 

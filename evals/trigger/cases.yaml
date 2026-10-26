@@ -395,17 +395,19 @@ cases:
   expect: contribute
   why: the to-do of the additive mode
   unmeasured: true
-- prompt: la sessione di codice ha consegnato documentazione.md per CHG-031, portala nel mio filone
+- prompt: la sessione di codice ha consegnato documentazione.md per CHG-001, portala nel mio filone
   expect: contribute
   why: a code session's delivery turned into effects on a thread
   unmeasured: true
 - prompt: cosa c'è da fare in questo ciclo, quali change apriamo?
   expect: cycle
   why: 'trap: what a cycle builds, not which thread to take'
+  fixture: contribute
   unmeasured: true
 - prompt: cosa devo decidere questa settimana sul prodotto?
   expect: resolve
   why: 'trap: which decision to take, not the to-do of the threads'
+  fixture: contribute
   unmeasured: true
 # Added with `presentation` in 4.0.1 and not yet run. `unmeasured: true` keeps them out of the
 # denominators of the tables in evals/README.md, which were measured on the set without them;

@@ -44,6 +44,7 @@ GENERATED = {
     "memory": ("memory.py", "memory"),
     "digest": ("digest.py", "digest"),       # writes two: atlas and atlas-asks
     "digest-stages": ("digest_stages.py", "digest-stages"),   # writes borea
+    "contribute": ("additive.py", "contribute/team"),
 }
 STATIC = {
     "resolve/ordering-a": "ordering-a",

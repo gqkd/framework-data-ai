@@ -11,6 +11,9 @@
 # state of any project, and if one of them starts firing because the fixture changed, that
 # is the finding.
 #
+# A case runs in the repository of the skill it expects, or in the one its own `fixture:` names
+# by its key here, where what it measures exists only in that repository.
+#
 # Paths are relative to the repository root and point at what `evals/fixtures/make.py`
 # builds. Run that first; `build/` is not tracked, because for most of these the source is
 # a generator and the directory is its output.
@@ -58,3 +61,8 @@ fixtures:
   # `start` is written for. Measuring it in a documented repository asks it to set up
   # something that is already set up.
   start: evals/fixtures/build/start/corpus-project
+
+  # A project in the additive mode, with threads the to-do computes. `contribute` works only
+  # there: anywhere else it names the skill the request belongs to and stops, so `default`
+  # would measure it refusing.
+  contribute: evals/fixtures/build/contribute/team

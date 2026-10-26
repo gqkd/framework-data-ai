@@ -197,8 +197,20 @@ def main() -> int:
                  "or pass --fixture. Running these prompts in an empty directory measures "
                  "nothing, because none of the six is written for one")
 
+    # A case may name the repository it runs in, by its key in the map, where what it measures
+    # exists only there: the traps of `contribute` toward `cycle` and `resolve` ask whether, in
+    # a project in the additive mode, the sibling still answers.
+    named = {c["fixture"] for c in cases if c.get("fixture")}
+    unknown = sorted(n for n in named if n not in fmap)
+    if unknown and not args.fixture:
+        sys.exit(f"cases name fixtures {', '.join(unknown)} that {args.fixtures} does not map")
+    missing = sorted(n for n in named - set(unknown) if not fmap[n].exists())
+    if missing and not args.fixture:
+        sys.exit(f"cases run in {', '.join(missing)}, which is not built: run "
+                 "evals/fixtures/make.py first")
+
     def fixture_for(c):
-        want = c["expect"] if c["expect"] != "none" else (args.skill or "default")
+        want = c.get("fixture") or (c["expect"] if c["expect"] != "none" else (args.skill or "default"))
         return Path(args.fixture or fmap.get(want) or default)
 
     jobs = [(c, i) for c in cases for i in range(args.runs)]
