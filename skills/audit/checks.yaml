@@ -937,6 +937,14 @@ checks:
       already happened. And a risk in `closed` or `expired` is not an owner, which is the
       same pair `REF006` excludes.
 
+  XP009:
+    level: warn
+    title: a product is named like a branch of the additive mode, or starts like one
+    prevents: >
+      A thread that reads as something else. The additive mode names a computed thread after its
+      product and its lowest identifier, and keeps `parcheggio-` for parking branches and
+      `ricongiungimento-` for joins: a product called `parcheggio` gives a thread
+      `parcheggio-od-042`, which every tool reads as a parking branch.
   XP008:
     level: warn
     title: a product is named by a word that is reserved in `products:`
@@ -1609,7 +1617,9 @@ checks:
       not asked to. Read from the tags the run can see, so a checkout has to fetch them --
       `fetch-depth: 0` on actions/checkout does -- and the branch from HEAD, or from
       `GITHUB_HEAD_REF` where the checkout is detached. It does not stop anybody deleting or
-      forcing a tag; it sees what a branch writes.
+      forcing a tag; it sees what a branch writes. On the branch of a join in the additive mode,
+      a reservation made for one of the threads it merged -- named in its merge messages --
+      holds as well.
   BR004:
     level: warn
     title: a decision or an approval this branch brings names nobody who decides

@@ -3594,7 +3594,19 @@ def check_cross_product(arts: list[Artifact], report: Report) -> None:
     for a in arts:
         if a.type != "product-manifest":
             continue
-        for name in as_list(a.meta.get("products")):
+        # The name the product carries, and the folder a thread's name is read from.
+        folder = a.rel.replace("\\", "/").split("/")
+        names = list(as_list(a.meta.get("products"))) + (
+            [folder[1]] if len(folder) > 2 and folder[0] == "products" else [])
+        for name in dict.fromkeys(str(n) for n in names):
+            slugged = re.sub(r"[^a-z0-9]+", "-", str(name).lower()).strip("-")
+            if any(slugged == w or slugged.startswith(w + "-")
+                   for w in ("parcheggio", "ricongiungimento")):
+                report.add("XP009", a.rel,
+                           f"this product is called {name!r}: the additive mode names a computed "
+                           f"thread `<product>-<identifier>`, and `{name}-...` is the name of its "
+                           "parking branches or of its joins, so a thread of this product would "
+                           "read as one of them. Rename the product.")
             if name in (ALL_PRODUCTS, NO_PRODUCTS):
                 report.add("XP008", a.rel,
                            f"this product is called {name!r}, which is a reserved word in "
@@ -4118,6 +4130,13 @@ def check_branch(root: Path, base: str, arts: list[Artifact], registry: dict, sc
 
     if work is None:
         return
+    # On the branch of a join, the threads it merged: their numbers were reserved for them.
+    prefix = str(work.get("branch_prefix") or "work/")
+    on_join = branch.startswith(prefix) and branch[len(prefix):].startswith(_branches.JOIN)
+    log = _git(["log", "--merges", "--format=%B", f"{tip}..HEAD"], root) if on_join else None
+    joined = {line[len(_branches.JOINED):].split()[0]
+              for line in (log.stdout if log is not None and log.returncode == 0 else "").splitlines()
+              if line.startswith(_branches.JOINED) and line[len(_branches.JOINED):].split()}
     fresh = {k for k in head.ids() - main.ids() - start if id_form.fullmatch(k[1])}
     for key in sorted(fresh):
         scope, ident = key
@@ -4136,6 +4155,8 @@ def check_branch(root: Path, base: str, arts: list[Artifact], registry: dict, sc
             continue
         held = _git(["for-each-ref", "--format=%(contents)", ref], root)
         owner = _branches.message_fields(held.stdout if held is not None else "").get("branch")
+        if owner and owner in joined:
+            continue                     # reserved for a thread this join merged
         if not owner or (branch and owner != branch):
             report.add("BR003", where(key),
                        f"{named(key)} is new on this branch, and its reservation ({ref}) was "

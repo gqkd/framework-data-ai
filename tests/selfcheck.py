@@ -9383,6 +9383,12 @@ def _sync_additive_rules():
         roles = "mode: additive\npeople: [Owner, Junior]\nadmins: [Owner]\n"
         (a / ".framework" / "work.yaml").write_text(roles)
         (a / ".framework" / "sessions.yaml").write_text("exchange: ../_scambio\n")
+        # OD-001 anchored, so that the to-do computes a thread of it: `radice-od-001`.
+        reg = a / "OPEN.md"
+        reg.write_text(reg.read_text().replace(
+            "  OD-001:\n    status: open\n    cost_to_reverse: low\n    default_in_force: none\n"
+            "    products: [all]\n", "  OD-001:\n    status: open\n    cost_to_reverse: low\n"
+            "    default_in_force: none\n    products: [all]\n    affects: [OPEN.md#OD-001]\n", 1))
         _commit_all(a, "additive")
         _g(a, "push", "-q", "origin", "main")
         rc, out = _work(a, "open", "--who", "Owner", "--branch", "notes", "--no-worktree")
@@ -9394,8 +9400,8 @@ def _sync_additive_rules():
             problems.append(f"a thread with elements opened under a parking branch's name gave "
                             f"exit {rc}")
         # Both sides add an entry at the end of `entries:`: the main line, and a thread.
-        rc, out = _work(a, "open", "--who", "Owner", "--branch", "t", "OD-001")
-        tree = a.parent / "docs--t"
+        rc, out = _work(a, "open", "--who", "Owner", "--thread", "radice-od-001")
+        tree = a.parent / "docs--radice-od-001"
         row = lambda k: f"  {k}:\n    status: open\n    cost_to_reverse: low\n" \
                         f"    default_in_force: none\n    products: [all]\n---\n"
         for where, key in ((tree, "OD-004"), (b, "OD-003")):
@@ -9578,8 +9584,16 @@ def _todo_computes_threads():
                             f"{mixed}")
 
         # Two threads taken, one decided whole, one in part; a parking branch; an abandoned one.
+        # `b-od-010` as `open` made it before KI-013 joined its component: its branch and the
+        # claims it had then, made by hand; `g-od-050` taken whole, as the to-do computes it now.
+        _g(a, "worktree", "add", "-q", "-b", "work/b-od-010", str(a.parent / "docs--b-od-010"),
+           "origin/main")
+        for ident in ("OD-010", "CHG-001"):
+            _g(a, "tag", "-a", f"claim/{ident}", "-m",
+               f"claim {ident}\n\nwho: Owner\nbranch: work/b-od-010\n", "origin/main")
+            _g(a, "push", "-q", "origin", f"refs/tags/claim/{ident}")
+        _work(a, "open", "--who", "Owner", "--thread", "g-od-050")
         for branch, ids in (("b-od-010", ("OD-010", "CHG-001")), ("g-od-050", ("OD-050", "OD-051"))):
-            _work(a, "open", "--who", "Owner", "--branch", branch, *ids)
             tree = a.parent / f"docs--{branch}"
             prod = branch[0]
             reg = tree / "products" / prod / "OPEN.md"
@@ -9595,7 +9609,7 @@ def _todo_computes_threads():
             _g(tree, "push", "-q", "origin", f"work/{branch}")
         # An increment taken, `c/INC-001` as its claim names it, decomposed on its branch by an
         # effect on its anchor.
-        _work(a, "open", "--who", "Junior", "--branch", "c-inc-001", "c:INC-001")
+        _work(a, "open", "--who", "Junior", "--thread", "c-inc-001")
         inc = a.parent / "docs--c-inc-001"
         (inc / "_filoni" / "c-inc-001").mkdir(parents=True)
         (inc / "_filoni" / "c-inc-001" / "effetti.md").write_text(
@@ -9724,6 +9738,182 @@ def _affects_anchors():
         if not any(f["path"] == "products/p/changes/CHG-003-x.md" for f in repo.findings("FM002")):
             problems.append("`affects` written as one value on a change is not FM002: one field "
                             "name, one form")
+    return problems
+
+
+@check("a computed thread is taken whole, and a join lands the threads ready on the main line by a local merge")
+def _join_lands_threads():
+    # In the additive mode `open --thread` takes what the to-do computes, a thread with a
+    # decision only for those who decide; `join` merges the threads ready on a branch of its
+    # own, `--finish` signs it with the trailer, `--merge` lands it on the main line and
+    # releases what it landed -- and keeps a thread that moved after it was merged.
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        origin = tmp / "origin.git"
+        subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(origin)], check=True,
+                       env={**os.environ, **_WORK_ENV})
+        seed = _Repo(tmp / "seed")
+        seed.write(".framework/work.yaml",
+                   "mode: additive\npeople: [Owner, Junior]\nadmins: [Owner]\n")
+        seed.write(".framework/sessions.yaml", "exchange: ../_scambio\n")
+        seed.write("products/a/OPEN.md", _register({
+            "OD-001": {"status": "open", "affects": "[products/a/OPEN.md#OD-001]"},
+            "KI-002": {"status": "open", "affects": "[products/a/OPEN.md#KI-002]"},
+            "OD-005": {"status": "open", "affects": "[products/a/OPEN.md#OD-005]"}}))
+        seed.commit("base", "2026-06-01T09:00:00+02:00")
+        seed.git("remote", "add", "origin", str(origin))
+        seed.git("push", "-q", "origin", "main")
+        a = tmp / "projects" / "docs"
+        a.parent.mkdir()
+        subprocess.run(["git", "clone", "-q", str(origin), str(a)], check=True,
+                       env={**os.environ, **_WORK_ENV})
+        remote_heads = lambda: _g(a, "ls-remote", "--heads", "origin").stdout
+        remote_claims = lambda: _g(a, "ls-remote", "--tags", "origin", "refs/tags/claim/*").stdout
+
+        for args, want, why in (
+                (("open", "--who", "Junior", "--thread", "a-od-001"), 2,
+                 "a thread with a decision taken by a contributor"),
+                (("open", "--who", "Junior", "--branch", "x", "KI-002"), 2,
+                 "a list of elements in the additive mode"),
+                (("open", "--who", "Junior", "--thread", "a-ki-002"), 0, "a thread of work"),
+                (("open", "--who", "Owner", "--thread", "a-od-001"), 0, "a thread with a decision")):
+            rc, out = _work(a, *args)
+            if rc != want:
+                problems.append(f"{why}: exit {rc}, expected {want}: {out[-200:]!r}")
+        new_kis = []
+        for thread, entry in (("a-ki-002", "KI-002"), ("a-od-001", "OD-001")):
+            tree = a.parent / f"docs--{thread}"
+            if not tree.is_dir():
+                problems.append(f"no worktree for {thread}")
+                return problems
+            reg = tree / "products" / "a" / "OPEN.md"
+            text = reg.read_text().replace(f"  {entry}:\n    status: open",
+                                           f"  {entry}:\n    status: decided")
+            # Each thread adds an entry of its own at the end of `entries:`: the join resolves
+            # the two, keys both sides added to one map.
+            rc, out = _work(tree, "reserve", "KI", "--who", "Owner")
+            new_ki = re.search(r"Reserved: (KI-\d+)", out)
+            if not new_ki:
+                problems.append(f"no KI reserved on {thread}: {out[-200:]!r}")
+                return problems
+            new_kis.append(new_ki.group(1))
+            text = text.replace("---\n\n# Open", f"  {new_ki.group(1)}:\n    status: open\n"
+                                f"    affects: [products/a/OPEN.md#{entry}]\n---\n\n# Open", 1)
+            reg.write_text(text + f"### {new_ki.group(1)} · new\n\n")
+            (tree / "_filoni" / thread).mkdir(parents=True)
+            # The thread with the decision writes also on KI-002's anchor: outside its forecast,
+            # and inside the other thread's.
+            extra = ("\n## products/a/OPEN.md#KI-002\n- Da: OD-001\n- Diventa vero: z\n"
+                     "- Perché: w\n") if entry == "OD-001" else ""
+            (tree / "_filoni" / thread / "effetti.md").write_text(
+                f"# Effetti\n\n## products/a/OPEN.md#{entry}\n- Da: {entry}\n- Diventa vero: x\n"
+                "- Perché: y\n" + extra)
+            _commit_all(tree, f"{entry} closed")
+            _g(tree, "push", "-q", "origin", f"work/{thread}")
+
+        # Refused before anything is pushed: a contributor, a thread that is not ready.
+        rc, out = _work(a, "join", "--who", "Junior")
+        if rc != 2:
+            problems.append(f"a join by a contributor: exit {rc}")
+        rc, out = _work(a, "join", "--who", "Owner", "a-od-005")
+        if rc != 2 or "ricongiungimento" in remote_claims():
+            problems.append(f"a join naming a thread not ready: exit {rc}, or a join opened anyway")
+        rc, out = _work(a, "join", "--who", "Owner")
+        join = a.parent / "docs--ricongiungimento-1"
+        merged = _g(a, "log", "--merges", "--format=%B", "origin/main..work/ricongiungimento-1",
+                    ok=False).stdout
+        reg = (join / "products" / "a" / "OPEN.md").read_text() if join.is_dir() else ""
+        if rc or "joined: work/a-ki-002" not in merged or "joined: work/a-od-001" not in merged \
+                or "<<<<<<<" in reg or not all(f"  {k}:" in reg for k in new_kis):
+            problems.append(f"the join did not merge both threads ready, their new entries kept "
+                            f"(exit {rc}): {out[-400:]!r}")
+        if "outside the forecast -- work/a-ki-002 forecast it" not in out \
+                or "KI-002 closed by its row, not by a change" not in out:
+            problems.append(f"before merging, the join did not show an effect outside the forecast "
+                            f"or a KI closed without a change: {out[:600]!r}")
+        # A thread that moves after the join merged it is kept, with its claims.
+        ki = a.parent / "docs--a-ki-002"
+        (ki / "after.md").write_text("x\n")
+        _commit_all(ki, "after the join")
+        _g(ki, "push", "-q", "origin", "work/a-ki-002")
+        rc, out = _work(a, "join", "--who", "Owner", "--finish")
+        if rc or (join / "_filoni").exists():
+            problems.append(f"join --finish (exit {rc}): {out[-300:]!r}")
+        _work(a, "join", "--who", "Owner", "--finish")
+        signed = _g(a, "log", "work/ricongiungimento-1",
+                    "--format=%(trailers:key=Ricongiungimento-di,valueonly)").stdout.split()
+        if len(signed) != 1:
+            problems.append(f"join --finish run again signed the join {len(signed)} times")
+        rc, out = _work(a, "join", "--who", "Owner", "--merge")
+        heads, claims = remote_heads(), remote_claims()
+        trailer = _g(a, "log", "origin/main", "--format=%(trailers:key=Ricongiungimento-di,valueonly)").stdout
+        if rc != 1 or "work/a-od-001" in heads or "ricongiungimento" in heads \
+                or "work/a-ki-002" not in heads or "claim/KI-002" not in claims \
+                or "claim/OD-001" in claims or "ricongiungimento" in claims or "Owner" not in trailer:
+            problems.append(f"join --merge: exit {rc} (1 expected, one thread kept), heads "
+                            f"{heads!r}, claims {claims!r}: {out[-400:]!r}")
+        if "decided" not in _g(a, "show", "origin/main:products/a/OPEN.md").stdout:
+            problems.append("the decisions of the threads are not on the main line")
+        od1 = a.parent / "docs--a-od-001"
+        (od1 / "late.md").write_text("late\n")
+        _commit_all(od1, "a commit after the join")
+        rc, out = _work(od1, "sync", "--no-push")
+        if rc != 2 or "landed by a join" not in out or "a commit after the join" not in out \
+                or "branch -D" not in out:
+            problems.append(f"sync on a branch a join landed, with a commit after it: exit {rc}, "
+                            f"{out[-300:]!r}")
+        if "landed by a join" not in _work(a, "list")[1]:
+            problems.append("list does not say the branch a join landed")
+
+        # A join with no thread, abandoned; a thread abandoned, taken again on its branch.
+        rc, out = _work(a, "join", "--who", "Owner", "--no-threads")
+        if rc or "work/ricongiungimento-2" not in remote_heads():
+            problems.append(f"a join with no thread (exit {rc}): {out[-200:]!r}")
+        rc, out = _work(a, "join", "--who", "Owner", "--abandon")
+        if rc or "ricongiungimento" in remote_heads() or "ricongiungimento" in remote_claims():
+            problems.append(f"join --abandon (exit {rc}): {out[-200:]!r}")
+        # The number of a join abandoned is burned: the next join is another branch, and the
+        # one left here is told for what it is.
+        rc, out = _work(a, "join", "--who", "Owner", "--no-threads")
+        if rc or "work/ricongiungimento-3" not in remote_heads():
+            problems.append(f"the join after an abandoned one reused its number (exit {rc}): "
+                            f"{remote_heads()!r}")
+        rc, out = _work(a.parent / "docs--ricongiungimento-2", "sync", "--no-push")
+        if rc != 2 or "closed or abandoned" not in out:
+            problems.append(f"sync on the branch of an abandoned join: exit {rc}, {out[-200:]!r}")
+        listed = json.loads(_work(a, "list", "--json")[1] or "{}")
+        if "work/ricongiungimento-2" not in listed.get("landed", {}):
+            problems.append(f"list --json does not tell the branch of an abandoned join: "
+                            f"{listed.get('landed')}")
+        rc, out = _work(a, "join", "--who", "Owner")
+        if rc != 2 or "name the threads" not in out:
+            problems.append(f"a join open, run again without its threads: exit {rc}, {out[-200:]!r}")
+        _work(a, "join", "--who", "Owner", "--abandon")
+        _work(a, "open", "--who", "Owner", "--thread", "a-od-005")
+        od5 = a.parent / "docs--a-od-005"
+        (od5 / "half.md").write_text("half done\n")
+        _commit_all(od5, "half done")
+        _g(od5, "push", "-q", "origin", "work/a-od-005")
+        _work(a, "release", "OD-005", "--who", "Owner")
+        _g(a, "worktree", "remove", "--force", str(od5))
+        _g(a, "branch", "-D", "work/a-od-005")
+        rc, out = _work(a, "open", "--who", "Owner", "--thread", "a-od-005")
+        if rc or "taken again" not in out or "half done" not in out:
+            problems.append(f"an abandoned thread taken again (exit {rc}): {out[-300:]!r}")
+
+        # A product named like a branch of the additive mode, or starting like one.
+        named = _Repo(tmp / "named")
+        for prod in ("parcheggio", "parcheggio-auto", "parcheggiometro"):
+            named.write(f"products/{prod}/product.yaml",
+                        "schema: framework/product-manifest/v1\nartifact_type: product-manifest\n"
+                        f"lifecycle: living\nstatus: active\nproducts: [{prod}]\nname: x\n"
+                        "one_liner: A thing.\nowners: [o]\ncreated: 2026-06-01 09:00\n"
+                        "last_review: 2026-06-01 09:00\nstage:\n  phase: F5\n  block: A\n")
+        got = sorted(f["path"] for f in named.findings("XP009"))
+        if got != ["products/parcheggio-auto/product.yaml", "products/parcheggio/product.yaml"]:
+            problems.append(f"XP009 at {got}: on `parcheggio` and `parcheggio-auto`, not on "
+                            "`parcheggiometro`")
     return problems
 
 

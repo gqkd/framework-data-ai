@@ -10,10 +10,16 @@ what, release a claim, and bring a branch up to date with the main line.
     python3 work.py --root . sync [--continue] [--no-push]
     python3 work.py --root . delegate --to "Name" --who "Admin"
     python3 work.py --root . revoke --to "Name" --who "Admin"         # or the delegate, for their own
+    python3 work.py --root . open --thread beta-od-042 --who "Name"   # the additive mode
+    python3 work.py --root . join --who "Admin" [THREAD ...] [--no-threads]
+    python3 work.py --root . join --finish --who "Admin"
+    python3 work.py --root . join --merge --who "Admin"               # or --close, --abandon
 
 ONE PIECE OF WORK, ONE BRANCH, ONE PULL REQUEST, for everybody who writes the documentation,
 the person who owns it included. A session that already ran beside two others on one working
-tree and one main line, and coordinated with them by hand, is the shape this replaces.
+tree and one main line, and coordinated with them by hand, is the shape this replaces. In the
+additive mode the piece of work is a thread the to-do computes, taken whole with `open --thread`,
+and the threads land on the main line together, at a join, by a local merge and no pull request.
 
 WHAT IS CENTRAL IS A TAG. A claim is `claim/<ID>` and a reservation is `id/<ID>` --
 `claim/<product>/<ID>` and `id/<product>/<ID>` for the families the catalog numbers per
@@ -23,9 +29,10 @@ second is told who pushed first. What it does not stop is somebody forcing a pus
 a tag by hand: this is the protection of people who use it, and the checks are what see the
 rest. The tag object is unique -- who, when, for which branch -- so after a push whose answer
 was lost, the remote holding that object is the proof the push went through. The branch is
-created in the same atomic push as the claims, with a lease that requires it not to exist yet.
-Reservations are never deleted, and a number reserved and not used stays burned; claims are
-removed only by `release`, when a person says so.
+created in the same atomic push as the claims, with a lease that requires it not to exist yet --
+but for a thread taken again, whose branch exists and whose claims alone are pushed. Reservations
+are never deleted, and a number reserved and not used stays burned; claims are removed by
+`release`, when a person says so, and by `join --close`, by role, for what a join landed.
 
 A DELEGATION IS A TAG TOO. `delega/<slug of the name>`, annotated with who gave it, to whom and
 when: in the additive mode the person it names decides as an admin does, until it is revoked.
@@ -50,9 +57,10 @@ a person's. Before merging it refuses a main line that created an identifier thi
 too -- the main line, or the branch's own commits pushed from another clone: once both are in one
 tree, YAML folds two rows of `entries:` into one without a word.
 
-WHAT IT NEVER DOES. It never pushes the main line, never forces a push, never deletes a
-reservation, never decides which of two texts holds, and never deduces who is working from
-`git config`: `--who` is the person's name, as they give it.
+WHAT IT NEVER DOES. It never pushes the main line -- but for `join --merge`, the one gesture
+by which an admin, a deputy or a delegate lands a join, with their name --, never forces a push,
+never deletes a reservation, never decides which of two texts holds, and never deduces who is
+working from `git config`: `--who` is the person's name, as they give it.
 
 Only in a project that declares `.framework/work.yaml`. Exit 0 when done, 1 when something is
 for the person (claimed by somebody else, a conflict left, a collision), 2 when nothing was
@@ -75,9 +83,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import validate as v  # noqa: E402  (the validator's helpers, not its main)
+import todo as T  # noqa: E402  (the threads, computed as the to-do computes them)
 
 B = v._branches
 S = importlib.import_module(f"{v._CORE_NAME}.strict_yaml")
+E = v._effects
 SLUG = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 # Git's own words are read below -- a refusal, a lease that failed -- so git speaks one language.
 ENV = {**os.environ, "LC_ALL": "C", "LANG": "C", "GIT_TERMINAL_PROMPT": "0"}
@@ -324,8 +334,29 @@ def remote_work_branches(p: Project) -> dict[str, str]:
 
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _computed_thread(p: Project, name: str) -> dict:
+    """The thread the to-do computes now, by its name, after the fetch: two clones that had not
+    fetched would see different threads."""
+    r = T.compute(p.root, p.remote, p.main)
+    found = next((t for t in r.get("threads", []) if t["name"] == name), None)
+    if found is None:
+        if f"{p.prefix}{name}" in r.get("open", {}):
+            v.refuse(f"{name} is open already: {p.prefix}{name}. A thread open is fixed until "
+                     "the join that lands it.")
+        v.refuse(f"{name} is not a thread the to-do computes now. The threads to take: "
+                 f"{', '.join(t['name'] for t in r.get('threads', [])) or 'none'}.")
+    return found
+
+
 def cmd_open(p: Project, args) -> int:
     who = p.who(args.who)
+    args.thread = getattr(args, "thread", None)      # a caller that predates it passes none
+    if args.thread and (args.branch or args.ids):
+        v.refuse("`--thread` takes the thread whole, on a branch named after it: no `--branch`, "
+                 "no elements.")
+    args.branch = args.branch or args.thread
+    if not args.branch:
+        v.refuse("`--branch` names the branch: the name after the prefix, such as od-042.")
     if not SLUG.match(args.branch):
         v.refuse(f"`--branch {args.branch}`: lower case letters, digits and dashes.")
     if args.branch.startswith(B.JOIN):
@@ -336,14 +367,32 @@ def cmd_open(p: Project, args) -> int:
                  "lines alone, which claims no element and, in the additive mode, is checked as "
                  "such.")
     p.fetch()
+    roles = main_roles(p)
+    additive = roles.get("mode") == "additive"
+    ids, resume = list(args.ids), False
+    if args.thread and not additive:
+        v.refuse("`--thread` is for a project in the additive mode, whose to-do computes the "
+                 "threads; here, name the elements.")
+    if additive and args.thread:
+        thread = _computed_thread(p, args.thread)
+        delegated = {c.get("to") for c in p.held(B.DELEGATION_REF).values() if c.get("to")}
+        if any(n.kind == "decision" for n in thread["nodes"]) \
+                and who not in B.deciders(roles, delegated):
+            v.refuse(f"{args.thread} holds a decision, and only an admin, a deputy or a delegate "
+                     "decides: a contributor implements.")
+        ids = [i.replace("/", ":") for n in thread["nodes"] for i in n.ids]
+    elif additive and ids:
+        v.refuse("In the additive mode a thread is taken whole, as the to-do computes it: "
+                 "`open --thread <name>`, or no element for a parking branch. "
+                 "`todo.py` lists the threads to take.")
     # In the additive mode a piece of work without an element is a parking branch, and it is
     # known by its name: no claims is also what a thread whose claims were released looks like.
     short = args.branch
-    if not args.ids and main_roles(p).get("mode") == "additive" and not short.startswith(B.PARKING):
+    if not ids and additive and not short.startswith(B.PARKING):
         short = B.PARKING + short
     branch = p.prefix + short
     main = p.view(p.base)
-    wanted = [p.element(w) for w in dict.fromkeys(args.ids)]
+    wanted = [p.element(w) for w in dict.fromkeys(ids)]
     for key, tag in wanted:
         if key not in main.ids():
             v.refuse(f"{tag} is not declared on {p.base}. A claim is on an element that "
@@ -355,7 +404,24 @@ def cmd_open(p: Project, args) -> int:
                      "entry, or a decision that `supersedes` the one that closed it.")
     if git(p.root, "rev-parse", "--verify", "-q", f"refs/remotes/{p.remote}/{branch}",
            check=False).returncode == 0:
-        v.refuse(f"{branch} exists on {p.remote} already. Choose another `--branch`.")
+        # A thread abandoned -- its claims all released -- is taken again on its own branch,
+        # with the work half done; anything else under that name is somebody's.
+        holders = [c for c in p.held(B.CLAIM_REF).values() if c.get("branch") == branch]
+        if additive and args.thread and holders:
+            v.refuse(f"{branch} is open, in the hands of "
+                     f"{', '.join(sorted({c.get('who', '?') for c in holders}))}.")
+        if not (additive and args.thread):
+            v.refuse(f"{branch} exists on {p.remote} already. Choose another `--branch`.")
+        resume = True
+        # Checked before anything is pushed: a local branch that is not the remote's, or a
+        # worktree left from before, would stop the work after the claims were taken.
+        local = git(p.root, "rev-parse", "--verify", "-q", f"refs/heads/{branch}", check=False).stdout.strip()
+        remote = git(p.root, "rev-parse", f"refs/remotes/{p.remote}/{branch}").stdout.strip()
+        if local and local != remote:
+            v.refuse(f"{branch} here is not {p.remote}'s: bring it to the remote's commit, or "
+                     "remove it, before taking the thread again.")
+        if not args.no_worktree and p.worktree_for(short).exists():
+            v.refuse(f"{p.worktree_for(short)} exists: remove it before taking the thread again.")
 
     claims = p.held(B.CLAIM_REF)
     taken = [tag for _, tag in wanted if tag in claims]
@@ -378,6 +444,8 @@ def cmd_open(p: Project, args) -> int:
                 say(f"note: {ident} is decided together with {other}{note}. Claim both in one "
                     "`open`, or agree with whoever holds it.")
     for name, work_branch in remote_work_branches(p).items():
+        if work_branch == branch or work_branch[len(p.prefix):].startswith(B.JOIN):
+            continue
         changed = B.touched(p.view(name), p.view(B.merge_base(p.root, p.base, name)))
         for ident, what in changed.items():
             if ident in idents:
@@ -387,22 +455,35 @@ def cmd_open(p: Project, args) -> int:
     for key, tag in wanted:
         git(p.root, "tag", "-a", f"claim/{tag}", "-m", message(who, branch, f"claim {tag}"), p.base)
         mine[tag] = git(p.root, "rev-parse", f"{B.CLAIM_REF}{tag}").stdout.strip()
-    git(p.root, "branch", "--no-track", branch, p.base)
+    start = f"refs/remotes/{p.remote}/{branch}" if resume else p.base
+    if git(p.root, "rev-parse", "--verify", "-q", f"refs/heads/{branch}", check=False).returncode:
+        git(p.root, "branch", "--no-track", branch, start)
+    elif not resume:
+        for tag in mine:
+            git(p.root, "tag", "-d", f"claim/{tag}", check=False)
+        v.refuse(f"a branch {branch} is here already, not on {p.remote}: remove it"
+                 + ("" if args.thread else ", or choose another name") + ". Nothing was claimed.")
 
     def undo() -> None:
         for tag in mine:
             git(p.root, "tag", "-d", f"claim/{tag}", check=False)
-        git(p.root, "branch", "-D", branch, check=False)
+        if not resume:
+            git(p.root, "branch", "-D", branch, check=False)
 
     # One atomic push: the branch, with a lease that says it must not exist yet -- two `open`s
     # naming one branch would otherwise both succeed, the second as "up to date" -- and every
-    # claim, created without force.
-    refspecs = [f"refs/heads/{branch}:refs/heads/{branch}"] + \
+    # claim, created without force. A thread taken again pushes its claims alone.
+    refspecs = ([] if resume else [f"refs/heads/{branch}:refs/heads/{branch}"]) + \
                [f"{B.CLAIM_REF}{t}:{B.CLAIM_REF}{t}" for t in mine]
     head = git(p.root, "rev-parse", branch).stdout.strip()
-    expect = {f"refs/heads/{branch}": head, **{f"{B.CLAIM_REF}{t}": sha for t, sha in mine.items()}}
-    outcome, said = p.push(refspecs, expect,
+    expect = {**({} if resume else {f"refs/heads/{branch}": head}),
+              **{f"{B.CLAIM_REF}{t}": sha for t, sha in mine.items()}}
+    outcome, said = p.push(refspecs, expect, ("--atomic",) if resume else
                            ("--atomic", f"--force-with-lease=refs/heads/{branch}:"))
+    if outcome == "unknown" and resume:
+        v.refuse(f"the push of the claims may or may not have landed: the remote did not answer "
+                 f"({said}). Run `list` once it answers: it says whether {', '.join(mine)} are "
+                 f"claimed on {branch}; if they are not, `open --thread` again.")
     if outcome == "unknown":
         path = p.worktree_for(short)
         there = (f"make the worktree: `git worktree add {path} {branch}` and "
@@ -430,7 +511,7 @@ def cmd_open(p: Project, args) -> int:
         for tag in taken:
             c = there[tag]
             say(f"  {tag}: {c.get('who', '?')} on {c.get('branch', '?')} since {c.get('when', '?')}")
-        if branch_taken:
+        if branch_taken and not resume:
             say(f"  {branch} exists on {p.remote}: choose another `--branch`.")
         return 1
 
@@ -443,7 +524,14 @@ def cmd_open(p: Project, args) -> int:
         git(path, "branch", "--set-upstream-to", f"{p.remote}/{branch}", branch)
     where = B.prefix(p.root)
     say(f"Claimed: {', '.join(mine) or 'nothing (a piece of work without an element)'}.")
-    say(f"Branch: {branch}, from {p.base}, on {p.remote}.")
+    say(f"Branch: {branch}, " + (f"taken again on {p.remote}, with what it already carries:"
+                                  if resume else f"from {p.base}, on {p.remote}."))
+    if resume:
+        for line in git(p.root, "log", "--oneline", f"{p.base}..{branch}").stdout.splitlines():
+            say(f"  {line}")
+        for ident, what in B.touched(p.view(branch),
+                                     p.view(B.merge_base(p.root, p.base, branch))).items():
+            say(f"  {ident}: {'; '.join(what)}")
     if not args.no_worktree:
         say(f"Worktree: {path / where if where else path}. Open the session there: the main "
             "checkout stays on the main line, and nothing is written in it.")
@@ -542,9 +630,22 @@ def cmd_list(p: Project, args) -> int:
     branches = {r["branch"] for r in rows}
     orphans = {t: c for t, c in sorted(claims.items()) if c.get("branch") not in branches}
     delegations = {c.get("to", t): c for t, c in sorted(p.held(B.DELEGATION_REF).items())}
+    landed: dict[str, str] = {}
+    if main_roles(p).get("mode") == "additive":
+        joining = p.held(B.CLAIM_REF).get(JOIN_CLAIM, {}).get("branch")
+        for name in git(p.root, "for-each-ref", "--format=%(refname:short)", "refs/heads/").stdout.split():
+            if not name.startswith(p.prefix):
+                continue
+            at = _landed_at(p, name)
+            if at:
+                landed[name] = _landed_note(p, name, at)
+            elif name[len(p.prefix):].startswith(B.JOIN) and name != joining:
+                landed[name] = (f"{name} is the branch of a join closed or abandoned: remove it "
+                                f"here: {_remove_hint(p, name, force=True)}.")
     if args.json:
         print(json.dumps({"base": p.base, "branches": rows, "claims_without_branch": orphans,
-                          "delegations": delegations}, indent=2, ensure_ascii=False))
+                          "delegations": delegations, "landed": landed}, indent=2,
+                         ensure_ascii=False))
         return 0
     for name, c in delegations.items():
         say(f"delegation: {name} decides as an admin, given by {c.get('who', '?')} on "
@@ -559,12 +660,15 @@ def cmd_list(p: Project, args) -> int:
             say(f"  claims: {', '.join(r['claims'])}")
         if r["reserved"]:
             say(f"  reserved: {', '.join(r['reserved'])}")
+        joining = r["branch"][len(p.prefix):].startswith(B.JOIN)
         for ident, what in r["touches"].items():
-            mark = "" if ident in r["claims"] else "  (not claimed)"
+            mark = "" if ident in r["claims"] or joining else "  (not claimed)"
             say(f"  changes {ident}: {'; '.join(what)}{mark}")
     for tag, c in orphans.items():
         say(f"claim without a branch: {tag} by {c.get('who', '?')} for {c.get('branch', '?')} "
             f"since {c.get('when', '?')}. Landed or abandoned: `release` it once its person agrees.")
+    for note in landed.values():
+        say(note)
     return 0
 
 
@@ -671,6 +775,502 @@ def cmd_revoke(p: Project, args) -> int:
     git(p.root, "tag", "-d", f"delega/{name}", check=False)
     say(f"Revoked: {to} no longer decides as an admin.")
     return 0
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# join
+
+JOIN_CLAIM = "ricongiungimento"       # claim/ricongiungimento: one join at a time
+E_THREADS = "_filoni"
+
+
+def _joiner(p: Project, args) -> tuple[dict, str]:
+    """The main line's roles, and the person, who decides there."""
+    p.fetch()
+    roles = main_roles(p)
+    if roles.get("mode") != "additive":
+        v.refuse(f"{B.WORK} on {p.base} does not declare `mode: additive`: a join lands threads, "
+                 "and there are none here.")
+    who = main_person(p, roles, args.who, "--who")
+    delegated = {c.get("to") for c in p.held(B.DELEGATION_REF).values() if c.get("to")}
+    if who not in B.deciders(roles, delegated):
+        v.refuse(f"{who} is not an admin, a deputy or a delegate on {p.base}: a join is theirs.")
+    return roles, who
+
+
+def _joined(p: Project, ref: str) -> list[tuple[str, str]]:
+    """The threads a join's branch merged, and at which commits, from its merge messages."""
+    log = git(p.root, "log", "--merges", "--format=%B", f"{p.base}..{ref}", check=False).stdout
+    out = []
+    for line in log.splitlines():
+        if line.startswith(B.JOINED):
+            parts = line[len(B.JOINED):].split()
+            if len(parts) == 2:
+                out.append((parts[0], parts[1]))
+    return out
+
+
+def _join_root(p: Project) -> str:
+    """The commit the open join started from: where its claim points."""
+    return git(p.root, "rev-parse", "--verify", "-q", f"{B.CLAIM_REF}{JOIN_CLAIM}^{{commit}}",
+               check=False).stdout.strip()
+
+
+def _join_landed(p: Project, branch: str) -> bool:
+    """The open join is on the main line: its branch, as the remote has it, signed since it
+    started, and contained in the main line. Read the same by every step, since a push of the
+    main line whose answer was lost leaves exactly this state to be closed."""
+    ref = f"refs/remotes/{p.remote}/{branch}"
+    root = _join_root(p)
+    if not root or git(p.root, "rev-parse", "--verify", "-q", ref, check=False).returncode:
+        return False
+    signed = git(p.root, "log", f"--format=%(trailers:key={B.JOIN_TRAILER},valueonly)",
+                 f"{root}..{ref}", check=False).stdout.strip()
+    return bool(signed) and git(p.root, "merge-base", "--is-ancestor", ref, p.base,
+                                check=False).returncode == 0
+
+
+def _landed(p: Project, ref: str) -> list[tuple[str, str]]:
+    """The threads a finished join merged, from the commit that carries its trailer: read the
+    same before and after the join reaches the main line, when its merges are no longer past
+    it. Only since the join started: an earlier join's commit is not this one's."""
+    since = _join_root(p)
+    log = git(p.root, "log", "--format=%H%x00%(trailers:key=" + B.JOIN_TRAILER + ",valueonly)%x00%B%x1e",
+              f"{since}..{ref}" if since else ref, check=False).stdout
+    for record in log.split("\x1e"):
+        parts = record.strip("\n").split("\x00")
+        if len(parts) == 3 and parts[1].strip():
+            return [(x.split()[0], x.split()[1]) for x in
+                    (l[len(B.JOINED):] for l in parts[2].splitlines() if l.startswith(B.JOINED))
+                    if len(x.split()) == 2]
+    return []
+
+
+def _finished(p: Project, ref: str) -> bool:
+    """Whether the join's branch carries its trailer past the main line."""
+    return bool(git(p.root, "log", f"--format=%(trailers:key={B.JOIN_TRAILER},valueonly)",
+                    f"{p.base}..{ref}", check=False).stdout.strip())
+
+
+def _join_tree(p: Project, branch: str) -> Path:
+    """The join's worktree, beside the main checkout; one left there holding another branch is
+    somebody's, and is not reused."""
+    path = p.worktree_for(branch[len(p.prefix):])
+    if path.exists():
+        held = git(path, "rev-parse", "--abbrev-ref", "HEAD", check=False).stdout.strip()
+        if held != branch:
+            v.refuse(f"{path} exists and holds {held or 'no branch'}, not {branch}: remove or "
+                     "move it first.")
+        return path
+    if git(p.root, "rev-parse", "--verify", "-q", f"refs/heads/{branch}", check=False).returncode:
+        git(p.root, "branch", "--no-track", branch, f"refs/remotes/{p.remote}/{branch}")
+    git(p.root, "worktree", "add", str(path), branch)
+    return path
+
+
+def _regenerate(root: Path) -> list[str]:
+    """The views regenerated from the tree at `root`, staged: what each of them derives from."""
+    r = subprocess.run([sys.executable, str(Path(v.__file__)), "--root", str(root),
+                        "--emit-index", "--json", "--stale-days", "36500"],
+                       capture_output=True, text=True)
+    try:
+        written = json.loads(r.stdout).get("generated", []) if r.returncode in (0, 1) else None
+    except json.JSONDecodeError:
+        written = None
+    if written is None:
+        v.refuse(f"the views could not be regenerated (exit {r.returncode}): "
+                 f"{(r.stderr or '').strip()[-300:]}.")
+    for rel in written:
+        git(root, "add", "--", rel)
+    return written
+
+
+def _before_merging(p: Project, r: dict, names: list[str], every: list[str]) -> None:
+    """What the threads bring that the roles keep to those who decide (§10), and the effects
+    each wrote outside what it forecast -- first those another thread of this join forecast:
+    shown to the admin before anything is merged, to be read, not judged here."""
+    tree = r.get("tree")
+    where = B.prefix(p.root)
+    try:
+        policy = json.loads(git(p.root, "show", f"{p.base}:{where}.framework/contribution-policy.json",
+                                check=False).stdout or "{}")
+    except ValueError:
+        policy = {}
+    declared: dict[str, set[str]] = {}
+    for name in every:
+        anchors: set[str] = set()
+        for ident, _ in r.get("open", {}).get(name, {}).get("claims", []):
+            bare_id = ident.rsplit("/", 1)[-1]
+            if tree and bare_id in tree.entries:
+                anchors |= {str(x) for x in v.as_list(tree.entries[bare_id].get("affects"))}
+            if tree and bare_id in tree.changes:
+                change = tree.changes[bare_id]
+                anchors |= {str(x) for x in v.as_list(change.meta.get("affects"))}
+                # The forecast the to-do reads: the mandate's prefixes too.
+                mandate = (policy.get("mandates") or {}).get(change.rel.replace("\\", "/")) or {}
+                for repo, prefixes in (mandate.get("paths") or {}).items():
+                    kind = "doc" if repo == "documents" else f"code:{repo}"
+                    anchors |= {f"{kind}:{str(x).rstrip('/')}" for x in v.as_list(prefixes)}
+            if tree and ident in tree.roadmap:
+                anchors.add(f"{tree.roadmap[ident]}#{bare_id}")
+        declared[name] = anchors
+    for name in names:
+        ref = f"refs/remotes/{p.remote}/{name}"
+        said = []
+        changed = set(git(p.root, "diff", "--name-only", f"{p.base}...{ref}").stdout.split())
+        if f"{where}.framework/contribution-policy.json" in changed:
+            said.append("the contribution policy changes on the thread's branch")
+        for path in sorted(c for c in changed if c.endswith("/contribution-policy.json")
+                           and f"/{E_THREADS}/" in f"/{c}"):
+            said.append(f"a contribution policy delivered, {path}: an admin or whoever stands in "
+                        "carries it into `.framework/`, after reading it")
+        before = {a.rel.replace("\\", "/"): a for a in p.view(p.base).arts}
+        for a in p.view(ref).arts:
+            rel = a.rel.replace("\\", "/")
+            if f"{where}{rel}" not in changed:
+                continue
+            was = (before.get(rel).meta.get("status") if before.get(rel) else None)
+            now = a.meta.get("status")
+            if now == was:
+                continue
+            if a.type == "impact-classification" and now == "accepted":
+                said.append(f"{a.id or rel} accepted: a classification is confirmed by who decides")
+            elif a.type == "change-contract" and now == "verified":
+                said.append(f"{a.id or rel} verified")
+        # The evaluation plan: one already there that changes -- its thresholds are decisions --
+        # and an evaluation report new on the thread that records a freeze of it.
+        for a in p.view(ref).arts:
+            rel = a.rel.replace("\\", "/")
+            if f"{where}{rel}" not in changed:
+                continue
+            old = before.get(rel)
+            if a.type == "evaluation-plan" and old is not None \
+                    and (old.meta != a.meta or old.body != a.body):
+                said.append(f"{rel} changes")
+            elif a.type == "evaluation-report" and old is None and a.meta.get("evp_hash"):
+                said.append(f"{a.id or rel} records a freeze of the evaluation plan "
+                            f"{a.meta.get('evp_version', '')}".rstrip())
+        thread_view, main_view = p.view(ref), p.view(p.base)
+        for k, row in thread_view.entries.items():
+            if k.startswith("KI-") and thread_view.closed(k) and not main_view.closed(k):
+                closers = sorted(thread_view.closers(k))
+                if not any(c.startswith("CHG-") for c in closers):
+                    said.append(f"{k} closed by {', '.join(closers) or 'its row'}, not by a "
+                                "change: a commit, or kept as it is, which only who decides "
+                                "can say")
+        listed = git(p.root, "ls-tree", "-r", "--name-only", "--full-tree", ref, "--",
+                     f"{where}{E_THREADS}").stdout.split("\n")
+        outside = []
+        for path in (x for x in listed if x.endswith(f"/{E.EFFECTS}")):
+            for eff in E.read(git(p.root, "show", f"{ref}:{path}").stdout)[0]:
+                if T.meet(declared[name], {eff.target}):
+                    continue
+                other = [n for n in every if n != name and T.meet(declared[n], {eff.target})]
+                outside.append((not other, f"effect on {eff.target}, outside the forecast"
+                                + (f" -- {', '.join(other)} forecast it" if other else "")))
+        said = [line for _, line in sorted(outside)] + said
+        if said:
+            say(f"{name}, before it is merged:")
+            for line in said:
+                say(f"  - {line}")
+
+
+def _join_start(p: Project, who: str, args) -> int:
+    held = p.held(B.CLAIM_REF).get(JOIN_CLAIM)
+    r = T.compute(p.root, p.remote, p.main)
+    ready = r.get("ready", [])
+    named = [x if x.startswith(p.prefix) else p.prefix + x for x in args.threads]
+    wanted = [] if args.no_threads else (named or ready)
+    not_ready = [x for x in wanted if x not in ready]
+    if not_ready:
+        v.refuse(f"not ready: {', '.join(not_ready)}. A join merges the threads that are ready: "
+                 f"{', '.join(ready) or 'none now'}.")
+    if not wanted and not args.no_threads and not held:
+        v.refuse("no thread is ready. `--no-threads` opens a join that lands only `work.yaml`, an "
+                 "adoption, the contribution policy or annotations.")
+    if held:
+        branch = held.get("branch", "")
+        if _join_landed(p, branch):
+            v.refuse(f"{branch} is on {p.base} already: `join --close` releases what it landed.")
+        if _finished(p, branch) or _finished(p, f"refs/remotes/{p.remote}/{branch}"):
+            v.refuse(f"{branch} is finished: `join --merge` lands it, `join --abandon` drops it. "
+                     "A thread ready since waits for the next join.")
+        remote_branch = f"refs/remotes/{p.remote}/{branch}"
+        local = git(p.root, "rev-parse", "--verify", "-q", f"refs/heads/{branch}", check=False).stdout.strip()
+        if local and git(p.root, "merge-base", "--is-ancestor", remote_branch, local,
+                         check=False).returncode:
+            v.refuse(f"{branch} here is behind or apart from {p.remote}'s: bring it to the remote's "
+                     "commit first.")
+        if not named and not args.no_threads:
+            v.refuse(f"{branch} is open, and merged {', '.join(n for n, _ in _joined(p, remote_branch)) or 'no thread yet'}: "
+                     "name the threads to merge in it, as when it was opened -- a thread ready since "
+                     "is not added by itself.")
+        say(f"A join is open: {branch}, by {held.get('who', '?')} since {held.get('when', '?')}. "
+            "It goes on from where it is.")
+    else:
+        # One more than the joins on the main line, and than every number a join reserved: a
+        # join abandoned leaves nothing on the main line, and its number, reused, would give
+        # the next join the name of a branch some clone still holds.
+        trailers = git(p.root, "log", f"--format=%(trailers:key={B.JOIN_TRAILER},valueonly)",
+                       p.base).stdout
+        reserved = [int(m.group(1)) for m in (re.fullmatch(rf"{re.escape(B.JOIN)}(\d+)", t)
+                                              for t in p.held(B.RESERVED_REF)) if m]
+        n = max(1 + sum(1 for line in trailers.splitlines() if line.strip()),
+                1 + max(reserved, default=0))
+        branch = f"{p.prefix}{B.JOIN}{n}"
+        if git(p.root, "rev-parse", "--verify", "-q", f"refs/heads/{branch}", check=False).returncode == 0:
+            v.refuse(f"{branch} is left here by a join that did not land: remove it -- "
+                     f"{_remove_hint(p, branch, force=True)} -- and `join` again.")
+        number = f"{B.JOIN}{n}"
+        git(p.root, "tag", "-a", f"claim/{JOIN_CLAIM}", "-m",
+            message(who, branch, f"claim {JOIN_CLAIM}"), p.base)
+        git(p.root, "tag", "-a", f"id/{number}", "-m", message(who, branch, f"reserve {number}"),
+            p.base)
+        tag = git(p.root, "rev-parse", f"{B.CLAIM_REF}{JOIN_CLAIM}").stdout.strip()
+        mark = git(p.root, "rev-parse", f"{B.RESERVED_REF}{number}").stdout.strip()
+        git(p.root, "branch", "--no-track", branch, p.base)
+        head = git(p.root, "rev-parse", branch).stdout.strip()
+        outcome, said = p.push([f"refs/heads/{branch}:refs/heads/{branch}",
+                                f"{B.CLAIM_REF}{JOIN_CLAIM}:{B.CLAIM_REF}{JOIN_CLAIM}",
+                                f"{B.RESERVED_REF}{number}:{B.RESERVED_REF}{number}"],
+                               {f"refs/heads/{branch}": head, f"{B.CLAIM_REF}{JOIN_CLAIM}": tag,
+                                f"{B.RESERVED_REF}{number}": mark},
+                               ("--atomic", f"--force-with-lease=refs/heads/{branch}:"))
+        if outcome != "ok":
+            git(p.root, "tag", "-d", f"claim/{JOIN_CLAIM}", check=False)
+            git(p.root, "tag", "-d", f"id/{number}", check=False)
+            git(p.root, "branch", "-D", branch, check=False)
+            v.refuse(f"the join could not be opened ({said}): another may have been opened a "
+                     "moment ago; run `list`.")
+    tree = _join_tree(p, branch)
+    if git(tree, "rev-parse", "--verify", "-q", "MERGE_HEAD", check=False).returncode == 0:
+        v.refuse(f"a merge is in progress in {tree}: resolve it and `git commit` -- its message "
+                 "names the thread -- or `git merge --abort`, then `join` again.")
+    if git(tree, "status", "--porcelain", "--untracked-files=no").stdout.strip():
+        v.refuse(f"{tree} has changes not committed: commit them, or put them aside, first. A "
+                 "merge is a commit of its own.")
+    where = B.prefix(p.root)
+    done = {name for name, _ in _joined(p, branch)}
+    todo_now = sorted(set(wanted) - done)
+    _before_merging(p, r, todo_now, sorted(done | set(todo_now)))
+    again = (f"--who \"{who}\" " + (" ".join(n[len(p.prefix):] for n in sorted(set(wanted)))
+                                     or "--no-threads"))
+    for name in todo_now:
+        sha = git(p.root, "rev-parse", f"refs/remotes/{p.remote}/{name}").stdout.strip()
+        both = _collisions(p, branch, sha)
+        if both:
+            say(f"Not merged: {name} and this join both created {', '.join(both)}. Renumber on "
+                f"{name}, and run `join {again}` again.")
+            return 1
+        msg = f"Join {branch}: merge {name}\n\n{B.JOINED}{name} {sha}\n"
+        r = git(tree, "-c", "merge.conflictStyle=diff3", "-c", "rerere.enabled=false", "merge",
+                "--no-ff", "--no-commit", "-m", msg, sha, check=False)
+        if r.returncode and not git(tree, "ls-files", "-u").stdout.strip():
+            git(tree, "merge", "--abort", check=False)
+            v.refuse(f"the merge of {name} stopped: {(r.stderr or r.stdout).strip()[-300:]}")
+        root = tree / where if where else tree
+        left = _settle(p, root, tree, where, True, branch_ours=False)
+        if left:
+            say(f"\n{name}: left for a person: {', '.join(left)}. Resolve them in {tree}, "
+                "`git add` them and `git commit` -- the message is ready, and it names the thread "
+                f"and its commit -- then run `join {again}` again.")
+            return 1
+        _regenerate(root)
+        git(tree, "commit", "-q", "-m", msg)
+        say(f"Merged {name} at {sha[:12]}.")
+    say(f"\nJoin: {branch}, in {tree}. Now rewrite the living documents from the effects in "
+        f"`{E_THREADS}/*/effetti.md`, approve the changes to approve, accept or leave the "
+        "decisions proposed, regenerate the views (`validate.py --emit-index`), have the reviser "
+        "read the diff, commit, and `join --finish`.")
+    return 0
+
+
+def _join_finish(p: Project, who: str) -> int:
+    held = p.held(B.CLAIM_REF).get(JOIN_CLAIM)
+    if not held:
+        v.refuse("no join is open: `join` opens one.")
+    branch = held.get("branch", "")
+    if _join_landed(p, branch):
+        v.refuse(f"{branch} is on {p.base} already: `join --close` releases what it landed.")
+    tree = _join_tree(p, branch)
+    if git(tree, "status", "--porcelain", "--untracked-files=no").stdout.strip():
+        v.refuse(f"{tree} has changes not committed: commit the rewritten documents first.")
+    remote_branch = f"refs/remotes/{p.remote}/{branch}"
+    if git(p.root, "merge-base", "--is-ancestor", remote_branch, branch, check=False).returncode:
+        v.refuse(f"{branch} here is behind or apart from {p.remote}'s, which another clone may "
+                 "have finished: bring it to the remote's commit first.")
+    if not _finished(p, branch):
+        where = B.prefix(p.root)
+        folder = (tree / where / E_THREADS) if where else tree / E_THREADS
+        rewritten = []
+        for path in sorted(folder.glob(f"*/{E.EFFECTS}")) if folder.is_dir() else []:
+            for eff in E.read(path.read_text(encoding="utf-8"))[0]:
+                rewritten.append(f"- {eff.target} (from {path.parent.name})")
+        if folder.exists():
+            git(tree, "rm", "-r", "-q", "--", str(folder.relative_to(tree)))
+        joined = _joined(p, branch)
+        body = (f"Join {branch} finished: {', '.join(n for n, _ in joined) or 'no thread'}\n\n"
+                + ("Rewritten from the effects:\n" + "\n".join(rewritten) + "\n\n" if rewritten else "")
+                + "".join(f"{B.JOINED}{n} {sha}\n" for n, sha in joined) + "\n"
+                + f"{B.JOIN_TRAILER}: {who}\n")
+        git(tree, "commit", "-q", "--allow-empty", "-m", body)
+    # Finished already, and not pushed: pushed again, never signed twice -- the number of the next
+    # join counts the trailers on the main line.
+    head = git(tree, "rev-parse", "HEAD").stdout.strip()
+    outcome, said = p.push([f"refs/heads/{branch}:refs/heads/{branch}"],
+                           {f"refs/heads/{branch}": head})
+    if outcome != "ok":
+        v.refuse(f"the join is finished here and the push "
+                 f"{'may not have gone' if outcome == 'unknown' else 'did not go'} through "
+                 f"({said}). Never --force: `join --finish` again pushes what is committed.")
+    say(f"{branch} finished and pushed. `join --merge --who {who}` lands it on {p.main}.")
+    return 0
+
+
+def _main_checkout(p: Project) -> Path:
+    common = git(p.root, "rev-parse", "--path-format=absolute", "--git-common-dir").stdout.strip()
+    return Path(common).parent
+
+
+def _join_merge(p: Project, who: str) -> int:
+    held = p.held(B.CLAIM_REF).get(JOIN_CLAIM)
+    if not held:
+        v.refuse("no join is open: `join` opens one.")
+    branch = held.get("branch", "")
+    remote_branch = f"refs/remotes/{p.remote}/{branch}"
+    if not _finished(p, remote_branch):
+        v.refuse(f"{branch} carries no `{B.JOIN_TRAILER}:` trailer on {p.remote}: `join --finish` "
+                 "first.")
+    if git(p.root, "merge-base", "--is-ancestor", p.base, remote_branch, check=False).returncode:
+        v.refuse(f"{p.base} moved past {branch}: bring the join up to date -- `sync` in its "
+                 "worktree -- and finish it again.")
+    # What is validated is what is merged: the join's tree at the commit the remote holds.
+    tree = _join_tree(p, branch)
+    tip = git(p.root, "rev-parse", remote_branch).stdout.strip()
+    if git(tree, "rev-parse", "HEAD").stdout.strip() != tip or \
+            git(tree, "status", "--porcelain", "--untracked-files=no").stdout.strip():
+        v.refuse(f"{tree} is not {branch} as {p.remote} holds it, clean: push or pull it first.")
+    main = _main_checkout(p)
+    if git(main, "rev-parse", "--abbrev-ref", "HEAD").stdout.strip() != p.main:
+        v.refuse(f"{main} is not on {p.main}: the merge is made there.")
+    r = git(main, "merge", "--ff-only", "-q", p.base, check=False)
+    if r.returncode:
+        v.refuse(f"{p.main} in {main} has commits of its own, or changes: it cannot move to "
+                 f"{p.base}. Nothing was merged.")
+    where = B.prefix(p.root)
+    check = subprocess.run([sys.executable, str(Path(v.__file__)), "--root",
+                            str(tree / where if where else tree), "--base", p.base, "--json",
+                            "--stale-days", "36500"], capture_output=True, text=True)
+    try:
+        errors = [f for f in json.loads(check.stdout).get("findings", []) if f["level"] == "error"]
+    except (ValueError, KeyError):
+        v.refuse(f"the validator gave no report on the join ({check.stderr.strip()[-200:]}).")
+        return 2
+    if errors:
+        for f in errors[:10]:
+            say(f"  {f['code']} {f['path']}: {f['message'][:160]}")
+        v.refuse(f"the join has {len(errors)} errors: nothing was merged.")
+    git(main, "merge", "--no-ff", "-q", "-m", f"Merge {branch} into {p.main}", tip)
+    head = git(main, "rev-parse", "HEAD").stdout.strip()
+    outcome, said = p.push([f"refs/heads/{p.main}:refs/heads/{p.main}"],
+                           {f"refs/heads/{p.main}": head})
+    if outcome == "rejected" and "[remote rejected]" in said and "cannot lock ref" not in said:
+        v.refuse(f"{p.remote} refused the push of {p.main} ({said}): a hook or a protection rule, "
+                 "the person's to look at. The merge is here, not pushed. Never --force.")
+    if outcome == "rejected":
+        v.refuse(f"{p.main} moved on {p.remote} while this merged ({said}). Undo the local merge "
+                 f"-- `git -C {main} reset --keep HEAD~1` --, bring the join up to date with "
+                 "`sync` in its worktree, `join --finish`, and `join --merge` again. Never --force.")
+    if outcome != "ok":
+        v.refuse(f"{p.main} is merged here and the push "
+                 f"{'may not have gone' if outcome == 'unknown' else 'did not go'} through "
+                 f"({said}). Never --force: push it once the remote answers, then `join --close`.")
+    say(f"{branch} landed on {p.main}, pushed.")
+    return _join_close(p, who)
+
+
+def _join_close(p: Project, who: str) -> int:
+    p.fetch()
+    held = p.held(B.CLAIM_REF).get(JOIN_CLAIM)
+    if not held:
+        v.refuse("no join is open.")
+    branch = held.get("branch", "")
+    remote_branch = f"refs/remotes/{p.remote}/{branch}"
+    if not _join_landed(p, branch):
+        v.refuse(f"{branch} is not on {p.base}: the join has not landed, and nothing is released.")
+    claims = p.held(B.CLAIM_REF)
+    kept, failed = [], []
+    for name, sha in _landed(p, remote_branch):
+        there = git(p.root, "rev-parse", "--verify", "-q", f"refs/remotes/{p.remote}/{name}",
+                    check=False).stdout.strip()
+        if there and there != sha:
+            kept.append(name)
+            say(f"{name}: kept -- it has commits after the join merged it; it and its claims "
+                "stay, for the next join.")
+            continue
+        if there:
+            outcome, said = p.push([f":refs/heads/{name}"], {f"refs/heads/{name}": None},
+                                   (f"--force-with-lease=refs/heads/{name}:{sha}",))
+            if outcome != "ok":
+                failed.append(name)
+                say(f"{name}: not deleted ({said}).")
+                continue
+        tags = [tag for tag, c in claims.items() if c.get("branch") == name]
+        if tags:
+            outcome, said = p.push([f":{B.CLAIM_REF}{tag}" for tag in tags],
+                                   {f"{B.CLAIM_REF}{tag}": None for tag in tags}, ("--atomic",))
+            if outcome != "ok":
+                failed.append(name)
+                say(f"{name}: claims not released ({said}).")
+                continue
+            for tag in tags:
+                git(p.root, "tag", "-d", f"claim/{tag}", check=False)
+        say(f"{name}: landed; branch deleted and claims released ({', '.join(tags) or 'none'}), "
+            f"by role, by {who}. Here: {_remove_hint(p, name)}.")
+    if failed:
+        say("The join stays open, so that `join --close` again finishes what did not go through.")
+        return 1
+    tip = git(p.root, "rev-parse", remote_branch).stdout.strip()
+    outcome, said = p.push([f":refs/heads/{branch}", f":{B.CLAIM_REF}{JOIN_CLAIM}"],
+                           {f"refs/heads/{branch}": None, f"{B.CLAIM_REF}{JOIN_CLAIM}": None},
+                           ("--atomic", f"--force-with-lease=refs/heads/{branch}:{tip}"))
+    if outcome != "ok":
+        v.refuse(f"the join's branch and claim could not be removed ({said}): `join --close` "
+                 "again once the remote answers.")
+    git(p.root, "tag", "-d", f"claim/{JOIN_CLAIM}", check=False)
+    say(f"{branch} closed. Here: {_remove_hint(p, branch)}.")
+    return 1 if kept else 0
+
+
+def _join_abandon(p: Project, who: str) -> int:
+    held = p.held(B.CLAIM_REF).get(JOIN_CLAIM)
+    if not held:
+        v.refuse("no join is open.")
+    branch = held.get("branch", "")
+    remote_branch = f"refs/remotes/{p.remote}/{branch}"
+    tip = git(p.root, "rev-parse", "--verify", "-q", remote_branch, check=False).stdout.strip()
+    if _join_landed(p, branch):
+        v.refuse(f"{branch} is on {p.base} already: it landed, and `join --close` releases what "
+                 "it landed.")
+    refspecs = [f":{B.CLAIM_REF}{JOIN_CLAIM}"] + ([f":refs/heads/{branch}"] if tip else [])
+    expect = {f"{B.CLAIM_REF}{JOIN_CLAIM}": None, **({f"refs/heads/{branch}": None} if tip else {})}
+    outcome, said = p.push(refspecs, expect, ("--atomic",) + (
+        (f"--force-with-lease=refs/heads/{branch}:{tip}",) if tip else ()))
+    if outcome != "ok":
+        v.refuse(f"the join could not be abandoned ({said}).")
+    git(p.root, "tag", "-d", f"claim/{JOIN_CLAIM}", check=False)
+    say(f"{branch} abandoned by {who}: nothing landed, the threads keep their branches and "
+        f"claims. Here: {_remove_hint(p, branch, force=True)}.")
+    return 0
+
+
+def cmd_join(p: Project, args) -> int:
+    _, who = _joiner(p, args)
+    for flag, step in (("finish", _join_finish), ("merge", _join_merge), ("close", _join_close),
+                       ("abandon", _join_abandon)):
+        if getattr(args, flag):
+            return step(p, who)
+    return _join_start(p, who, args)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -904,11 +1504,110 @@ def _collisions(p: Project, mine: str, theirs: str) -> list[str]:
     return sorted(i if s == "*" else f"{s.removeprefix('product:')}:{i}" for s, i in both)
 
 
+def _settle(p: Project, root: Path, top: Path, where: str, additive: bool,
+            branch_ours: bool) -> list[str]:
+    """Resolve what is mechanical in the merge in progress in `top`, and stage it: the files
+    left for a person. `branch_ours` says which side is the thread -- this branch in `sync`, the
+    side merged in at a join."""
+    left_files: list[str] = []
+    unmerged = git(top, "ls-files", "-u", "-z").stdout
+    stages: dict[str, set[str]] = {}
+    for row in filter(None, unmerged.split("\0")):
+        meta, _, path = row.partition("\t")
+        stages.setdefault(path, set()).add(meta.split()[2])
+    arts = v.discover(root, p.scan, p.registry, B._Sink())
+    generated = {str(x.relative_to(root)).replace("\\", "/")
+                 for x in v.build_indices(root, arts)}
+    for path, have in sorted(stages.items()):
+        if where and not path.startswith(where):
+            left_files.append(f"{path} (from the repository's top)")
+            say(f"{path}: outside the documentation, left for a person.")
+            continue
+        rel = path[len(where):] if where else path
+        full = top / path
+        if not {"2", "3"} <= have:
+            gone = "the side merged in" if "3" not in have else "this branch"
+            left_files.append(rel)
+            say(f"{rel}: deleted on {gone} and changed on the other side, left for a person.")
+            continue
+        ours = git(top, "show", f":2:{path}", check=False).stdout
+        theirs = git(top, "show", f":3:{path}", check=False).stdout
+        if rel in generated and v.GENERATED_MARK in ours and v.GENERATED_MARK in theirs:
+            git(top, "checkout", "--theirs", "--", path)
+            git(top, "add", "--", path)
+            say(f"{rel}: written whole by the generator; taken from the side merged in, "
+                "regenerated below.")
+            continue
+        if "1" not in have:
+            left_files.append(rel)
+            say(f"{rel}: created on both sides with different content, left for a person.")
+            continue
+        try:
+            raw = full.read_bytes().decode("utf-8")
+            crlf = "\r\n" in raw           # any CRLF and the file is written back CRLF throughout
+            text = raw.replace("\r\n", "\n")
+            if not any(l.startswith(OURS) for l in text.split("\n")):
+                # Unmerged and no markers: a file git would not merge line by line (`-merge`,
+                # `binary`), a change of mode, markers of another size. Never this branch's
+                # by default.
+                raise Unreadable("in conflict and without markers")
+            resolved, left, done = resolve(text, rel, additive=additive, branch_ours=branch_ours)
+        except UnicodeDecodeError:
+            left_files.append(rel)
+            say(f"{rel}: not text, left for a person.")
+            continue
+        except Unreadable as e:
+            left_files.append(rel)
+            say(f"{rel}: {e}, left whole for a person.")
+            continue
+        # The line endings the file had: a working tree on Windows keeps CRLF.
+        full.write_bytes((resolved.replace("\n", "\r\n") if crlf else resolved).encode("utf-8"))
+        for line in done:
+            say(f"{rel}, {line}")
+        if left:
+            left_files.append(rel)
+        else:
+            git(top, "add", "--", path)
+    return left_files
+
+
+def _landed_at(p: Project, branch: str) -> str | None:
+    """The commit at which a join landed this work branch, when the branch is gone from the
+    remote: the `joined:` line of the join's commit on the main line. None otherwise -- a branch
+    that was never pushed is not one a join landed, whatever its tip."""
+    if git(p.root, "rev-parse", "--verify", "-q", f"refs/remotes/{p.remote}/{branch}",
+           check=False).returncode == 0:
+        return None
+    for line in git(p.root, "log", "--format=%B", p.base, check=False).stdout.splitlines():
+        parts = line[len(B.JOINED):].split() if line.startswith(B.JOINED) else []
+        if len(parts) == 2 and parts[0] == branch:
+            return parts[1]
+    return None
+
+
+def _landed_note(p: Project, branch: str, sha: str) -> str:
+    after = git(p.root, "log", "--oneline", f"{sha}..{branch}", check=False).stdout.strip()
+    return (f"{branch} was landed by a join, at {sha[:12]}, and deleted from {p.remote}: brought "
+            "up to date and pushed, it would come back without its claims. "
+            + (f"These commits came after the join, and are not on the main line -- take them "
+               f"into a thread of their own, or drop them; that is yours to decide:\n{after}\n"
+               if after else "")
+            + f"Remove it here: {_remove_hint(p, branch, force=bool(after))}.")
+
+
+def _remove_hint(p: Project, branch: str, force: bool = False) -> str:
+    trees = git(p.root, "worktree", "list", "--porcelain").stdout.split("\n\n")
+    path = next((b.splitlines()[0][len("worktree "):] for b in trees
+                 if f"branch refs/heads/{branch}" in b.splitlines()), None)
+    return ((f"`git worktree remove {path}` and " if path else "")
+            + f"`git branch -{'D' if force else 'd'} {branch}`")
+
+
 def cmd_sync(p: Project, args) -> int:
     branch = p.branch()
     if not branch.startswith(p.prefix):
         v.refuse(f"on {branch}, not on a work branch ({p.prefix}...). `sync` brings a work "
-                 "branch up to date; the main line is never written here.")
+                 "branch up to date; the main line is written only by `join --merge`.")
     top = Path(git(p.root, "rev-parse", "--show-toplevel").stdout.strip())
     where = B.prefix(p.root)
     target = Path(git(p.root, "rev-parse", "--path-format=absolute", "--git-path",
@@ -925,6 +1624,14 @@ def cmd_sync(p: Project, args) -> int:
             v.refuse("the working tree has uncommitted changes. Commit them first: the merge "
                      "is a commit of its own, and nothing of yours should be inside it.")
         p.fetch()
+        landed = _landed_at(p, branch) if main_roles(p).get("mode") == "additive" else None
+        if landed:
+            v.refuse(_landed_note(p, branch, landed))
+        if branch[len(p.prefix):].startswith(B.JOIN) and \
+                p.held(B.CLAIM_REF).get(JOIN_CLAIM, {}).get("branch") != branch:
+            v.refuse(f"{branch} is the branch of a join that is closed or abandoned: pushed again, "
+                     f"it would come back with no join. Remove it here: "
+                     f"{_remove_hint(p, branch, force=True)}.")
         # Commits pushed to this same branch from another clone come in first: by fast-forward,
         # and then the main line in the same run; or by a merge with the same resolution, and
         # then the main line on the next run.
@@ -969,63 +1676,7 @@ def cmd_sync(p: Project, args) -> int:
             target.unlink(missing_ok=True)
             v.refuse(f"the merge stopped: {(r.stderr or r.stdout).strip()}")
 
-        stages: dict[str, set[str]] = {}
-        for row in filter(None, unmerged.split("\0")):
-            meta, _, path = row.partition("\t")
-            stages.setdefault(path, set()).add(meta.split()[2])
-        arts = v.discover(p.root, p.scan, p.registry, B._Sink())
-        generated = {str(x.relative_to(p.root)).replace("\\", "/")
-                     for x in v.build_indices(p.root, arts)}
-        for path, have in sorted(stages.items()):
-            if where and not path.startswith(where):
-                left_files.append(f"{path} (from the repository's top)")
-                say(f"{path}: outside the documentation, left for a person.")
-                continue
-            rel = path[len(where):] if where else path
-            full = top / path
-            if not {"2", "3"} <= have:
-                gone = "the side merged in" if "3" not in have else "this branch"
-                left_files.append(rel)
-                say(f"{rel}: deleted on {gone} and changed on the other side, left for a person.")
-                continue
-            ours = git(p.root, "show", f":2:{path}", check=False).stdout
-            theirs = git(p.root, "show", f":3:{path}", check=False).stdout
-            if rel in generated and v.GENERATED_MARK in ours and v.GENERATED_MARK in theirs:
-                git(top, "checkout", "--theirs", "--", path)
-                git(top, "add", "--", path)
-                say(f"{rel}: written whole by the generator; taken from the side merged in, "
-                    "regenerated below.")
-                continue
-            if "1" not in have:
-                left_files.append(rel)
-                say(f"{rel}: created on both sides with different content, left for a person.")
-                continue
-            try:
-                raw = full.read_bytes().decode("utf-8")
-                crlf = "\r\n" in raw           # any CRLF and the file is written back CRLF throughout
-                text = raw.replace("\r\n", "\n")
-                if not any(l.startswith(OURS) for l in text.split("\n")):
-                    # Unmerged and no markers: a file git would not merge line by line (`-merge`,
-                    # `binary`), a change of mode, markers of another size. Never this branch's
-                    # by default.
-                    raise Unreadable("in conflict and without markers")
-                resolved, left, done = resolve(text, rel, additive=additive)
-            except UnicodeDecodeError:
-                left_files.append(rel)
-                say(f"{rel}: not text, left for a person.")
-                continue
-            except Unreadable as e:
-                left_files.append(rel)
-                say(f"{rel}: {e}, left whole for a person.")
-                continue
-            # The line endings the file had: a working tree on Windows keeps CRLF.
-            full.write_bytes((resolved.replace("\n", "\r\n") if crlf else resolved).encode("utf-8"))
-            for line in done:
-                say(f"{rel}, {line}")
-            if left:
-                left_files.append(rel)
-            else:
-                git(top, "add", "--", path)
+        left_files += _settle(p, p.root, top, where, additive, branch_ours=True)
     else:
         # Only the merge `sync` started, with the refusal of a shared number.
         incoming = git(p.root, "rev-parse", "MERGE_HEAD").stdout.strip()
@@ -1137,9 +1788,11 @@ def main() -> int:
     o.add_argument("ids", nargs="*", help="the elements this work decides or closes: OD-042, "
                                           "or atlas:RSK-012 for a family numbered per product")
     o.add_argument("--who", required=True)
-    o.add_argument("--branch", required=True, help="the name after the prefix: od-042; in the "
-                                                   "additive mode, with no element, it becomes "
-                                                   "parcheggio-<name>")
+    o.add_argument("--branch", help="the name after the prefix: od-042; in the additive mode, with "
+                                    "no element, it becomes parcheggio-<name>; not with --thread, "
+                                    "whose branch is named after the thread")
+    o.add_argument("--thread", help="in the additive mode: the thread the to-do computes, taken "
+                                    "whole")
     o.add_argument("--no-worktree", action="store_true")
 
     r = sub.add_parser("reserve", help="reserve the next numbers of an identifier family")
@@ -1168,6 +1821,16 @@ def main() -> int:
     d = sub.add_parser("delegate", help="let a person decide as an admin, until revoked")
     d.add_argument("--to", required=True, help="the person, among the people")
     d.add_argument("--who", required=True, help="the admin giving it")
+    j = sub.add_parser("join", help="in the additive mode: land the threads that are ready")
+    j.add_argument("threads", nargs="*", help="the threads to merge; all those ready if none")
+    j.add_argument("--who", required=True, help="an admin, a deputy or a delegate")
+    j.add_argument("--no-threads", action="store_true",
+                   help="a join with no thread: for work.yaml, an adoption, the policy, annotations")
+    step = j.add_mutually_exclusive_group()
+    step.add_argument("--finish", action="store_true", help="drop _filoni, commit with the trailer, push")
+    step.add_argument("--merge", action="store_true", help="merge the join into the main line, push, close")
+    step.add_argument("--close", action="store_true", help="release what a join landed")
+    step.add_argument("--abandon", action="store_true", help="drop a join that did not land")
     rv = sub.add_parser("revoke", help="take a delegation back, or give one's own up")
     rv.add_argument("--to", required=True, help="the person holding it")
     rv.add_argument("--who", required=True, help="an admin, or the delegate")
@@ -1176,7 +1839,7 @@ def main() -> int:
     p = Project(args)
     return {"open": cmd_open, "reserve": cmd_reserve, "list": cmd_list,
             "release": cmd_release, "sync": cmd_sync, "delegate": cmd_delegate,
-            "revoke": cmd_revoke}[args.command](p, args)
+            "revoke": cmd_revoke, "join": cmd_join}[args.command](p, args)
 
 
 if __name__ == "__main__":

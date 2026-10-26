@@ -57,6 +57,12 @@ RESERVED_REF = "refs/tags/id/"
 # The branch of a join, after the prefix: where living documents are rewritten, and the one
 # branch the additive check does not read.
 JOIN = "ricongiungimento-"
+# The line of a join's merge message that names the thread it merged and at which commit:
+# `BR003` on the branch of a join accepts the reservations made for those threads, and
+# `work.py join --close` deletes those branches at those commits and no later.
+JOINED = "joined: "
+# The trailer of the commit that finishes a join, read by the main-line job and by `join`.
+JOIN_TRAILER = "Ricongiungimento-di"
 # The branch of parking lines alone, after the prefix: a thread without elements, which writes
 # only lines added to the body of the open registers.
 PARKING = "parcheggio-"
