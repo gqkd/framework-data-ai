@@ -8,6 +8,8 @@ what, release a claim, and bring a branch up to date with the main line.
     python3 work.py --root . list [--json]
     python3 work.py --root . release OD-042 --who "Name"
     python3 work.py --root . sync [--continue] [--no-push]
+    python3 work.py --root . delegate --to "Name" --who "Admin"
+    python3 work.py --root . revoke --to "Name" --who "Admin"         # or the delegate, for their own
 
 ONE PIECE OF WORK, ONE BRANCH, ONE PULL REQUEST, for everybody who writes the documentation,
 the person who owns it included. A session that already ran beside two others on one working
@@ -24,6 +26,12 @@ was lost, the remote holding that object is the proof the push went through. The
 created in the same atomic push as the claims, with a lease that requires it not to exist yet.
 Reservations are never deleted, and a number reserved and not used stays burned; claims are
 removed only by `release`, when a person says so.
+
+A DELEGATION IS A TAG TOO. `delega/<slug of the name>`, annotated with who gave it, to whom and
+when: in the additive mode the person it names decides as an admin does, until it is revoked.
+Only an admin gives one, since deputies are declared beforehand for the day the admin cannot
+act; the admin or the delegate takes it back. A delegation is not a role in `work.yaml`, which
+only an admin changes, and so it needs no join to start.
 
 THE BRANCH IS BROUGHT UP TO DATE BY MERGING THE MAIN LINE INTO IT, never by a rebase: a rebase
 needs a forced push and rewrites the commits the exchange and the history name. Commits pushed to
@@ -154,13 +162,15 @@ class Project:
         return network(self.root, self.retries, self.pause, *args)
 
     def fetch(self, so_far: str = "") -> None:
-        """The main line, the work branches, the claims and the reservations, as the remote has
-        them now. Claims and reservations are fetched with force and pruned: a claim released
-        and taken again is a tag that moved, which a plain fetch refuses to update, and a claim
-        released is one this clone must not go on seeing."""
+        """The main line, the work branches, the claims, the reservations and the delegations,
+        as the remote has them now. The tags are fetched with force and pruned: a claim
+        released and taken again is a tag that moved, which a plain fetch refuses to update,
+        and a claim released, or a delegation revoked, is one this clone must not go on
+        seeing."""
         r = self.net("fetch", "--prune", self.remote,
                      f"+refs/heads/*:refs/remotes/{self.remote}/*",
-                     f"+{B.CLAIM_REF}*:{B.CLAIM_REF}*", f"+{B.RESERVED_REF}*:{B.RESERVED_REF}*")
+                     f"+{B.CLAIM_REF}*:{B.CLAIM_REF}*", f"+{B.RESERVED_REF}*:{B.RESERVED_REF}*",
+                     f"+{B.DELEGATION_REF}*:{B.DELEGATION_REF}*")
         if r.returncode:
             v.refuse(f"could not fetch {self.remote} after {self.retries} attempts: "
                      f"{(r.stderr or '').strip()}. " + (so_far or "Nothing was done: a claim or a "
@@ -513,10 +523,14 @@ def cmd_list(p: Project, args) -> int:
         })
     branches = {r["branch"] for r in rows}
     orphans = {t: c for t, c in sorted(claims.items()) if c.get("branch") not in branches}
+    delegations = {c.get("to", t): c for t, c in sorted(p.held(B.DELEGATION_REF).items())}
     if args.json:
-        print(json.dumps({"base": p.base, "branches": rows, "claims_without_branch": orphans},
-                         indent=2, ensure_ascii=False))
+        print(json.dumps({"base": p.base, "branches": rows, "claims_without_branch": orphans,
+                          "delegations": delegations}, indent=2, ensure_ascii=False))
         return 0
+    for name, c in delegations.items():
+        say(f"delegation: {name} decides as an admin, given by {c.get('who', '?')} on "
+            f"{c.get('when', '?')}.")
     if not rows:
         say(f"No work branch on {p.remote} under {p.prefix}.")
     for r in rows:
@@ -557,6 +571,87 @@ def cmd_release(p: Project, args) -> int:
     for tag in tags:
         git(p.root, "tag", "-d", f"claim/{tag}", check=False)
     say(f"Released: {', '.join(tags)}. Reservations are never released.")
+    return 0
+
+
+def main_roles(p: Project) -> dict:
+    """`.framework/work.yaml` as the main line has it after the fetch: where the job and
+    `BR004` read the mode and the roles, and not the working tree, which may be behind it or
+    on a branch that changes them. A file that cannot be read there reads as empty, and the
+    refusals that follow say what is missing."""
+    return B.work_at(p.root, p.base)
+
+
+def main_person(p: Project, roles: dict, name: str | None, flag: str) -> str:
+    """A name among the people of the main line's `work.yaml`, as `who` checks the working
+    tree's for every other command."""
+    name = (name or "").strip()
+    people = B.names(roles.get("people"))
+    if not name or (people and name not in people):
+        v.refuse(f"`{flag} {name}` is not among the people {B.WORK} names on {p.base}: "
+                 f"{', '.join(sorted(people))}.")
+    return name
+
+
+def cmd_delegate(p: Project, args) -> int:
+    p.fetch()
+    roles = main_roles(p)
+    who = main_person(p, roles, args.who, "--who")
+    if roles.get("mode") != "additive":
+        v.refuse(f"{B.WORK} on {p.base} does not declare `mode: additive`, or cannot be read "
+                 "there, and only that mode reads a delegation: here it would say somebody "
+                 "decides and change nothing.")
+    if who not in B.names(roles.get("admins")):
+        v.refuse(f"{who} is not among the admins of {B.WORK} on {p.base}: only an admin gives a "
+                 "delegation. A deputy is declared there beforehand, by an admin.")
+    to = main_person(p, roles, args.to, "--to")
+    if to in B.names(roles.get("admins")) | B.names(roles.get("deputies")):
+        v.refuse(f"{to} already decides, as an admin or a deputy: a delegation adds nothing.")
+    name = B.slug(to)
+    if not name:
+        v.refuse(f"`{to}` gives no name a ref can carry.")
+    held = p.held(B.DELEGATION_REF).get(name)
+    if held is not None:
+        v.refuse(f"{held.get('to', to)} already holds a delegation, given by {held.get('who', '?')} "
+                 f"on {held.get('when', '?')}.")
+    ref = f"{B.DELEGATION_REF}{name}"
+    git(p.root, "tag", "-a", f"delega/{name}", "-m",
+        f"delegate {to}\n\nwho: {who}\nto: {to}\nwhen: {stamp()}\n", p.base)
+    mine = git(p.root, "rev-parse", ref).stdout.strip()
+    outcome, said = p.push([f"{ref}:{ref}"], {ref: mine})
+    if outcome == "unknown":
+        v.refuse(f"the push of the delegation may or may not have landed: the remote did not "
+                 f"answer ({said}). The local tag is kept; `list` says whether it is there.")
+    if outcome != "ok":
+        git(p.root, "tag", "-d", f"delega/{name}", check=False)
+        v.refuse(f"the delegation did not go through ({said}); nothing was given.")
+    say(f"{to} decides as an admin until the delegation is revoked: `revoke --to \"{to}\"`, by "
+        f"an admin or by {to}.")
+    return 0
+
+
+def cmd_revoke(p: Project, args) -> int:
+    p.fetch()
+    roles = main_roles(p)
+    who = main_person(p, roles, args.who, "--who")
+    # `--to` is not checked against the people: the delegation of somebody no longer among
+    # them is the one most worth taking back. Found by the name it was given to, not by its
+    # slug, which two names can share.
+    to = (args.to or "").strip()
+    if who != to and who not in B.names(roles.get("admins")):
+        v.refuse(f"{who} is not an admin on {p.base}, and the delegation is {to}'s: an admin "
+                 "takes it back, or the delegate gives it up.")
+    found = [t for t, c in p.held(B.DELEGATION_REF).items() if c.get("to") == to]
+    if not found:
+        v.refuse(f"{to} holds no delegation on {p.remote}.")
+    name = found[0]
+    ref = f"{B.DELEGATION_REF}{name}"
+    outcome, said = p.push([f":{ref}"], {ref: None})
+    if outcome != "ok":
+        v.refuse(f"the revocation {'may not have gone' if outcome == 'unknown' else 'did not go'} "
+                 f"through ({said}): run `list` to see what the remote holds.")
+    git(p.root, "tag", "-d", f"delega/{name}", check=False)
+    say(f"Revoked: {to} no longer decides as an admin.")
     return 0
 
 
@@ -925,10 +1020,18 @@ def main() -> int:
     s.add_argument("--continue", dest="cont", action="store_true")
     s.add_argument("--no-push", action="store_true")
 
+    d = sub.add_parser("delegate", help="let a person decide as an admin, until revoked")
+    d.add_argument("--to", required=True, help="the person, among the people")
+    d.add_argument("--who", required=True, help="the admin giving it")
+    rv = sub.add_parser("revoke", help="take a delegation back, or give one's own up")
+    rv.add_argument("--to", required=True, help="the person holding it")
+    rv.add_argument("--who", required=True, help="an admin, or the delegate")
+
     args = ap.parse_args()
     p = Project(args)
     return {"open": cmd_open, "reserve": cmd_reserve, "list": cmd_list,
-            "release": cmd_release, "sync": cmd_sync}[args.command](p, args)
+            "release": cmd_release, "sync": cmd_sync, "delegate": cmd_delegate,
+            "revoke": cmd_revoke}[args.command](p, args)
 
 
 if __name__ == "__main__":

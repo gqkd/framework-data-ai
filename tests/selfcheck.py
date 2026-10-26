@@ -8852,6 +8852,284 @@ def _work_refusals_and_ci_comparison():
     return problems
 
 
+@check("work.yaml says who decides in the additive mode, a branch's decisions name one of them, and only an admin delegates")
+def _additive_roles():
+    # The additive mode is declared in `.framework/work.yaml`, and with it who decides: the
+    # admins, the deputies declared beforehand, and whoever holds a delegation an admin gave.
+    # Nothing can block on the free plan, so what does not hold is a warning: roles that do not
+    # hold together (`WK002`), a decision a branch brings that names nobody who decides
+    # (`BR004`), an exchange code sessions cannot reach (`EXC008`).
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        repo = _Repo(tmp / "keys")
+        repo.write("OPEN.md", _open_register({"OD-001": "open"}))
+
+        def findings(text: str) -> tuple[int, list, str]:
+            repo.write(".framework/work.yaml", text)
+            code, out, err = repo.validate()
+            return code, [(f["code"], f["message"]) for f in (out or {}).get("findings", [])
+                          if f["code"] in ("WK001", "WK002", "EXC008")], err
+
+        for text, want, why in (
+                ("mode: additive\npeople: [Admin, Junior]\nadmins: [Admin]\n", [],
+                 "roles that hold together"),
+                ("mode: additive\npeople: [Admin]\nadmins: [Other]\n", ["among the admins"],
+                 "an admin who is not among the people"),
+                ("mode: additive\n", ["no `people`", "no `admins`"], "the mode with nobody named"),
+                ("people: [Admin]\ndeputies: [Admin]\nthresholds: {ready_days: 2}\n",
+                 ["without `mode: additive`"], "deputies and thresholds without the mode"),
+                ("mode: additive\npeople: [Admin]\nadmins: [Admin]\nthresholds: {speed: 3}\n",
+                 ["thresholds.speed"], "a threshold this version does not read"),
+                ("mode: subtractive\n", ["`mode: subtractive`"], "a mode this version does not know"),
+                ("rereading: sometimes\n", ["`rereading: sometimes`", "without `mode: additive`"],
+                 "a rereading neither optional nor required")):
+            code, got, err = findings(text)
+            said = " ".join(m for _, m in got)
+            if code == 2 or len(got) != len(want) or not all(w in said for w in want):
+                problems.append(f"{why}: {got or err[-200:]}")
+        for text, why in (("mode: additive\nthresholds: {ready_days: 0}\n", "a threshold of 0"),
+                          ("admins: Admin\n", "admins as a single name")):
+            code, _, err = findings(text)
+            if code == 0 or not err.strip():
+                problems.append(f"{why} did not stop the validator, with a reason")
+        repo.write(".framework/work.yaml", "people: [Admin]\n")
+        for value, want in (("../other", 1), ("../_scambio", 0)):
+            repo.write(".framework/sessions.yaml", f"exchange: {value}\n")
+            got = [c for c, _ in findings("people: [Admin]\n")[1] if c == "EXC008"]
+            if len(got) != want:
+                problems.append(f"`exchange: {value}` gave {len(got)} EXC008, expected {want}")
+        (repo.path / ".framework" / "sessions.yaml").unlink()
+        # With the documentation in a folder of its repository, `_scambio` beside the
+        # repository is two levels up, and one level up is inside it.
+        nested = _Repo(tmp / "nested")
+        docs = nested.path / "docs"
+        (docs / ".framework").mkdir(parents=True)
+        (docs / "framework.yaml").write_text(f"framework_version: {REGISTRY['version']}\n")
+        (docs / "OPEN.md").write_text(_open_register({"OD-001": "open"}))
+        for value, want in (("../../_scambio", 0), ("../_scambio", 1)):
+            (docs / ".framework" / "sessions.yaml").write_text(f"exchange: {value}\n")
+            r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(docs), "--json",
+                                "--stale-days", "36500"], capture_output=True, text=True)
+            try:
+                got = [f for f in json.loads(r.stdout)["findings"] if f["code"] == "EXC008"]
+            except (ValueError, KeyError):
+                got = None
+            if got is None or len(got) != want:
+                problems.append(f"documentation in a folder, `exchange: {value}`: "
+                                f"{got if got is not None else r.stderr[-200:]}")
+
+        # BR004: what the branch brings to `accepted`, against where it left the main line.
+        br = _Repo(tmp / "branch")
+        br.write(".framework/work.yaml", "mode: additive\npeople: [Admin, Dep, Junior]\n"
+                 "admins: [Admin]\ndeputies: [Dep]\n")
+        br.write("OPEN.md", _open_register({"OD-001": "open", "OD-002": "open"}))
+        br.write("decisions/DEC-002.md", _decision("DEC-002", "OD-002", approvers="[Junior]"))
+        br.write("changes/CHG-002.md", _fm(
+            schema="framework/change-contract/v1", artifact_type="change-contract",
+            lifecycle="immutable", status="approved", id="CHG-002", products="[all]",
+            owners="[o]", created="2026-06-01", derives_from="[DEC-002]",
+            approvers="[Admin]") + "# CHG-002\n")
+        br.commit("base", "2026-06-01T09:00:00+02:00")
+        br.git("checkout", "-q", "-b", "work/x")
+
+        def br004(approvers: str) -> int:
+            br.write("decisions/DEC-001.md", _decision("DEC-001", "OD-001", approvers=approvers))
+            br.commit(f"DEC-001 by {approvers}", "2026-06-02T09:00:00+02:00")
+            out = br.validate("--base", "main")[1] or {}
+            return [f["code"] for f in out.get("findings", [])].count("BR004")
+        if br004("[Junior]") != 1:
+            problems.append("a decision a contributor accepted on a branch did not give BR004, "
+                            "or one already accepted on the main line gave one too")
+        if br004("[Admin]") != 0 or br004("[Dep]") != 0:
+            problems.append("a decision an admin or a deputy accepted gave BR004")
+        # A change that went past `approved` on the branch went through the approval too.
+        chg = lambda status, by: _fm(
+            schema="framework/change-contract/v1", artifact_type="change-contract",
+            lifecycle="immutable", status=status, id="CHG-001", products="[all]", owners="[o]",
+            created="2026-06-02", derives_from="[DEC-001]", approvers=by) + "# CHG-001\n"
+        for status, by, want in (("implemented", "[Junior]", 1), ("approved", "[Dep]", 0),
+                                 ("draft", "[Junior]", 0)):
+            br.write("changes/CHG-001.md", chg(status, by))
+            br.commit(f"CHG-001 {status}", "2026-06-02T10:00:00+02:00")
+            out = br.validate("--base", "main")[1] or {}
+            got = [f["path"] for f in out.get("findings", []) if f["code"] == "BR004"
+                   and "CHG-001" in f["path"]]
+            if len(got) != want:
+                problems.append(f"a change `{status}` by {by} on a branch gave {len(got)} BR004, "
+                                f"expected {want}")
+        (br.path / "changes" / "CHG-001.md").unlink()
+        # Approved on the main line, marked `implemented` on the branch by whoever has the
+        # thread: the approval was not this branch's.
+        br.write("changes/CHG-002.md", (br.path / "changes" / "CHG-002.md").read_text()
+                 .replace("status: approved", "status: implemented")
+                 .replace("approvers: [Admin]", "approvers: [Junior]"))
+        br.commit("CHG-002 implemented", "2026-06-02T11:00:00+02:00")
+        out = br.validate("--base", "main")[1] or {}
+        if any(f["code"] == "BR004" and "CHG-002" in f["path"] for f in out.get("findings", [])):
+            problems.append("a change approved on the main line and implemented on the branch "
+                            "by a contributor gave BR004: the approval was not the branch's")
+        br.git("tag", "-a", "delega/junior", "-m", "delegate Junior\n\nwho: Admin\nto: Junior\n")
+        if br004("[Junior, Someone]") != 0:
+            problems.append("a decision by the holder of a delegation gave BR004")
+        br.git("tag", "-d", "delega/junior")
+        br.git("checkout", "-q", "main")
+        br.write(".framework/work.yaml", "people: [Admin, Junior]\n")
+        br.commit("not additive", "2026-06-03T09:00:00+02:00")
+        br.git("checkout", "-q", "-b", "work/y")
+        br.write(".framework/work.yaml",
+                 "mode: additive\npeople: [Admin, Junior]\nadmins: [Admin]\n")
+        if br004("[Junior]") != 0:
+            problems.append("BR004 read the mode from the branch, not from the main line it "
+                            "left: a branch that turns the mode on would judge itself")
+
+        # Delegations: only an admin gives one, the admin or the delegate takes it back.
+        _, a, b = _work_origin(tmp / "deleg")
+        # The roles are the main line's: a working tree that declares the mode before the
+        # main line does is not read, and one still behind it is not either.
+        roles = ("mode: additive\npeople: [Owner, Junior, Third, Anna Rossi, anna-rossi]\n"
+                 "admins: [Owner]\n")
+        (a / ".framework" / "work.yaml").write_text(roles)
+        rc, out = _work(a, "delegate", "--to", "Junior", "--who", "Owner")
+        if rc != 2 or "mode: additive" not in out:
+            problems.append(f"a delegation the main line's mode does not allow, from a working "
+                            f"tree that declares it, gave exit {rc}: {out[-200:]!r}")
+        _commit_all(a, "roles")
+        _g(a, "push", "-q", "origin", "main")
+        for where, args, want, why in (
+                (a, ("delegate", "--to", "Nobody", "--who", "Owner"), 2, "a delegation to somebody "
+                 "not among the people"),
+                (b, ("delegate", "--to", "Anna Rossi", "--who", "Owner"), 0, "a delegation from a "
+                 "working tree behind the main line"),
+                (a, ("delegate", "--to", "anna-rossi", "--who", "Owner"), 2, "a delegation to a "
+                 "name whose slug is taken"),
+                (b, ("revoke", "--to", "anna-rossi", "--who", "anna-rossi"), 2, "a revocation by "
+                 "the holder of the same slug"),
+                (a, ("revoke", "--to", "Anna Rossi", "--who", "Owner"), 0, "an admin's revocation"),
+                (a, ("delegate", "--to", "Third", "--who", "Owner"), 0, "a delegation to Third")):
+            rc, out = _work(where, *args)
+            if rc != want:
+                problems.append(f"{why} gave exit {rc}, expected {want}: {out[-200:]!r}")
+        # Third leaves the people, and the delegation is still taken back.
+        (a / ".framework" / "work.yaml").write_text(roles.replace("Third, ", ""))
+        _commit_all(a, "Third leaves")
+        _g(a, "push", "-q", "origin", "main")
+        rc, out = _work(a, "revoke", "--to", "Third", "--who", "Owner")
+        if rc != 0:
+            problems.append(f"the delegation of somebody no longer among the people could not be "
+                            f"revoked: {out[-200:]!r}")
+        _g(b, "pull", "-q", "origin", "main")
+        for where, args, want, why in (
+                (a, ("delegate", "--to", "Junior", "--who", "Junior"), 2, "a delegation not by an admin"),
+                (a, ("delegate", "--to", "Junior", "--who", "Owner"), 0, "a delegation by an admin"),
+                (b, ("delegate", "--to", "Junior", "--who", "Owner"), 2, "a second delegation to one person"),
+                (b, ("revoke", "--to", "Junior", "--who", "Anna Rossi"), 2, "a revocation by a third person"),
+                (b, ("revoke", "--to", "Junior", "--who", "Junior"), 0, "the delegate giving it up")):
+            rc, out = _work(where, *args)
+            if rc != want or (why == "a revocation by a third person" and "not an admin" not in out):
+                problems.append(f"{why} gave exit {rc}, expected {want}: {out[-200:]!r}")
+            if why == "a delegation by an admin":
+                held = _g(a, "ls-remote", "origin", "refs/tags/delega/junior").stdout
+                listed = _work(b, "list")[1]
+                if not held.strip() or "delegation: Junior" not in listed:
+                    problems.append(f"the delegation is not on the remote, or `list` does not "
+                                    f"say it: {listed[-200:]!r}")
+        if _g(a, "ls-remote", "origin", "refs/tags/delega/junior").stdout.strip():
+            problems.append("a revoked delegation is still on the remote")
+    return problems
+
+
+@check("the main-line job tells a join from a commit outside a pull request, by the trailer and the roles before it")
+def _ci_recognises_joins():
+    # A join lands on the main line by a local merge, which no pull request holds, and says so
+    # in a trailer of the commit `work.py join --finish` makes. The main-line job reads it from
+    # the commits the merge's second parent reaches and its first does not, and the roles from
+    # the first parent, before the commit is validated.
+    problems = []
+    wf = yaml.safe_load((ROOT / "ci" / "branches.yml").read_text(encoding="utf-8"))
+    run = next(st["run"] for st in wf["jobs"]["main"]["steps"]
+               if str(st.get("name", "")).startswith("how each commit"))
+    script = run[run.index("<<'JOIN'\n") + 9:run.index("\nJOIN\n")]
+    start = run.index("git -C docs log --format='%(trailers:key=Ricongiungimento-di")
+    trailers = run[start:run.index('"$sha^1..$sha^2"', start) + len('"$sha^1..$sha^2"')]
+    with tempfile.TemporaryDirectory() as tmp:
+        t = Path(tmp)
+        (t / "s.py").write_text(script)
+        (t / "delegations.txt").write_text("delegate Del\n\nwho: Admin\nto: Del\n")
+        additive = "mode: additive\npeople: [Admin, Dep, Del, Junior]\nadmins: [Admin]\ndeputies: [Dep]\n"
+
+        def job(merged: str, by: list[str], work: str = additive, changed: str = "a.md") -> str:
+            (t / "join.txt").write_text("\n".join(["", *by, ""]))
+            (t / "work.yaml").write_text(work)
+            (t / "changed.txt").write_text(changed + "\n")
+            return subprocess.run([sys.executable, str(t / "s.py"), "abc123", merged,
+                                   str(t / "join.txt"), str(t / "work.yaml"),
+                                   str(t / "delegations.txt"), str(t / "changed.txt")],
+                                  capture_output=True, text=True).stdout
+        for merged, by, work, changed, want, why in (
+                ("0", ["Admin"], additive, "a.md", "", "a join by an admin"),
+                ("0", ["Dep"], additive, "a.md", "", "a join by a deputy"),
+                ("0", ["Del"], additive, "a.md", "", "a join by a delegate"),
+                ("0", ["Junior"], additive, "a.md", "as a join by Junior", "a join by a contributor"),
+                ("0", [], additive, "a.md", "outside a pull request", "a merge with no trailer"),
+                ("0", ["Admin"], "people: [Admin]\n", "a.md", "outside a pull request",
+                 "a trailer outside the additive mode"),
+                ("?", [], additive, "a.md", "did not say", "GitHub giving no answer"),
+                ("?", ["Admin"], additive, "a.md", "", "GitHub giving no answer on an admin's join"),
+                ("?", ["Junior"], additive, "a.md", "as a join by Junior",
+                 "GitHub giving no answer on a contributor's join"),
+                ("1", [], additive, "a.md", "through a pull request, not a join",
+                 "a pull request in the additive mode"),
+                ("1", [], "people: [Admin]\n", "a.md", "", "a pull request outside the mode"),
+                ("1", ["Admin"], additive, "a.md", "", "a join GitHub ties to a pull request"),
+                ("0", ["Dep"], additive, ".framework/work.yaml", "by an admin only",
+                 "a deputy's join that changes the roles"),
+                ("0", ["Admin"], additive, ".framework/work.yaml", "", "an admin's join that "
+                 "changes the roles")):
+            out = job(merged, by, work, changed)
+            if (want and want not in out) or (not want and out.strip()):
+                problems.append(f"{why}: the job said {out.strip()!r}")
+        # The trailer is below the tip when the main line was brought in after `--finish`, and
+        # the roles are the first parent's: a join that names its author an admin does not
+        # authorize itself.
+        repo = t / "docs"
+        _g(t, "init", "-q", "-b", "main", str(repo))
+        (repo / ".framework").mkdir()
+        (repo / ".framework" / "work.yaml").write_text(additive)
+        _commit_all(repo, "start")
+        _g(repo, "checkout", "-q", "-b", "join")
+        (repo / ".framework" / "work.yaml").write_text(additive.replace("admins: [Admin]",
+                                                                        "admins: [Junior]"))
+        _commit_all(repo, "finish\n\nRicongiungimento-di: Junior")
+        _g(repo, "commit", "-q", "--allow-empty", "-m", "after the finish")
+        _g(repo, "checkout", "-q", "main")
+        _g(repo, "merge", "-q", "--no-ff", "-m", "join", "join")
+        sha = _g(repo, "rev-parse", "HEAD").stdout.strip()
+        start = run.index('git -C docs show "$parent:.framework/work.yaml"')
+        roles = run[start:run.index('> "/tmp/work-$sha.yaml"', start)]
+        start = run.index('git -C docs diff --name-only "$parent" "$sha"')
+        diff = run[start:run.index('> "/tmp/changed-$sha.txt"', start)]
+        found, read, changed = t / "found.txt", t / "first-parent.yaml", t / "job-changed.txt"
+        env = {**os.environ, **_WORK_ENV, "sha": sha, "parent": f"{sha}^1"}
+        r = subprocess.run(["bash", "-c", trailers + f' > "{found}" && ' + roles + f' > "{read}" '
+                            f'&& ' + diff + f' > "{changed}"'],
+                           cwd=t, capture_output=True, text=True, env=env)
+        if r.returncode or "Junior" not in (found.read_text() if found.exists() else ""):
+            problems.append(f"the trailer of a commit below the tip of the join was not found: "
+                            f"{r.stderr[-200:]!r}")
+        elif "admins: [Admin]" not in read.read_text():
+            problems.append("the main-line job read the roles from the merge, not from its first "
+                            "parent: a join can make its author an admin")
+        else:
+            out = subprocess.run([sys.executable, str(t / "s.py"), sha, "0", str(found),
+                                  str(read), str(t / "delegations.txt"), str(changed)],
+                                 capture_output=True, text=True).stdout
+            if "as a join by Junior" not in out or "by an admin only" not in out:
+                problems.append(f"a join by somebody who made themselves an admin in it, changing "
+                                f"the roles, went unsaid: {out.strip()!r}")
+    return problems
+
+
 @check("BR003 asks that the reservation be this branch's")
 def _branch_reservations_are_owned():
     problems = []

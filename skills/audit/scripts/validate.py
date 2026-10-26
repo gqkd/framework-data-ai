@@ -332,8 +332,9 @@ def load_work(root: Path, report: "Report") -> dict | None:
     """`.framework/work.yaml`, the declaration that documentation is written on branches.
 
     None where the file does not exist, which is every project that does not work that way.
-    A key this version does not read is `WK001` and not a stop: the file is new, read by
-    nothing older than 4.8.0, and the version that adds the next key must not stop this one.
+    A key, a value or a threshold this version does not read is `WK001` and not a stop: the
+    file is new, read by nothing older than 4.8.0, and the version that adds the next one must
+    not stop this one.
     What does not parse still stops, because a declaration that cannot be read is the one
     that would leave `BR003` silent and read as satisfied.
     """
@@ -346,16 +347,68 @@ def load_work(root: Path, report: "Report") -> dict | None:
         sys.exit(f"{path}: does not parse as YAML.\n{str(e).strip()}")
     if not isinstance(data, dict):
         sys.exit(f"{path}: the top level has to be a mapping")
-    people = data.get("people")
-    if people is not None and not isinstance(people, (dict, list)):
-        sys.exit(f"{path}: `people` is a mapping or a list of names, and a single value would "
-                 "read as no list at all -- anybody accepted as `--who`.")
+    for key in ("people", "admins", "deputies"):
+        if data.get(key) is not None and not isinstance(data[key], (dict, list)):
+            sys.exit(f"{path}: `{key}` is a mapping or a list of names, and a single value would "
+                     "read as no list at all.")
+    # A value this version does not know is a warning, as a key is: the next version may add
+    # one, and must not stop this one.
+    for key, known in (("mode", ("additive",)), ("rereading", ("optional", "required"))):
+        if data.get(key) is not None and data[key] not in known:
+            report.add("WK001", _branches.WORK,
+                       f"`{key}: {data[key]}` is not a value this version reads "
+                       f"({', '.join(known)}), so it does nothing here. A newer version may "
+                       "read it; until the project declares that version, it is only text.")
+    thresholds = data.get("thresholds")
+    if thresholds is not None and not isinstance(thresholds, dict):
+        sys.exit(f"{path}: `thresholds` is a mapping: {', '.join(_branches.THRESHOLDS)}.")
+    for key, value in (thresholds or {}).items():
+        if str(key) not in _branches.THRESHOLDS:
+            report.add("WK001", _branches.WORK,
+                       f"`thresholds.{key}` is not a threshold this version reads, so it does "
+                       f"nothing here. The thresholds: {', '.join(_branches.THRESHOLDS)}.")
+        elif isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            sys.exit(f"{path}: `thresholds.{key}` is a whole number from 1 up, not {value!r}.")
     for key in sorted(set(map(str, data)) - _branches.WORK_KEYS):
         report.add("WK001", _branches.WORK,
                    f"`{key}` is not a key this version reads, so it does nothing here. This "
                    f"file holds: {', '.join(sorted(_branches.WORK_KEYS))}. A newer version may "
                    "read it; until the project declares that version, it is only text.")
+    check_roles(data, report)
     return data
+
+
+def check_roles(work: dict, report: "Report") -> None:
+    """`WK002`: who decides, as `.framework/work.yaml` says it, holds together.
+
+    In the additive mode only the admins, the deputies and whoever holds a delegation decide,
+    and `work.py join` refuses where nobody is named: a mode with nobody to decide is a mode in
+    which everything waits. Outside the mode the deputies, the rereading and the thresholds do
+    nothing, and a file that sets them reads as though they did.
+    """
+    people = _branches.names(work.get("people"))
+    admins, deputies = _branches.names(work.get("admins")), _branches.names(work.get("deputies"))
+    stray = sorted((admins | deputies) - people) if people else []
+    if stray:
+        report.add("WK002", _branches.WORK,
+                   f"{', '.join(stray)} {'is' if len(stray) == 1 else 'are'} among the admins or "
+                   "the deputies and not among the people: `--who` accepts only the people, so "
+                   "a role nobody can act under is no role.")
+    if work.get("mode") == "additive":
+        if not people:
+            report.add("WK002", _branches.WORK,
+                       "`mode: additive` with no `people`: anybody is accepted as `--who`, and "
+                       "a join, which names who made it, refuses to run.")
+        if not admins:
+            report.add("WK002", _branches.WORK,
+                       "`mode: additive` with no `admins`: nobody decides an open decision, "
+                       "approves a change or joins the threads, and everything waits.")
+    else:
+        idle = [k for k in ("deputies", "rereading", "thresholds") if work.get(k) is not None]
+        if idle:
+            report.add("WK002", _branches.WORK,
+                       f"{', '.join(f'`{k}`' for k in idle)} without `mode: additive`: read only "
+                       "in the additive mode, so here they do nothing.")
 
 
 # WHERE A PROJECT SAYS "I LOOKED AT THIS FINDING AND DECIDED", AND WHY IT IS NOT IN
@@ -469,7 +522,8 @@ def apply_annotations(report: Report, rows: list[dict], require_all: bool,
         if not matched and str(row["code"]).startswith(unread):
             # NOT LOOKED FOR, WHICH IS NOT REPAIRED. The exchange is on the machines where
             # sessions work and nowhere else, so an annotation written there about it would
-            # read as obsolete on every CI run, where nothing about the exchange runs.
+            # read as obsolete on every CI run, where nothing about the exchange runs but
+            # `EXC008`, which reads the declared value and is looked for everywhere.
             continue
         if not matched:
             if report.level(row["code"]) == RETIRED:
@@ -3911,16 +3965,24 @@ def check_roadmap(arts: list[Artifact], report: Report) -> None:
 
 def check_exchange(root: Path, declared: str | None, place: Path | None, arts: list[Artifact],
                    references: ReferenceIndex, repo: "Repository | None", report: Report) -> str:
-    """`EXC001`-`EXC007`, on the exchange `.framework/sessions.yaml` declares, where it is here.
+    """`EXC001`-`EXC008`, on the exchange `.framework/sessions.yaml` declares, where it is here.
 
-    WHERE IT IS NOT, NOTHING RUNS AND NOTHING IS REPORTED. The exchange lives beside the clone on
-    the machines where sessions work, and nowhere else: a CI runner has the repository and not
-    the place beside it. A finding for its absence would sound on every push, about a directory
-    that is supposed to be absent there. The report says so in a line, as it does for a
-    directory outside any history, and the JSON says which of the three it was.
+    WHERE IT IS NOT, NOTHING RUNS AND NOTHING IS REPORTED but `EXC008`, which reads the value
+    alone. The exchange lives beside the clone on the machines where sessions work, and nowhere
+    else: a CI runner has the repository and not the place beside it. A finding for its absence
+    would sound on every push, about a directory that is supposed to be absent there. The
+    report says so in a line, as it does for a directory outside any history, and the JSON says
+    which of the three it was.
     """
     if place is None:
         return "not-declared"
+    if place.resolve() != (projects_folder(root) / "_scambio").resolve():
+        report.add("EXC008", SESSIONS,
+                   f"`exchange: {declared}` is not `_scambio` beside the repository. The "
+                   "plugin's write guard lets a code session, which reads no `sessions.yaml`, "
+                   "write only `_scambio` beside its repository: the deliveries of code "
+                   "sessions would stop at it, unless every person adds this place to the "
+                   "plugin option `allowed_dirs`. `references/workstation.md` fixes the name.")
     if not place.is_dir():
         return "absent"
     ex = _exchange.read(place, declared, report)
@@ -3936,7 +3998,7 @@ def check_exchange(root: Path, declared: str | None, place: Path | None, arts: l
 
 def check_branch(root: Path, base: str, arts: list[Artifact], registry: dict, scan: dict,
                  repo: "Repository | None", work: dict | None, report: Report) -> None:
-    """What this branch adds, against the main line it will land on: `BR001`-`BR003`.
+    """What this branch adds, against the main line it will land on: `BR001`-`BR004`.
 
     THREE TREES, OR MORE. The working tree, which is the branch as it stands; the tip of `base`,
     which is what it will meet; and every best common ancestor of the two, which together say
@@ -3962,7 +4024,8 @@ def check_branch(root: Path, base: str, arts: list[Artifact], registry: dict, sc
         # another line this branch also holds -- an earlier commit of the branch landed by a pull
         # request, then the main line merged in -- there are two, and either alone would count
         # what the other declares as created here.
-        start = _branches.shared(root, tip, "HEAD", registry, scan)
+        bases, before = _branches.base_views(root, tip, "HEAD", registry, scan)
+        start = _branches.declared_by(before)
     except _branches.BranchError as e:
         refuse(f"--base {base}: {e}. Name a ref this clone has -- `origin/main` after a "
                "fetch -- and a history that holds both it and HEAD. Nothing was checked.")
@@ -4011,6 +4074,8 @@ def check_branch(root: Path, base: str, arts: list[Artifact], registry: dict, sc
                        "one it replaces, or derives from a new entry. Which of the two holds "
                        "is for whoever decides that matter, not for the branch.")
 
+    check_approvers(root, bases, before, head, report)
+
     if work is None:
         return
     # Whose branch this is, for the reservations: the branch checked out, or in a pull request
@@ -4044,6 +4109,53 @@ def check_branch(root: Path, base: str, arts: list[Artifact], registry: dict, sc
                        "else's, or nobody's: the likeliest way two branches meet on one number "
                        "is the second writing the next free one while the first holds it. "
                        "Reserve a number of your own, from this branch, and renumber.")
+
+
+# What a decision or an approval leaves in the front matter: a `DEC` accepted, a `CHG` approved
+# or any state past the approval, which a branch can reach without stopping at `approved`.
+DECIDED = {"decision-record": {"accepted"},
+           "change-contract": {"approved", "implemented", "verified", "rolled-back"}}
+
+
+def check_approvers(root: Path, bases: list[str], before: list["_branches.View"],
+                    head: "_branches.View", report: Report) -> None:
+    """`BR004`: in the additive mode, a decision or an approval this branch brings names in
+    `approvers` somebody who decides.
+
+    Only the decisions the branch brings to `accepted` and the changes it brings to `approved`
+    or past it, against every point where it left the main line: one already there is not read
+    again. The mode and the roles are those of `.framework/work.yaml` at those points, and the
+    delegations those this clone holds now, so that a join which changes `admins` does not
+    authorize itself. Declared, not proven, like `--who`: a warning, which a person reads.
+    """
+    try:
+        works = [_branches.work_at(root, b) for b in bases]
+        if not any(w.get("mode") == "additive" for w in works):
+            return
+        delegated = _branches.delegates(root)
+    except _branches.BranchError as e:
+        refuse(f"--base: {e}. Nothing was checked.")
+        return
+    deciders = set().union(*(_branches.deciders(w, delegated) for w in works))
+    for a in sorted(head.arts, key=lambda a: a.rel):
+        decided = DECIDED.get(a.type, set())
+        status = a.meta.get("status")
+        if status not in decided:
+            continue
+        rel = a.rel.replace("\\", "/")
+        if any(any(b.rel.replace("\\", "/") == rel and b.meta.get("status") in decided
+                   for b in view.arts) for view in before):
+            continue
+        named = {str(n) for n in as_list(a.meta.get("approvers"))}
+        if named & deciders:
+            continue
+        report.add("BR004", a.rel,
+                   f"{a.id or a.rel} is `{status}` on this branch, and its `approvers` "
+                   f"({', '.join(sorted(named)) or 'nobody'}) names none of those who decide "
+                   f"in the additive mode where it left the main line: "
+                   f"{', '.join(sorted(deciders)) or 'nobody is named'}. Only an admin, a "
+                   "deputy or a delegate accepts a decision or approves a change; a contributor "
+                   "leaves it `proposed` or `draft`, for the join.")
 
 
 def projects_folder(root: Path) -> Path:
@@ -4465,7 +4577,8 @@ def main() -> int:
     # cannot be joined until every check has finished producing them.
     if annotations_rel is not None:
         apply_annotations(report, annotations, require_all, annotations_rel,
-                          unread=("EXC",) if exchange != "read" else ())
+                          unread=tuple(f"EXC00{n}" for n in range(1, 8))
+                          if exchange != "read" else ())
     if repo is not None:
         repo.close()
 

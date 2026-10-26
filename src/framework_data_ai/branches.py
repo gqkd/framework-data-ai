@@ -17,10 +17,13 @@ the person's to approve.
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+
+import yaml
 
 from .artifacts import Artifact, as_list, as_map, discover
 from .references import ReferenceIndex
@@ -33,8 +36,16 @@ from .references import ReferenceIndex
 WORK = ".framework/work.yaml"
 
 # The keys this version reads. Unlike `sessions.yaml`, an unknown key is a warning and not a
-# stop, so that the next version can add one without stopping this one.
-WORK_KEYS = {"branch_prefix", "people"}
+# stop, so that the next version can add one without stopping this one. `mode: additive` is the
+# switch of the additive mode; `admins` and `deputies` say who decides in it, `rereading`
+# whether a join waits for an attested reading, `thresholds` when the to-do suggests a join.
+# Only `mode` and `admins` mean anything without the mode: the rest is read under it.
+WORK_KEYS = {"branch_prefix", "people", "mode", "admins", "deputies", "rereading", "thresholds"}
+
+# What `thresholds:` holds, and the value where the project gives none: low, so that joins come
+# often and each touches few documents, and a thread stays small.
+THRESHOLDS = {"items_per_thread": 5, "effects_per_section": 3, "ready_days": 3, "od_affects": 3,
+              "unread_days": 15}
 
 # Refs: a claim on an element, and a reserved number. Tags because a push of a tag that
 # exists already is rejected, on every host, without a paid plan: the one atomic operation
@@ -43,6 +54,9 @@ WORK_KEYS = {"branch_prefix", "people"}
 # object on the remote can be compared with the one made here.
 CLAIM_REF = "refs/tags/claim/"
 RESERVED_REF = "refs/tags/id/"
+# A delegation: who stands in for an admin until it is revoked, named by a slug of the name,
+# since a ref carries no spaces and the names in `people` do. The whole name is in the message.
+DELEGATION_REF = "refs/tags/delega/"
 
 
 class BranchError(RuntimeError):
@@ -80,6 +94,42 @@ def resolve(root: Path, ref: str) -> str:
     return str(git(root, "rev-parse", "--verify", "-q", f"{ref}^{{commit}}")).strip()
 
 
+def names(value) -> set[str]:
+    """The names `people`, `admins` or `deputies` holds: a list, or a mapping keyed by name."""
+    if isinstance(value, dict):
+        return {str(k) for k in value}
+    if isinstance(value, list):
+        return {str(n) for n in value}
+    return set()
+
+
+def slug(name: str) -> str:
+    """A name as a ref can carry it."""
+    return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+
+
+def delegates(root: Path) -> set[str]:
+    """Whoever the delegations this clone holds stand in, as `work.py delegate` named them."""
+    listed = str(git(root, "for-each-ref", "--format=%(contents)%00", DELEGATION_REF.rstrip("/")))
+    return {f["to"] for f in map(message_fields, listed.split("\0")) if f.get("to")}
+
+
+def deciders(work: dict | None, delegated: set[str]) -> set[str]:
+    """Who decides in the additive mode: the admins, the deputies and whoever holds a delegation."""
+    work = work or {}
+    return names(work.get("admins")) | names(work.get("deputies")) | delegated
+
+
+def work_at(root: Path, ref: str) -> dict:
+    """`.framework/work.yaml` as `ref` holds it; empty where it does not, or does not parse."""
+    try:
+        text = str(git(root, "show", f"{ref}:{prefix(root)}{WORK}"))
+        data = yaml.safe_load(text) or {}
+    except (BranchError, yaml.YAMLError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
 def merge_base(root: Path, a: str, b: str) -> str:
     return str(git(root, "merge-base", a, b)).strip()
 
@@ -91,12 +141,21 @@ def merge_bases(root: Path, a: str, b: str) -> list[str]:
     return str(git(root, "merge-base", "--all", a, b)).split()
 
 
+def base_views(root: Path, a: str, b: str, registry: dict,
+               scan: dict) -> tuple[list[str], list["View"]]:
+    """Every common ancestor of `a` and `b`, and what each holds."""
+    bases = merge_bases(root, a, b)
+    return bases, [View.of(snapshot(root, base, registry, scan), registry) for base in bases]
+
+
+def declared_by(views: list["View"]) -> set[tuple[str, str]]:
+    """What any of the common ancestors declares: what neither side created."""
+    return set().union(*(view.ids() for view in views))
+
+
 def shared(root: Path, a: str, b: str, registry: dict, scan: dict) -> set[tuple[str, str]]:
     """What any common ancestor of `a` and `b` declares: what neither of them created."""
-    out: set[tuple[str, str]] = set()
-    for base in merge_bases(root, a, b):
-        out |= View.of(snapshot(root, base, registry, scan), registry).ids()
-    return out
+    return declared_by(base_views(root, a, b, registry, scan)[1])
 
 
 def snapshot(root: Path, ref: str, registry: dict, scan: dict) -> list[Artifact]:
@@ -234,11 +293,11 @@ def touched(head: View, before: View) -> dict[str, list[str]]:
 
 
 def message_fields(text: str) -> dict:
-    """`who`, `branch` and `when` out of the message `work.py` writes into a claim or a
-    reservation."""
+    """`who`, `branch`, `when` and `to` out of the message `work.py` writes into a claim, a
+    reservation or a delegation."""
     out = {}
     for line in text.splitlines():
         key, sep, value = line.partition(": ")
-        if sep and key in ("who", "branch", "when"):
+        if sep and key in ("who", "branch", "when", "to"):
             out[key] = value.strip()
     return out

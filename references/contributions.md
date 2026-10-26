@@ -194,9 +194,10 @@ has every person add it to `allowed_dirs`. The guard only stops: Claude Code sti
 a write outside the session's folder, and how a project lets its sessions write in the
 exchange without asking (a permission, an added directory) is the project's. The framework
 never relies on material copied by hand out of a session's scratchpad. On a machine where the
-place does not exist, a CI runner being the ordinary case, nothing about it is checked and
-the report says so in a line; an annotation in `.framework/expected-findings.yaml` about the
-exchange is not reported as obsolete there, since nothing looked.
+place does not exist, a CI runner being the ordinary case, nothing about it is checked but its
+name (`EXC008`), and the report says so in a line; an annotation in
+`.framework/expected-findings.yaml` about the exchange, `EXC008` aside, is not reported as
+obsolete there, since nothing looked.
 
 ### One folder per element, with fixed names
 

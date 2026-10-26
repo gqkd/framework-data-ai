@@ -3,8 +3,9 @@
 #
 # Copy to `.github/workflows/branches.yml` in a project that declares `.framework/work.yaml`
 # and writes its documentation through `skills/audit/scripts/work.py`: one piece of work, one
-# branch, one pull request. It replaces `pull-request.yml`, whose job is its first one: copy one
-# or the other, not both.
+# branch, one pull request -- or, in the additive mode, one thread per branch and a join that
+# lands them on the main line by a local merge. It replaces `pull-request.yml`, whose job is
+# its first one: copy one or the other, not both.
 #
 # EVERY PULL REQUEST SAYS WHAT AUTHORIZES IT. The pull request context below runs `PR001`: a
 # documentation pull request that implements no `CHG` carries `no-chg: <reason>` in its body,
@@ -15,8 +16,13 @@
 # merge from the button of a pull request that is not up to date. What can be had for nothing
 # is to see it within minutes: the pull request carries a red check, and a commit that reached
 # the main line outside a pull request, or a merge that produced text neither side had, opens
-# an issue. Where the plan has branch protection, make the `pull-request` job a required check
-# as well; this file stays the same.
+# an issue. In the additive mode so does whatever reached the main line other than by the join
+# of somebody who decides -- a pull request included -- and rules changed by somebody who is
+# not an admin. Where the plan has branch protection, make the `pull-request` job a required
+# check as well; this file stays the same. In the additive mode a join reaches the main line by
+# a local merge, with no pull request, and a required check refuses its push: on a protected
+# main line either the check is not required, or those who join may bypass the protection.
+# The framework does not choose between the two.
 #
 # THE PROJECT AND THE FRAMEWORK ARE CHECKED OUT SIDE BY SIDE, in `docs/` and
 # `framework-data-ai/`, as they sit on a person's machine. Inside the project the validator would
@@ -71,7 +77,7 @@ jobs:
 
       - run: python -m pip install -r framework-data-ai/requirements.txt -c framework-data-ai/constraints.txt
 
-      - name: what this branch adds against the main line (BR001-BR003)
+      - name: what this branch adds against the main line (BR001-BR004)
         env:
           BASE_REF: ${{ github.base_ref }}
         run: |
@@ -150,18 +156,79 @@ jobs:
             commits=""
           fi
           V=framework-data-ai/skills/audit/scripts/validate.py
+          # Who stands in for an admin now: the delegations `work.py delegate` pushed.
+          git -C docs for-each-ref refs/tags/delega/ --format='%(contents)' > /tmp/delegations.txt || true
           for sha in $commits; do
             if ! merged=$(gh api "repos/$REPO/commits/$sha/pulls" \
                             --jq '[.[] | select(.merged_at != null)] | length'); then
-              echo "- \`$sha\`: GitHub did not say which pull request it came from; look at it by hand." >> /tmp/alerts.md
-            elif [ "$merged" = "0" ]; then
-              echo "- \`$sha\` reached the main line outside a pull request: nobody reviewed it, and nothing compared it with the main line before it landed." >> /tmp/alerts.md
+              merged="?"
             fi
+            parent=$(git -C docs rev-parse -q --verify "$sha^1" || true)
+            # In the additive mode a join lands by a local merge, not a pull request, and says so
+            # in a trailer of the commit `work.py join --finish` makes: reached from the merge's
+            # second parent and not from its first, since a commit added after it -- the main
+            # line brought in again -- leaves the trailer below the tip. The roles are read from
+            # the first parent: from the merge itself, a join that changes `admins` would
+            # authorize itself.
+            : > "/tmp/join-$sha.txt"; : > "/tmp/work-$sha.yaml"; : > "/tmp/changed-$sha.txt"
+            if git -C docs rev-parse -q --verify "$sha^2" > /dev/null; then
+              git -C docs log --format='%(trailers:key=Ricongiungimento-di,valueonly)' \
+                "$sha^1..$sha^2" > "/tmp/join-$sha.txt" || true
+            fi
+            if [ -n "$parent" ]; then
+              git -C docs show "$parent:.framework/work.yaml" > "/tmp/work-$sha.yaml" 2> /dev/null || true
+              git -C docs diff --name-only "$parent" "$sha" > "/tmp/changed-$sha.txt" || true
+            fi
+            python3 - "$sha" "$merged" "/tmp/join-$sha.txt" "/tmp/work-$sha.yaml" \
+              /tmp/delegations.txt "/tmp/changed-$sha.txt" >> /tmp/alerts.md <<'JOIN'
+          import sys
+          import yaml
+          sha, merged, joins, work, delegations, changed = sys.argv[1:7]
+          def lines(path):
+              try:
+                  return [l.strip() for l in open(path, encoding="utf-8") if l.strip()]
+              except OSError:
+                  return []
+          def names(value):
+              return {str(n) for n in value} if isinstance(value, (dict, list)) else set()
+          try:
+              declared = yaml.safe_load(open(work, encoding="utf-8")) or {}
+          except (OSError, yaml.YAMLError):
+              declared = {}
+          declared = declared if isinstance(declared, dict) else {}
+          additive = declared.get("mode") == "additive"
+          admins = names(declared.get("admins"))
+          deciders = admins | names(declared.get("deputies")) | {
+              l[3:].strip() for l in lines(delegations) if l.startswith("to:")}
+          by = lines(joins)
+          joined = additive and bool(set(by) & deciders)
+          outside = (f"- `{sha}` reached the main line outside a pull request: nobody reviewed "
+                     "it, and nothing compared it with the main line before it landed.")
+          if joined:
+              pass
+          elif additive and by:
+              print(f"- `{sha}` reached the main line as a join by {', '.join(by)}, who is not "
+                    "an admin, a deputy or a delegate in the `.framework/work.yaml` of the main "
+                    "line before it.")
+          elif merged == "?":
+              print(f"- `{sha}`: GitHub did not say which pull request it came from; look at it by hand.")
+          elif additive and merged != "0":
+              print(f"- `{sha}` reached the main line through a pull request, not a join: in the "
+                    "additive mode the main line changes at a join, where an admin or whoever "
+                    "stands in reads what each thread brings.")
+          elif merged == "0":
+              print(outside)
+          rules = sorted(set(lines(changed)) & {".framework/work.yaml", "framework.yaml",
+                                                ".framework/expected-findings.yaml"})
+          if additive and by and rules and not set(by) & admins:
+              print(f"- `{sha}` changes {', '.join(rules)} in a join by {', '.join(by)}, who is not "
+                    "an admin: the people and their roles, the framework's version and the "
+                    "expected findings are changed by an admin only.")
+          JOIN
             # The tree after this commit, validated whole and against the main line before it,
             # and the tree before it, so that only what this commit brought is said: a new error
             # of the combined tree, a merge that produced text nobody read (`LC006` naming this
             # commit), a decision closing an entry already closed.
-            parent=$(git -C docs rev-parse -q --verify "$sha^1" || true)
             if ! git -C docs worktree add -q --detach "/tmp/at-$sha" "$sha"; then
               echo "- \`$sha\`: could not be checked out to be validated." >> /tmp/alerts.md
               continue
@@ -218,7 +285,7 @@ jobs:
             echo
             cat /tmp/alerts.md
             echo
-            echo "Nothing was reverted. A commit outside a pull request is reviewed now; a merge that produced text is reread, and its living documents attested, in a new piece of work; two decisions on one entry are put side by side by whoever decides that matter."
+            echo "Nothing was reverted. A commit outside a pull request is reviewed now; a merge that produced text is reread, and its living documents attested, in a new piece of work; two decisions on one entry are put side by side by whoever decides that matter. In the additive mode, what reached the main line other than by a join of somebody who decides -- or rules changed by somebody who is not an admin -- is read by an admin, who keeps it, saying why, or brings it back through a join."
           } > /tmp/issue.md
           title="Main line: reached without being seen"
           open=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "in:title \"$title\"" \

@@ -8,10 +8,11 @@ plugin, not the version a project pins.
 ## What to install
 
 - **Claude Code**, with the framework installed as a plugin at the version the project pins
-  in `.framework/framework.yaml`. The README says how to install it and why a change is
-  picked up by reinstalling rather than updating. The symlink into `~/.claude/skills/` the
-  README also describes brings the skills and not the hooks: no guard. Tested with Claude
-  Code 2.1.310 on Linux; the earliest version that works is not known.
+  in `framework.yaml` at the root of the documentation. The README says how to install it and
+  why a change is picked up by reinstalling rather than updating. The symlink into
+  `~/.claude/skills/` the README also describes brings the skills and not the hooks: no
+  guard. Tested with Claude Code 2.1.310 on Linux; the earliest version that works is not
+  known.
 - **Python 3** with the framework's dependencies, from the framework's directory:
   `python3 -m pip install -r requirements.txt -c constraints.txt`. The write guard runs as
   `python3 -I` and needs nothing else: with no `python3` on the PATH the hook fails, and a
