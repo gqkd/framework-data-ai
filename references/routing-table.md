@@ -60,7 +60,8 @@ it. If that column is empty for every row, the classification is not finished.
 ## 2 · Cascade
 
 Writing in one place is not enough: consistency lives in the linked writes. These are
-mandatory, and the validator verifies some of them.
+mandatory, and the validator verifies some of them. In the additive mode a write this table
+obliges into a living document is a pending effect, not an edit: `references/additive.md`.
 
 | If you write | You must also |
 |---|---|
@@ -90,6 +91,9 @@ A correction is the most delicate operation, because the class of the document d
 | **living** | edit in place. `last_review` and `review_scope` are proposed and not written: they attest a reading, and the proposal carries the sentence for `review_scope` (what the reading covered, what it did not). The person writes both with `skills/audit/scripts/attest.py`, which stamps the instant it runs at, with its offset |
 | **immutable** | **never edit.** Create a new document with `supersedes`, and move the old one to `status: superseded` |
 | **append-only** | **never rewrite a line.** Add a linked event (`ANA-NNN` on `SIG-NNN`) |
+
+In the additive mode a living document is edited in place only on the branch of a join:
+anywhere else the correction is a pending effect, `references/additive.md`.
 
 On immutables the temptation is strong and worth naming: if a `PRB` turns out to be wrong,
 the repair is not to edit it. That document records what we believed then, and erasing it

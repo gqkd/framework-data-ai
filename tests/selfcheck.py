@@ -9292,7 +9292,7 @@ def _threads_write_by_adding():
     return problems
 
 
-@check("in the additive mode sync keeps the keys both sides added to one map, puts back what a thread only added, and a parking branch writes parking lines alone")
+@check("in the additive mode sync keeps the keys both sides added to one map, puts back what a thread only added, and a parking branch is checked as a thread is")
 def _sync_additive_rules():
     # Two rules `sync` has only in the additive mode, and only for the main line coming in: keys
     # both sides added to one map of the front matter are all kept, and lines a thread only
@@ -9419,7 +9419,7 @@ def _sync_additive_rules():
             problems.append(f"sync in the additive mode left two entries added at one place of "
                             f"entries for a person (exit {rc}): {out[-300:]!r}")
 
-        # BR005 on a parking branch: lines added to the body of an open register, and nothing else.
+        # BR005 on a parking branch, as on a thread: what is added passes, a rewrite does not.
         repo = _Repo(tmp / "park")
         repo.write(".framework/work.yaml", roles)
         repo.write(".framework/sessions.yaml", "exchange: ../_scambio\n")
@@ -9434,8 +9434,10 @@ def _sync_additive_rules():
                 ("a reading attested", base.replace("last_review: 2026-06-01 09:00",
                                                     "last_review: 2026-06-02 09:00"), None, 0),
                 ("a state in the front matter", base.replace("    status: open", "    status: parked"),
-                 None, 1),
-                ("a new file", base, ("decisions/DEC-001.md", _decision("DEC-001", "OD-001")), 1)):
+                 None, 0),
+                ("a new file", base, ("decisions/DEC-001.md", _decision("DEC-001", "OD-001")), 0),
+                ("a line of the body rewritten", base.replace("- first line\n", "- first line, rewritten\n"),
+                 None, 1)):
             repo.write("OPEN.md", body)
             if extra:
                 repo.write(*extra)
@@ -9446,12 +9448,13 @@ def _sync_additive_rules():
                 problems.append(f"{name} on a parking branch: {len(got)} BR005, expected {want}")
             if extra:
                 (repo.path / extra[0]).unlink()
-        (repo.path / "decisions" / "DEC-002.md").unlink()
-        repo.commit("a decision deleted", "2026-06-02T10:00:00+02:00")
+        repo.write("OPEN.md", base)
+        (repo.path / "OPEN.md").unlink()
+        repo.commit("a register deleted", "2026-06-02T10:00:00+02:00")
         got = [f["path"] for f in (repo.validate("--base", "main")[1] or {}).get("findings", [])
                if f["code"] == "BR005"]
-        if "decisions/DEC-002.md" not in got:
-            problems.append(f"a decision deleted on a parking branch gave no BR005: {got}")
+        if "OPEN.md" not in got:
+            problems.append(f"a living document deleted on a parking branch gave no BR005: {got}")
     return problems
 
 
@@ -9804,6 +9807,14 @@ def _join_lands_threads():
                 # Rewritten, not added: an effect, and `BR005` on the branch, which the join shows.
                 text = text.replace("### KI-002 · ki-002 title", "### KI-002 · renamed by hand", 1)
             reg.write_text(text + f"### {new_ki.group(1)} · new\n\n")
+            if entry == "KI-002":
+                # A decision a contributor prepares, proposed, for the admin to accept at the join.
+                rc, out = _work(tree, "reserve", "DEC", "--who", "Owner")
+                dec = re.search(r"Reserved: (DEC-\d+)", out)
+                if dec:
+                    (tree / "decisions").mkdir(exist_ok=True)
+                    (tree / "decisions" / f"{dec.group(1)}.md").write_text(
+                        _decision(dec.group(1), "OD-005", status="proposed", products="[a]"))
             (tree / "_filoni" / thread).mkdir(parents=True)
             # The thread with the decision writes also on KI-002's anchor: outside its forecast,
             # and inside the other thread's.
@@ -9833,7 +9844,8 @@ def _join_lands_threads():
                             f"(exit {rc}): {out[-400:]!r}")
         if "outside the forecast -- work/a-ki-002 forecast it" not in out \
                 or "KI-002 closed by its row, not by a change" not in out \
-                or "BR005 products/a/OPEN.md" not in out:
+                or "BR005 products/a/OPEN.md" not in out \
+                or not re.search(r"DEC-\d+ proposed: accept it", out):
             problems.append(f"before merging, the join did not show an effect outside the forecast, "
                             f"a KI closed without a change, or BR005 on a branch: {out[:900]!r}")
         # A thread that moves after the join merged it is kept, with its claims.
@@ -10168,7 +10180,8 @@ def _doctor_reads_a_machine():
 
         env = {"PATH": f"{bin_}{os.pathsep}{os.environ.get('PATH', '')}",
                "CLAUDE_CONFIG_DIR": str(config)}
-        good = {"sandbox": {"enabled": True, "allowUnsandboxedCommands": False},
+        good = {"sandbox": {"enabled": True, "allowUnsandboxedCommands": False,
+                            "failIfUnavailable": True},
                 "permissions": {"disableBypassPermissionsMode": "disable"}}
         claude(f"framework-data-ai {pin}\\n\\nComponent inventory\\n  Hooks (2)\\n")
         settings(config / "settings.json", good)
@@ -10433,9 +10446,15 @@ def _adopt_writes_the_framework_sections():
     problems = []
     template = (ROOT / migrate.TEMPLATE_REL).read_text(encoding="utf-8")
     marked = {s["id"]: s for s in migrate.sections(template) if s["id"]}
-    if set(marked) != {"review", "exchange"}:
+    if set(marked) != {"review", "exchange", "additive"}:
         problems.append(f"the template marks {sorted(marked)} as the framework's, expected "
-                        "the review and the exchange")
+                        "the review, the exchange and the additive mode")
+    if marked.get("additive", {}).get("requires") != ["additive"]:
+        problems.append("the section on threads and joins does not require the additive mode: "
+                        "--adopt would write it into every project")
+    if "framework-data-ai:critic" in marked.get("additive", {}).get("text", ""):
+        problems.append("the section on threads and joins names the critic: AGENTS.md would "
+                        "name it twice")
     for sid, s in marked.items():
         left = set(re.findall(r"\b[A-Z]+_[A-Z_]+\b", migrate.render(s["text"], None)))
         if left - set(migrate.PLACEHOLDERS):
@@ -10480,9 +10499,9 @@ def _adopt_writes_the_framework_sections():
             listed = {e["id"]: e["action"] for e in json.loads(r.stdout)["agents"]["sections"]}
         except (ValueError, KeyError, TypeError):
             listed = None
-        if listed != {"review": "add", "exchange": "skipped"}:
-            problems.append(f"the report lists {listed}, expected review add and exchange "
-                            f"skipped: {(r.stdout + r.stderr)[-300:]}")
+        if listed != {"review": "add", "exchange": "skipped", "additive": "skipped"}:
+            problems.append(f"the report lists {listed}, expected review add, exchange and "
+                            f"additive skipped: {(r.stdout + r.stderr)[-300:]}")
         if r.returncode != 1:
             problems.append(f"a project on this version with a section to write exits "
                             f"{r.returncode}: 0 says there is nothing to do")
@@ -10520,7 +10539,8 @@ def _adopt_writes_the_framework_sections():
             if must_not in text:
                 problems.append(f"after writing, {must_not.strip()!r} is still in AGENTS.md: a "
                                 "placeholder or an instruction to whoever fills the template")
-        if migrate.section_plan(root, ROOT, None)["sections"]:
+        if [e for e in migrate.section_plan(root, ROOT, None)["sections"]
+                if e["action"] != "skipped"]:
             problems.append("a second migration plans more work on sections just written")
 
         # The previous template's text with only the placeholders filled: nobody edited it,
@@ -10762,6 +10782,54 @@ def _adopt_writes_the_framework_sections():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+
+@check("--adopt writes the section on threads and joins only where the additive mode is declared")
+def _adopt_additive_section():
+    migrate = _load(ROOT / "skills" / "audit" / "scripts" / "migrate.py", "migrate_additive")
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = _Repo(Path(tmp) / "docs")
+        repo.write("AGENTS.md", _AGENTS_BODY)
+
+        def additive() -> dict:
+            return next((e for e in migrate.section_plan(repo.path, ROOT, None)["sections"]
+                         if e["id"] == "additive"), {})
+        if additive().get("action") != "skipped" or "mode: additive" not in additive().get("at", ""):
+            problems.append(f"without the mode the section is {additive()}: skipped expected")
+        repo.write(".framework/work.yaml", "mode: additive\npeople: [A]\nadmins: [A]\n")
+        a = additive()
+        if a.get("action") != "add" or "_filoni/<thread>/effetti.md" not in a.get("text", "") \
+                or "FRAMEWORK_PATH" in a.get("text", "") or "\n> " in a.get("text", ""):
+            problems.append(f"with the mode the section is not added, filled: {a}")
+        repo.write(".framework/sessions.yaml", "exchange: ../_ours\n")
+        notes = migrate.section_plan(repo.path, ROOT, None).get("notes", [])
+        if not any("code sessions" in n and "../_ours" in n for n in notes):
+            problems.append(f"an exchange other than ../_scambio is not noted: {notes}")
+        # One framework, one path: the section added takes the one the review section carries,
+        # from a copy as the template wrote it or edited, when it leads to a framework.
+        review = next(s for s in migrate.sections((ROOT / migrate.TEMPLATE_REL).read_text(
+            encoding="utf-8")) if s["id"] == "review")
+        filled = migrate.render(review["text"], {"FRAMEWORK_PATH": "../fw-elsewhere"})
+        for name, text in (("a copy", filled),
+                           ("an edited copy", filled.replace("Every plan is reviewed",
+                                                             "Every single plan is reviewed", 1))):
+            repo.write("AGENTS.md", _AGENTS_BODY.replace(
+                "## Mandatory updates", text + "\n\n## Mandatory updates"))
+            notes = migrate.section_plan(repo.path, ROOT, None).get("notes") or []
+            if "../fw-elsewhere/references/additive.md" in additive().get("text", "") \
+                    or not any("../fw-elsewhere" in n for n in notes):
+                problems.append(f"{name}: a path that leads to no framework was carried into the "
+                                f"section added, or not said: {notes}")
+            fw = Path(tmp) / "fw-elsewhere"
+            for rel in ("agents/critic.md", "references/additive.md", "skills/audit/scripts/todo.py"):
+                (fw / rel).parent.mkdir(parents=True, exist_ok=True)
+                (fw / rel).write_text("x\n")
+            if "../fw-elsewhere/references/additive.md" not in additive().get("text", ""):
+                problems.append(f"{name}: the section added names another framework path than "
+                                f"the review section: {additive().get('text', '')[:300]}")
+            (fw / "references" / "additive.md").unlink()
+    return problems
+
 
 @check("contribution authority, artifact resolution and code-observation contracts")
 def _contracts_suite():

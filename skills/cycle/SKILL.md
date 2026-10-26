@@ -119,7 +119,8 @@ came out of it, so a candidate routed back into discovery, and every triage a us
 after reading, left nothing behind at all.
 
 **Propose the classification, do not decide it.** The `ICG` is written `status: proposed`
-and becomes `accepted` when the user says so. A gate crossed automatically is a gate that
+and becomes `accepted` when the user says so -- in the additive mode, when an admin, a deputy or
+a delegate says so: a contributor's stays proposed, and the join shows one accepted on a thread. A gate crossed automatically is a gate that
 does not exist. The two invalidation rows especially: if the hypothesis is invalidated, the
 honest outcome is that this is not a change, it is discovery starting again, and saying so
 is more valuable than producing a change contract that pretends otherwise.
@@ -153,7 +154,10 @@ documents, then ask the user what else.
 works" but what is observed, measured or asserted.
 
 A `CHG` starts at `status: draft` and becomes `approved` when the user approves it. Only an
-approved one authorizes anything.
+approved one authorizes anything. In the additive mode a change stays in draft on the thread:
+an admin, a deputy or a delegate approves it at a join (`references/additive.md`), and its brief
+comes in the round after. It carries `affects` in its front matter, the documents it is expected
+to touch, which put it in a thread; one that touches much is worth proposing to split.
 
 **When it reaches `implemented`**, and the project declares an exchange, read the
 `risorse.md` in its folder and propose removing what is still there, one row at a time with
@@ -174,7 +178,8 @@ say so when the person chooses it.
 `IMP` says how the approved contracts get executed this cycle. It is living and replaced
 each cycle, and it is an output of the reshaping, never an input. Include what is
 **excluded** this cycle: a plan that lists only what is in is one somebody will read as
-open-ended.
+open-ended. In the additive mode `IMP` is a living document like the others: the new plan is a
+pending effect, and reaches the main line at the next join.
 
 ## Step 5b · The stages of the roadmap
 
@@ -207,7 +212,8 @@ says what each field means; what follows is when to touch them.
 
 Every change to `RMP.md` is a change to a living document: the person rereads it and
 attests it, as for any other (`LC006`). That is the reason to touch the stages at the pace
-of the cycles, and not every day.
+of the cycles, and not every day. In the additive mode it is a pending effect, and the stages
+change at a join.
 
 ## Step 6 · The agent brief
 
@@ -222,7 +228,8 @@ Guardrails         CHG-NNN §what-must-not-change
 Context            AGENTS.md authoritative sources, resolved for this product
                    ARC#current, the relevant DC, GLOSSARY
 Done when          CHG-NNN §how-we-know-it-worked
-                   the artifacts in AGENTS.md "mandatory updates" are updated
+                   the artifacts in AGENTS.md "mandatory updates" are updated -- in the
+                   additive mode proposed in documentazione.md (Delivery), not written
                    the validator passes with no errors
                    a new EVR, if an AI component was touched
                    the diff, new files included (git diff --no-index /dev/null <file>,
@@ -249,6 +256,8 @@ path of the folder, because the code session starts in another directory:
 ```
 Delivery           <absolute path>/in-arrivo/CHG-NNN/, under the fixed names: verifica.md,
                    mr.md, mr-link.txt, evidenze/, contribution-policy.json
+                   documentazione.md, in the additive mode: what the documentation should
+                   say after this change, which the thread turns into effects
                    risorse.md: one row per resource, the moment it exists -- type, path or
                    name, the command that removes it; a copy of credentials only in your
                    scratchpad, with the names of its keys and never their values

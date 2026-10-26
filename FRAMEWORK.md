@@ -60,7 +60,7 @@ its content. Every artifact belongs to one class only, declared in the front mat
 
 | Class | Rule | Answers |
 |---|---|---|
-| **Living** (`living`) | One file only, always current, `last_review` field | how it is **now** |
+| **Living** (`living`) | One file only, always current -- in the additive mode, as of the last join, with the effects waiting on it -- `last_review` field | how it is **now** |
 | **Immutable** (`immutable`) | New file every time, never rewritten, it is *superseded* | **why** it was decided this way |
 | **Append-only** (`append-only`) | You add lines, you do not modify the existing ones | what **happened** |
 
@@ -405,7 +405,7 @@ version: 1.0.0
 products: [product-a, product-b]
 scope: architecture             # DEC only
 owners: [first.last]
-approvers: [first.last]
+approvers: [first.last]         # in the additive mode, names of `people` in .framework/work.yaml
 created: 2026-07-27
 last_review: 2026-07-29 18:40 +02:00   # living only; written by attest.py, by a person
 review_scope: the whole file    # living only: what that reading covered
@@ -455,7 +455,9 @@ commit may change without counting is the body of the union the generator writes
 produced a version neither side had counts, because a merge records no reading. `LC008` reports a note
 that is empty on a document attested after its creation, identical across the documents one
 commit attested, or unchanged from the previous attestation of the same document, and says
-of itself that it is a proxy: a sentence written to differ passes it.
+of itself that it is a proxy: a sentence written to differ passes it. In the additive mode
+with `rereading: optional` a join's text owes no reading: `LC006` is quiet about it, and
+`LC009` reminds of it past `thresholds.unread_days` (`references/additive.md`).
 
 ### Traceability chain
 
@@ -672,7 +674,8 @@ completeness of the picture.
    add a linked event.
 5. **Mandatory updates after a change:** you touch the architecture → `ARC` **and** a `DEC`
    · you touch data or schema → the relevant `DC` · you touch an AI component → a new `EVR`
-   · you release → `REL` **and** `RLM`.
+   · you release → `REL` **and** `RLM`. In the additive mode an update to a living document is a
+   pending effect on the thread, written at the join (`references/additive.md`).
 6. **If a fact is not documented, say so.** The absence is information. An agent that fills
    a gap with a plausible assumption does more damage than one that stops.
 

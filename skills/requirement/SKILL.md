@@ -102,6 +102,19 @@ its value depends on the exact time, and a commitment that has just turned out t
 of technical reach**, because it is the most urgent thing in the project the moment it
 surfaces.
 
+## In the additive mode
+
+The classification and the destination do not change; how the write happens does
+(`references/additive.md`). A new entry, a new file, a line in `LOG` or in the parking lot is
+written on the thread's branch as usual when it belongs to that thread's work, a new entry with
+its `affects`; when it does not, on a parking branch the person opens. A new key in another register that is a map -- a
+commitment, a risk, a term, a tool of `STACK`, an increment -- is an effect, as is a change to a
+living document -- a capability in `PBR`, a guarantee in a `DC`, a term in `GLOSSARY` -- and every step
+of the cascade it obliges are pending effects, one per target, proposed in the same table and
+written in `_filoni/<slug>/effetti.md`. A contradiction with a living document is shown as
+always; its resolution is an effect. An entry that would forecast more anchors than
+`thresholds.od_affects` is worth splitting: propose it.
+
 ## What you must not do
 
 **Do not turn a request into a mandate.** "The customer wants Excel export" is a `SIG` in

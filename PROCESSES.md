@@ -30,13 +30,20 @@ The groups in Part II are `GP1` … `GP6`, *group of processes*. The processes a
 - **Business user (`UB`)**: sells, promises, defines outcomes, priorities and commercial
   constraints, and takes product decisions.
 - **Developer (`DEV`)**: implements the `CHG`, opens the pull request, updates the tests and
-  the documents it touches.
+  the documents it touches -- in the additive mode, the pull request of the code: the
+  documentation lands at a join.
 - **Developer admin (`ADMIN`)**: technically and operationally responsible; administers the
   repositories, CI, releases, infrastructure, rollback, the framework and the architectural
   coordination.
 
 One person can hold several roles, but the process has to distinguish which responsibility
 is being exercised.
+
+In the additive mode `.framework/work.yaml` also names `admins`, `deputies` and `people`. Those
+are permissions in the documentation repository -- who decides an open decision, approves a
+change, runs a join -- and not these responsibilities, though the `ADMIN` is usually among the
+`admins`. `references/additive.md` has the table. `P-07` holds for the code; the documentation of
+a thread lands at a join, by the `contribute` skill.
 
 ---
 
@@ -1095,9 +1102,11 @@ agree with, before anything is written or pushed.
 | `business` | P-14 |
 | `presentation` | P-15 |
 | `digest` | P-16 |
+| `contribute` | in the additive mode, the documentation half of P-04, P-06 and P-08 on a thread, and the join |
 
-Three skills arrived after this table was first written, `business`, `presentation` and
-`digest`: P-14 and P-15 have readers nobody else here writes for, the people who steer the
+Four skills arrived after this table was first written, `business`, `presentation`, `digest`
+and `contribute`, the last of which is a way of working the processes above rather than one of
+its own: P-14 and P-15 have readers nobody else here writes for, the people who steer the
 project and the people it is shown to, and P-16 holds what no artifact may hold, the hours of
 the people doing the work. Nothing else is missing, and what is left are
 deterministic integrations and prose: the connectors

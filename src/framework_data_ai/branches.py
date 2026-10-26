@@ -74,8 +74,8 @@ def landing(subject: str) -> str | None:
     merged = subject.partition(" into ")[0]
     return merged if merged.startswith("Merge ") and re.search(rf"{re.escape(JOIN)}\d+", merged) \
         else None
-# The branch of parking lines alone, after the prefix: a thread without elements, which writes
-# only lines added to the body of the open registers.
+# A parking branch, after the prefix: a thread without elements, for what belongs to no thread --
+# new information, a new entry, a line in `LOG`, parking lines --, checked as a thread is.
 PARKING = "parcheggio-"
 # A delegation: who stands in for an admin until it is revoked, named by a slug of the name,
 # since a ref carries no spaces and the names in `people` do. The whole name is in the message.

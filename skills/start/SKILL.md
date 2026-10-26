@@ -168,7 +168,9 @@ does not know the template.
 their blockquotes, and write for `FRAMEWORK_PATH` the framework's path, relative to the
 project when the two checkouts sit side by side and absolute otherwise. The exchange section
 goes only where `.framework/sessions.yaml` declares one, which on day one it does not: drop
-it, and `migrate.py --adopt` writes it on the day the file is written. No check sees a
+it, and `migrate.py --adopt` writes it on the day the file is written. So does the section on
+threads and joins, marked `requires=additive`, which belongs only where `.framework/work.yaml`
+declares `mode: additive`. No check sees a
 section filled wrong; `migrate.py` lists one that is not a template's text, and from then on
 maintains them.
 

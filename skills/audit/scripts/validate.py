@@ -4446,12 +4446,8 @@ def check_additive(root: Path, bases: list[str], before: list["_branches.View"],
     name = branch[len(prefix):] if branch.startswith(prefix) else ""
     if name.startswith(_branches.JOIN):
         return
-    # A parking branch writes lines added to the body of the open registers, and nothing else:
-    # no front matter but a reading attested, no other document, no new document, none deleted.
-    # What the scan does not read is not seen here: `_meta/business/`, where a SAL may be
-    # written on any branch, `_filoni/`, `.framework/`, the files the scan skips, a file with no
-    # front matter or that is not Markdown or YAML.
-    parking = name.startswith(_branches.PARKING)
+    # A parking branch -- what belongs to no thread: new information, a new entry, a line in
+    # `LOG`, parking lines -- is checked as a thread's is.
     norm = lambda a: a.rel.replace("\\", "/")
     found: dict[str, list[str]] = {}
     for n, view in enumerate(before):
@@ -4459,29 +4455,14 @@ def check_additive(root: Path, bases: list[str], before: list["_branches.View"],
         now = {norm(a): a for a in head.arts}
         was = {norm(a): a for a in view.arts}
         for old in view.arts:
-            if old.meta.get("lifecycle") != "living" and not parking:
+            if old.meta.get("lifecycle") != "living":
                 continue
             new = now.get(norm(old))
             if new is None:
-                here[norm(old)] = (["deleted on a parking branch"] if parking else
-                                   ["deleted or moved: a living document leaves the main line "
-                                    "at a join"] if old.meta.get("lifecycle") == "living" else [])
-            elif parking:
-                # A reading may be attested on any branch, a parking one included.
-                bare = lambda m: {k: x for k, x in m.items() if k not in ATTESTATION_FIELDS}
-                if bare(old.meta) == bare(new.meta) and old.body == new.body:
-                    here[norm(old)] = []
-                elif old.type == "open-register" and bare(old.meta) == bare(new.meta):
-                    here[norm(old)] = _not_additive(old, new)
-                else:
-                    here[norm(old)] = ["a parking branch writes only lines added to the body of "
-                                       "an open register"]
+                here[norm(old)] = ["deleted or moved: a living document leaves the main line at "
+                                   "a join"]
             else:
                 here[norm(old)] = _not_additive(old, new)
-        if parking:
-            for rel in now.keys() - was.keys():
-                here[rel] = ["a new file on a parking branch, which writes only lines added to "
-                             "the body of an open register"]
         # Said only where every point the branch left from finds something.
         found = here if n == 0 else {rel: found[rel] for rel in found if here.get(rel)}
     for rel, reasons in sorted(found.items()):
@@ -4489,9 +4470,6 @@ def check_additive(root: Path, bases: list[str], before: list["_branches.View"],
             continue
         said = f"{'; '.join(reasons[:4])}{f' and {len(reasons) - 4} more' if len(reasons) > 4 else ''}"
         report.add("BR005", rel, (
-            f"changed on this parking branch: {said}. A parking branch writes parking lines -- "
-            "lines added to the body of an open register -- and may attest a reading; anything "
-            "more is a thread of its own." if parking else
             f"changed on this branch other than by adding, against where it left the main line: "
             f"{said}. In the additive mode a thread writes new files, new entries, parking lines "
             "and states; what a living document should say becomes an effect in "

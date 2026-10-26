@@ -46,6 +46,7 @@ except ImportError:
 
 FRAMEWORK = Path(__file__).resolve().parents[3]
 REGISTRY_REL = "schemas/artifact-types.yaml"
+WORK_REL = ".framework/work.yaml"
 VALIDATE_REL = "skills/audit/scripts/validate.py"
 
 # The findings `--adopt` clears by writing a number, rather than by anybody editing a
@@ -511,6 +512,16 @@ def framework_path(root: Path, framework: Path) -> tuple[str, bool]:
     return framework.as_posix(), True
 
 
+def additive_declared(root: Path) -> bool:
+    """Whether `.framework/work.yaml` declares `mode: additive`, read as the validator reads it:
+    a file that does not parse declares nothing here, and the validator says why."""
+    try:
+        data = yaml.safe_load((root / WORK_REL).read_text(encoding="utf-8")) or {}
+    except (OSError, UnicodeError, yaml.YAMLError):
+        return False
+    return isinstance(data, dict) and data.get("mode") == "additive"
+
+
 def exchange_declared(root: Path, framework: Path) -> tuple[str | None, str | None]:
     """The `exchange:` value, or why there is none that can be written into `AGENTS.md`.
 
@@ -581,14 +592,15 @@ def _resembles(template_sections: list[str], have: list[dict]) -> dict | None:
     return None
 
 
-def _leads_to_framework(root: Path, value: str) -> bool:
+def _leads_to_framework(root: Path, value: str, needs=()) -> bool:
     """Whether a path written in `AGENTS.md` reaches a framework on this machine: the one
-    thing about it anything can check. Said in the report, never acted on: the value is
-    committed for every machine, and one where it does not hold -- a CI runner, a colleague
-    with the plugin elsewhere -- is not the one to rewrite it for the others."""
+    thing about it anything can check. Said in the report, and never rewritten where it is:
+    the value is committed for every machine, and one where it does not hold -- a CI runner, a
+    colleague with the plugin elsewhere -- is not the one to rewrite it for the others. A
+    section added takes it only when it holds, and for the files that section names."""
     where = Path(value).expanduser()
     where = where if where.is_absolute() else root / where
-    return (where / "agents" / "critic.md").is_file()
+    return all((where / rel).is_file() for rel in ("agents/critic.md", *needs))
 
 
 def marked_ids(framework: Path) -> set[str]:
@@ -620,23 +632,54 @@ def section_plan(root: Path, framework: Path, old_template: str | None,
     known = [sections(t) for t in dict.fromkeys(
         [*([old_template] if old_template else []), *template_history(framework)])]
     exchange, unusable = exchange_declared(root, framework)
+    met = {"exchange": bool(exchange), "additive": additive_declared(root)}
+    if exchange and exchange.replace("\\", "/").rstrip("/") != "../_scambio":
+        plan.setdefault("notes", []).append(
+            f"the exchange is {exchange}, not ../_scambio: code sessions, which read no "
+            f"{SESSIONS_REL}, do not reach it, and the write guard lets them write only in "
+            "../_scambio (references/workstation.md). The documentation sessions do.")
     path, local = framework_path(root, framework)
     fill = {"FRAMEWORK_PATH": path}
     if exchange:
         fill["EXCHANGE_PATH"] = exchange
     tpl = sections(template)
+    # A section added takes the framework's path the project already wrote in another of the
+    # framework's sections, so that one AGENTS.md does not name two places for one framework.
+    # An edited copy is read loosely; a path that leads to no framework here is not carried into
+    # a new section, which takes this machine's, and `say_where` names the old one.
+    for t in tpl:
+        theirs = _find(have, t["id"], t["heading"]) if t["id"] and "FRAMEWORK_PATH" in t["text"] else None
+        values = next((v for c in [t, *(_find(k, t["id"], t["heading"]) for k in known)]
+                       if theirs and c and (v := written_values(c["text"], theirs["text"]))), None)
+        if theirs and values is None:
+            values = loose_values(t["text"], theirs["text"])
+        given = (values or {}).get("FRAMEWORK_PATH")
+        if given in (None, "FRAMEWORK_PATH"):
+            continue
+        if _leads_to_framework(root, given, ("references/additive.md",
+                                             "skills/audit/scripts/todo.py")):
+            path, local = given, False
+            fill["FRAMEWORK_PATH"] = path
+        else:
+            plan.setdefault("notes", []).append(
+                f"the framework's path in the section {t['heading']!r}, {given}, leads to no "
+                f"framework of this version on this machine: a section added names {path} "
+                "instead. If the old path is wrong, correct it by hand, so that one AGENTS.md "
+                "names one place.")
+        break
     for n, s in enumerate(tpl):
         if not s["id"]:
             continue
         entry = {"id": s["id"], "heading": s["heading"]}
-        unmet = [r for r in s["requires"] if r != "exchange" or not exchange]
+        unmet = [r for r in s["requires"] if not met.get(r)]
         doubled = [p for p in have if p["id"] == s["id"]]
         mine = _find(have, s["id"], s["heading"])
         if unmet:
-            entry.update(action="skipped", at=(
-                (unusable or "no exchange declared in " + SESSIONS_REL)
-                if unmet == ["exchange"] else f"needs {', '.join(unmet)}, which this tool does "
-                                              "not know"))
+            unknown = [r for r in unmet if r not in met]
+            entry.update(action="skipped", at="; ".join(
+                ([unusable or "no exchange declared in " + SESSIONS_REL] if "exchange" in unmet else [])
+                + ([f"`mode: additive` is not declared in {WORK_REL}"] if "additive" in unmet else [])
+                + ([f"needs {', '.join(unknown)}, which this tool does not know"] if unknown else [])))
             if mine:
                 entry["at"] += ("; the copy in AGENTS.md is left as it is" + (
                     ", and the template says to delete it where no exchange is declared"

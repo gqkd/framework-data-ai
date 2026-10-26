@@ -111,6 +111,8 @@ comprehension, human review or production verification.
 > Keep this section only if `.framework/sessions.yaml` declares `exchange:`, and write its
 > value for `EXCHANGE_PATH`; delete the section otherwise. `migrate.py` lists a value that
 > differs from the declared one and `--adopt` corrects it; no check of the validator does.
+> Code sessions, which read no `sessions.yaml`, reach only `../_scambio` beside the
+> repositories: another name serves the documentation sessions alone.
 
 This project hands material between sessions through `EXCHANGE_PATH`, outside every
 repository: one folder per element in `in-arrivo/`, named by its identifier, with the fixed
@@ -121,6 +123,29 @@ it exists, with the command that removes it; a copy of credentials stays in your
 listed with the names of its keys and never their values. Every session closes with its
 declaration in `sessioni/`: what it committed, what it leaves uncommitted, what it leaves
 outside the repositories.
+
+<!-- framework-section: additive requires=additive -->
+## Threads and joins
+
+> Keep this section only if `.framework/work.yaml` declares `mode: additive`; delete it
+> otherwise. `migrate.py --adopt`, run on the branch of a join once the mode is declared,
+> adds it.
+
+This project writes its documentation in threads that a script computes, each on a branch of
+its own, and lands them on the main line together, at a join that an admin runs. Never write
+the main line. On a thread's branch write new files, new entries in the open registers, parking
+lines and changes of state; anything else a living document should say -- an edit, a line the
+mandatory updates below ask for, a step of a cascade -- is a pending effect in
+`_filoni/<thread>/effetti.md`. What belongs to no thread goes on a parking branch, which the
+person opens; the parking line of rule 4 too, which here waits for that branch: say it in the
+answer, and write it there. A parking branch is pushed only when what it carries is complete:
+from its first commit pushed, the next join lands it whole. Rule 5 for a living document, the mandatory
+updates and the Definition of Done below hold here as effects: a change is done on a thread
+when its effects are written, and `verified` is for whoever decides, at a join. `FRAMEWORK_PATH/references/additive.md` has the table, the
+format of an effect and who decides what. Between two joins the living documents are behind:
+before reading one as current, look at the effects waiting on it, which the to-do lists per
+document. If this session did not start with the to-do in its context, run it:
+`python3 FRAMEWORK_PATH/skills/audit/scripts/todo.py --root .`.
 
 <!-- framework-section: review -->
 ## Review before presenting, and before committing
@@ -147,6 +172,11 @@ and say so; fix the objections on the proposal, show the others, and ask again o
 corrections and on the points it left out only when `FRAMEWORK_PATH/agents/reviser.md`
 would, at most three passes. If you cannot run a subagent at all, say that the review did
 not run. A review that did not run is said, never skipped in silence.
+
+Write only inside this repository and its worktrees, the exchange, and the folders Claude Code
+keeps for the session; for any other place, ask the person first. The framework plugin's guard
+stops the file tools where it is installed, and nothing stops Bash: the rule holds there all
+the same.
 
 ## Mandatory updates
 

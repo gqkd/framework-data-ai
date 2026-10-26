@@ -366,9 +366,8 @@ def cmd_open(p: Project, args) -> int:
         v.refuse(f"`--branch {args.branch}`: `{B.JOIN}` is the name of a join's branch, where "
                  "living documents are rewritten and the additive check does not read.")
     if args.ids and args.branch.startswith(B.PARKING):
-        v.refuse(f"`--branch {args.branch}`: `{B.PARKING}` is the name of a branch of parking "
-                 "lines alone, which claims no element and, in the additive mode, is checked as "
-                 "such.")
+        v.refuse(f"`--branch {args.branch}`: `{B.PARKING}` is the name of a parking branch, which "
+                 "claims no element.")
     p.fetch()
     roles = main_roles(p)
     additive = roles.get("mode") == "additive"
@@ -976,6 +975,9 @@ def _before_merging(p: Project, r: dict, names: list[str], every: list[str]) -> 
                 said.append(f"{a.id or rel} accepted: a classification is confirmed by who decides")
             elif a.type == "change-contract" and now == "verified":
                 said.append(f"{a.id or rel} verified")
+            elif a.type == "decision-record" and now == "proposed" and was is None:
+                said.append(f"{a.id or rel} proposed: accept it -- and write its cascade on the "
+                            "join's branch -- or leave it proposed")
         # The evaluation plan: one already there that changes -- its thresholds are decisions --
         # and an evaluation report new on the thread that records a freeze of it.
         for a in p.view(ref).arts:
@@ -1025,8 +1027,10 @@ def _join_start(p: Project, who: str, args) -> int:
         v.refuse(f"not ready: {', '.join(not_ready)}. A join merges the threads that are ready: "
                  f"{', '.join(ready) or 'none now'}.")
     if not wanted and not args.no_threads and not held:
-        v.refuse("no thread is ready. `--no-threads` opens a join that lands only `work.yaml`, an "
-                 "adoption, the contribution policy or annotations.")
+        v.refuse("no thread is ready. `--no-threads` opens a join with no thread, for what is "
+                 "written only on a join's branch: `work.yaml`, an adoption, the contribution "
+                 "policy, annotations, and what only those who decide write -- a release, a "
+                 "change verified, the freeze of the evaluation plan, an approval.")
     if held:
         branch = held.get("branch", "")
         if _join_landed(p, branch):
@@ -1923,12 +1927,16 @@ def cmd_doctor(p: Project, args) -> int:
         perms = data.get("permissions") if isinstance(data, dict) else None
         for key, holder, field in (("sandbox", box, "enabled"),
                                    ("fallback", box, "allowUnsandboxedCommands"),
+                                   ("unavailable", box, "failIfUnavailable"),
                                    ("bypass", perms, "disableBypassPermissionsMode")):
             if isinstance(holder, dict) and field in holder:
                 found[key] = (holder[field], f)
 
     def where(key: str) -> str:
-        return f" ({found[key][1]})" if key in found else ""
+        if key not in found:
+            return ""
+        local = found[key][1].name == "settings.local.json"
+        return f" ({found[key][1]}" + (", which a thread's worktree does not have" if local else "") + ")"
     line(found.get("sandbox", (None,))[0] is True, "the Bash sandbox is "
          + ("declared" if found.get("sandbox", (None,))[0] is True else "not declared")
          + f" in the settings files{where('sandbox')}: recommended, see references/workstation.md",
@@ -1936,6 +1944,10 @@ def cmd_doctor(p: Project, args) -> int:
     line(found.get("fallback", (None,))[0] is False, "commands outside the sandbox are "
          + ("refused" if found.get("fallback", (None,))[0] is False else "not refused")
          + f"{where('fallback')}: `sandbox.allowUnsandboxedCommands: false` is recommended",
+         needed=False)
+    line(found.get("unavailable", (None,))[0] is True, "a session whose sandbox cannot start "
+         + ("stops" if found.get("unavailable", (None,))[0] is True else "runs Bash with none")
+         + f"{where('unavailable')}: `sandbox.failIfUnavailable: true` is recommended",
          needed=False)
     line(found.get("bypass", (None,))[0] == "disable", "the mode that skips the permissions is "
          + ("disabled" if found.get("bypass", (None,))[0] == "disable" else "not disabled")
@@ -2086,7 +2098,8 @@ def main() -> int:
     j.add_argument("threads", nargs="*", help="the threads to merge; all those ready if none")
     j.add_argument("--who", required=True, help="an admin, a deputy or a delegate")
     j.add_argument("--no-threads", action="store_true",
-                   help="a join with no thread: for work.yaml, an adoption, the policy, annotations")
+                   help="a join with no thread: for work.yaml, an adoption, the policy, annotations, "
+                        "a release, approvals")
     step = j.add_mutually_exclusive_group()
     step.add_argument("--finish", action="store_true", help="drop _filoni, commit with the trailer, push")
     step.add_argument("--merge", action="store_true", help="merge the join into the main line, push, close")

@@ -87,6 +87,12 @@ lost. If the answer is no, it was about the framework.
 | `immutable` | never edit the body. Create a new document with `supersedes`, move the old one to `status: superseded`. The `status` field is the one exception and moves in place |
 | `append-only` | never rewrite a line. Add a linked event |
 
+**In the additive mode the table above is not the whole rule.** Where `.framework/work.yaml`
+declares `mode: additive`, read `references/additive.md` before writing: during a thread a
+living document is not edited in place, and a cascade into one is not carried out in the same
+pass -- both become pending effects on the thread's branch --, the main line is never written,
+and who may decide what is in its table.
+
 **Do not implement a signal.** A `LOG` line, a piece of feedback or an `RMP` increment is
 not an authorization to build. What gets implemented is a `CHG` with `status: approved`.
 
@@ -133,7 +139,9 @@ Two things you apply without asking, because they destroy nothing and asking wou
 make them annoying: appending a `SIG` to `LOG`, and adding an entry to the parking lot in
 `§3` of `OPEN.md` at the root — the root and not a product's register, because what goes in
 the parking lot has not been qualified yet, and deciding which product it belongs to is
-part of qualifying it. Other new documentary writes/cascades are proposed. The project's `AGENTS.md` says when the second one
+part of qualifying it. In the additive mode both go on a parking branch, or on the thread's
+branch when they belong to its work; with none open, propose them, and ask the person to open
+one, since opening a branch takes their name. Other new documentary writes/cascades are proposed. The project's `AGENTS.md` says when the second one
 applies even though nobody asked you to write anything, and it says it there rather than
 here because that rule has to reach an agent answering a question with no skill running,
 which never reaches this file.
@@ -162,7 +170,8 @@ of it.
   whenever it writes a diff. When the reviser says it changed files, or you change them after
   the review, run the validator again and write the diff again.
 
-Pass also a file in your scratchpad for its log: every objection and what the reviser did
+Pass also a file in your scratchpad for its log -- in the additive mode
+`_filoni/<slug>/revisione.md` on the branch --: every objection and what the reviser did
 about it are there, for whoever asks. Show what it hands back, with what you did about each
 objection still open: answered by a change, or left standing, with why. One on the substance
 is the person's to settle, and is never presented as settled. Exempt: the two writes above

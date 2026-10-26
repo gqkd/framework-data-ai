@@ -1666,7 +1666,7 @@ checks:
       like `--who`, so a warning that a person reads. Runs with `--base`.
   BR005:
     level: warn
-    title: a thread's branch changes a living document other than by adding, or a parking branch writes more than parking lines
+    title: a thread's or a parking branch changes a living document other than by adding
     prevents: >
       Two threads rewriting one paragraph, met in a merge nobody can read. In the additive
       mode a thread writes new files, new entries in a register, parking lines and states, and
@@ -1675,10 +1675,8 @@ checks:
       body only lines added, outside the regions the generator owns; in the front matter only
       new `entries` of a register, the `status` and `closed_by` of an entry, and the two fields
       an attestation writes. Against every point where the branch left the main line, and not
-      on the branch of a join. On a parking branch (`parcheggio-<name>`, a thread without
-      elements) only lines added to the body of an open register, and an attested reading: no
-      other change, no new document, none deleted -- among the documents the scan reads, so a
-      SAL in `_meta/business/` stays allowed on any branch. Runs with `--base`.
+      on the branch of a join. A parking branch (`parcheggio-<name>`, a thread without elements,
+      for what belongs to no thread) is checked the same way. Runs with `--base`.
   WK001:
     level: warn
     title: a key, a value or a threshold in .framework/work.yaml that this version does not read

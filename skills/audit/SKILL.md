@@ -428,6 +428,14 @@ question.
 
 ## Documentation written on branches
 
+**In the additive mode** -- `mode: additive` in `.framework/work.yaml` -- the pieces of work are
+threads the to-do computes, and they land on the main line at a join, by a local merge and with
+no pull request: the `contribute` skill carries that procedure, and `references/additive.md` the
+rule of what a thread writes. Of what follows, the reservations, `sync` and the checks with
+`--base` hold for each thread's branch; a thread is taken with `open --thread`, not with a list
+of elements, and when its work is over it is left to the join, not released: a work branch
+without claims, other than a parking branch, is an abandoned thread, which no join lands.
+
 When `.framework/work.yaml` exists, the documentation is written one piece of work per branch,
 and each branch lands through a pull request. `skills/audit/scripts/work.py` carries the
 mechanics, and none of it is yours to run without the person's word:
@@ -462,7 +470,9 @@ after a fast-forward the main line comes in the same run, after a merge on the n
 two texts of which one holds, and when the text is a decision's, which one holds is for
 whoever decides that matter: show both, with their branch and author, and ask. After a merge,
 the living documents it produced owe a reading -- a merge records no reading, and `LC006` says
-so -- which the person attests.
+so -- which the person attests. Not where `.framework/work.yaml` says `rereading: optional`:
+there nothing is owed on the branches of the additive mode, a join's text owes nothing either,
+and `LC009` reminds of what a join brought once it has waited past `thresholds.unread_days`.
 
 Before a pull request is proposed for merging, fetch, and run the validator against the main
 line as the remote has it now -- a stale `origin/main` passes what the real one would not:
@@ -580,7 +590,10 @@ version moves, and exits 1 while one is to write:
   `--replace-section <id>` with `--adopt` puts the template's text in its place, keeping the
   framework's path it can still read. Show the person both texts and let them choose: a copy
   made by hand under the 4.6.0 note is usually this case, and usually wants the replacement.
-- **skipped** — `requires=exchange` and no exchange the validator accepts.
+- **skipped** — `requires=exchange` and no exchange the validator accepts, or
+  `requires=additive` and no `mode: additive` in `.framework/work.yaml`: `--adopt` writes it on
+  the day the file says so. In the additive mode an adoption is written on the branch of a join,
+  `--adopt` run in its worktree (`references/additive.md`).
 
 When there is a section to write, `--adopt` refuses while `AGENTS.md` has uncommitted changes,
 and writes `AGENTS.md` only once the number is written, putting the number back if it

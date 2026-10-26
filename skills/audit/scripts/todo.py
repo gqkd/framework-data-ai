@@ -229,6 +229,7 @@ def nodes_of(tree: Tree, policy: dict) -> tuple[list[Node], list[str]]:
     # the ones it derives from and, as the roadmaps written before 4.3.0 say it, the ones that
     # list it in `changes`.
     drafts = []
+    proposed = sorted((d for d, s in tree.decisions.items() if s == "proposed"), key=order)
     listing: dict[str, set[str]] = {}
     for inc, row in tree.increments.items():
         for c in v.as_list(row.get("changes")):
@@ -274,7 +275,7 @@ def nodes_of(tree: Tree, policy: dict) -> tuple[list[Node], list[str]]:
                                 {f"{rel}#{inc}"}, True,
                                 {f"{product}/{x}" for x in v.as_list(row.get("depends_on"))},
                                 False))
-    return out, sorted(drafts, key=order)
+    return out, sorted(drafts, key=order) + proposed
 
 
 def meet(a: set[str], b: set[str]) -> list[str]:
@@ -599,7 +600,7 @@ def markdown(r: dict) -> str:
             out.append(f"- {describe(n, tree)}")
         out.append("")
     if r["drafts"]:
-        out.append("## Changes to approve, at a join")
+        out.append("## Changes to approve and decisions to accept, at a join")
         out += [f"- {d} {tree.titles.get(d, '')}".rstrip() for d in r["drafts"]]
         out.append("")
     if r["unanchored"]:

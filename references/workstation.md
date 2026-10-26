@@ -80,7 +80,7 @@ repository: start sessions in a repository.
 It sees Write, Edit and NotebookEdit only: a command run through Bash, or a tool of an MCP
 server that writes files, writes wherever the operating system lets it. The limit for Bash
 is the rule below, which an agent follows and nothing enforces; the sandbox Claude Code
-offers for Bash is what can enforce it, and its configuration is not in this document yet.
+offers for Bash is what can enforce it.
 
 **The to-do at the start of a session** (`hooks/session_start.py`, a `SessionStart` hook). In a
 project whose `.framework/work.yaml` declares `mode: additive`, and that pins in `framework.yaml`
@@ -96,6 +96,48 @@ checkout at another version may compute the whole to-do differently.
 README says, and starting the session again -- whatever version a project pins and with no
 `--adopt`: the guard follows the plugin. A session started with
 `claude --plugin-dir <checkout>` has the hooks of that checkout instead.
+
+## The Bash sandbox, recommended
+
+Recommended in this version and not required. No tool of the framework writes it: each person
+puts it in their own settings, `~/.claude/settings.json` -- not the documentation repository's
+`.claude/settings.local.json`, which is not committed, and so a thread's worktree, where the
+sessions of a thread start, does not have it --, and `work.py doctor` says whether the settings
+files declare it. The exchange is the one folder outside the repository it has to open,
+written as an absolute path, since a relative one is not documented to resolve against the
+project:
+
+```json
+{
+  "sandbox": {
+    "enabled": true,
+    "allowUnsandboxedCommands": false,
+    "failIfUnavailable": true,
+    "filesystem": { "allowWrite": ["/absolute/path/to/<parent>/_scambio"] }
+  },
+  "permissions": { "disableBypassPermissionsMode": "disable" }
+}
+```
+
+`allowUnsandboxedCommands: false` stops a command the sandbox blocked from being retried outside
+it; `failIfUnavailable: true` stops a session whose sandbox cannot start from running Bash with
+none, which is what happens on Linux and WSL2 without `bubblewrap` and `socat`;
+`disableBypassPermissionsMode` takes away the mode that answers every question yes. `/sandbox`
+in a session shows whether it is active and what it is missing.
+
+What it lets Bash write, by Claude Code's documentation: the folder the session started in and
+what is below it, `$TMPDIR`, the directories added with `--add-dir` or
+`permissions.additionalDirectories`, those in `allowWrite`, and the shared `.git` of the
+repository a worktree belongs to, but for its `hooks/` and `config`: by that, a commit in a
+thread's worktree succeeds, where the plan of this version had assumed it would not. What it does
+not let through, with this configuration and no network allowed: `work.py open` and `join`,
+which create a worktree beside the repository, in the parent folder; a push and a fetch -- `work.py
+list`, `reserve`, `sync`, `release`, `delegate`, `revoke` and the steps of `join` that reach the
+remote --, which need the network or, for a remote on disk, a folder outside the repository. Those
+are the person's to run, and the `contribute` skill says so rather than retrying them. **None of
+this has been tried yet on a machine with the sandbox active**: it is what the documentation
+says, and the trial on worktrees, git and the network comes before the sandbox is required, in
+a later version.
 
 ## Where an agent writes, and why
 

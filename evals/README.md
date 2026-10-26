@@ -7,15 +7,17 @@ here, and it needs a model to run, which is why it is not in CI.
 
 ## Triggering
 
-`trigger/cases.yaml` holds 136 prompts, each labelled with the one skill that should
+`trigger/cases.yaml` holds 143 prompts, each labelled with the one skill that should
 answer, or `none`.
 
-**Eighteen of them are marked `unmeasured: true`, and the mark is the lesson of the paragraph
+**Twenty-five of them are marked `unmeasured: true`, and the mark is the lesson of the paragraph
 below.** `presentation` arrived in 4.0.1 with four cases of its own and three traps, one each
 toward `start`, `business` and `none`; `digest` arrived in 4.1.0 with six of its own, one of
 them a trap that `requirement` must not take, and five traps toward `business`, `cycle`,
-`release` and `none`. None of them has been run, and the tables further down were measured on
-the 118 without them: the mark keeps those eighteen out of the denominators the self check
+`release` and `none`; `contribute` arrived in 4.9.0 with five of its own and two traps, toward
+`cycle` and `resolve`, whose sentences sit closest to its own. The measured cases of `cycle` and
+`resolve` that ask what to do or decide next are at risk from it, and no mark protects them. None of them has been run, and the tables further down were measured on
+the 118 without them: the mark keeps those twenty-five out of the denominators the self check
 compares, so a score is never read against a set it was not measured on. The run that scores
 them removes the mark and adds its own table. One measured case is at risk from the second
 batch and no mark protects it: *the image digest is in the CI log* is scored for `release`,

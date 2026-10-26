@@ -138,6 +138,14 @@ rollback becomes an archaeology exercise at the worst possible moment.
 gate, it is a meeting. If the outcome is rework, say what failed, against which threshold,
 and what has to change.
 
+## In the additive mode
+
+Saying yes or no to a release, freezing the `EVP` and marking a change `verified` are for an
+admin, a deputy or a delegate (`references/additive.md`), and so is where they are written:
+the branch of a join, opened with `work.py join --no-threads` when no thread is ready. There the
+`REL`, the `RLM` and a new `EVR` are new files, and what a release changes in living documents --
+the `RB`, the stage of `RMP` delivered, `ARC#current` -- is rewritten, as the join rewrites.
+
 ## Handing back
 
 Say whether the gate passed, on which evidence, what was generated, and what is left for the
