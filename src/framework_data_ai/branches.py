@@ -63,6 +63,17 @@ JOIN = "ricongiungimento-"
 JOINED = "joined: "
 # The trailer of the commit that finishes a join, read by the main-line job and by `join`.
 JOIN_TRAILER = "Ricongiungimento-di"
+
+
+def landing(subject: str) -> str | None:
+    """What a merge says it merges, where it is the landing of a join: "Merge <branch> into
+    <main>" from `join --merge`, "Merge branch '<branch>'" from git for a merge by hand. Not a
+    merge inside a join ("Join <branch>: merge <thread>"), and not one into a join's branch -- a
+    `sync`, "Merge <main> (<sha>) into <branch>", or git's "Merge remote-tracking branch
+    'origin/main' into <branch>" -- where the branch comes after "into". None otherwise."""
+    merged = subject.partition(" into ")[0]
+    return merged if merged.startswith("Merge ") and re.search(rf"{re.escape(JOIN)}\d+", merged) \
+        else None
 # The branch of parking lines alone, after the prefix: a thread without elements, which writes
 # only lines added to the body of the open registers.
 PARKING = "parcheggio-"

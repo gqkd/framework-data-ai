@@ -859,7 +859,8 @@ def parse_moment(v) -> datetime | None:
     return None
 
 
-def check_lifecycle(a: Artifact, stale_days: int, now: datetime, report: Report) -> None:
+def check_lifecycle(a: Artifact, stale_days: int, now: datetime, report: Report,
+                    by_join=None) -> None:
     lc = a.meta.get("lifecycle")
     if lc == "living":
         raw = a.meta.get("last_review")
@@ -870,9 +871,12 @@ def check_lifecycle(a: Artifact, stale_days: int, now: datetime, report: Report)
                        "'YYYY-MM-DD', 'YYYY-MM-DD HH:MM' or 'YYYY-MM-DD HH:MM +HH:MM'. While "
                        "it stays like this the document never counts as reviewed.")
         elif lr is None:
-            report.add("LC001", a.rel,
-                       "a living document needs last_review: without it there is no way "
-                       "to notice it has gone stale")
+            # Where a join waits for no reading, a document born in a join, or on a branch of the
+            # mode, owes no stamp: `LC009` reminds of it instead. None everywhere else.
+            if by_join is None or not by_join(a.rel.replace("\\", "/")):
+                report.add("LC001", a.rel,
+                           "a living document needs last_review: without it there is no way "
+                           "to notice it has gone stale")
         else:
             # `LC002` asks how old, not which minute. A value carrying an offset is folded
             # onto this machine's clock rather than resolved against a commit: hours do not
@@ -1068,6 +1072,7 @@ class Repository:
     prefix: str
     in_head: set[str]                    # files under the root that HEAD holds, root-relative
     has_head: bool
+    tip: str = "HEAD"                    # where the history is read from: the main line, for the to-do
     _commits: dict[str, list[tuple[str, datetime]]] | None = None
     _parents: dict[str, list[str]] = field(default_factory=dict)
     _when: dict[str, datetime] = field(default_factory=dict)
@@ -1078,7 +1083,7 @@ class Repository:
     _oids: dict[str, str | None] = field(default_factory=dict)
 
     @classmethod
-    def open(cls, root: Path) -> "Repository | None":
+    def open(cls, root: Path, tip: str = "HEAD") -> "Repository | None":
         where = _git(["rev-parse", "--show-prefix"], root)
         if where is None or where.returncode != 0:
             return None                      # not inside a repository: nothing to read
@@ -1095,17 +1100,17 @@ class Repository:
         # its lines is simply not committed, which is what the clock is for. A repository with
         # no commit yet is the same state for every file -- the first documented set, written
         # in an afternoon -- and has a history that is empty rather than unreadable.
-        head = _git(["rev-parse", "--verify", "-q", "HEAD"], root)
+        head = _git(["rev-parse", "--verify", "-q", tip], root)
         has_head = head is not None and head.returncode == 0
         in_head: set[str] = set()
         if has_head:
-            tree = _git(["ls-tree", "-r", "-z", "--name-only", "--full-tree", "HEAD"], root)
+            tree = _git(["ls-tree", "-r", "-z", "--name-only", "--full-tree", tip], root)
             if tree is None or tree.returncode != 0:
                 refuse(f"{root} is inside a repository whose HEAD could not be read: "
                        f"{_last_line(tree)}. Nothing was checked.")
             in_head = {p[len(prefix):] for p in tree.stdout.split("\0")
                        if p and p.startswith(prefix)}
-        return cls(root, prefix, in_head, has_head)
+        return cls(root, prefix, in_head, has_head, tip)
 
     def is_tracked(self, rel: str) -> bool:
         """Whether HEAD holds a version of `rel`: the condition for a line to have a commit."""
@@ -1130,7 +1135,7 @@ class Repository:
             commits: dict[str, list[tuple[str, datetime]]] = {}
             if self.has_head:
                 log = _git(["log", "--format=%x00%H%x00%aI%x00%P", "--cc", "--name-only",
-                            "--no-renames"], self.root)
+                            "--no-renames", self.tip], self.root)
                 if log is None or log.returncode != 0:
                     refuse(f"{self.root} is inside a repository whose history could not be "
                            f"read: {_last_line(log)}. Nothing was checked.")
@@ -1160,7 +1165,7 @@ class Repository:
         return self._when[sha]
 
     def head(self) -> str | None:
-        r = _git(["rev-parse", "--verify", "-q", "HEAD"], self.root)
+        r = _git(["rev-parse", "--verify", "-q", self.tip], self.root)
         return r.stdout.strip() if r is not None and r.returncode == 0 else None
 
     def commits_of(self, rel: str) -> list[tuple[str, datetime]]:
@@ -1183,8 +1188,9 @@ class Repository:
                     out.add(name[len(self.prefix):])
         return out
 
-    def blame(self, rel: str, line: int) -> tuple[str | None, datetime | None, datetime | None, bool]:
-        """Which commit wrote line `line` of `rel` as it stands in the working tree.
+    def blame(self, rel: str, line: int,
+              rev: str | None = None) -> tuple[str | None, datetime | None, datetime | None, bool]:
+        """Which commit wrote line `line` of `rel` as it stands in the working tree, or at `rev`.
 
         Returns the sha, its committer and author instants in the offset the commit
         recorded, and whether that commit is the one that brought the file into the history
@@ -1201,7 +1207,7 @@ class Repository:
         the one that wrote the value.
         """
         r = _git(["-c", "blame.ignoreRevsFile=", "blame", "-w", "-M", "-L", f"{line},{line}",
-                  "--porcelain", "--", rel], self.root)
+                  "--porcelain", *([rev] if rev else []), "--", rel], self.root)
         if r is None or r.returncode != 0:
             refuse(f"`git blame` could not read {rel}: {_last_line(r)}. Nothing was checked.")
         head = r.stdout.split("\n", 1)[0].split()
@@ -1412,7 +1418,8 @@ def check_review_not_ahead(attestations: list[Attestation], now: datetime,
                    "with `attest.py`, which writes the instant it runs at, with its offset.")
 
 
-def last_text_change(repo: Repository, rel: str) -> tuple[str, datetime, str] | None:
+def last_text_change(repo: Repository, rel: str,
+                     start: str | None = None) -> tuple[str, datetime, str] | None:
     """The newest commit that changed what a reading of `rel` vouches for.
 
     Returns the sha, its author instant and what it did: `born` for the commit that brought
@@ -1439,11 +1446,14 @@ def last_text_change(repo: Repository, rel: str) -> tuple[str, datetime, str] | 
     merge equal to one of its parents in everything but a generated region -- the union taken
     from the other side and nothing else -- which changed no attested text at all: the walk
     goes on down that parent.
+
+    From `start` when it is given -- the merge of a join, to ask what that join brought -- and
+    from the tip of the history otherwise.
     """
     touching = repo.touching(rel)
     if not touching:
         return None
-    sha, seen = repo.head(), set()
+    sha, seen = start or repo.head(), set()
     while sha is not None and sha not in seen:
         seen.add(sha)
         parents = repo.parents_of(sha)
@@ -1482,7 +1492,8 @@ def last_text_change(repo: Repository, rel: str) -> tuple[str, datetime, str] | 
 
 
 def check_review_gap(attestations: list[Attestation], repo: Repository | None,
-                     report: Report, changed: set[str] | None = None) -> tuple[int, list]:
+                     report: Report, changed: set[str] | None = None,
+                     quiet: "Quiet | None" = None) -> tuple[int, list]:
     """A living document changed after the instant it says somebody read it.
 
     `LC002` measures elapsed time and can only ever guess when truth decays. `LC007` catches an
@@ -1530,6 +1541,12 @@ def check_review_gap(attestations: list[Attestation], repo: Repository | None,
     states as a note: those are compared against what is committed, so a gap measured here can
     be smaller than the real one, and that is worth a line rather than a finding that appears
     and disappears with every save.
+
+    QUIET ON WHAT A JOIN BROUGHT, WHERE A JOIN WAITS FOR NO READING. `quiet` is given in the
+    additive mode with `rereading: optional`: a text whose last change reached the main line
+    through a join is no finding here, nor `PR005`'s, and on a branch of the mode nothing is,
+    since what is written there reaches the main line through a join. `LC009` reminds of a
+    join's text once it has waited longer than the project allows.
     """
     if repo is None:
         return 0, []                     # no history to ask: unverifiable is not violated
@@ -1545,6 +1562,8 @@ def check_review_gap(attestations: list[Attestation], repo: Repository | None,
         attested, _ = att.instant
         if _minute(when) <= _minute(attested):
             continue
+        if quiet is not None and (quiet.branch or sha in quiet.joins):
+            continue                     # a join waits for no reading here
         why = {"text and stamp": " That commit moved the attestation block and changed "
                                  "something else as well, so it counts: recording a reading "
                                  "is not a modification, and this was both.",
@@ -1722,6 +1741,200 @@ def check_pr_review(gaps: list, changed: set[str] | None, report: Report) -> Non
                "the document says has moved, the reading is cheapest now, while whoever wrote "
                "the text is still the person answering. If it has not, say so in the pull "
                "request and nothing else is owed.")
+
+
+def read_joins(repo: Repository) -> dict[str, str]:
+    """What the joins brought to the main line: each commit, mapped to the merge that landed it,
+    the merges in the order they were made.
+
+    A join is signed by the commit `work.py join --finish` makes, with the trailer
+    `Ricongiungimento-di:`, and lands with a merge of its own whose message names its branch.
+    What it brought is what the signed commit reaches and the merge's first parent does not: the
+    threads' commits, the join's merges and rewriting -- not a commit made on its branch after it
+    was signed, which no signature covers. The signer is somebody who decides, as the main-line
+    job asks: an admin or a deputy in the `work.yaml` of the merge's first parent, or whoever a
+    delegation this clone holds names, given before the merge -- one given later does not make
+    an earlier join quiet, and one revoked since is not seen: what that delegate landed is then
+    read as text that reached the main line outside a join.
+
+    This runs without knowing which branch is the main line. A join that reached it without a
+    merge naming it -- a fast-forward -- brings nothing here: its text is read as any other, and
+    `LC006` speaks, which is the safe way to be wrong.
+
+    TWO `git log`s, WHATEVER THE NUMBER OF JOINS: the signed commits and the merges; the rest is
+    walked over the parents the history above already read, which `LC006` needs anyway. Asking
+    git for each join's range cost seconds a run at two hundred joins, and this runs at every
+    `sync`, twice, and in CI at every commit of the main line.
+    """
+    def ask(args: list[str]) -> subprocess.CompletedProcess:
+        r = _git(args, repo.root)
+        if r is None or r.returncode != 0:
+            refuse(f"{repo.root}: the joins in the history could not be read "
+                   f"(`git {args[0]}`): {_last_line(r)}. Nothing was checked.")
+        return r
+
+    tip = repo.head()
+    if tip is None:
+        return {}
+    signed: dict[str, set[str]] = {}
+    log = ask(["log", f"--format=%H%x00%(trailers:key={_branches.JOIN_TRAILER},valueonly,"
+                      "separator=%x2C)%x1e", tip])
+    for record in log.stdout.split("\x1e"):
+        sha, _, who = record.strip().partition("\x00")
+        names = {w.strip() for w in who.split(",") if w.strip()}
+        if sha and names:
+            signed[sha] = names
+    if not signed:
+        return {}
+    brought: dict[str, str] = {}
+    behind: set[str] = set()             # what the first parents seen so far reach: closed
+    roles: dict[str | None, dict] = {}
+    tags = _git(["for-each-ref", "--format=%(taggerdate:iso-strict)%00%(contents)%1e",
+                 _branches.DELEGATION_REF.rstrip("/")], repo.root)
+    delegations: list[tuple[str, datetime]] = []
+    for record in (tags.stdout.split("\x1e") if tags is not None and tags.returncode == 0 else []):
+        when, _, body = record.strip().partition("\x00")
+        to = _branches.message_fields(body).get("to")
+        if to and when:
+            delegations.append((to, datetime.fromisoformat(when)))
+
+    def walk(starts: list[str], stop: set[str], into: set[str] | None = None) -> set[str]:
+        out = into if into is not None else set()
+        stack = list(starts)
+        while stack:
+            c = stack.pop()
+            if c in stop or c in out:
+                continue
+            out.add(c)
+            stack.extend(repo.parents_of(c))
+        return out
+
+    merges = ask(["log", "--merges", "--topo-order", "--reverse", "--format=%H%x00%P%x00%s", tip])
+    for row in merges.stdout.splitlines():
+        merge, parents, subject = (row.split("\x00") + ["", ""])[:3]
+        first, *others = parents.split() or [""]
+        if not others or _branches.landing(subject) is None:
+            continue                     # not the landing of a join
+        walk([first], set(), behind)
+        inside = walk(others, behind)
+        oid = repo.oid(first, _branches.WORK)
+        if oid not in roles:
+            try:
+                work = yaml.safe_load(repo.blob(first, _branches.WORK) or "") or {}
+            except yaml.YAMLError:
+                work = {}
+            roles[oid] = work if isinstance(work, dict) else {}
+        deciders = _branches.deciders(roles[oid], {to for to, since in delegations
+                                                   if since <= repo.when(merge)})
+        for sha in [s for s in inside if s in signed]:
+            if not signed[sha] & deciders:
+                continue
+            for c in walk([sha], behind):
+                brought[c] = merge
+    return brought
+
+
+@dataclass
+class Quiet:
+    """Where a join waits for no reading: what the joins brought, the days after which `LC009`
+    speaks, and whether this is a branch of the additive mode -- a thread, a parking branch, the
+    branch of a join --, where nothing is owed, since what is written there reaches the main
+    line through a join."""
+    joins: dict[str, str]
+    days: int
+    branch: bool
+
+
+def quiet_joins(root: Path, repo: Repository | None) -> Quiet | None:
+    """`Quiet`, in the additive mode with `rereading: optional` in `.framework/work.yaml`; None
+    everywhere else, where every text is read as before.
+
+    The branch is HEAD's, or `GITHUB_HEAD_REF` where HEAD is detached, as `--base` reads it; a
+    branch of the mode is one whose name starts with the prefix. Read here and quietly, because
+    the checks of the readings run before `load_work`, which reports what the file gets wrong and
+    stops on what does not parse.
+    """
+    try:
+        work = yaml.safe_load((root / _branches.WORK).read_text(encoding="utf-8")) or {}
+    except (OSError, UnicodeError, yaml.YAMLError):
+        return None
+    if (repo is None or not repo.has_head or not isinstance(work, dict)
+            or work.get("mode") != "additive" or work.get("rereading") != "optional"):
+        return None
+    limits = work.get("thresholds") if isinstance(work.get("thresholds"), dict) else {}
+    days = limits.get("unread_days")
+    if isinstance(days, bool) or not isinstance(days, int) or days < 1:
+        days = _branches.THRESHOLDS["unread_days"]
+    head = _git(["symbolic-ref", "--short", "-q", "HEAD"], root)
+    name = (head.stdout.strip() if head is not None and head.returncode == 0
+            else os.environ.get("GITHUB_HEAD_REF", ""))
+    prefix = str(work.get("branch_prefix") or "work/")
+    return Quiet(read_joins(repo), days, bool(name) and name.startswith(prefix))
+
+
+def unread_join(repo: Repository, joins: dict[str, str], rel: str,
+                attested: datetime | None) -> tuple[str, datetime] | None:
+    """The first join whose text in `rel` nobody has read since, and when it landed. None when
+    the text was last changed by something other than a join -- `LC006`'s, then -- or has been
+    read since the last join that changed it.
+
+    THE COUNT STARTS AT THE FIRST JOIN NOT READ, NOT AT `last_review`. Counting from the reading
+    is `LC002`'s, and lowered to a few days it would speak on every living document nobody
+    rereads, those no join touched included. Going back from the newest join that changed the
+    text, the first one whose text is older than the reading ends the count: what it brought
+    was read, and so was everything before it.
+    """
+    change = last_text_change(repo, rel)
+    if change is None or change[0] not in joins:
+        return None
+    if attested is not None and (change[2] == "born" or _minute(change[1]) <= _minute(attested)):
+        return None
+    first = None
+    # The joins whose commits touched the document, newest first by topology.
+    touched = {joins[c] for c in repo.touching(rel) if c in joins}
+    for merge in reversed([m for m in dict.fromkeys(joins.values()) if m in touched]):
+        brought = last_text_change(repo, rel, start=merge)
+        if brought is None or joins.get(brought[0]) != merge:
+            continue                     # it moved a stamp or a generated region, not the text
+        if attested is not None and _minute(brought[1]) <= _minute(attested):
+            break
+        first = merge
+    return (first, repo.when(first)) if first else None
+
+
+def check_unread_joins(arts: list[Artifact], attestations: list[Attestation],
+                       repo: Repository | None, quiet: Quiet | None,
+                       now: datetime, report: Report) -> None:
+    """`LC009`: a living document a join wrote more than `unread_days` ago, and nobody has read
+    since.
+
+    With `rereading: optional` a join waits for no reading, and `LC006`, `LC001` and `PR005`
+    are quiet about what it brought, and on the branches of the mode about everything: this is
+    the one reminder that the text is still nobody's reading. It counts from the first join not read (see `unread_join`), and it is quiet where
+    `LC002` speaks, which already says to reread the document, and where `LC004` does, whose
+    `last_review` reads as no reading at all.
+    """
+    if repo is None or quiet is None:
+        return
+    joins, days = quiet.joins, quiet.days
+    attested = {att.artifact.rel: att.instant[0] for att in attestations}
+    spoken = {f.path for f in report.findings if f.code in ("LC002", "LC004")}
+    for a in arts:
+        if a.meta.get("lifecycle") != "living" or a.rel in spoken:
+            continue
+        hit = unread_join(repo, joins, a.rel.replace("\\", "/"), attested.get(a.rel))
+        if hit is None:
+            continue
+        merge, landed = hit
+        age = (now - landed).days
+        if age > days:
+            report.add("LC009", a.rel,
+                       f"text a join brought on {landed:%Y-%m-%d} (merge {merge[:12]}) has not "
+                       f"been read since: {age} days, past `thresholds.unread_days` ({days}) in "
+                       f"{_branches.WORK}. With `rereading: optional` a join waits for no "
+                       "reading and `LC006` is quiet about what it brings; this is the reminder "
+                       "that nobody has said it is still true. Reread it and attest it with "
+                       "attest.py on a thread or a parking branch: the next join brings the stamp.")
 
 
 def check_references(arts: list[Artifact], registry: dict, report: Report, *, references=None) -> None:
@@ -4789,6 +5002,18 @@ def main() -> int:
     # Before anything is scanned: a history that cannot be read is a run that must not
     # report, and `Repository.open` says so with exit 2 rather than with a clean report.
     repo = Repository.open(root)
+    # Where a join waits for no reading: what the joins brought, read once.
+    quiet = quiet_joins(root, repo)
+
+    def by_join(rel: str) -> bool:
+        """On a branch of the mode, or born in a join and last changed by one: owes no stamp.
+        One that lacked it before a join changed it, or whose last change came outside a join,
+        still does."""
+        if quiet.branch:
+            return True
+        born, last = repo.commits_of(rel), last_text_change(repo, rel)
+        return bool(born) and born[-1][0] in quiet.joins and last is not None \
+            and last[0] in quiet.joins
 
     arts = discover(root, scan, registry, report)
     references = ReferenceIndex(arts, registry)
@@ -4796,7 +5021,7 @@ def main() -> int:
         check_front_matter(a, registry, report)
         check_placeholders(a, registry, report)
         check_sections(a, registry, report)
-        check_lifecycle(a, stale_days, now, report)
+        check_lifecycle(a, stale_days, now, report, by_join if quiet else None)
     check_references(arts, registry, report, references=references)
     check_release(arts, report)
     importlib.import_module(f"{_CORE_NAME}.release_sets").check(arts, registry, report)
@@ -4810,9 +5035,10 @@ def main() -> int:
     unenforced = check_placement(arts, registry, report)
     check_product_of_the_directory(arts, registry, report)
     attestations = read_attestations(arts, repo)
-    uncommitted, gaps = check_review_gap(attestations, repo, report, changed_files)
+    uncommitted, gaps = check_review_gap(attestations, repo, report, changed_files, quiet)
     check_pr_review(gaps, changed_files, report)
     check_review_not_ahead(attestations, datetime.now().astimezone(), report)
+    check_unread_joins(arts, attestations, repo, quiet, datetime.now().astimezone(), report)
     check_register_halves(arts, registry, report)
     check_body_repeats_a_field(arts, registry, report)
     check_key_typos(arts, registry, report)

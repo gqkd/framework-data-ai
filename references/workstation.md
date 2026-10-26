@@ -120,6 +120,13 @@ working in one is for the agent to know and for this rule to hold, not for the g
 
 ## How to check a machine
 
+- `python3 <framework>/skills/audit/scripts/work.py --root <documentation> doctor --who "<name>"`
+  reads, offline, what the files of the machine say of everything below but the last point: the
+  plugin against the pin and its hooks, the settings, the folders and the exchange, the
+  versions of Python, PyYAML, jsonschema and git -- without the first three it stops at once,
+  saying which is missing --, the name, and the copy of `ci/branches.yml`. A `todo` line is what
+  the framework needs, and makes it exit 1; a `note` is what it recommends, or only tells. It
+  does not see the settings an organisation manages, nor a plugin loaded with `--plugin-dir`.
 - `claude plugin details framework-data-ai` shows the version installed and where it is read
   from; it should be the version the project pins.
 - `python3 -c "import yaml, jsonschema"` from the environment the scripts use.

@@ -31,7 +31,7 @@ import sys
 import tempfile
 import types
 import zipfile
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import yaml
@@ -9800,6 +9800,9 @@ def _join_lands_threads():
             new_kis.append(new_ki.group(1))
             text = text.replace("---\n\n# Open", f"  {new_ki.group(1)}:\n    status: open\n"
                                 f"    affects: [products/a/OPEN.md#{entry}]\n---\n\n# Open", 1)
+            if entry == "KI-002":
+                # Rewritten, not added: an effect, and `BR005` on the branch, which the join shows.
+                text = text.replace("### KI-002 · ki-002 title", "### KI-002 · renamed by hand", 1)
             reg.write_text(text + f"### {new_ki.group(1)} · new\n\n")
             (tree / "_filoni" / thread).mkdir(parents=True)
             # The thread with the decision writes also on KI-002's anchor: outside its forecast,
@@ -9829,9 +9832,10 @@ def _join_lands_threads():
             problems.append(f"the join did not merge both threads ready, their new entries kept "
                             f"(exit {rc}): {out[-400:]!r}")
         if "outside the forecast -- work/a-ki-002 forecast it" not in out \
-                or "KI-002 closed by its row, not by a change" not in out:
-            problems.append(f"before merging, the join did not show an effect outside the forecast "
-                            f"or a KI closed without a change: {out[:600]!r}")
+                or "KI-002 closed by its row, not by a change" not in out \
+                or "BR005 products/a/OPEN.md" not in out:
+            problems.append(f"before merging, the join did not show an effect outside the forecast, "
+                            f"a KI closed without a change, or BR005 on a branch: {out[:900]!r}")
         # A thread that moves after the join merged it is kept, with its claims.
         ki = a.parent / "docs--a-ki-002"
         (ki / "after.md").write_text("x\n")
@@ -9845,6 +9849,18 @@ def _join_lands_threads():
                     "--format=%(trailers:key=Ricongiungimento-di,valueonly)").stdout.split()
         if len(signed) != 1:
             problems.append(f"join --finish run again signed the join {len(signed)} times")
+        (join / "fix.txt").write_text("a correction after the signature\n")
+        _commit_all(join, "a correction after --finish")
+        _g(join, "push", "-q", "origin", "work/ricongiungimento-1")
+        rc, out = _work(a, "join", "--who", "Owner", "--merge")
+        if rc != 2 or "after its last signature" not in out:
+            problems.append(f"join --merge of a branch with a commit after its signature: exit {rc}, "
+                            f"{out[-200:]!r}")
+        _work(a, "join", "--who", "Owner", "--finish")
+        signed = _g(a, "log", "work/ricongiungimento-1",
+                    "--format=%(trailers:key=Ricongiungimento-di,valueonly)").stdout.split()
+        if len(signed) != 2:
+            problems.append(f"join --finish after a correction signed {len(signed)} times, 2 expected")
         rc, out = _work(a, "join", "--who", "Owner", "--merge")
         heads, claims = remote_heads(), remote_claims()
         trailer = _g(a, "log", "origin/main", "--format=%(trailers:key=Ricongiungimento-di,valueonly)").stdout
@@ -9853,6 +9869,9 @@ def _join_lands_threads():
                 or "claim/OD-001" in claims or "ricongiungimento" in claims or "Owner" not in trailer:
             problems.append(f"join --merge: exit {rc} (1 expected, one thread kept), heads "
                             f"{heads!r}, claims {claims!r}: {out[-400:]!r}")
+        if "without a merge of its own" in out:
+            problems.append(f"join --merge landed with --no-ff, and --close took it for a "
+                            f"fast-forward: {out[-300:]!r}")
         if "decided" not in _g(a, "show", "origin/main:products/a/OPEN.md").stdout:
             problems.append("the decisions of the threads are not on the main line")
         od1 = a.parent / "docs--a-od-001"
@@ -9866,7 +9885,10 @@ def _join_lands_threads():
         if "landed by a join" not in _work(a, "list")[1]:
             problems.append("list does not say the branch a join landed")
 
-        # A join with no thread, abandoned; a thread abandoned, taken again on its branch.
+        # A join with no thread, abandoned; a thread abandoned, taken again on its branch. The
+        # reservation of the first join gone, its number is still read from the commit it signed.
+        _g(a, "push", "-q", "origin", ":refs/tags/id/ricongiungimento-1")
+        _g(a, "tag", "-d", "id/ricongiungimento-1")
         rc, out = _work(a, "join", "--who", "Owner", "--no-threads")
         if rc or "work/ricongiungimento-2" not in remote_heads():
             problems.append(f"a join with no thread (exit {rc}): {out[-200:]!r}")
@@ -9914,6 +9936,317 @@ def _join_lands_threads():
         if got != ["products/parcheggio-auto/product.yaml", "products/parcheggio/product.yaml"]:
             problems.append(f"XP009 at {got}: on `parcheggio` and `parcheggio-auto`, not on "
                             "`parcheggiometro`")
+    return problems
+
+
+@check("with `rereading: optional` a join's text owes no reading until `unread_days`, and the to-do lists it")
+def _join_text_owes_no_reading():
+    # What a join signed by somebody who decides and landed with a merge naming it brought is
+    # quiet for `LC006`, `LC001` and `PR005`; a commit after the signature, a join signed by a
+    # contributor or by a delegate before the delegation, one landed by a fast-forward, a commit
+    # of the main line a join's branch merged in by hand, are not; nor is a document born in a
+    # join and changed outside one. `LC009` reminds of a join's text past
+    # `unread_days`, from the first join not read, and is quiet where `LC002` speaks. On a branch
+    # of the mode nothing is owed, and `sync` says so by saying nothing. All of it only where the
+    # project says a join waits for no reading.
+    problems = []
+    todo_py = ROOT / "skills" / "audit" / "scripts" / "todo.py"
+
+    def ago(days: float) -> str:
+        return (datetime.now().astimezone() - timedelta(days=days)).isoformat(timespec="seconds")
+
+    def stamp(days: float) -> str:
+        s = (datetime.now().astimezone() - timedelta(days=days)).strftime("%Y-%m-%d %H:%M %z")
+        return f"{s[:-2]}:{s[-2:]}"
+
+    lines = ["First.", "A.", "Second.", "B.", "Third.", "C.", "End."]
+
+    def brief(product: str, review: str | None = "2026-06-01 09:00", **change: str) -> str:
+        body = "\n\n".join(change.get(x.rstrip(".").lower(), x) for x in lines)
+        text = _brief(product, review or "x", scope="the whole file", body=body)
+        return text.replace("last_review: x\n", "").replace("review_scope: the whole file\n", "") \
+            if review is None else text
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        origin = tmp / "origin.git"
+        subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(origin)], check=True,
+                       env={**os.environ, **_WORK_ENV})
+        repo = _Repo(tmp / "projects" / "docs")
+        work = ("mode: additive\npeople: [Owner, Junior]\nadmins: [Owner]\n"
+                "rereading: optional\n")
+        repo.write(".framework/work.yaml", work)
+        repo.write(".framework/sessions.yaml", "exchange: ../_scambio\n")
+        for product in "pruvwzt":
+            repo.write(f"products/{product}/PBR.md", brief(product))
+        repo.commit("base", "2026-06-01T09:00:00+02:00")
+        repo.git("remote", "add", "origin", str(origin))
+        repo.git("push", "-q", "origin", "main")
+
+        def join(n: int, who: str, landed: float, writes, after=None, threads=(), ff=False,
+                 meanwhile=None):
+            repo.git("checkout", "-q", "-b", f"work/ricongiungimento-{n}", "main")
+            for thread in threads:
+                repo.git("merge", "-q", "--no-ff", "-m", f"Join work/ricongiungimento-{n}: merge "
+                         f"{thread}", thread, env={"GIT_AUTHOR_DATE": ago(landed + 1),
+                                                    "GIT_COMMITTER_DATE": ago(landed + 1)})
+            for rel, text in writes.items():
+                repo.write(rel, text)
+            repo.write(f"_filoni/ricongiungimento-{n}/revisione.md", "x\n")
+            repo.commit(f"join {n} rewrites", ago(landed + 0.5))
+            if meanwhile:
+                # The main line moves while the join is open, and its branch merges it in by
+                # hand, with git's own message.
+                repo.git("checkout", "-q", "main")
+                for rel, text in meanwhile.items():
+                    repo.write(rel, text)
+                repo.commit("a commit on the main line during the join", ago(landed + 0.7))
+                repo.git("checkout", "-q", f"work/ricongiungimento-{n}")
+                repo.git("merge", "-q", "--no-ff", "-m", "Merge remote-tracking branch "
+                         f"'origin/main' into work/ricongiungimento-{n}", "main",
+                         env={"GIT_AUTHOR_DATE": ago(landed + 0.45), "GIT_COMMITTER_DATE": ago(landed + 0.45)})
+            (repo.path / "_filoni" / f"ricongiungimento-{n}" / "revisione.md").unlink()
+            repo.commit(f"join {n}\n\nRicongiungimento-di: {who}", ago(landed + 0.5))
+            for rel, text in (after or {}).items():
+                repo.write(rel, text)
+                repo.commit(f"after join {n} was signed", ago(landed + 0.4))
+            repo.git("checkout", "-q", "main")
+            dates = {"GIT_AUTHOR_DATE": ago(landed), "GIT_COMMITTER_DATE": ago(landed)}
+            if ff:
+                repo.git("merge", "-q", "--ff-only", f"work/ricongiungimento-{n}")
+            else:
+                repo.git("merge", "-q", "--no-ff", "-m", f"Merge work/ricongiungimento-{n} into main",
+                         f"work/ricongiungimento-{n}", env=dates)
+
+        # A thread opened before every join, which writes at the end of the brief of p.
+        repo.git("checkout", "-q", "-b", "work/x-thread")
+        repo.write("products/p/PBR.md", brief("p", end="End, by x."))
+        repo.commit("x writes", ago(20))
+        repo.git("push", "-q", "origin", "work/x-thread")
+        # The thread the first join merges.
+        repo.git("checkout", "-q", "-b", "work/p-thread", "main")
+        repo.write("products/p/PBR.md", brief("p", third="Third, by the thread."))
+        repo.commit("the thread writes", ago(12))
+        repo.git("checkout", "-q", "main")
+        join(1, "Owner", 9, {"products/p/PBR.md": brief("p", first="First, rewritten.",
+                                                         third="Third, by the thread."),
+                             "products/q/PBR.md": brief("q", None),
+                             "products/s/PBR.md": brief("s", None)},
+             after={"products/r/PBR.md": brief("r", first="First, corrected after the signature.")},
+             threads=["work/p-thread"],
+             meanwhile={"products/w/PBR.md": brief("w", first="First, on the main line.")})
+        repo.write("products/s/PBR.md", brief("s", None, first="First, on the main line."))
+        repo.commit("s changed outside a join", ago(7.5))
+        repo.write("products/p/PBR.md", brief("p", stamp(8), first="First, rewritten.",
+                                               third="Third, by the thread."))
+        repo.commit("p read", ago(8))
+        join(2, "Owner", 2, {"products/p/PBR.md": brief("p", stamp(8), first="First, rewritten.",
+                                                         second="Second, rewritten.",
+                                                         third="Third, by the thread.")})
+        join(3, "Junior", 1, {"products/u/PBR.md": brief("u", first="First, by a contributor.")})
+        join(4, "Owner", 0.5, {"products/v/PBR.md": brief("v", first="First, fast-forward.")}, ff=True)
+        # A thread opened at the start, brought up to date after the fast-forward, then joined:
+        # its `sync` is not the landing of anything.
+        repo.git("checkout", "-q", "-b", "work/y-thread", "main~6")
+        repo.write("products/z/PBR.md", brief("z", first="First, by y."))
+        repo.commit("y writes", ago(0.45))
+        repo.git("merge", "-q", "--no-ff", "-m", "Merge origin/main (0123456789ab) into work/y-thread",
+                 "main", env={"GIT_AUTHOR_DATE": ago(0.4), "GIT_COMMITTER_DATE": ago(0.4)})
+        repo.git("checkout", "-q", "main")
+        join(5, "Owner", 0.2, {}, threads=["work/y-thread"])
+        # A delegation to the contributor, after their first join and before their second.
+        repo.git("tag", "-a", "delega/junior", "-m", "delegation\n\nwho: Owner\nto: Junior\n",
+                 env={"GIT_COMMITTER_DATE": ago(0.15)})
+        join(6, "Junior", 0.1, {"products/t/PBR.md": brief("t", first="First, by a delegate.")})
+        repo.git("push", "-q", "origin", "main")
+
+        def paths(code: str, *extra: str, env: dict | None = None) -> list[str]:
+            rc, out, err = repo.validate(*extra, env=env)
+            if out is None:
+                raise RuntimeError(f"no report (exit {rc}): {err}")
+            return sorted(f["path"] for f in out["findings"] if f["code"] == code)
+
+        want006 = ["products/r/PBR.md", "products/u/PBR.md", "products/v/PBR.md",
+                   "products/w/PBR.md"]
+        if paths("LC006") != want006 or paths("LC001") != ["products/s/PBR.md"] or paths("LC009"):
+            problems.append(f"after four joins, rereading optional: LC006 {paths('LC006')} (want "
+                            f"{want006}), LC001 {paths('LC001')}, LC009 {paths('LC009')}")
+        for days, want in ((5, ["products/q/PBR.md"]),
+                           (1, ["products/p/PBR.md", "products/q/PBR.md"])):
+            repo.write(".framework/work.yaml", work + f"thresholds:\n  unread_days: {days}\n")
+            if paths("LC009") != want:
+                problems.append(f"unread_days {days}: LC009 at {paths('LC009')}, {want} expected "
+                                "(p was read between the first join and the second)")
+        if paths("LC009", "--stale-days", "1") != ["products/q/PBR.md"]:
+            problems.append(f"LC009 where LC002 speaks: {paths('LC009', '--stale-days', '1')}")
+        repo.write(".framework/work.yaml", work.replace("rereading: optional\n", ""))
+        if not {"products/p/PBR.md", "products/t/PBR.md", "products/z/PBR.md", *want006} \
+                <= set(paths("LC006")) or paths("LC001") != ["products/q/PBR.md", "products/s/PBR.md"] \
+                or paths("LC009"):
+            problems.append(f"rereading required, as before: LC006 {paths('LC006')}, LC001 "
+                            f"{paths('LC001')}, LC009 {paths('LC009')}")
+        repo.write(".framework/work.yaml", work)
+        # A branch outside the prefix reads as the main line does; a detached HEAD is the branch
+        # `GITHUB_HEAD_REF` names, as in CI.
+        repo.git("checkout", "-q", "-b", "other")
+        if paths("LC006") != want006:
+            problems.append(f"on a branch outside the prefix: LC006 {paths('LC006')}")
+        repo.git("checkout", "-q", "--detach", "main")
+        if paths("LC006", env={"GITHUB_HEAD_REF": "work/x-thread"}) \
+                or paths("LC001", env={"GITHUB_HEAD_REF": "work/x-thread"}) or paths("LC006") != want006:
+            problems.append("a detached HEAD named a branch of the mode by GITHUB_HEAD_REF is not quiet, "
+                            "or one with no name is")
+        repo.git("checkout", "-q", "main")
+
+        r = subprocess.run([sys.executable, str(todo_py), "--root", str(repo.path), "--json"],
+                           capture_output=True, text=True)
+        try:
+            unread = {u["path"]: u["days"] for u in json.loads(r.stdout).get("unread") or []}
+        except (json.JSONDecodeError, AttributeError):
+            unread = {}
+        if unread != {"products/p/PBR.md": 2, "products/q/PBR.md": 9, "products/t/PBR.md": 0,
+                      "products/z/PBR.md": 0}:
+            problems.append(f"the to-do does not list what a join brought and nobody read: "
+                            f"{unread} (exit {r.returncode}) {r.stderr.strip()[-200:]}")
+
+        # A thread brings the main line in: nothing is owed on a branch of the mode, and `sync`
+        # says nothing; where the rereading is required it says what it always said.
+        repo.git("checkout", "-q", "work/x-thread")
+        rc, out = _work(repo.path, "sync", "--no-push")
+        if rc or "neither side had" in out:
+            problems.append(f"sync of a thread, rereading optional (exit {rc}): {out[-300:]!r}")
+        if paths("LC006") or paths("LC001"):
+            problems.append(f"on a thread, rereading optional: LC006 {paths('LC006')}, LC001 "
+                            f"{paths('LC001')}")
+        repo.git("reset", "-q", "--hard", "origin/work/x-thread")
+        repo.git("checkout", "-q", "main")
+        repo.write(".framework/work.yaml", work.replace("rereading: optional\n", ""))
+        repo.commit("rereading required", ago(0.05))
+        repo.git("push", "-q", "origin", "main")
+        repo.git("checkout", "-q", "work/x-thread")
+        rc, out = _work(repo.path, "sync", "--no-push")
+        if "neither side had" not in out:
+            problems.append(f"sync of a thread, rereading required: no message (exit {rc}): "
+                            f"{out[-300:]!r}")
+    return problems
+
+
+@check("work.py doctor says what a machine has of what references/workstation.md asks")
+def _doctor_reads_a_machine():
+    problems = []
+    migrate = _load(ROOT / "skills" / "audit" / "scripts" / "migrate.py", "migrate_for_doctor")
+    work = _load(WORK, "work_for_doctor")
+    pin = REGISTRY["version"]
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        repo = _Repo(tmp / "projects" / "docs")
+        repo.write(".framework/work.yaml", "mode: additive\npeople: [Owner]\nadmins: [Owner]\n")
+        repo.write(".framework/sessions.yaml", "exchange: ../_scambio\n")
+        (tmp / "projects" / "_scambio").mkdir()
+        sha, why = migrate.commit_declaring(pin, ROOT)
+        shipped = subprocess.run(["git", "-C", str(ROOT), "show", f"{sha}:ci/branches.yml"],
+                                 capture_output=True, text=True).stdout if sha else ""
+        filled = shipped.replace("OWNER/framework-data-ai", "acme/framework-data-ai").replace(
+            "COMMIT_OR_TAG", f"v{pin}")
+        repo.write(".github/workflows/branches.yml", filled or "on: push\n")
+        repo.commit("base", "2026-06-01T09:00:00+02:00")
+        bin_, config = tmp / "bin", tmp / "config"
+        bin_.mkdir()
+        config.mkdir()
+
+        def claude(text: str | None) -> None:
+            body = f"printf '{text}'\n" if text is not None else "exit 1\n"
+            (bin_ / "claude").write_text("#!/bin/sh\n" + body)
+            (bin_ / "claude").chmod(0o755)
+
+        def settings(where: Path, data: dict | None) -> None:
+            where.parent.mkdir(parents=True, exist_ok=True)
+            if data is None:
+                where.unlink(missing_ok=True)
+            else:
+                where.write_text(json.dumps(data))
+
+        env = {"PATH": f"{bin_}{os.pathsep}{os.environ.get('PATH', '')}",
+               "CLAUDE_CONFIG_DIR": str(config)}
+        good = {"sandbox": {"enabled": True, "allowUnsandboxedCommands": False},
+                "permissions": {"disableBypassPermissionsMode": "disable"}}
+        claude(f"framework-data-ai {pin}\\n\\nComponent inventory\\n  Hooks (2)\\n")
+        settings(config / "settings.json", good)
+
+        def run(*who: str) -> tuple[int, str]:
+            return _work(repo.path, "doctor", *who, env=env)
+
+        rc, out = run("--who", "Owner")
+        compared = ("branches.yml is the one of" in out) if sha else ("cannot be compared" in out)
+        if rc or "todo" in out or not compared or "the Bash sandbox is declared" not in out \
+                or "brings 2 hook(s)" not in out:
+            problems.append(f"a machine with everything: exit {rc}, {out[-600:]!r}")
+        # One fault at a time, each with the exit code it owes: 0 for a note, 1 for a todo.
+        local = repo.path / ".claude" / "settings.local.json"
+        hooks_owed = (migrate.semver(pin) or (0,)) >= work.SINCE_HOOKS
+        cases = [
+            ("no sandbox, user settings overridden by the project's local ones",
+             lambda: settings(local, {"sandbox": {"enabled": False}}), lambda: settings(local, None),
+             0, "the Bash sandbox is not declared"),
+            ("a plugin newer than the pin", lambda: claude("framework-data-ai 99.0.0\\n  Hooks (2)\\n"),
+             None, 0, "note  the plugin installed is 99.0.0"),
+            ("a plugin older than the pin, no hooks", lambda: claude("framework-data-ai 0.0.1\\n  Hooks (0)\\n"),
+             None, 1, "todo  the plugin installed is 0.0.1"),
+            ("Claude Code that does not answer", lambda: claude(None), None, 1, "gave no version"),
+            ("no exchange", lambda: (tmp / "projects" / "_scambio").rmdir(),
+             lambda: (tmp / "projects" / "_scambio").mkdir(), 1, "which this machine does not have"),
+            ("a name not among the people", None, None, 1, "`Nobody` is not among the people"),
+            ("another project beside", lambda: _Repo(tmp / "projects" / "another").write(
+                ".framework/work.yaml", "people: [X]\n"),
+             lambda: subprocess.run(["rm", "-rf", str(tmp / "projects" / "another")]), 1,
+             "another project with .framework/"),
+            ("pull-request.yml beside branches.yml",
+             lambda: repo.write(".github/workflows/pull-request.yml", "on: pull_request\n"),
+             lambda: (repo.path / ".github" / "workflows" / "pull-request.yml").unlink(), 1,
+             "pull-request.yml is in .github/workflows/, beside"),
+        ]
+        if sha:
+            cases.append(("branches.yml changed", lambda: repo.write(
+                ".github/workflows/branches.yml", filled.replace("fetch-depth: 0", "fetch-depth: 1", 1)),
+                lambda: repo.write(".github/workflows/branches.yml", filled), 1, "branches.yml differs"))
+        for name, before, after, want, says in cases:
+            claude(f"framework-data-ai {pin}\\n\\nComponent inventory\\n  Hooks (2)\\n")
+            if before:
+                before()
+            if name == "a plugin older than the pin, no hooks":
+                says_hooks = "todo  the plugin brings 0 hook(s)" if hooks_owed else "note  the plugin brings 0 hook(s)"
+            else:
+                says_hooks = None
+            rc, out = run("--who", "Nobody" if name == "a name not among the people" else "Owner")
+            if rc != want or says not in out or (says_hooks and says_hooks not in out):
+                problems.append(f"{name}: exit {rc} ({want} expected), {says!r} "
+                                f"{'and ' + repr(says_hooks) if says_hooks else ''} in {out[-500:]!r}")
+            if after:
+                after()
+    return problems
+
+
+@check("a version is rebuilt from the commit its tag names, where it has one")
+def _versions_resolve_to_their_tags():
+    # The next version is developed under the old number until the bump, so the newest commit
+    # declaring a released number can be work it never shipped with: the tag is what shipped.
+    migrate = _load(ROOT / "skills" / "audit" / "scripts" / "migrate.py", "migrate_for_tags")
+    problems = []
+    tags = subprocess.run(["git", "-C", str(ROOT), "tag", "-l", "v*"], capture_output=True,
+                          text=True).stdout.split()
+    if not tags:
+        return ["no tags here: a clone without tags cannot run this check"]
+    for tag in tags:
+        sha = subprocess.run(["git", "-C", str(ROOT), "rev-parse", f"{tag}^{{commit}}"],
+                             capture_output=True, text=True).stdout.strip()
+        declared = migrate.registry_version(subprocess.run(
+            ["git", "-C", str(ROOT), "show", f"{sha}:{migrate.REGISTRY_REL}"],
+            capture_output=True, text=True).stdout)
+        if declared != tag[1:]:
+            continue                     # a tag whose registry says another number: not a release of it
+        got, why = migrate.commit_declaring(declared, ROOT)
+        if got != sha:
+            problems.append(f"{declared}: rebuilt from {str(got)[:12]}, its tag names {sha[:12]} ({why})")
     return problems
 
 

@@ -37,6 +37,10 @@ until it has anchors; one with `[none]` and no anchors is with the others `[none
 connected component; it is named after its product and its lowest identifier -- OD, then KI, then
 CHG, then INC, then the number.
 
+WHERE A JOIN WAITS FOR NO READING (`rereading: optional`), the living documents whose text a join
+brought and nobody has read since, with the day of that join; `LC009` reminds of them past
+`unread_days`.
+
 A THREAD OPEN IS FIXED until the join that lands it: the nodes that would fall into its component
 wait for it, "after thread X". It is ready when its elements are done on its remote branch --
 an entry closed, a change `implemented`, an increment decomposed (a change deriving from it, or
@@ -51,6 +55,8 @@ whatever fetch was last made. Exit 0, or 2 when the repository does not allow it
 from __future__ import annotations
 
 import argparse
+import contextlib
+import io
 import json
 import re
 import subprocess
@@ -465,6 +471,28 @@ def compute(root: Path, remote: str, main: str) -> dict:
         t["age_days"] = (now - datetime.fromisoformat(stamp)).days if stamp else 0
     ready = sorted(n for n, t in open_threads.items() if t["ready"])
 
+    # What a join brought and nobody has read since, where a join waits for no reading: as
+    # `LC009` reads it, a bare `last_review` in the offset of the commit that wrote the line.
+    # A shallow clone has no history to read it from, and the to-do says so rather than stop.
+    unread: list[dict] | None = []
+    if work.get("rereading") == "optional":
+        repo = None
+        try:
+            # A refusal here leaves the rest of the to-do standing: what it would print is
+            # replaced by the line that says this part was not computed.
+            with contextlib.redirect_stderr(io.StringIO()):
+                if git(root, "rev-parse", "--is-shallow-repository").strip() == "true":
+                    raise B.BranchError("shallow")
+                repo = v.Repository.open(root, tip=base)
+                if repo is not None:
+                    _unread(repo, v.read_joins(repo), main_tree, base, now, unread)
+        except (SystemExit, B.BranchError):
+            unread = None
+        finally:
+            if repo is not None:
+                repo.close()
+
+
     def state(n: Node) -> tuple[str, list[str]]:
         open_ = [p for p in n.preds if main_tree.known(p) and not main_tree.closed(p)]
         if not open_:
@@ -502,7 +530,25 @@ def compute(root: Path, remote: str, main: str) -> dict:
             "threads": free, "open": open_threads, "after_thread": after_thread,
             "after_join": after_join, "waiting": waiting, "drafts": drafts,
             "unanchored": unanchored, "abandoned": abandoned, "effects": effects,
-            "ready": ready, "join": join, "tree": main_tree}
+            "ready": ready, "join": join, "unread": unread, "tree": main_tree}
+
+
+def _unread(repo, joins: dict, tree: Tree, base: str, now: datetime, out: list) -> None:
+    """The living documents of the main line whose text a join brought and nobody has read
+    since, with the day of that join, into `out`."""
+    for a in tree.view.arts:
+        if a.meta.get("lifecycle") != "living":
+            continue
+        rel = a.rel.replace("\\", "/")
+        value = v.parse_moment(a.meta.get("last_review"))
+        attested = None
+        if value is not None:
+            line = v._review_line(repo.blob(base, rel) or "")
+            committed = repo.blame(rel, line, rev=base)[1] if line else None
+            attested = v.as_instant(value, committed.tzinfo if committed else None)[0]
+        hit = v.unread_join(repo, joins, rel, attested)
+        if hit:
+            out.append({"path": rel, "merged": hit[1], "days": (now - hit[1]).days})
 
 
 def describe(n: Node, tree: Tree) -> str:
@@ -569,6 +615,16 @@ def markdown(r: dict) -> str:
         for path, targets in sorted(r["effects"].items()):
             out.append(f"- {path}: {len(targets)} -- {'; '.join(sorted(targets))}")
         out.append("")
+    if r["unread"] is None:
+        out += ["## Merged by a join, not reread", "- not computed: the history of the joins could "
+                "not be read here -- a shallow clone wants `git fetch --unshallow`", ""]
+    if r["unread"]:
+        out.append("## Merged by a join, not reread")
+        for u in r["unread"]:
+            late = " -- past the reminder" if u["days"] > r["limits"]["unread_days"] else ""
+            out.append(f"- {u['path']}: merged on {u['merged']:%Y-%m-%d}, not reread "
+                       f"({u['days']} days){late}")
+        out.append("")
     if r["abandoned"]:
         out.append("## Branches without claims (abandoned)")
         out += [f"- {b}" for b in r["abandoned"]]
@@ -590,6 +646,12 @@ def summary(r: dict) -> str:
         lines.append(f"- and {len(r['threads']) - 10} more threads to take")
     for path, targets in sorted(r["effects"].items()):
         lines.append(f"- effects waiting on {path}: {len(targets)}")
+    if r["unread"] is None:
+        lines.append("- what the joins brought and nobody read: not computed here (`todo.py` says why)")
+    late = [u["path"] for u in r["unread"] or [] if u["days"] > r["limits"]["unread_days"]]
+    if late:
+        lines.append(f"- merged by a join and not reread for over {r['limits']['unread_days']} "
+                     f"days: {', '.join(late[:5])}" + (f" and {len(late) - 5} more" if len(late) > 5 else ""))
     lines.append("The whole to-do: python3 <framework>/skills/audit/scripts/todo.py --root <documentation>")
     return "\n".join(lines)[:4000] + "\n"
 
@@ -607,7 +669,10 @@ def as_json(r: dict) -> dict:
             "after_thread": [{"ids": i["node"].ids, "threads": i["threads"]} for i in r["after_thread"]],
             "after_join": [n.ids for n in r["after_join"]], "waiting": r["waiting"],
             "drafts": r["drafts"], "unanchored": [n.ids for n in r["unanchored"]],
-            "abandoned": r["abandoned"], "effects": r["effects"]}
+            "abandoned": r["abandoned"], "effects": r["effects"],
+            "unread": None if r["unread"] is None else
+            [{"path": u["path"], "merged": u["merged"].date().isoformat(), "days": u["days"]}
+             for u in r["unread"]]}
 
 
 def main() -> int:

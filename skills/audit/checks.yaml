@@ -198,6 +198,11 @@ checks:
       Without the field there is no way to notice the document has gone stale, and a stale
       living document is worse than an absent one because it gets read as current.
 
+      Quiet, in the additive mode with `rereading: optional`, on a document born in a join and
+      on every document of a branch of the mode: a join waits for no reading there, and `LC009`
+      reminds of it instead. A document that lacked the field before a join changed it, or whose
+      last change came outside a join, still owes it.
+
   LC002:
     level: warn
     title: living document not reviewed for longer than stale_days
@@ -327,6 +332,19 @@ checks:
       That is a note and not a finding: a finding that appeared and vanished with every save
       would teach people to ignore this between saves.
 
+      QUIET ON WHAT A JOIN BROUGHT, WHERE A JOIN WAITS FOR NO READING. In the additive mode with
+      `rereading: optional` in `.framework/work.yaml`, a text whose last change reached the main
+      line through a join is not reported, here or by `PR005`: what the signed commit of the
+      join reaches and the first parent of the merge that landed it does not, when the merge
+      names the join's branch and the signer is an admin or a deputy of that first parent, or
+      holds a delegation whose tag is older than that merge. A commit made on the join's branch after it was signed, a join signed
+      by a contributor, one landed by a fast-forward, and a text that reached the main line any
+      other way are reported, as before. On a branch of the mode -- a thread, a parking branch,
+      a join's -- nothing is, since what is written there reaches the main line through a join;
+      the message of `sync`, which repeats what this says of its merge, says nothing either.
+      `LC009` is the reminder that a join's text has waited unread longer than the project
+      allows.
+
       WHAT ITS YIELD IS, WE DO NOT KNOW. Zero on every fixture in this repository before the
       bench for it was built, and two per repository on that bench, by construction. What a
       real repository shows depends on how much of it was edited without being reread, and
@@ -407,6 +425,21 @@ checks:
       commit that changed the line's content without moving the instant -- quoting the value,
       adding an offset -- is, and then the note is owed on a document that was only reformatted.
       Rare, and the repair is the sentence itself.
+
+  LC009:
+    level: warn
+    title: a join brought text to a living document more than unread_days ago, and nobody has read it since
+    prevents: >
+      In the additive mode with `rereading: optional` a join waits for no reading, and `LC006`,
+      `LC001` and `PR005` are quiet about what it brings: without this, a document a join
+      rewrote would be read as current for ever, with nobody having said it is true. The count
+      starts at the first join whose text nobody has read since -- going back from the newest
+      join that changed the text, the first one older than the reading ends it -- and not at
+      `last_review`: `stale_days` lowered to a few days would speak on every living document
+      nobody rereads, those no join touched included, and with the rereading optional that is
+      nearly all of them. `stale_days` stays as it is; where `LC002` speaks this is quiet,
+      because that one already says to reread the document, and so it is where `LC004` speaks.
+      The threshold is `thresholds.unread_days` in `.framework/work.yaml`, 15 days by default.
 
   # ── Identity and references ────────────────────────────────────────────────
   ID001:

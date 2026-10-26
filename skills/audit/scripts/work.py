@@ -14,6 +14,7 @@ what, release a claim, and bring a branch up to date with the main line.
     python3 work.py --root . join --who "Admin" [THREAD ...] [--no-threads]
     python3 work.py --root . join --finish --who "Admin"
     python3 work.py --root . join --merge --who "Admin"               # or --close, --abandon
+    python3 work.py --root . doctor [--who "Name"]                    # read only: this machine
 
 ONE PIECE OF WORK, ONE BRANCH, ONE PULL REQUEST, for everybody who writes the documentation,
 the person who owns it included. A session that already ran beside two others on one working
@@ -72,11 +73,13 @@ from __future__ import annotations
 import argparse
 import difflib
 import importlib
+import importlib.metadata
 import json
 import os
 import re
 import subprocess
 import sys
+import tempfile
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -846,6 +849,13 @@ def _landed(p: Project, ref: str) -> list[tuple[str, str]]:
     return []
 
 
+def _signed_tip(p: Project, ref: str) -> bool:
+    """Whether the last commit of the join's branch carries its trailer: what lands is signed
+    whole, a `sync` or a correction after `--finish` included."""
+    return bool(git(p.root, "log", "-1", f"--format=%(trailers:key={B.JOIN_TRAILER},valueonly)",
+                    ref, check=False).stdout.strip())
+
+
 def _finished(p: Project, ref: str) -> bool:
     """Whether the join's branch carries its trailer past the main line."""
     return bool(git(p.root, "log", f"--format=%(trailers:key={B.JOIN_TRAILER},valueonly)",
@@ -885,10 +895,39 @@ def _regenerate(root: Path) -> list[str]:
     return written
 
 
+def _branch_findings(p: Project, name: str, ref: str) -> list[str]:
+    """What the validator says of a thread's branch against the main line, `BR005` first -- a
+    write that is not additive: nothing else runs it, since a thread has no pull request. Run
+    with `--base` in a worktree of its own, detached at the remote branch, because git does not
+    check one branch out twice, and with the branch's name in `GITHUB_HEAD_REF`, which the
+    validator reads when HEAD is detached."""
+    with tempfile.TemporaryDirectory(prefix="join-") as tmp:
+        tree = Path(tmp) / "tree"
+        if git(p.root, "worktree", "add", "-q", "--detach", str(tree), ref, check=False).returncode:
+            return ["its branch could not be checked out to run the validator on it"]
+        try:
+            where = B.prefix(p.root)
+            r = subprocess.run([sys.executable, str(Path(v.__file__)), "--root",
+                                str(tree / where if where else tree), "--base", p.base, "--json",
+                                "--stale-days", "36500"], capture_output=True, text=True,
+                               env={**os.environ, "GITHUB_HEAD_REF": name})
+            try:
+                found = json.loads(r.stdout).get("findings", [])
+            except ValueError:
+                return [f"the validator gave no report on its branch (exit {r.returncode})"]
+        finally:
+            git(p.root, "worktree", "remove", "--force", str(tree), check=False)
+    found = sorted((f for f in found if str(f.get("code", "")).startswith("BR")),
+                   key=lambda f: (f["code"] != "BR005", f["code"], f["path"]))
+    said = [f"{f['code']} {f['path']}: {f['message'][:200]}" for f in found[:10]]
+    return said + ([f"and {len(found) - 10} more findings of the branches"] if len(found) > 10 else [])
+
+
 def _before_merging(p: Project, r: dict, names: list[str], every: list[str]) -> None:
-    """What the threads bring that the roles keep to those who decide (§10), and the effects
-    each wrote outside what it forecast -- first those another thread of this join forecast:
-    shown to the admin before anything is merged, to be read, not judged here."""
+    """What the threads bring that the roles keep to those who decide (§10), the effects each
+    wrote outside what it forecast -- first those another thread of this join forecast -- and
+    what the checks of the branches find on each: shown to the admin before anything is merged,
+    to be read, not judged here."""
     tree = r.get("tree")
     where = B.prefix(p.root)
     try:
@@ -968,7 +1007,7 @@ def _before_merging(p: Project, r: dict, names: list[str], every: list[str]) -> 
                 other = [n for n in every if n != name and T.meet(declared[n], {eff.target})]
                 outside.append((not other, f"effect on {eff.target}, outside the forecast"
                                 + (f" -- {', '.join(other)} forecast it" if other else "")))
-        said = [line for _, line in sorted(outside)] + said
+        said = [line for _, line in sorted(outside)] + said + _branch_findings(p, name, ref)
         if said:
             say(f"{name}, before it is merged:")
             for line in said:
@@ -993,8 +1032,11 @@ def _join_start(p: Project, who: str, args) -> int:
         if _join_landed(p, branch):
             v.refuse(f"{branch} is on {p.base} already: `join --close` releases what it landed.")
         if _finished(p, branch) or _finished(p, f"refs/remotes/{p.remote}/{branch}"):
-            v.refuse(f"{branch} is finished: `join --merge` lands it, `join --abandon` drops it. "
-                     "A thread ready since waits for the next join.")
+            then = ("`join --merge` lands it" if _signed_tip(p, f"refs/remotes/{p.remote}/{branch}")
+                    else "it has commits after its last signature, which `join --finish` signs; "
+                         "then `join --merge` lands it")
+            v.refuse(f"{branch} is finished: {then}, `join --abandon` drops it. A thread ready "
+                     "since waits for the next join.")
         remote_branch = f"refs/remotes/{p.remote}/{branch}"
         local = git(p.root, "rev-parse", "--verify", "-q", f"refs/heads/{branch}", check=False).stdout.strip()
         if local and git(p.root, "merge-base", "--is-ancestor", remote_branch, local,
@@ -1011,12 +1053,13 @@ def _join_start(p: Project, who: str, args) -> int:
         # One more than the joins on the main line, and than every number a join reserved: a
         # join abandoned leaves nothing on the main line, and its number, reused, would give
         # the next join the name of a branch some clone still holds.
-        trailers = git(p.root, "log", f"--format=%(trailers:key={B.JOIN_TRAILER},valueonly)",
-                       p.base).stdout
+        signed = git(p.root, "log", f"--format=%s%x00%(trailers:key={B.JOIN_TRAILER},valueonly)%x1e",
+                     p.base).stdout
+        landed = [int(m.group(1)) for s, _, who in (r.strip().partition("\x00") for r in signed.split("\x1e"))
+                  if who.strip() and (m := re.search(rf"{re.escape(B.JOIN)}(\d+)", s))]
         reserved = [int(m.group(1)) for m in (re.fullmatch(rf"{re.escape(B.JOIN)}(\d+)", t)
                                               for t in p.held(B.RESERVED_REF)) if m]
-        n = max(1 + sum(1 for line in trailers.splitlines() if line.strip()),
-                1 + max(reserved, default=0))
+        n = 1 + max([*landed, *reserved], default=0)
         branch = f"{p.prefix}{B.JOIN}{n}"
         if git(p.root, "rev-parse", "--verify", "-q", f"refs/heads/{branch}", check=False).returncode == 0:
             v.refuse(f"{branch} is left here by a join that did not land: remove it -- "
@@ -1099,7 +1142,7 @@ def _join_finish(p: Project, who: str) -> int:
     if git(p.root, "merge-base", "--is-ancestor", remote_branch, branch, check=False).returncode:
         v.refuse(f"{branch} here is behind or apart from {p.remote}'s, which another clone may "
                  "have finished: bring it to the remote's commit first.")
-    if not _finished(p, branch):
+    if not _signed_tip(p, branch):
         where = B.prefix(p.root)
         folder = (tree / where / E_THREADS) if where else tree / E_THREADS
         rewritten = []
@@ -1114,8 +1157,9 @@ def _join_finish(p: Project, who: str) -> int:
                 + "".join(f"{B.JOINED}{n} {sha}\n" for n, sha in joined) + "\n"
                 + f"{B.JOIN_TRAILER}: {who}\n")
         git(tree, "commit", "-q", "--allow-empty", "-m", body)
-    # Finished already, and not pushed: pushed again, never signed twice -- the number of the next
-    # join counts the trailers on the main line.
+    # Signed again only when something came after the last signature -- a `sync` because the
+    # main line moved, a correction --, so that what lands is signed whole; finished already and
+    # not pushed, pushed again.
     head = git(tree, "rev-parse", "HEAD").stdout.strip()
     outcome, said = p.push([f"refs/heads/{branch}:refs/heads/{branch}"],
                            {f"refs/heads/{branch}": head})
@@ -1138,9 +1182,10 @@ def _join_merge(p: Project, who: str) -> int:
         v.refuse("no join is open: `join` opens one.")
     branch = held.get("branch", "")
     remote_branch = f"refs/remotes/{p.remote}/{branch}"
-    if not _finished(p, remote_branch):
-        v.refuse(f"{branch} carries no `{B.JOIN_TRAILER}:` trailer on {p.remote}: `join --finish` "
-                 "first.")
+    if not _signed_tip(p, remote_branch):
+        v.refuse(f"{branch} on {p.remote} ends with a commit no `{B.JOIN_TRAILER}:` trailer signs "
+                 "-- not finished, or with commits after its last signature: `join --finish` "
+                 "signs it.")
     if git(p.root, "merge-base", "--is-ancestor", p.base, remote_branch, check=False).returncode:
         v.refuse(f"{p.base} moved past {branch}: bring the join up to date -- `sync` in its "
                  "worktree -- and finish it again.")
@@ -1198,6 +1243,21 @@ def _join_close(p: Project, who: str) -> int:
     remote_branch = f"refs/remotes/{p.remote}/{branch}"
     if not _join_landed(p, branch):
         v.refuse(f"{branch} is not on {p.base}: the join has not landed, and nothing is released.")
+    tip = git(p.root, "rev-parse", remote_branch).stdout.strip()
+    landing = [row.split()[0] for row in git(p.root, "log", "--merges", "--format=%H %P%x00%s",
+                                             f"{_join_root(p)}..{p.base}").stdout.splitlines()
+               if tip in row.split("\x00")[0].split()[2:]
+               and branch in (B.landing(row.split("\x00", 1)[-1]) or "")]
+    if not _signed_tip(p, remote_branch):
+        say(f"{branch} reached {p.main} with commits after its last signature, merged by hand: "
+            "the validator reads them as text that came outside a join, and `LC006` speaks on "
+            "them; a later join that changes the same text covers them. `join --merge` lands "
+            "only a branch signed whole.")
+    if not landing:
+        say(f"{branch} reached {p.main} without a merge of its own that names it -- a fast-forward, "
+            "or a merge by hand with another message: the validator does not read what it brought "
+            "as a join's, and `LC006` speaks on it where the rereading is optional. `join --merge` "
+            "merges with --no-ff and names the branch.")
     claims = p.held(B.CLAIM_REF)
     kept, failed = [], []
     for name, sha in _landed(p, remote_branch):
@@ -1771,6 +1831,207 @@ def cmd_sync(p: Project, args) -> int:
     return 0
 
 
+# ── What a machine has ───────────────────────────────────────────────────────
+
+# The first version whose plugin brings the hooks: below it a project needs none.
+SINCE_HOOKS = (4, 9, 0)
+
+
+def _semver(text: str) -> tuple[int, ...] | None:
+    m = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", str(text or "").strip())
+    return tuple(map(int, m.groups())) if m else None
+
+
+# The placeholders of the workflows in `ci/`, which a project fills when it copies one.
+PLACEHOLDERS = {"OWNER/framework-data-ai": r"[\w.-]+/[\w.-]+", "COMMIT_OR_TAG": r"[\w./-]+"}
+
+
+def _filled_copy(expected: str, copy: str) -> bool:
+    """Whether `copy` is `expected` with its placeholders filled, and nothing else changed."""
+    a, b = expected.splitlines(), copy.splitlines()
+    if len(a) != len(b):
+        return False
+    for want, have in zip(a, b):
+        if want == have:
+            continue
+        pattern = re.escape(want)
+        for name, value in PLACEHOLDERS.items():
+            pattern = pattern.replace(re.escape(name), value)
+        if pattern == re.escape(want) or not re.fullmatch(pattern, have):
+            return False
+    return True
+
+
+def cmd_doctor(p: Project, args) -> int:
+    """What this machine has of what `references/workstation.md` asks: read only and offline.
+
+    It says what the files declare, not what a session has: the settings an organisation
+    manages and a plugin loaded with `--plugin-dir` are out of its sight, and it says so. `todo`
+    is what the framework needs; `note` is what it recommends, or only tells. Exit 1 when there
+    is a `todo`.
+    """
+    todo: list[str] = []
+
+    def line(ok: bool, text: str, needed: bool = True) -> None:
+        say(f"{'ok  ' if ok else 'todo' if needed else 'note'}  {text}")
+        if not ok and needed:
+            todo.append(text)
+
+    pin = str(v.load_project(p.root).get("framework_version") or "")
+    if not pin:
+        say("note  the project pins no version in framework.yaml: nothing to compare the plugin with")
+    framework = Path(__file__).resolve().parents[3]
+    top = Path(git(p.root, "rev-parse", "--show-toplevel").stdout.strip())
+    say("Read only and offline: what the files of this machine declare.")
+
+    # The plugin, as Claude Code lists it.
+    try:
+        r = subprocess.run(["claude", "plugin", "details", "framework-data-ai"],
+                           capture_output=True, text=True, timeout=60)
+        shown = r.stdout if r.returncode == 0 else ""
+    except (OSError, subprocess.SubprocessError):
+        shown = ""
+    version = re.search(r"^framework-data-ai\s+(\S+)", shown, re.M)
+    hooks = re.search(r"^\s*Hooks\s*\((\d+)\)", shown, re.M)
+    if version is None:
+        line(False, "`claude plugin details framework-data-ai` gave no version: Claude Code is not "
+             "on the PATH, or the plugin is not installed. Install it at the version the project "
+             f"pins{', ' + pin if pin else ''}.")
+    else:
+        have, want = _semver(version.group(1)), _semver(pin)
+        older = bool(have and want and have < want)
+        line(version.group(1) == pin, f"the plugin installed is {version.group(1)}, and the "
+             f"project pins {pin or 'no version'}" + (": older, so its skills and validator do not "
+             "know what the project declares" if older else ""), needed=older)
+        n = int(hooks.group(1)) if hooks else 0
+        line(n >= 2, f"the plugin brings {n} hook(s)" + (": the write guard and the to-do at the "
+             "start of a session" if n >= 2 else ", and the write guard and the to-do at the start "
+             "of a session are two"), needed=bool(want and want >= SINCE_HOOKS))
+    say("      A plugin loaded with `--plugin-dir` replaces the one installed for that session "
+        "alone, and is not seen here.")
+
+    # The settings files: the sandbox and the bypass mode, recommended and not required.
+    config = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude")
+    found: dict[str, tuple[object, Path]] = {}
+    for f in (config / "settings.json", top / ".claude" / "settings.json",
+              top / ".claude" / "settings.local.json"):      # later ones win, as in Claude Code
+        try:
+            data = json.loads(f.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        box = data.get("sandbox") if isinstance(data, dict) else None
+        perms = data.get("permissions") if isinstance(data, dict) else None
+        for key, holder, field in (("sandbox", box, "enabled"),
+                                   ("fallback", box, "allowUnsandboxedCommands"),
+                                   ("bypass", perms, "disableBypassPermissionsMode")):
+            if isinstance(holder, dict) and field in holder:
+                found[key] = (holder[field], f)
+
+    def where(key: str) -> str:
+        return f" ({found[key][1]})" if key in found else ""
+    line(found.get("sandbox", (None,))[0] is True, "the Bash sandbox is "
+         + ("declared" if found.get("sandbox", (None,))[0] is True else "not declared")
+         + f" in the settings files{where('sandbox')}: recommended, see references/workstation.md",
+         needed=False)
+    line(found.get("fallback", (None,))[0] is False, "commands outside the sandbox are "
+         + ("refused" if found.get("fallback", (None,))[0] is False else "not refused")
+         + f"{where('fallback')}: `sandbox.allowUnsandboxedCommands: false` is recommended",
+         needed=False)
+    line(found.get("bypass", (None,))[0] == "disable", "the mode that skips the permissions is "
+         + ("disabled" if found.get("bypass", (None,))[0] == "disable" else "not disabled")
+         + f"{where('bypass')}: `permissions.disableBypassPermissionsMode: disable` is recommended",
+         needed=False)
+    say("      The settings an organisation manages are not read here.")
+
+    # The folders: one project per parent folder, and the exchange beside the repositories.
+    parent = top.parent
+    ours = {Path(l[len("worktree "):]).resolve() for l in
+            git(top, "worktree", "list", "--porcelain").stdout.splitlines()
+            if l.startswith("worktree ")}
+    beside = sorted(d for d in parent.iterdir()
+                    if d.is_dir() and (d / ".git").exists() and d.resolve() not in ours)
+    others = [d.name for d in beside if (d / ".framework").is_dir()]
+    line(not others, f"one project in {parent}" if not others else
+         f"another project with .framework/ in {parent}: {', '.join(others)}. One project per "
+         "parent folder: two would share the exchange")
+    say(f"note  repositories beside it: {', '.join(d.name for d in beside if d.name not in others) or 'none'}")
+    try:
+        sessions = v.yaml.safe_load((p.root / ".framework" / "sessions.yaml").read_text(encoding="utf-8")) or {}
+    except (OSError, UnicodeError, v.yaml.YAMLError):
+        sessions = {}
+    declared = sessions.get("exchange") if isinstance(sessions, dict) else None
+    if not declared:
+        line(False, "no `exchange:` in .framework/sessions.yaml: a code session has nowhere to "
+             "deliver what the documentation should say")
+    else:
+        place = (p.root / str(declared)).resolve()
+        line(place.is_dir(), f"the exchange {declared} is {place}"
+             + ("" if place.is_dir() else ", which this machine does not have: create it"))
+        line(place == parent / "_scambio", "the exchange is `_scambio` beside the repositories"
+             if place == parent / "_scambio" else "the exchange is not `_scambio` beside the "
+             "repositories: code sessions, which read no sessions.yaml, do not know it",
+             needed=False)
+
+    # The tools.
+    pins = {}
+    try:
+        for row in (framework / "constraints.txt").read_text(encoding="utf-8").splitlines():
+            name, _, value = row.split(";")[0].strip().partition("==")
+            if value:
+                pins[name.lower()] = value.strip()
+    except OSError:
+        pass
+    say(f"note  Python {sys.version.split()[0]}, at {sys.executable}")
+    # PyYAML, jsonschema and git it needed to start at all: without them it stopped before
+    # this, saying which. Their versions are what is left to tell.
+    for name in ("pyyaml", "jsonschema"):
+        try:
+            have = importlib.metadata.version(name)
+        except importlib.metadata.PackageNotFoundError:
+            have = "?"
+        line(have == pins.get(name, have), f"{name} {have}" + (
+            "" if have == pins.get(name, have) else f", and constraints.txt pins {pins[name]}"),
+            needed=False)
+    say(f"note  {git(p.root, '--version', check=False).stdout.strip()}")
+
+    # The name.
+    people = B.names(p.work.get("people"))
+    if args.who:
+        line(not people or args.who.strip() in people, f"`{args.who.strip()}` is "
+             + ("" if not people or args.who.strip() in people else "not ")
+             + f"among the people of {B.WORK}")
+    else:
+        say(f"note  the names `--who` takes: {', '.join(sorted(people)) or 'any, no people declared'}")
+
+    # The workflow of the branches, as the pinned version has it.
+    flows = top / ".github" / "workflows"
+    branches, request = flows / "branches.yml", flows / "pull-request.yml"
+    if request.is_file():
+        line(False, "pull-request.yml is in .github/workflows/" + (
+            ", beside branches.yml: copy one or the other" if branches.is_file() else
+            ", and it has no `main` job: a project with work.yaml copies ci/branches.yml in its "
+            "place"))
+    if not branches.is_file():
+        line(False, "no .github/workflows/branches.yml: nothing sees what reaches the main line "
+             "outside a pull request or a join")
+    else:
+        copy = branches.read_text(encoding="utf-8")
+        import migrate as M                  # the framework's history, read as `migrate.py` reads it
+        sha, why = M.commit_declaring(pin, framework) if pin else (None, "the project pins no version")
+        shown = git(framework, "show", f"{sha}:ci/branches.yml", check=False) if sha else None
+        if shown is None or shown.returncode:
+            line(False, f"branches.yml cannot be compared with the one of {pin or 'the pin'}: "
+                 f"{why or 'that version has no ci/branches.yml'}", needed=False)
+        elif any(name in copy for name in PLACEHOLDERS):
+            line(False, "branches.yml still has OWNER/framework-data-ai or COMMIT_OR_TAG: fill them")
+        else:
+            same = _filled_copy(shown.stdout, copy)
+            line(same, f"branches.yml is the one of {pin}, its placeholders filled" if same else
+                 f"branches.yml differs from the one of {pin}: copy ci/branches.yml again and "
+                 "fill its placeholders")
+    return 1 if todo else 0
+
+
 def main() -> int:
     for stream in (sys.stdout, sys.stderr):
         if hasattr(stream, "reconfigure"):
@@ -1834,12 +2095,15 @@ def main() -> int:
     rv = sub.add_parser("revoke", help="take a delegation back, or give one's own up")
     rv.add_argument("--to", required=True, help="the person holding it")
     rv.add_argument("--who", required=True, help="an admin, or the delegate")
+    d = sub.add_parser("doctor", help="what this machine has of what references/workstation.md "
+                                      "asks; read only and offline")
+    d.add_argument("--who", help="the name you work under, to check it is among the people")
 
     args = ap.parse_args()
     p = Project(args)
     return {"open": cmd_open, "reserve": cmd_reserve, "list": cmd_list,
             "release": cmd_release, "sync": cmd_sync, "delegate": cmd_delegate,
-            "revoke": cmd_revoke, "join": cmd_join}[args.command](p, args)
+            "revoke": cmd_revoke, "join": cmd_join, "doctor": cmd_doctor}[args.command](p, args)
 
 
 if __name__ == "__main__":

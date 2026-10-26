@@ -183,11 +183,16 @@ def migration_notes(text: str) -> list[tuple[str, str, str]]:
 
 
 def commit_declaring(version: str, framework: Path):
-    """The newest framework commit whose registry declared `version`.
+    """The framework commit that shipped `version`: its tag `v<version>`, where there is one
+    and its registry declares that number, and the newest commit whose registry declared it
+    otherwise.
 
     Newest and not oldest: a version is current from the commit that introduced it until
     the one that replaced it, and the validator a project has been running all along is the
-    last one that shipped under that number, not the first.
+    last one that shipped under that number, not the first. THE TAG FIRST, because the next
+    version is developed under the old number until the commit that bumps it, and a step of
+    that work which touched the registry is the newest commit declaring a number it never
+    shipped under.
     """
     # Asked before the log, because git's own answer to "not a repository" is
     # `Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set)`, which
@@ -200,6 +205,11 @@ def commit_declaring(version: str, framework: Path):
                       "own history. Point --framework at a clone. The migration notes above "
                       "are still the ones for this move.")
 
+    tag = git(["rev-parse", "--verify", "-q", f"refs/tags/v{version}^{{commit}}"], framework)
+    if tag.returncode == 0:
+        show = git(["show", f"{tag.stdout.strip()}:{REGISTRY_REL}"], framework)
+        if show.returncode == 0 and registry_version(show.stdout) == version:
+            return tag.stdout.strip(), None
     log = git(["log", "--follow", "--format=%H", "--", REGISTRY_REL], framework)
     if log.returncode != 0:
         tail = log.stderr.strip().splitlines()
