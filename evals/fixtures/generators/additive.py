@@ -14,8 +14,7 @@ A git repository with one commit and no remote. The to-do reads the main line an
 branches the clone has, without the network, so it computes threads here; `work.py`, which
 fetches, does not get far. That is the limit of a fixture for triggering, which asks only which
 skill answers: the behaviour of `contribute`, which needs the exchange beside the repository,
-has no fixture yet. Its review stamps are audit.py's, so outside `stale_days` of them `LC002`
-speaks here as it does there.
+has no fixture yet. Its review stamps are audit.py's, which move with the calendar.
 """
 import os
 import re
@@ -40,8 +39,11 @@ with tempfile.TemporaryDirectory() as tmp:
 # The register in the shape the threads are computed from: each open entry forecasts what it
 # will change. OD-004 and OD-012 are decisions, each a thread for those who decide; KI-003 and
 # KI-005 forecast one anchor, so they are one thread of work, which a contributor may take; the
-# approved CHG-001 forecasts another, and is a thread of its own.
-(D / "products" / "atlas" / "OPEN.md").write_text("""\
+# approved CHG-001 forecasts another, and is a thread of its own. Its stamp is the one audit.py
+# gave the register, read rather than restated: those move with the calendar.
+register = D / "products" / "atlas" / "OPEN.md"
+stamp = re.search(r"^last_review: (.+)$", register.read_text(encoding="utf-8"), re.M).group(1)
+register.write_text("""\
 ---
 schema: framework/open-register/v1
 artifact_type: open-register
@@ -50,7 +52,7 @@ status: active
 owners: [maria]
 products: [atlas]
 created: 2026-01-01
-last_review: 2026-08-01 09:17
+last_review: STAMP
 entries:
   OD-004:
     status: open
@@ -103,7 +105,7 @@ review_scope: the whole file
 # §4 · Decided, moved out
 
 - OD-001 -> DEC-001
-""", encoding="utf-8")
+""".replace("last_review: STAMP\n", f"last_review: {stamp}\n"), encoding="utf-8")
 chg = D / "products" / "atlas" / "changes" / "CHG-001-scoring.md"
 text = chg.read_text(encoding="utf-8")
 if text.count("derives_from: DEC-001\n") != 1:

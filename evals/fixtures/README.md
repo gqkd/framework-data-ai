@@ -41,10 +41,16 @@ by a relative path, so a copy pushes into its own copy.
 
 | | |
 |---|---|
-**THE DECLARED COUNTS ARE TRUE INSIDE A WINDOW, AND ONE OF THEM MOVES WITH THE CALENDAR.**
+**THE DECLARED COUNTS ARE TRUE INSIDE A WINDOW.**
 `LC002` reports a living document unreviewed for longer than `stale_days`, which is 90, and
 `requirement/seed` carries a `last_review` that crossed that line on its own: the fixture went
 from one warning to two on 2026-08-31 without anybody touching it, because that was day 91.
+`audit/clean-repo`, `audit/dirty-repo`, `cycle/fixture-base`, `requirement/seed` and `platform`,
+and `contribute/team` built from the first, would have crossed it on 2026-10-31, all at once:
+the stamps their generators write one after another are written thirty days before the day of
+the build now, so a build crosses it on the sixty-first day after it was made. Every other
+stamp is fixed, in the other generators and in `static/`, and a fixture carrying one reports
+`LC002` on its own from the ninety-first day after it.
 Every count written here is a count as of a date, and a fixture whose result depends on when it
 is run cannot be pinned by a sentence. Run `--stale-days` high to take the clock out of it, or
 read a count that is one off as this before reading it as a defect.
@@ -81,7 +87,7 @@ wrong in a way nobody planned.
 | `resolve/coldstart` | Almost nothing written, because almost everything is blocked on a decision nobody took. |
 | `platform` | Three products on one substrate and a change that reaches all of them: a signed commitment promising an identifier to customers, another promising to pseudonymise it, three architectures joining on it, and a risk accepted on the grounds that it stays what it is. Eleven documents, three owners. The only fixture here where "propose a diff and wait" produces something too long to read. It is also the only one carrying the full register layout: `platform/OPEN.md` for the two substrate decisions, one register per product for what is only theirs, and a root holding the parking lot and the generated union. |
 | `review/gap` | A git repository whose history says which documents were reread and which were only edited. Three commits, each of which can be said in one sentence: the first documented set; the contract gains a column and the architecture and the brief follow it, none of the three reread; the architecture is reread and stamped. Two findings by construction, both eleven days, and one document that produces none because it was reread. It exists because the six `release/` fixtures looked like a bench for this and were not: thirty of their living documents carried a gap and twenty-nine were the first commit importing everything after those instants. No story, no edit, nobody's mistake. |
-| `contribute/team` | `audit/clean-repo` put in the additive mode: the roles in `.framework/work.yaml`, and open entries whose `affects` give the to-do four threads -- two with a decision, one of two known issues forecasting one anchor, one approved change -- in one commit, so the to-do has a main line to read. No remote and no exchange beside it: `contribute`'s prompts, and the two traps that name it, are measured here for triggering, not for behaviour. Nothing to report, inside the window of its review stamps, which are `audit/clean-repo`'s; the self check asserts that and the four threads. |
+| `contribute/team` | `audit/clean-repo` put in the additive mode: the roles in `.framework/work.yaml`, and open entries whose `affects` give the to-do four threads -- two with a decision, one of two known issues forecasting one anchor, one approved change -- in one commit, so the to-do has a main line to read. No remote and no exchange beside it: `contribute`'s prompts, and the two traps that name it, are measured here for triggering, not for behaviour. Nothing to report: its review stamps are `audit/clean-repo`'s, which move with the calendar; the self check asserts that and the four threads. |
 | `start/corpus-project` | Business documents and no framework, the only state `start` is written for. Three of the seven give nothing back: an empty scanned PDF, a `.docx` that is not a zip archive, and a file of whitespace. They need three different things done about them, so a run that reports a count has not helped. |
 
 ## A fixture that cannot fail is not a fixture

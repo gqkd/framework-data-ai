@@ -297,6 +297,13 @@ def previous_framework(args, declared, root, framework):
     pin = args.from_commit or (config.get("framework_commit") if isinstance(config, dict)
                               and not args.from_version else None)
     if pin is not None:
+        # A hash made only of digits is a number to YAML, and this is the first thing that
+        # reads the pin in an adoption: said as such, as `FW003` says it.
+        if isinstance(pin, int) and not isinstance(pin, bool):
+            raise RuntimeError(f"framework_commit is {pin}, a number: YAML reads a hash made "
+                               "only of digits as one, and one that starts with 0 may not "
+                               "come back as written. Write the hash in quotes, seven "
+                               'characters or more, `framework_commit: "<hash>"`')
         if not isinstance(pin, str) or not COMMIT.fullmatch(pin):
             raise RuntimeError("previous framework commit is not a valid Git commit ID")
         resolved = git(["rev-parse", "--verify", f"{pin}^{{commit}}"], framework)

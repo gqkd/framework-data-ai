@@ -3604,6 +3604,16 @@ def check_framework_pin(project: dict, report: Report) -> None:
     pinned = project.get("framework_commit")
     if pinned is None:
         return
+    # A hash made only of digits is a number to YAML: one written by hand without quotes, seven
+    # characters long, is one about once in twenty-seven. Said as such, or "not a commit" sends
+    # somebody to check a hash that is right.
+    if isinstance(pinned, int) and not isinstance(pinned, bool):
+        report.add("FW003", "framework.yaml",
+                   f"framework_commit is {pinned}, a number: YAML reads a hash made only of "
+                   "digits as one, and one that starts with 0 may not come back as written. "
+                   'Write the hash in quotes, seven characters or more, `framework_commit: '
+                   '"<hash>"`, as `migrate.py --adopt` writes it.')
+        return
     if not isinstance(pinned, str) or not COMMIT.match(pinned.strip()):
         report.add("FW003", "framework.yaml",
                    f"framework_commit is {pinned!r}, which is not a commit. It takes the "

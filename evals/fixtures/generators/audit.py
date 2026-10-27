@@ -8,7 +8,7 @@ import shutil
 import sys
 from pathlib import Path
 import itertools
-from datetime import datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from attested import reread     # beside this script: sys.path[0] when run as one
 
 # Every document here used to carry the same review instant, which is a claim that somebody
@@ -19,9 +19,19 @@ from attested import reread     # beside this script: sys.path[0] when run as on
 # truth about itself either way.
 _REVIEW_STEP = itertools.count()
 
+# THE STAMPS MOVE WITH THE CALENDAR. They were the first of August 2026, fixed, and `LC002`
+# reports a living document unreviewed for longer than `stale_days`: from 31 October 2026 every
+# living document here would have gone stale on its own, the fixture that must report nothing
+# would have reported seven warnings, and every count the prose states would have been wrong.
+# No prose and no case cites these stamps; the dates that are cited -- the glossary's stamp of
+# 2024, planted, and a trigger -- stay fixed. Thirty days before the day of the build is inside
+# the window and after every day a document here is created or decided on. The two manifests
+# carry the first stamp, as they did.
+_FIRST_STAMP = datetime.combine(date.today() - timedelta(days=30), time(9, 0))
+
 
 def review() -> str:
-    return (datetime(2026, 8, 1, 9, 0)
+    return (_FIRST_STAMP
             + timedelta(minutes=17 * next(_REVIEW_STEP))).strftime("%Y-%m-%d %H:%M")
 
 
@@ -145,7 +155,7 @@ Nothing open.
         "products: [atlas]\n"
         "owners: [maria]\n"
         "created: 2026-01-01\n"
-        "last_review: 2026-08-01 09:00\n"
+        f"last_review: {_FIRST_STAMP:%Y-%m-%d %H:%M}\n"
         "review_scope: the whole manifest\n"
         # Declared, so the commit the ARC attests resolves to a repository. Without it the
         # attestation names something no map knows and VER001 is right to say so.
@@ -405,7 +415,7 @@ each decision still matters, which no generator can produce.
         "products: [atlas]\n"
         "owners: [maria]\n"
         "created: 2026-01-01\n"
-        "last_review: 2026-08-01 09:00\n"
+        f"last_review: {_FIRST_STAMP:%Y-%m-%d %H:%M}\n"
         "review_scope: the whole manifest\n"),
 
     # 3. FM002: PBR missing `owners`

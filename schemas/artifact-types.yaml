@@ -1974,7 +1974,68 @@
 # linear history refuses: where the main line is protected that way, either the requirement goes or
 # those who join may bypass it, and the framework does not choose between the two. From then on the
 # main line moves only at a join.
-version: "4.9.0"
+#
+# 4.9.0 -> 4.9.1. Every project has an exchange; a pin YAML reads as a number is said as such; the
+# fixtures whose stamps were fresh stop going stale; and the self check gives git an identity of
+# its own.
+#
+# THE EXCHANGE IS A PLACE EVERY PROJECT HAS; DECLARING IT TURNS ON ITS RULES. The section on review
+# of `AGENTS.md`, which every project adopts, let sessions write in "the exchange", while the
+# section saying what the exchange is enters only where `.framework/sessions.yaml` declares one: a
+# project that declared none read a name its `AGENTS.md` never explained, and the guard let
+# `_scambio` beside the repositories through all the same. The section on review now says where it
+# is -- `_scambio` beside the repositories, and the place `.framework/sessions.yaml` declares, if
+# it declares one. `references/contributions.md`, which called the exchange optional, and
+# `PROCESSES.md` say that every project has the place and that the declaration turns on the rest:
+# the fixed names, `risorse.md` and the closing declaration, the brief `cycle` writes there and the
+# delivery `contribute` takes from there, the section of `AGENTS.md` that says the rule,
+# `exchange.py` and the `EXC` checks. A check of the self check reads what every project gets of
+# the template, and wants each paragraph that names the exchange to say where it is.
+#
+# A PIN MADE ONLY OF DIGITS. `framework_commit` is written by hand the first time, and a hash made
+# only of digits is a number to YAML: seven characters are, about once in twenty-seven. `FW003`
+# said "not a commit" of it, which sends somebody to check a hash that may be right; it now says
+# that YAML read a number and to write the hash in quotes, seven characters or more, as `migrate.py
+# --adopt` does; and `migrate.py`, which reads the same pin first in an adoption and said that it
+# was not a valid Git commit ID, says the same. The self check's own check of the pin wrote it
+# unquoted and failed on about one commit in three hundred, for the same reason.
+#
+# THE FIXTURES, AND THE SELF CHECK. The review stamps the generators of `audit/clean-repo`,
+# `audit/dirty-repo`, `cycle/fixture-base`, `requirement/seed` and `platform` write one after
+# another, and those of `contribute/team` built from the first, were fixed at 1 August 2026, and
+# from 31 October every one of them would have gone stale on its own: seven warnings in the fixture
+# that must report nothing and every count stated of the two audit ones wrong, twelve, eleven and
+# twenty-one more in the other three. They are written thirty days before the day the fixtures are
+# built now; the dates the cases cite stay fixed. Every other stamp is fixed, in the other
+# generators and in `static/`, and a fixture carrying one reports `LC002` on its own from the
+# ninety-first day after it: `evals/fixtures/README.md` says how to read a count there. And two
+# checks call `work.py` inside the self check's own process, whose commits and tags took that
+# process's git configuration: the CI runner names nobody, so both failed there with "Committer
+# identity unknown" from 4.8.0 on, while every run on a machine whose `~/.gitconfig` names somebody
+# was green. The self check now gives git an identity of its own; the rest of the machine's git
+# configuration stays, because git reads the checkout through it.
+#
+# PATCH, ARGUED. No document stops validating, and nothing arrives: no type, field or check of the
+# validator. What moves is the words of a template section, two messages, the stamps of some
+# fixtures -- and the section is one `--adopt` writes, so adopting it costs a commit and a reading,
+# as 4.8.1, a patch too, cost a `ref:` moved. ADOPTION: each person updates the plugin; where the
+# project declares `.framework/work.yaml`, `work.py doctor` says when it is older than the version
+# the project declares. Then `migrate.py --root <project>` and `--adopt`, which brings the `review`
+# section of `AGENTS.md` to the new text where its words are still the framework's -- in the
+# additive mode on the branch of a join, as every adoption there --; commit `AGENTS.md` with
+# `framework.yaml`. A person rereads and attests it, and until then `LC006` reports it, `PR005` on
+# a pull request; in the additive mode with `rereading: optional` a join's text owes the reading
+# only after `unread_days`, as `LC009` says. A copy somebody edited is left, and `migrate.py` names
+# it at every run; no check of the validator sees whether it says where the exchange is: write it
+# in, or `--adopt --replace-section review`. The main line carried the new section for a while
+# under the number 4.9.0, and a project that adopted from there has it already. Copies of
+# `ci/pull-request.yml` and `ci/branches.yml` move `ref:` to `v4.9.1`, the version the project now
+# declares, and a copy of `ci/contribution.yml` its sha to the commit `v4.9.1` names; nothing else
+# in them changes. A copy left behind is seen by `FW003`, in that copy's own runs, only where the
+# project writes `framework_commit`: those runs read the pin against the framework they check out,
+# as for 4.8.1. Where it writes none, no check sees a copy left behind, `contribution.yml`'s
+# included.
+version: "4.9.1"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of

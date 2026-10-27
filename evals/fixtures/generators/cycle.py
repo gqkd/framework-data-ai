@@ -6,7 +6,7 @@ Usage: python make_fixture.py <dest-dir>
 import sys, shutil
 from pathlib import Path
 import itertools
-from datetime import datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from attested import reread     # beside this script: sys.path[0] when run as one
 
 # Every document here used to carry the same review instant, which is a claim that somebody
@@ -17,9 +17,15 @@ from attested import reread     # beside this script: sys.path[0] when run as on
 # truth about itself either way.
 _REVIEW_STEP = itertools.count()
 
+# THE STAMPS MOVE WITH THE CALENDAR, as `audit.py`'s do and for the same reason: fixed at the
+# first of August 2026, every one of them would have gone stale on its own on 31 October 2026.
+# Thirty days before the day of the build is after every day a document here is created or
+# decided on.
+_FIRST_STAMP = datetime.combine(date.today() - timedelta(days=30), time(9, 0))
+
 
 def review() -> str:
-    return (datetime(2026, 8, 1, 9, 0)
+    return (_FIRST_STAMP
             + timedelta(minutes=17 * next(_REVIEW_STEP))).strftime("%Y-%m-%d %H:%M")
 
 

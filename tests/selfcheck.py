@@ -47,6 +47,20 @@ GENERATE = ROOT / "schemas" / "generate.py"
 SECTION_MARK = re.compile(r"<!--\s*section:\s*([a-z0-9-]+)\s*-->")
 PLACEHOLDERS = set(REGISTRY["placeholders"]["enforced"])
 
+# GIT HAS AN IDENTITY IN EVERY RUN, WHOEVER RUNS IT. Some checks call `work.py` inside this
+# process, and the commits and tags it makes take this process's environment: on a machine whose
+# `~/.gitconfig` names somebody they passed, and on the CI runner, which names nobody, two of
+# them failed with "Committer identity unknown" from 4.8.0 to 4.9.0 while every run here was
+# green. Only the identity: the rest of the machine's configuration -- `safe.directory`, a global
+# ignore file, `core.autocrlf` -- is how git reads this checkout, and sees it clean, as the
+# machine has it, and stays. A run that sets these itself keeps them; the subprocesses given
+# `_WORK_ENV` set their own. The generators `built()` runs inherit it too, and in the stores
+# `digest.py` and `digest_stages.py` build it wins over the `lead` they configure: built here
+# their commits are `t`'s, built by `make.py` `lead`'s, and nothing reads who made them.
+for _name, _value in (("GIT_AUTHOR_NAME", "t"), ("GIT_AUTHOR_EMAIL", "t@example.com"),
+                      ("GIT_COMMITTER_NAME", "t"), ("GIT_COMMITTER_EMAIL", "t@example.com")):
+    os.environ.setdefault(_name, _value)
+
 
 def _load(path: Path, name: str):
     """Import the validator so its constants are read, never restated here."""
@@ -812,9 +826,13 @@ def _pin_shapes():
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
 
-        def message(pin: str) -> str:
+        def message(pin: str, quoted: bool = True) -> str:
+            # Quoted, as `migrate.py --adopt` writes it. A short hash made only of digits is a
+            # number to YAML, and about one commit in three hundred has one: run on such a
+            # commit, this check had both pins below reported as not a commit.
+            pin = f'"{pin}"' if quoted else pin
             (root / "framework.yaml").write_text(
-                f"framework_version: {REGISTRY['version']}\nframework_commit: {pin}\n")
+                f'framework_version: {REGISTRY["version"]}\nframework_commit: {pin}\n')
             r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(root),
                                 "--json"], capture_output=True, text=True)
             found = [f["message"] for f in json.loads(r.stdout)["findings"]
@@ -839,6 +857,26 @@ def _pin_shapes():
         if not message("main"):
             problems.append("a branch name was accepted as a pin: both a branch and a tag "
                             "move, which is the state the field exists to leave")
+        # The first pin a person writes by hand, and seven digits are a number to YAML.
+        if "quotes" not in message("1234567", quoted=False):
+            problems.append("a pin of digits written without quotes was not told to be "
+                            "quoted: YAML read it as a number, and the message sent somebody "
+                            f"to check a hash that may be right: {message('1234567', False)[:80]!r}")
+        # And `migrate.py`, which reads the same pin first in an adoption, said "not a valid
+        # Git commit ID" of it.
+        migrate = _load(ROOT / "skills" / "audit" / "scripts" / "migrate.py", "migrate")
+        (root / "framework.yaml").write_text(
+            f'framework_version: {REGISTRY["version"]}\nframework_commit: 1234567\n')
+        try:
+            with migrate.previous_framework(
+                    argparse.Namespace(from_framework=None, from_commit=None,
+                                       from_version=None), REGISTRY["version"], root, ROOT):
+                said = ""
+        except RuntimeError as e:
+            said = str(e)
+        if "quotes" not in said:
+            problems.append("migrate.py did not tell a pin of digits written without quotes to "
+                            f"be quoted: {said[:80]!r}")
     return problems
 
 
