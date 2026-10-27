@@ -86,11 +86,11 @@ every new identifier before writing it, from this branch: `work.py --root <threa
 reserve`, as `audit` describes. From here on `<thread worktree>` is the root: run on the main
 checkout, the checks below compare the main line with itself and find nothing.
 
-**What a code session delivered.** When `in-arrivo/<CHG>/documentazione.md` is in the exchange,
-copy it to `_filoni/<slug>/consegne/<CHG>/documentazione.md` and commit it, then draw the effects
-from it with the rules of `requirement`: each line proposed with its target, confirmed once by the
-person. A `contribution-policy.json` delivered goes to the same folder. Then the delivery moves to
-`integrati/` as `references/contributions.md` describes, with `documentazione.md` named in
+**What a code session delivered.** When `in-arrivo/<CHG>/documentazione.md` is in the declared
+exchange, copy it to `_filoni/<slug>/consegne/<CHG>/documentazione.md` and commit it, then draw the
+effects from it with the rules of `requirement`: each line proposed with its target, confirmed once
+by the person. A `contribution-policy.json` delivered goes to the same folder. Then the delivery
+moves to `integrati/` as `references/contributions.md` describes, with `documentazione.md` named in
 `parts` at its place on the branch.
 
 ## Before each push

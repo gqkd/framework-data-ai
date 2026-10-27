@@ -164,12 +164,18 @@ request, evidence and a contribution policy coming back. Every rule above says w
 material ends up. None said where it waits, or when it goes, and after six weeks of parallel
 sessions the folder holding the repositories was full of worktrees already merged, deliveries
 already integrated and copies of credentials nobody removed. This section is the rule for
-when. It is optional: a project that declares no exchange works as before.
+when. Every project has the place: `_scambio` beside the repositories, which the guard lets
+every session write in and the template's section on review of `AGENTS.md` names. Declaring
+it is optional, and is what turns on the rest -- the rule below with its fixed names,
+`risorse.md` and the closing declaration, the brief `cycle` writes there and the delivery
+`contribute` takes from there, the section of `AGENTS.md` that says the rule, `exchange.py`
+and the checks of the validator: a project that declares no exchange has the place and none
+of its discipline.
 
 ### The place
 
-`.framework/sessions.yaml` declares it, relative to the root of the documentation
-repository, outside it:
+A project declares it in `.framework/sessions.yaml`, relative to the root of the
+documentation repository, outside it:
 
 ```yaml
 exchange: ../_scambio
@@ -339,4 +345,7 @@ that two documents declare is done only when both say so. All seven are warnings
 
 The rule has to reach sessions that run no skill, which only the project's `AGENTS.md` does.
 The template's section *Sessions and the exchange* says it, and `migrate.py --adopt` writes
-it there, with the declared place, once `.framework/sessions.yaml` declares one.
+it there, with the declared place, once `.framework/sessions.yaml` declares one. The
+template's section on review names the place itself, declared or not, and `--adopt` brings
+that text to a copy of the section still in an earlier version's words, where it can read
+that version: in the framework's git history, or with `--from-framework`.

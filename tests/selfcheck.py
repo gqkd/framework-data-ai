@@ -10793,6 +10793,46 @@ def _adopt_writes_the_framework_sections():
 
 # ─────────────────────────────────────────────────────────────────────────────
 
+@check("every project's AGENTS.md says where the exchange is, declared or not")
+def _every_project_reads_where_the_exchange_is():
+    # A PLACE NAMED ONLY WHERE A PROJECT DECLARES IT. The section on review, which every project
+    # adopts, told sessions they may write in "the exchange"; the section that said what the
+    # exchange is entered only where `.framework/sessions.yaml` declares one. A project that
+    # declared none read a name its AGENTS.md never explained, while the guard let `_scambio`
+    # beside the repositories through all the same. Every project has that place; declaring it
+    # turns on its rules. So whatever every project gets names it, in the paragraph that uses it.
+    migrate = _load(ROOT / "skills" / "audit" / "scripts" / "migrate.py", "migrate_exchange_named")
+    guard = _load(ROOT / "hooks" / "guard.py", "guard_exchange_named")
+    # The name the guard lets through, read from it: renamed there, this check follows.
+    where_it_is = re.compile(rf"`(?:\.\./)?{re.escape(guard.EXCHANGE)}`")
+    problems = []
+    template = (ROOT / migrate.TEMPLATE_REL).read_text(encoding="utf-8")
+    every = [("the text before the first section", template.split("\n## ", 1)[0])]
+    every += [(repr(s["heading"]), s["text"]) for s in migrate.sections(template) if not s["requires"]]
+    if "'Review before presenting, and before committing'" not in [w for w, _ in every]:
+        problems.append("the section on review is not among those every project gets: "
+                        "this check would pass on nothing")
+    for where, text in every:
+        rendered = migrate.render(text, None)
+        if "EXCHANGE_PATH" in rendered:
+            problems.append(f"{where}, which every project gets, uses EXCHANGE_PATH: where no "
+                            "exchange is declared it stays a placeholder")
+        paragraphs = re.split(r"\n[ \t]*\n", rendered)
+        if where == "'Review before presenting, and before committing'" \
+                and not any(where_it_is.search(para) for para in paragraphs):
+            problems.append(f"{where} no longer says where the exchange is: a session where no "
+                            "exchange is declared is told nowhere of the place the guard lets "
+                            "it write in")
+        for para in paragraphs:
+            if re.search(r"\bexchanges?\b(?!\.py)", para, re.I) and not where_it_is.search(para):
+                problems.append(f"{where}, which every project gets, names the exchange in a "
+                                "paragraph that does not say where it is: "
+                                f"{' '.join(para.split())[:70]}...")
+    return problems
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+
 @check("--adopt writes the section on threads and joins only where the additive mode is declared")
 def _adopt_additive_section():
     migrate = _load(ROOT / "skills" / "audit" / "scripts" / "migrate.py", "migrate_additive")

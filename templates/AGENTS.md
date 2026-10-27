@@ -173,10 +173,11 @@ corrections and on the points it left out only when `FRAMEWORK_PATH/agents/revis
 would, at most three passes. If you cannot run a subagent at all, say that the review did
 not run. A review that did not run is said, never skipped in silence.
 
-Write only inside this repository and its worktrees, the exchange, and the folders Claude Code
-keeps for the session; for any other place, ask the person first. The framework plugin's guard
-stops the file tools where it is installed, and nothing stops Bash: the rule holds there all
-the same.
+Write only inside this repository and its worktrees, the exchange -- `_scambio` beside the
+repositories, and the folder `.framework/sessions.yaml` declares, if it declares one -- and
+the folders Claude Code keeps for the session; for any other place, ask the person first.
+The framework plugin's guard stops the file tools where it is installed, and nothing stops
+Bash: the rule holds there all the same.
 
 ## Mandatory updates
 
