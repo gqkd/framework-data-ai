@@ -10233,6 +10233,138 @@ def _anchors_nest_by_name():
     return problems
 
 
+@check("4.10.0 end to end: dead mandates withdrawn and the living ones given a forecast at a join, and the product held in one thread comes apart, its long document by its sections")
+def _approved_mandates_end_to_end():
+    # What the project that asked for 4.10.0 said it would check, on a synthetic one. Before: a
+    # product with six approved changes without `affects`, held whole in one thread with the
+    # entries on its brief. On the branch of a join -- by its name: who decides, the trailers
+    # and the claims are `_mandate_moves`' -- four mandates that will never be carried out
+    # withdrawn, two replaced by a change deriving from them, one by a decision, one whose
+    # increment passes to its replacement, and the two left given disjoint forecasts: no finding
+    # of the branches, of the changes or of the anchors there, and the same writes on a
+    # thread's branch are six BR006. After: the to-do computes the product apart, no change
+    # "has no affects", the replacement waits for what the increment it received requires, and
+    # two entries on a section and on one inside it meet.
+    problems = []
+
+    def chg(i, status="approved", **extra):
+        meta = dict(schema="framework/change-contract/v1", artifact_type="change-contract",
+                    lifecycle="immutable", status=status, id=i, products="[a]", owners="[o]",
+                    created="2026-06-01", approvers="[Owner]")
+        meta.update(extra)
+        return _fm(**meta) + f"# {i} title\n"
+
+    def living(kind, body):
+        return _fm(schema=f"framework/{kind}/v1", artifact_type=kind, lifecycle="living",
+                   status="active", products="[a]", owners="[o]", created="2026-06-01",
+                   last_review="2026-06-01 09:00") + body
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        origin = tmp / "origin.git"
+        subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(origin)], check=True,
+                       env={**os.environ, **_WORK_ENV})
+        repo = _Repo(tmp / "docs")
+        repo.write(".framework/work.yaml", "mode: additive\npeople: [Owner, Junior]\n"
+                   "admins: [Owner]\n")
+        repo.write("decisions/DEC-001-x.md", _decision("DEC-001", "OD-900"))
+        repo.write("products/a/PBR.md", living("product-brief",
+                   "# Brief\n\n<!-- section: scope -->\n## Scope\n\nx\n\n"
+                   "<!-- section: scope-api -->\n### API\n\ny\n\n"
+                   "<!-- section: other -->\n## Other\n\nz\n"))
+        repo.write("products/a/ARC.md", living("architecture",
+                   "# Arch\n\n<!-- section: current -->\n## Current\n\na\n\n"
+                   "<!-- section: target -->\n## Target\n\nb\n\n"
+                   "<!-- section: delta -->\n## Delta\n\nc\n"))
+        repo.write("products/a/RMP.md", living("roadmap", "# Roadmap\n\n### INC-001 · first\n")
+                   .replace("---\n\n", "delivery_stages:\n  s1:\n    name: first\n"
+                            "    after: []\n    increments: [INC-001]\nincrements:\n"
+                            "  INC-001:\n    state: committed\n    depends_on: []\n"
+                            "    requires: [OD-003]\n    changes: []\n---\n\n", 1))
+        repo.write("products/a/OPEN.md", _register({
+            "OD-001": {"status": "open", "affects": "[products/a/PBR.md#scope]"},
+            "OD-002": {"status": "open", "affects": "[products/a/PBR.md#scope-api]"},
+            "OD-003": {"status": "open", "affects": "[products/a/PBR.md#other]"}}))
+        for i in ("CHG-001", "CHG-002", "CHG-003", "CHG-006"):
+            repo.write(f"products/a/changes/{i}.md", chg(i))
+        repo.write("products/a/changes/CHG-004.md", chg("CHG-004", derives_from="[INC-001]"))
+        repo.write("products/a/changes/CHG-005.md",
+                   chg("CHG-005", derives_from="[CHG-001, CHG-002]"))
+        repo.commit("base", "2026-06-01T09:00:00+02:00")
+        repo.git("remote", "add", "origin", str(origin))
+        repo.git("push", "-q", "origin", "main")
+
+        def todo() -> dict:
+            r = subprocess.run([sys.executable, str(TODO), "--root", str(repo.path), "--json"],
+                               capture_output=True, text=True, env={**os.environ, **_WORK_ENV})
+            try:
+                return json.loads(r.stdout)
+            except ValueError:
+                problems.append(f"todo.py gave no JSON (exit {r.returncode}): {r.stderr[-300:]}")
+                return {}
+
+        def threads(got: dict) -> list[list[str]]:
+            return sorted(sorted(i for n in t["nodes"] for i in n["ids"])
+                          for t in got.get("threads", []))
+
+        before = todo()
+        whole = ["CHG-001", "CHG-002", "CHG-003", "CHG-006", "OD-001", "OD-002", "OD-003"]
+        if threads(before) != [whole] or not any("has no affects" in w
+                                                 for t in before.get("threads", [])
+                                                 for w in t["why"]):
+            problems.append(f"before: the threads are {threads(before)}, expected the product "
+                            "whole in one, held by changes that have no affects")
+
+        moves = {"CHG-001": chg("CHG-001", "withdrawn", withdrawn_by="CHG-005"),
+                 "CHG-002": chg("CHG-002", "withdrawn", withdrawn_by="CHG-005"),
+                 "CHG-003": chg("CHG-003", "withdrawn", withdrawn_by="DEC-001"),
+                 "CHG-004": chg("CHG-004", "withdrawn", derives_from="[INC-001]",
+                                withdrawn_by="CHG-006"),
+                 "CHG-005": chg("CHG-005", derives_from="[CHG-001, CHG-002]",
+                                affects="[products/a/ARC.md#current]"),
+                 "CHG-006": chg("CHG-006", affects="[products/a/ARC.md#delta]")}
+
+        def found(branch: str) -> list[str]:
+            repo.git("checkout", "-q", "-b", branch, "main")
+            for i, text in moves.items():
+                repo.write(f"products/a/changes/{i}.md", text)
+            repo.commit(f"moves on {branch}", "2026-06-02T09:00:00+02:00")
+            rc, out, err = repo.validate("--base", "main")
+            if out is None:
+                problems.append(f"the validator gave no report on {branch} (exit {rc}): "
+                                f"{err[-200:]}")
+                return ["no report"]
+            # What the moves can bring; `CHG003`, a mandate with no classification, is the
+            # fixture's on every branch.
+            return sorted(f["code"] for f in out.get("findings", [])
+                          if f["code"].startswith(("BR", "AFF", "EFF")) or f["code"] == "CHG004")
+
+        on_thread = found("work/a-x")
+        if on_thread != ["BR006"] * 6:
+            problems.append(f"the same writes on a thread's branch gave {on_thread}: four "
+                            "withdrawals and two forecasts of approved changes, six BR006")
+        repo.git("checkout", "-q", "main")
+        on_join = found("work/ricongiungimento-x")
+        if on_join:
+            problems.append(f"on a join's branch the withdrawals and the forecasts gave "
+                            f"{on_join}")
+        repo.git("checkout", "-q", "main")
+        repo.git("merge", "--no-ff", "-q", "-m", "Merge work/ricongiungimento-x into main",
+                 "work/ricongiungimento-x")
+        repo.git("push", "-q", "origin", "main")
+
+        after = todo()
+        want = [["CHG-005"], ["OD-001", "OD-002"], ["OD-003"]]
+        if threads(after) != want or after.get("waiting") != {"a": 1}:
+            problems.append(f"after: the threads are {threads(after)} and waiting "
+                            f"{after.get('waiting')}, expected {want} and one waiting -- "
+                            "CHG-006 received INC-001 and waits for OD-003, which it requires; "
+                            "the entries on `scope` and `scope-api` together")
+        if any("has no affects" in w for t in after.get("threads", []) for w in t["why"]):
+            problems.append("after: a change still has no affects in the to-do's reasons")
+    return problems
+
+
 @check("a computed thread is taken whole, and a join lands the threads ready on the main line by a local merge")
 def _join_lands_threads():
     # In the additive mode `open --thread` takes what the to-do computes, a thread with a

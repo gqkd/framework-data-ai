@@ -117,6 +117,14 @@
 # consumer is the kind of change this file spends its notes warning against -- and the answer
 # should come from the first project that is surprised by one of these, not from here.
 #
+# A second thing it cannot say, met in 4.10.0: a version can change what is read from documents
+# nobody edits without any of them saying something else. `approved` stopped freezing `affects`
+# in the strict profile, and two forecasts written as `#x` and `#x-y` began to meet. 4.10.0 read
+# "starts meaning something else" as what a document asserts or authorizes -- a forecast
+# authorizes nothing, and which pieces of work meet is the to-do's computation, not a document's
+# meaning -- and is a MINOR, its note saying so. A project surprised by that is the answer this
+# question waits for.
+#
 # A three part string, so `1.10.0` sorts after `1.9.0` rather than before it. Quoted here
 # because YAML reads a bare `1.1` as a decimal and a bare `2` as a whole number, and both
 # of those stop being comparable with a version -- which `FW001` says in as many words when
@@ -2035,7 +2043,131 @@
 # project writes `framework_commit`: those runs read the pin against the framework they check out,
 # as for 4.8.1. Where it writes none, no check sees a copy left behind, `contribution.yml`'s
 # included.
-version: "4.9.1"
+#
+# 4.9.1 -> 4.10.0. A mandate approved and never to be carried out is withdrawn, saying what
+# withdrew it; the forecast of an approved mandate is written at a join; and every living document
+# has sections an anchor can name, one inside another by its name.
+#
+# WHY. In the additive mode an approved `CHG` without `affects` held its whole product in one
+# thread, and a project had nothing true to write to free it: a `CHG` is immutable, no state said
+# "approved, and never to be carried out", and step One of the 4.8.1 -> 4.9.0 note asked for
+# `affects` on approved changes, which the strict profile reported as `AUT003`, and a pull request
+# of code after it as `AUT002`. And a long living document whose type declares no sections had one
+# anchor, the whole document, so every entry citing it was in one thread.
+#
+# WITHDRAWN. `withdrawn` is reached from `approved` only, and `withdrawn_by` names what withdrew
+# it: an accepted `DEC`, or the `CHG` that replaces or absorbs it. For whatever derives from it a
+# withdrawn change is done -- in the to-do, in the exchange, in the digest, where it is `gone` --,
+# and it owes no `DEC` and no classification any more: `CHG002` and `CHG003` stop reading it. The
+# increment it carried passes along `withdrawn_by` to the changes not withdrawn of its product
+# folder; a decision, a circle or a change of another folder receives nothing, and the increment is
+# to be decomposed again. One function reads it, `carried_increments`, for the to-do, the digest
+# and `RMP004`. A withdrawn change an increment lists in `changes` no longer holds it, and the
+# listing hands nothing on. `CHG004` says a withdrawal that does not name what withdrew it, or
+# names something that is not a decision taken or a mandate past its draft; the release gate does
+# not run it. `PR003` refuses a withdrawn change as a mandate. In the exchange its folder goes to
+# `integrati/`, its `INTEGRATO` naming the commit that withdrew it and saying in `parts` that each
+# delivered part was dropped: `EXC002` says the folder still in `in-arrivo/`, `EXC003` the shape of
+# the `INTEGRATO`, and no check reads whether the commit is the withdrawal's or the parts say
+# dropped. `withdrawn_by` stays out of the relations of the memory graph. In the digest an
+# increment `delivered` is never "da scomporre", and a phase whose increments are all delivered
+# with nothing under them is "Completa".
+#
+# THE FORECAST OF AN APPROVED CHANGE. `affects` and `withdrawn_by` move in place on a `CHG`, as
+# `status` and `verified_by` did, and `normative()` exempts them: the strict profile and the
+# release profile no longer freeze the forecast of an approved mandate. `affects` is free in a
+# draft, written or corrected by who decides while the change is `approved`, and fixed after.
+# `BR006`, with `--base`, says when and where: in any mode, a withdrawal from a state other than
+# `approved`, an `affects` changed past `approved`, and the changes deriving from a withdrawn one
+# without being what withdrew it; in the additive mode, a withdrawal, a `withdrawn_by` or the
+# forecast of an approved change written off a join, and on a join the withdrawal of a mandate a
+# thread it merges carried out or an open thread holds -- the thread first, released or joined, and
+# work a thread carried out lands `implemented`, to be `rolled-back` if it must go. `join --finish`
+# prints the findings of the branches on its own branch. A contributor proposes a withdrawal as a
+# `DEC` `proposed` deriving from the change, and a forecast on a parking line.
+#
+# SECTIONS. On any living document a `<!-- section: <id> -->` marker above a heading, with only
+# blank lines between, is an anchor, read as `locate_sections` reads a section, so that what an
+# anchor is valid for and how far it reaches come from one reading; a marker inline, after its
+# heading or in a fenced block covers nothing. A section inside another is named after it,
+# `<id>-<rest>`, and the two meet by name -- a name does not move when a thread adds lines --; the
+# name and the headings are held to each other both ways wherever an anchor is in use: a marked
+# section inside another by its heading and not named after it is not an anchor, nor one named
+# after another and not inside it. The keys of a map stay flat, hyphens and all. At a join an
+# effect is within its thread's forecast when it is forecast or inside an anchor forecast; an
+# effect on a whole document is no longer within a forecast on a section, as it was in 4.9.x, so a
+# thread opened before this version with such effects hears "outside the forecast" at its join. The
+# other threads whose forecast meets the effect, either way, are named.
+# `thresholds.effects_per_section` still counts per anchor: with finer anchors a join is advised
+# later, and a project that wants it sooner lowers the threshold in `.framework/work.yaml`.
+#
+# MINOR, AND WHY. A value added to an enum, an optional field, two checks at `warn` -- `CHG004`,
+# and `BR006` with `--base` --, and anchors where there were none: no document that validated stops
+# validating. Two things change what is read from documents nobody edits, and the rule's "starts
+# meaning something else" is read here as what a document asserts or authorizes: in the strict and
+# release profiles `approved` stops freezing `affects`, which authorizes nothing -- paths,
+# obligations and tests are the contribution policy's, and stay frozen --; and two forecasts
+# already written as `#x` and `#x-y` begin to meet, which changes how the to-do groups the work and
+# not what either document says. The open question under the rule records the reading. What does
+# change is read by the tools of 4.9.x. To a validator before 4.10.0 a `withdrawn` change is an
+# `FM002`, at `error` -- in the copies of the workflows, in a plugin not updated, in what
+# `migrate.py` rebuilds of an older version --, and an anchor on a section of a type that declares
+# none is an `AFF001` or an `EFF001`; the digest before it refuses a workbook with a status it does
+# not map; the to-do before it reads a withdrawn change as open, keeps what derives from it
+# waiting, counts the increment of a change withdrawn by a decision as still decomposed, and reads
+# anchors flat, so it computes other threads, and `open --thread` refuses a name another clone
+# computed; the join before it reads an effect on `#x-y` as outside a forecast on `#x`. So every
+# person of a project updates the plugin before the first withdrawal or the first new marker. Where
+# `.framework/expected-findings.yaml` exists, an annotation whose finding this version no longer
+# reports is an `AN001`, at `error` -- one on a `CHG002` or a `CHG003` of a mandate then withdrawn,
+# one on an `AFF001` or an `EFF001` that an anchor now valid clears --, and in the additive mode
+# `join --merge` refuses a join with errors; where it says `require_all: true`, a new warning
+# nobody annotated is an `AN003`, at `error`.
+#
+# ADOPTION. Each person updates the plugin; where the project declares `.framework/work.yaml`,
+# `work.py doctor` says when it is older than the version the project declares, and elsewhere no
+# check sees a plugin left behind before the version is adopted. Then `migrate.py --root
+# <project>`. On the types that declare their sections a marker anywhere in the body was an anchor
+# in 4.9.x; now one off its heading, or nested and not named after its section, is an `AFF001`
+# where a forecast names it -- an entry `open` or `parked`, a change in draft or approved -- and an
+# `EFF001` where an effect of an open thread does: those are under NEW, and `--adopt` refuses while
+# anything is there, so they are repaired, or annotated, first -- a declared section is not
+# renamed, the level of its heading is corrected, and on an approved change the repair is at a
+# join; the annotations `AN001` names are removed. Then `--adopt`, in the additive mode on the
+# branch of a join; it brings the section on threads and joins of `AGENTS.md` to the new text where
+# its words are still the framework's, and a person rereads and attests it -- until then `LC006`
+# reports it, `PR005` on a pull request, and with `rereading: optional` a join's text owes the
+# reading only after `unread_days`, as `LC009` says. Rule 5 of `AGENTS.md`, on the class, stands
+# outside the sections `--adopt` writes: it reaches new projects, and an existing one copies the
+# sentence by hand, which no check sees. Copies of `ci/pull-request.yml` and `ci/branches.yml` move
+# `ref:` to `v4.10.0`, a copy of `ci/contribution.yml` its sha to the commit `v4.10.0` names;
+# `FW003` sees a copy left behind only where the project writes `framework_commit`. Then, on the
+# same branch of a join or, outside the mode, as any change is written: the mandates that will
+# never be carried out move to `withdrawn` with `withdrawn_by` -- `CHG004` checks the shape,
+# `BR006` says which changes derive from each one, and no check can say that every mandate that
+# will never be carried out was withdrawn --; and the approved changes receive `affects`, which is
+# how step One of the 4.9.0 note is done for them. No check of the validator sees an approved
+# change without `affects`; `todo.py` names one among its reasons when it is to do and holds its
+# product together with another node to do. The long documents the entries cite receive markers
+# above the headings of their sections, a section inside another named after it; on a thread a
+# marker is an effect, which the join writes. A marker nobody forecasts is read by no check. Then
+# the entries move their `affects` from the whole document to the section, as any change of an
+# entry's forecast: an effect a join applies, `BR005` on a thread's branch otherwise; no check sees
+# an entry still forecasting a whole document that has sections. A marker inside the `state`
+# section of a risk register cuts its table short, and `REG015` reports the risks after it as
+# missing from the body.
+#
+# WHAT IS NOT HERE. To 4.11.0: a change of several products, which the digest reads by `products:`
+# and the to-do and `RMP004` by its folder, a difference older than this version; a change brought
+# back out of `withdrawn`, which only `CHG004`, while its `withdrawn_by` stays, and the strict
+# profile, against an approved tip, see; and what the 4.9.0 note had sent to this number -- the
+# reconciler that extracts and renumbers, a pre-push hook, the digest that reads the branches, the
+# strict profile on documentation pull requests without branch protection -- with the cases of
+# `contribute` measured for behaviour, what `work.py doctor` says of a project that declares no
+# exchange, a line for credentials in every project, and two observations on the exchange: a
+# closing declaration that says nothing nobody removes, and the order of `cycle`'s steps with
+# `require_all: true`.
+version: "4.10.0"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of

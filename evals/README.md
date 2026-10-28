@@ -19,7 +19,7 @@ them a trap that `requirement` must not take, and five traps toward `business`, 
 `contribute/team`, a project in the additive mode, the traps by the `fixture` they name: the
 risk they measure exists only in such a project. It has no behaviour cases yet: they need a remote,
 which a fixture can carry inside it as `digest/` does, and the exchange beside the repository,
-which the behaviour runner, copying the fixture alone, does not give; they are left to 4.10.0. The measured cases of `cycle` and
+which the behaviour runner, copying the fixture alone, does not give; they are left to 4.11.0. The measured cases of `cycle` and
 `resolve` that ask what to do or decide next are at risk from it, and no mark protects them. None of them has been run, and the tables further down were measured on
 the 118 without them: the mark keeps those twenty-five out of the denominators the self check
 compares, so a score is never read against a set it was not measured on. The run that scores
