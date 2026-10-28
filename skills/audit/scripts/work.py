@@ -917,7 +917,7 @@ def _branch_findings(p: Project, name: str, ref: str) -> list[str]:
         finally:
             git(p.root, "worktree", "remove", "--force", str(tree), check=False)
     found = sorted((f for f in found if str(f.get("code", "")).startswith("BR")),
-                   key=lambda f: (f["code"] != "BR005", f["code"], f["path"]))
+                   key=lambda f: (f["code"] not in ("BR005", "BR006"), f["code"], f["path"]))
     said = [f"{f['code']} {f['path']}: {f['message'][:200]}" for f in found[:10]]
     return said + ([f"and {len(found) - 10} more findings of the branches"] if len(found) > 10 else [])
 
@@ -1030,7 +1030,8 @@ def _join_start(p: Project, who: str, args) -> int:
         v.refuse("no thread is ready. `--no-threads` opens a join with no thread, for what is "
                  "written only on a join's branch: `work.yaml`, an adoption, the contribution "
                  "policy, annotations, and what only those who decide write -- a release, a "
-                 "change verified, the freeze of the evaluation plan, an approval.")
+                 "change verified, the freeze of the evaluation plan, an approval, a mandate "
+                 "withdrawn or the forecast of an approved one.")
     if held:
         branch = held.get("branch", "")
         if _join_landed(p, branch):
@@ -1161,6 +1162,24 @@ def _join_finish(p: Project, who: str) -> int:
                 + "".join(f"{B.JOINED}{n} {sha}\n" for n, sha in joined) + "\n"
                 + f"{B.JOIN_TRAILER}: {who}\n")
         git(tree, "commit", "-q", "--allow-empty", "-m", body)
+    # What the branches' checks say of the join's own branch -- who approved, what was withdrawn
+    # and when, a forecast moved --: warnings nothing else shows before it lands.
+    where = B.prefix(p.root)
+    check = subprocess.run([sys.executable, str(Path(v.__file__)), "--root",
+                            str(tree / where if where else tree), "--base", p.base, "--json",
+                            "--stale-days", "36500"], capture_output=True, text=True)
+    try:
+        own = [f for f in json.loads(check.stdout).get("findings", [])
+               if str(f.get("code", "")).startswith("BR")]
+    except ValueError:
+        own = []
+        say(f"the checks of the branches could not be read on {branch} (exit "
+            f"{check.returncode}): run `validate.py --base {p.base}` in {tree} before `--merge`.")
+    for f in own[:10]:
+        say(f"  {f['code']} {f['path']}: {f['message'][:200]}")
+    if own:
+        say(f"{len(own)} findings of the branches on {branch}: read them before `join --merge`; "
+            "a correction is committed and `join --finish` run again.")
     # Signed again only when something came after the last signature -- a `sync` because the
     # main line moved, a correction --, so that what lands is signed whole; finished already and
     # not pushed, pushed again.

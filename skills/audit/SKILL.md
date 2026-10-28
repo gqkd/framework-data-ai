@@ -153,7 +153,9 @@ Propose a diff and wait for everything else. In particular:
   entry deleted outright takes with it the fact that the question was ever asked.
 - **Anything at all on an `immutable`.** The class means what it says. If the content is
   wrong, the repair is a new document with `supersedes`, and the old one moves to
-  `status: superseded`. The `status` field is the only one you may touch in place.
+  `status: superseded`. The `status` field is the only one you may touch in place, and on a
+  `CHG` the fields that move with it -- `verified_by`, `withdrawn_by`, `affects` --, the last
+  two as who decides writes them (`BR006`).
 
 ## What you must never do
 
@@ -400,7 +402,7 @@ python3 "${CLAUDE_PLUGIN_ROOT:?}/skills/audit/scripts/validate.py" --root <proje
 |---|---|
 | `PR001` | the change set cites no `CHG`, and carries no `no-chg: <reason>` line |
 | `PR002` | it cites one that is not in this repository |
-| `PR003` | it cites one that is `draft` or `rolled-back` |
+| `PR003` | it cites one that is `draft`, `rolled-back` or `withdrawn` |
 | `PR004` | the `ICG` says the change touches architecture, data or risk, and the diff does not touch the artifact that owes an update |
 
 `ci/PULL_REQUEST_TEMPLATE.md` and `ci/pull-request.yml` are the two files a project copies
@@ -485,7 +487,9 @@ python3 "${CLAUDE_PLUGIN_ROOT:?}/skills/audit/scripts/validate.py" --root <proje
 `BR001` is a number this branch created that the main line has too: renumber this branch's,
 with a new reservation. `BR002` is a decision deciding an entry the main line has already
 closed: put the two decisions side by side for the person, and do not choose. `BR003` is a
-number written without a reservation. `ci/branches.yml` runs the same comparison on every pull
+number written without a reservation. `BR006` is a mandate withdrawn, or its forecast moved,
+when or where it may not be: say which of its cases it is, and leave the move to who decides,
+at a join. `ci/branches.yml` runs the same comparison on every pull
 request, and opens an issue for what reaches the main line without one.
 
 ## The exchange between sessions

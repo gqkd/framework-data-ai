@@ -1251,13 +1251,15 @@ def _change_contracts():
             owners="[o]", created="2026-01-01") + "# EVR-001\n",
     }
 
-    def chg(status, derives, verified_by="null", icg="ICG-001"):
+    def chg(status, derives, verified_by="null", icg="ICG-001", withdrawn_by=None):
         meta = dict(schema="framework/change-contract/v1",
                     artifact_type="change-contract", lifecycle="immutable",
                     status=status, id="CHG-001", products="[p]", owners="[o]",
                     created="2026-01-01", derives_from=derives, verified_by=verified_by)
         if icg:
             meta["icg"] = icg
+        if withdrawn_by:
+            meta["withdrawn_by"] = withdrawn_by
         return fm(**meta) + "# CHG-001\n\n" + sections
 
     def codes(chg_text):
@@ -1299,6 +1301,13 @@ def _change_contracts():
          chg("draft", "[SIG-001]", icg=None), set()),
         ("icg naming a classification that does not exist",
          chg("approved", "[SIG-001, DEC-001]", icg="ICG-404"), {"CHG003"}),
+        # Withdrawn (4.10.0): a mandate that will never be carried out owes no decision and no
+        # classification; it owes saying what withdrew it.
+        ("withdrawn, no DEC", chg("withdrawn", "[SIG-001]", withdrawn_by="DEC-001"), set()),
+        ("withdrawn with no icg",
+         chg("withdrawn", "[SIG-001]", icg=None, withdrawn_by="DEC-001"), set()),
+        ("withdrawn naming nothing that withdrew it",
+         chg("withdrawn", "[SIG-001, DEC-001]"), {"CHG004"}),
     ]
     problems = []
     for what, text, want in cases:
@@ -4013,6 +4022,37 @@ def _borea(root: Path, *args: str) -> tuple[int, str]:
     return r.returncode, r.stdout + r.stderr
 
 
+@check("a phase whose increments are all delivered with nothing under them is «Completa»")
+def _delivered_phase_is_complete():
+    # 4.10.0: an increment delivered is done, carried by a change or not -- the one whose only
+    # change was withdrawn by a decision, and that was delivered another way, included. Its
+    # phase has no row to set against its date, and «Incompleta» would have stayed for good.
+    import openpyxl
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _stages_copy(tmp)
+        if root is None:
+            return ["the stages fixture could not be built: "
+                    "evals/fixtures/generators/digest_stages.py"]
+        rmp = root / "products" / "borea" / "RMP.md"
+        text = rmp.read_text(encoding="utf-8")
+        rmp.write_text(text.replace("  INC-104:\n    state: conditional\n",
+                                    "  INC-104:\n    state: delivered\n", 1), encoding="utf-8")
+        rc, out = _borea(root, "--date", "2026-10-07", "--now", "2026-10-07T08:30:00+02:00")
+        if rc != 0:
+            return [f"the digest was refused: {out.strip()[:400]}"]
+        xlsx = root / "_meta/digest/DIG-002-borea-2026-10-07/DIG-002-borea-2026-10-07.xlsx"
+        ws = openpyxl.load_workbook(xlsx, data_only=True)["Gantt"]
+        cells = [ws.cell(r, 4).value for r in range(1, ws.max_row + 1)
+                 if any(ws.cell(r, c).value == "App in prova sul campo" for c in range(1, 4))]
+    problems = []
+    if "Milestone «App in prova sul campo» (tappa t3, 30/10): completa" not in out:
+        problems.append(f"the summary does not say the delivered phase complete: "
+                        f"{[l for l in out.splitlines() if 'App in prova' in l]}")
+    if cells != ["Completa"]:
+        problems.append(f"the Gantt says {cells} of the milestone of the delivered phase")
+    return problems
+
+
 @check("with a roadmap in stages, the digest takes its order and its Gantt from the roadmap")
 def _digest_reads_the_stages():
     # Computed by hand from the fixture, at 2,4 hours a day for the release from 07/10 (25 hours
@@ -4792,6 +4832,8 @@ def _pull_request_binding():
          "implementing a draft"),
         ({"PR003"}, dict(status="rolled-back", text="implements CHG-001"),
          "citing a contract that was rolled back"),
+        ({"PR003"}, dict(status="withdrawn", text="implements CHG-001"),
+         "citing a contract that was withdrawn"),
         (set(), dict(status="approved", text="implements CHG-001"),
          "an approved contract with no diff supplied: PR004 cannot run and must not guess"),
         ({"PR004"}, dict(status="approved", text="implements CHG-001",
@@ -7678,10 +7720,23 @@ def _exc002():
                   for i in ("CHG-001", "CHG-002", "OD-001", "OD-002")})
         _put(ex, {"integrati/CHG-001/brief.md": "b"})
         got = _exc(repo, "EXC002")
+        # A change withdrawn (4.10.0) is done too, with nothing to integrate: its folder still
+        # goes, and the message says what to write instead of where the parts went.
+        repo.write("products/p/changes/CHG-004.md", _fm(
+            schema="framework/change-contract/v1", artifact_type="change-contract",
+            lifecycle="immutable", status="withdrawn", id="CHG-004", products="[p]",
+            owners="[o]", created="2026-10-01", withdrawn_by="CHG-001")
+            + "# CHG-004\n\n" + _EXCHANGE_SECTIONS)
+        _put(ex, {"in-arrivo/CHG-004/verifica.md": "v"})
+        said = [f["message"] for f in repo.findings("EXC002") if "CHG-004" in f["path"]]
     want = ["in-arrivo/CHG-001", "in-arrivo/OD-002"]
-    return [] if got == want else [f"EXC002 reported at {got}, expected {want}: implemented "
-                                   "and decided close an element, approved and open do not, "
-                                   "and integrati/ is where a closed one belongs"]
+    problems = [] if got == want else [f"EXC002 reported at {got}, expected {want}: implemented "
+                                       "and decided close an element, approved and open do not, "
+                                       "and integrati/ is where a closed one belongs"]
+    if len(said) != 1 or "dropped" not in said[0]:
+        problems.append(f"EXC002 on a withdrawn change said {said}: its folder goes to "
+                        "integrati/, its parts dropped")
+    return problems
 
 
 @check("EXC003: a folder in integrati/ without an INTEGRATO that says where each part went")
@@ -8104,6 +8159,12 @@ def _exchange_maps_every_status():
         if set(node) != done | not_done or done & not_done:
             problems.append(f"{kind}: the schema allows {sorted(node)}, the exchange calls "
                             f"{sorted(done)} done and {sorted(not_done)} not")
+    # The to-do holds its own copy, read for who waits on a change: the same set, or a change
+    # the exchange calls done would still hold up the work deriving from it.
+    todo = _load(ROOT / "skills" / "audit" / "scripts" / "todo.py", "todo_exchange_states")
+    if todo.CLOSED_CHANGE != x.CLOSED_CHANGE:
+        problems.append(f"the to-do reads {sorted(todo.CLOSED_CHANGE)} as a change done and the "
+                        f"exchange {sorted(x.CLOSED_CHANGE)}")
     return problems
 
 
@@ -9748,6 +9809,276 @@ def _todo_computes_threads():
     return problems
 
 
+@check("a withdrawn mandate is done for whoever waits on it, hands its increments on along withdrawn_by, and says what withdrew it")
+def _withdrawn_mandates():
+    # Before 4.10.0 a `CHG` approved and never to be carried out stayed `approved` for good: a
+    # piece of work in the to-do nobody was going to do, the changes deriving from it waiting
+    # on it, and its increment held out of the plan by a change that would not carry it.
+    # `withdrawn` ends it, and `withdrawn_by` says where the work went: to the change that
+    # replaces it, or nowhere, when a decision withdrew it -- and then the increment is work
+    # again, for the to-do and for the digest, which read it through one function.
+    problems = []
+    v = _load(VALIDATE, "validate_withdrawn")
+    case = lambda st, d=(), w=(), p="a": dict(status=st, derives_from=list(d),
+                                               withdrawn_by=list(w), product=p)
+    got = {k: s for k, s in v.carried_increments({
+        "CHG-001": case("withdrawn", ["INC-001"], ["CHG-002"]),
+        "CHG-002": case("approved", ["DEC-009"]),
+        "CHG-003": case("withdrawn", ["INC-003"], ["DEC-001"]),
+        "CHG-004": case("withdrawn", ["INC-004"], ["CHG-005"]),
+        "CHG-005": case("withdrawn", [], ["CHG-006"]),
+        "CHG-006": case("implemented"),
+        "CHG-007": case("withdrawn", ["INC-007"], ["CHG-008"]),
+        "CHG-008": case("withdrawn", [], ["CHG-007"]),
+        "CHG-009": case("withdrawn", ["INC-009"], ["b:CHG-010"]),
+        "CHG-010": case("approved", p="b"),
+        "CHG-011": case("withdrawn", ["INC-011"], ["CHG-002", "CHG-006"]),
+        "CHG-012": case("draft", ["INC-012"])}).items() if s}
+    want = {"CHG-002": {"INC-001", "INC-011"}, "CHG-006": {"INC-004", "INC-011"},
+            "CHG-012": {"INC-012"}}
+    if got != want:
+        problems.append(f"the increments carried are {got}, expected {want}: handed on along "
+                        "withdrawn_by, through a change withdrawn later, to each of a list; never "
+                        "to a decision, a circle or another product")
+
+    def chg(repo, i, status, *, affects="", derives="", by=""):
+        fields = dict(schema="framework/change-contract/v1", artifact_type="change-contract",
+                      lifecycle="immutable", status=status, id=i, products="[a]",
+                      owners="[o]", created="2026-06-01")
+        for k, val in (("affects", affects), ("derives_from", derives), ("withdrawn_by", by)):
+            if val:
+                fields[k] = val
+        repo.write(f"products/a/changes/{i}-x.md", _fm(**fields) + f"# {i} title\n")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        origin = tmp / "origin.git"
+        subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(origin)], check=True,
+                       env={**os.environ, **_WORK_ENV})
+        seed = _Repo(tmp / "seed")
+        seed.write(".framework/work.yaml", "mode: additive\npeople: [Owner]\nadmins: [Owner]\n")
+        seed.write("products/a/OPEN.md", _register(
+            {"KI-001": {"status": "open", "affects": "[products/a/X.md]"}}))
+        seed.write("products/a/product.yaml",
+                   "schema: framework/product-manifest/v1\nartifact_type: product-manifest\n"
+                   "lifecycle: living\nstatus: active\nproducts: [a]\nname: a\n"
+                   "one_liner: A thing.\nowners: [o]\ncreated: 2026-06-01 09:00\n"
+                   "last_review: 2026-06-01 09:00\nstage:\n  phase: F5\n  block: A\n")
+        seed.write("products/a/RMP.md", _fm(
+            schema="framework/roadmap/v1", artifact_type="roadmap", lifecycle="living",
+            status="active", products="[a]", owners="[o]", created="2026-06-01",
+            last_review="2026-06-01 09:00").replace("---\n\n", "delivery_stages:\n  s1:\n"
+            "    name: first\n    after: []\n    increments: [INC-001, INC-002, INC-003]\n"
+            "increments:\n"
+            "  INC-001:\n    state: committed\n    depends_on: []\n    requires: []\n"
+            "    changes: []\n  INC-002:\n    state: committed\n    depends_on: []\n"
+            "    requires: [KI-001]\n    changes: []\n  INC-003:\n    state: committed\n"
+            "    depends_on: []\n    requires: []\n    changes: [CHG-007]\n---\n\n", 1)
+            + "# Roadmap\n\n### INC-001 · first\n\n### INC-002 · second\n\n"
+            "### INC-003 · third\n")
+        seed.write("decisions/DEC-001-x.md", _decision("DEC-001", "OD-900"))
+        # Withdrawn by a decision: its increment is work again.
+        chg(seed, "CHG-001", "withdrawn", derives="[INC-001]", by="DEC-001")
+        # Withdrawn by the change that replaces it: the increment, and what it requires, pass.
+        chg(seed, "CHG-002", "withdrawn", derives="[INC-002]", by="CHG-003")
+        chg(seed, "CHG-003", "approved", affects="[products/a/Y.md]")
+        # Deriving from a withdrawn change: it waits for nothing.
+        chg(seed, "CHG-004", "approved", affects="[products/a/Z.md]", derives="[CHG-001]")
+        # Deriving from an approved one: it still waits.
+        chg(seed, "CHG-005", "approved", affects="[products/a/W.md]", derives="[CHG-006]")
+        chg(seed, "CHG-006", "approved", affects="[products/a/V.md]")
+        # Listed under an increment, as changes written before 4.3.0 are, and withdrawn: it
+        # no longer holds the increment, and a listing hands nothing on.
+        chg(seed, "CHG-007", "withdrawn", by="DEC-001")
+        seed.commit("base", "2026-06-01T09:00:00+02:00")
+        seed.git("remote", "add", "origin", str(origin))
+        seed.git("push", "-q", "origin", "main")
+        r = subprocess.run([sys.executable, str(TODO), "--root", str(seed.path), "--json"],
+                           capture_output=True, text=True, env={**os.environ, **_WORK_ENV})
+        try:
+            got = json.loads(r.stdout)
+        except ValueError:
+            return problems + [f"todo.py gave no JSON (exit {r.returncode}): {r.stderr[-300:]}"]
+        todo = sorted(i for t in got.get("threads", []) for n in t["nodes"] for i in n["ids"])
+        if todo != ["CHG-004", "CHG-006", "KI-001", "a/INC-001", "a/INC-003"] \
+                or got.get("waiting") != {"a": 2}:
+            problems.append(f"the to-do has {todo} to do and waiting {got.get('waiting')}, "
+                            "expected CHG-004, CHG-006, KI-001, a/INC-001 and a/INC-003, with "
+                            "CHG-003 waiting for what the increment it received requires and "
+                            "CHG-005 for CHG-006")
+
+        # The digest reads the increments as the to-do does.
+        dg = _load(ROOT / "skills" / "digest" / "scripts" / "digest.py", "digest_withdrawn")
+        dv = dg.load_validator()
+        arts, broken = dg.discover(seed.path, dv)
+        voci = dg.build_voci(dg.read_registers(arts, broken, "a", dv), set())[0]
+        seen = {k: (voci[k].state, voci[k].children)
+                for k in ("INC-001", "INC-002", "INC-003") if k in voci}
+        if seen != {"INC-001": ("open", []), "INC-002": ("replaced", ["CHG-003"]),
+                    "INC-003": ("open", [])}:
+            problems.append(f"the digest reads the increments as {seen}: INC-001 and INC-003 "
+                            "open again, INC-002 replaced by the change it passed to")
+
+        # The validator: what withdrew it, and the work of a delivered increment.
+        flat = tmp / "flat"
+        bad = _Repo(flat)
+        bad.write("products/a/product.yaml", (seed.path / "products/a/product.yaml").read_text())
+        bad.write("decisions/DEC-001-x.md", _decision("DEC-001", "OD-900"))
+        bad.write("decisions/DEC-002-x.md", _decision("DEC-002", "OD-901", status="proposed"))
+        chg(bad, "CHG-010", "withdrawn")
+        chg(bad, "CHG-011", "withdrawn", by="DEC-002")
+        chg(bad, "CHG-012", "withdrawn", by="CHG-013")
+        chg(bad, "CHG-013", "draft")
+        chg(bad, "CHG-014", "withdrawn", by="CHG-014")
+        chg(bad, "CHG-015", "withdrawn", by="CHG-016")
+        chg(bad, "CHG-016", "withdrawn", by="CHG-015")
+        chg(bad, "CHG-017", "approved", by="DEC-001")
+        chg(bad, "CHG-018", "withdrawn", by="CHG-999")
+        chg(bad, "CHG-019", "withdrawn", by="DEC-001")
+        chg(bad, "CHG-020", "withdrawn", derives="[INC-020]", by="CHG-021")
+        chg(bad, "CHG-021", "approved")
+        chg(bad, "CHG-022", "withdrawn", derives="[INC-021]", by="DEC-001")
+        bad.write("products/a/RMP.md", _fm(
+            schema="framework/roadmap/v1", artifact_type="roadmap", lifecycle="living",
+            status="active", products="[a]", owners="[o]", created="2026-06-01",
+            last_review="2026-06-01 09:00").replace("---\n\n", "delivery_stages:\n  s1:\n"
+            "    name: first\n    after: []\n    increments: [INC-020, INC-021]\nincrements:\n"
+            "  INC-020:\n    state: delivered\n    depends_on: []\n    requires: []\n"
+            "    changes: []\n  INC-021:\n    state: delivered\n    depends_on: []\n"
+            "    requires: []\n    changes: []\n---\n\n", 1)
+            + "# Roadmap\n\n### INC-020 · a\n\n### INC-021 · b\n")
+        rc, out, err = bad.validate()
+        found = (out or {}).get("findings", [])
+        if out is None:
+            problems.append(f"the validator returned nothing readable (exit {rc}): {err[-300:]}")
+        reported = {f["path"].split("/")[-1][:7] for f in found if f["code"] == "CHG004"}
+        expected = {"CHG-010", "CHG-011", "CHG-012", "CHG-014", "CHG-015", "CHG-016",
+                    "CHG-017", "CHG-018"}
+        if reported != expected:
+            problems.append(f"CHG004 reported {sorted(reported)}, expected {sorted(expected)}: "
+                            "no withdrawn_by, a decision not taken, a draft, itself, a circle, "
+                            "the field on a change not withdrawn, a name that resolves to nothing")
+        rmp = [f["message"] for f in found if f["code"] == "RMP004"]
+        if len(rmp) != 1 or "CHG-021" not in rmp[0] or "INC-020" not in rmp[0]:
+            problems.append(f"RMP004 said {rmp}: INC-020 is delivered while CHG-021, which "
+                            "received it, is still approved; INC-021's change was withdrawn by a "
+                            "decision, and nothing of it is open")
+    return problems
+
+
+@check("BR006 says a mandate withdrawn, or its forecast moved, when or where it may not be")
+def _mandate_moves():
+    # Since 4.10.0 a change contract moves in place three fields besides `status`: what
+    # withdrew it and its forecast. Each has a moment -- withdrawn from `approved` only, its
+    # forecast fixed once it is carried out -- and, in the additive mode, a place: the branch of
+    # a join, written by who decides, never over a thread that holds it or carried it out.
+    problems = []
+
+    def chg(i, status, **extra):
+        meta = dict(schema="framework/change-contract/v1", artifact_type="change-contract",
+                    lifecycle="immutable", status=status, id=i, products="[a]", owners="[o]",
+                    created="2026-06-01", approvers="[Admin]")
+        meta.update(extra)
+        return _fm(**meta) + f"# {i}\n"
+
+    def br006(repo: "_Repo") -> dict[str, int]:
+        out = repo.validate("--base", "main")[1] or {}
+        got: dict[str, int] = {}
+        for f in out.get("findings", []):
+            if f["code"] == "BR006":
+                key = f["path"].split("/")[-1][:7]
+                got[key] = got.get(key, 0) + 1
+        return got
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        for mode in ("additive", None):
+            repo = _Repo(tmp / f"m-{mode}")
+            if mode:
+                repo.write(".framework/work.yaml", "mode: additive\npeople: [Admin, Junior]\n"
+                           "admins: [Admin]\n")
+            repo.write("decisions/DEC-001.md", _decision("DEC-001", "OD-900"))
+            base = {"CHG-001": chg("CHG-001", "approved", affects="[products/a/X.md]"),
+                    "CHG-002": chg("CHG-002", "draft"),
+                    "CHG-003": chg("CHG-003", "implemented", affects="[products/a/Y.md]"),
+                    "CHG-004": chg("CHG-004", "withdrawn", withdrawn_by="DEC-001"),
+                    "CHG-005": chg("CHG-005", "approved", derives_from="[CHG-001]"),
+                    "CHG-007": chg("CHG-007", "approved", affects="[products/a/Z.md]")}
+            for i, text in base.items():
+                repo.write(f"products/a/changes/{i}.md", text)
+            repo.commit("base", "2026-06-01T09:00:00+02:00")
+            moved = {"CHG-001": chg("CHG-001", "withdrawn", affects="[products/a/X.md]",
+                                    withdrawn_by="DEC-001"),
+                     "CHG-002": chg("CHG-002", "withdrawn", withdrawn_by="DEC-001"),
+                     "CHG-003": chg("CHG-003", "implemented", affects="[products/a/W.md]"),
+                     "CHG-004": chg("CHG-004", "withdrawn", withdrawn_by="CHG-007"),
+                     "CHG-006": chg("CHG-006", "draft", affects="[products/a/V.md]"),
+                     "CHG-007": chg("CHG-007", "approved", affects="[products/a/V.md]")}
+            for branch in ("work/a-x", "work/ricongiungimento-x"):
+                repo.git("checkout", "-q", "-b", branch, "main")
+                for i, text in moved.items():
+                    repo.write(f"products/a/changes/{i}.md", text)
+                repo.commit("moves", "2026-06-02T09:00:00+02:00")
+                got = br006(repo)
+                # Any mode: from draft (CHG-002), a forecast moved past approved (CHG-003), a
+                # change deriving from the withdrawn one (CHG-001). The additive mode off a join:
+                # withdrawn, withdrawn_by and an approved forecast moved (CHG-001, -004, -007).
+                off_join = mode and branch == "work/a-x"
+                want = {"CHG-001": 2 if off_join else 1, "CHG-002": 1, "CHG-003": 1}
+                if off_join:
+                    want.update({"CHG-004": 1, "CHG-007": 1})
+                if got != want:
+                    problems.append(f"{mode or 'pull request'} mode, {branch}: BR006 {got}, "
+                                    f"expected {want}")
+                repo.git("checkout", "-q", "main")
+
+        # On a join: a change a merged thread carried out, one an open thread holds, and one the
+        # merged thread holds, which is the thread joined first and says nothing. The trailer as
+        # `work.py` writes it, the branch's whole name; and once with the documentation in a
+        # folder of its repository, where a path in a commit starts with the folder.
+        for where in ("", "docs/"):
+            repo = _Repo(tmp / f"join{where.strip('/')}")
+            docs = repo.path / where
+            put = lambda rel, text: repo.write(f"{where}{rel}", text)
+            if where:
+                put("framework.yaml", f"framework_version: {REGISTRY['version']}\n")
+            put(".framework/work.yaml", "mode: additive\npeople: [Admin]\nadmins: [Admin]\n")
+            put("decisions/DEC-001.md", _decision("DEC-001", "OD-900"))
+            for i in ("CHG-008", "CHG-009", "CHG-010"):
+                put(f"products/a/changes/{i}.md", chg(i, "approved"))
+            repo.commit("base", "2026-06-01T09:00:00+02:00")
+            repo.git("checkout", "-q", "-b", "work/a-t1", "main")
+            put("products/a/changes/CHG-009.md", chg("CHG-009", "implemented"))
+            thread = repo.commit("CHG-009 implemented", "2026-06-02T09:00:00+02:00")
+            repo.git("tag", "-a", "claim/CHG-008", "-m", "claim CHG-008\n\nbranch: work/a-t2\n")
+            repo.git("tag", "-a", "claim/CHG-010", "-m", "claim CHG-010\n\nbranch: work/a-t1\n")
+            repo.git("checkout", "-q", "-b", "work/ricongiungimento-y", "main")
+            repo.git("merge", "--no-ff", "-q", "-m",
+                     f"Join work/ricongiungimento-y: merge work/a-t1\n\n"
+                     f"joined: work/a-t1 {thread}\n", "work/a-t1")
+            for i in ("CHG-008", "CHG-009", "CHG-010"):
+                put(f"products/a/changes/{i}.md", chg(i, "withdrawn", withdrawn_by="DEC-001"))
+            repo.commit("withdrawn", "2026-06-03T09:00:00+02:00")
+            r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(docs), "--json",
+                                "--stale-days", "36500", "--base", "main"],
+                               capture_output=True, text=True)
+            try:
+                found = json.loads(r.stdout).get("findings", [])
+            except ValueError:
+                found = []
+                problems.append(f"the validator gave no report on the join: {r.stderr[-200:]}")
+            got = {}
+            for f in found:
+                if f["code"] == "BR006":
+                    got[f["path"].split("/")[-1][:7]] = got.get(f["path"].split("/")[-1][:7], 0) + 1
+            if got != {"CHG-008": 1, "CHG-009": 1}:
+                problems.append(f"on a join{' in a folder' if where else ''}, BR006 {got}: "
+                                "expected CHG-008, held by an open thread, and CHG-009, carried "
+                                "out by the thread the join merged; CHG-010, held by that thread, "
+                                "says nothing")
+    return problems
+
+
 @check("AFF001 says an anchor that names nothing, where it can still compute a thread, and affects has one form")
 def _affects_anchors():
     problems = []
@@ -11036,7 +11367,7 @@ def _additive_end_to_end():
             found = {f["code"] for f in json.loads(r.stdout)["findings"]}
         except (ValueError, KeyError):
             return problems + [f"the validator with --base on the thread gave no report: {r.stderr[-300:]!r}"]
-        if found & {"AFF001", "BR001", "BR002", "BR003", "BR004", "BR005", "EFF001"}:
+        if found & {"AFF001", "BR001", "BR002", "BR003", "BR004", "BR005", "BR006", "EFF001"}:
             problems.append(f"a thread written by adding, checked with --base: {sorted(found)}")
         r = subprocess.run([sys.executable, str(TODO), "--root", str(a), "--json"],
                            capture_output=True, text=True)

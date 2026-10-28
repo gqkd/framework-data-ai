@@ -84,7 +84,7 @@ lost. If the answer is no, it was about the framework.
 | Class | What you may do |
 |---|---|
 | `living` | edit in place. `last_review` and `review_scope` are proposed, never written by the run; a person writes them with `attest.py` |
-| `immutable` | never edit the body. Create a new document with `supersedes`, move the old one to `status: superseded`. The `status` field is the one exception and moves in place |
+| `immutable` | never edit the body. Create a new document with `supersedes`, move the old one to `status: superseded`. The `status` field is the exception and moves in place; on a `CHG` so do `verified_by`, `withdrawn_by` -- what withdrew a mandate that will never be carried out -- and `affects`, its forecast: free in a draft, written or corrected by who decides while the change is `approved`, fixed after. `BR006` says when and where the last two may move |
 | `append-only` | never rewrite a line. Add a linked event |
 
 **In the additive mode the table above is not the whole rule.** Where `.framework/work.yaml`

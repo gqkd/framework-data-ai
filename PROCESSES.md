@@ -508,7 +508,7 @@ python3 skills/audit/scripts/validate.py --root <project> \
 |---|---|---|
 | `PR001` | yes | the change set cites no `CHG`: nothing authorizes it |
 | `PR002` | yes | the `CHG` it cites is not in this repository |
-| `PR003` | yes | the `CHG` it cites is `draft` or `rolled-back`: it is not a mandate |
+| `PR003` | yes | the `CHG` it cites is `draft`, `rolled-back` or `withdrawn`: it is not a mandate |
 | `PR004` | no | the `ICG` says the change touches `architecture`, `data` or `risk-compliance`, and the diff does not touch the artifact that owes an update |
 
 `PR001` has one declared exception, `no-chg: <reason>` in the pull request text, and the
@@ -559,7 +559,9 @@ review; it is the reason field 2 of a `CHG` exists. A passed gate does not merge
 ### States
 
 The `CHG` states are already in the schema — `draft → approved → implemented → verified →
-rolled-back` — and `CHG001`, `CHG002` and `CHG003` already guard the transitions from the
+rolled-back`, and since 4.10.0 `approved → withdrawn` for a mandate that will never be carried
+out, which `CHG004` asks to name what withdrew it and `BR006` to move from `approved` only — and
+`CHG001`, `CHG002` and `CHG003` already guard the transitions from the
 citation side: an `ai` impact closed with no `EVR`, an `architecture` impact authorized with
 no `DEC`, an authorized `CHG` naming no classification at all. What was missing was the
 bridge to the pull request, not the model.
@@ -867,7 +869,8 @@ event that gets recorded, not a workflow that gets run.
    replaces more than one -- and in the body the sentence the old one can no longer support.
    `REF002` resolves the id, `REF004` refuses a cycle.
 2. **Move the old one to `status: superseded`.** That field is the only one you may touch on
-   an immutable. The document **stays where it is and stays readable**: it is the reasoning
+   an immutable -- with, on a `CHG`, `verified_by`, `withdrawn_by` and `affects`
+   (`references/preamble.md`). The document **stays where it is and stays readable**: it is the reasoning
    somebody will come looking for when the same question reopens. `REF003` reports an old
    decision left at `accepted`.
 3. **Then the four dependents**, in this order, because each one is somebody deciding and not

@@ -194,6 +194,20 @@ class ContributionAuthority(unittest.TestCase):
         self.control["documents"]["proposed"] = self.control["documents"]["approved_tip"]
         self.assertIn("AUT002", self.codes())
 
+    def test_a_forecast_moved_on_an_approved_mandate_changes_no_mandate(self):
+        amend(self.docs / fixture.CHG, affects=["products/alpha/ARC.md#current"])
+        self.control["documents"]["approved_tip"] = self.commit_docs("Forecast written at a join")
+        self.control["documents"]["proposed"] = self.control["documents"]["approved_tip"]
+        found = self.codes()
+        self.assertNotIn("AUT002", found)
+        self.assertNotIn("AUT003", found)
+
+    def test_older_approval_cannot_revive_a_withdrawn_mandate(self):
+        amend(self.docs / fixture.CHG, status="withdrawn")
+        self.control["documents"]["approved_tip"] = self.commit_docs("Withdrawal on approved branch")
+        self.control["documents"]["proposed"] = self.control["documents"]["approved_tip"]
+        self.assertIn("AUT002", self.codes())
+
     def test_proposed_policy_and_check_overrides_do_not_weaken_the_gate(self):
         self.policy["mandates"][fixture.CHG]["obligations"] = []
         self.policy["mandates"][fixture.CHG]["paths"]["documents"] = ["products"]

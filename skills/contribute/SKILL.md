@@ -57,7 +57,8 @@ At the join the admin accepts it, and the entry closes, or leaves it proposed.
 
 The threads are computed, never drawn: do not propose to move an element from one thread to
 another, or to take part of one. What holds a thread together is the anchors its elements forecast
-in `affects`; if that is wrong, the repair is the anchor, written as an effect.
+in `affects`; if that is wrong, the repair is the anchor -- on an entry written as an effect, on
+an approved `CHG` by who decides at a join, proposed on a parking line.
 
 ## Taking a thread
 
@@ -79,7 +80,7 @@ nothing, so the join shows every effect it wrote as outside the forecast.
 ## Working on the thread
 
 Write by `references/additive.md`: new files, new entries, parking lines and changes of state on
-the branch, and everything else a living document should say as an effect in
+the branch -- not a `CHG` withdrawn or the forecast of an approved one, which are a join's --, and everything else a living document should say as an effect in
 `_filoni/<slug>/effetti.md`. The skills that write -- `requirement`, `resolve`, `cycle`, `release`
 -- run on the branch as usual and say their own exceptions; this skill does not repeat them. Reserve
 every new identifier before writing it, from this branch: `work.py --root <thread worktree>
@@ -103,7 +104,8 @@ python3 "$F/validate.py" --root <thread worktree> --base origin/main
 On a thread nothing else runs the checks of the branches: there is no pull request. `BR005` is a
 living document changed in a way that is not additive -- move the change into an effect --;
 `BR001` and `BR003` are numbers, and `BR002` a decision on an entry the main line has closed,
-as `audit` says; `EFF001` is an effects file that does not read,
+as `audit` says; `BR006` a mandate withdrawn or its forecast moved off a join -- take it out
+and propose it, a withdrawal as a `DEC` `proposed`, a forecast on a parking line --; `EFF001` is an effects file that does not read,
 `AFF001` an anchor that does not exist. Then the review the preamble asks for, on the diff of the
 branch against `origin/main`, effects included, with `_filoni/<slug>/revisione.md` as its log.
 Then the push, and `work.py --root <thread worktree> sync` whenever the main line has moved --

@@ -3169,7 +3169,12 @@ types:
     template: templates/CHG.md
     path: [products/<p>/changes/CHG-NNN-slug.md]
     lifecycle: immutable
-    status: [draft, approved, implemented, verified, rolled-back]
+    # `withdrawn` SINCE 4.10.0: approved, and never to be carried out, because a later decision
+    # or another mandate made it moot. Reached from `approved` only -- what was built and taken
+    # out again is `rolled-back` -- and done for everything that waits on it, the to-do and the
+    # exchange included. Without it a mandate overtaken before anybody built it stayed
+    # `approved` for good, a piece of work in the to-do that nobody was going to do.
+    status: [draft, approved, implemented, verified, rolled-back, withdrawn]
     # DECLARED IN 3.0.0, AND READ BY THE VALIDATOR SINCE LONG BEFORE. `CHG002` and `CHG001`
     # both read this field -- they look in it for the `DEC` and the `EVR` a classification
     # demands -- and it was in no schema, so `derives_from: 12` was as legal here as it was
@@ -3177,7 +3182,13 @@ types:
     # `SIG` more often than any other in the framework, which is what made the omission
     # matter once references had a shape: the type most likely to carry a qualified
     # reference was the one type whose reference field nothing was checking.
-    id_fields: [derives_from]
+    # `withdrawn_by`, since 4.10.0: what withdrew a `withdrawn` change -- an accepted `DEC`, or
+    # the `CHG` that replaces or absorbs it. Its shape is declared here; whether it resolves to
+    # one of those, `CHG004` says, because the `REF` checks read only `derives_from` and
+    # `supersedes`. It moves in place, as `status` does, and the increments the change carried
+    # pass along it to a change of its own product folder (`carried_increments` in the
+    # validator).
+    id_fields: [derives_from, withdrawn_by]
     # The same forecast as an open entry's `affects`, in the same shape: one field name, one
     # form. The code paths are not repeated here; the to-do reads them from the change's
     # mandate in the contribution policy, where there is one.

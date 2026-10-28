@@ -68,8 +68,13 @@ def artifacts(tree, project, policy, registry, *, include_generated=False):
 
 def normative(art):
     # The whole immutable body is retained, not only the three headings: a new paragraph
-    # outside a marker can change a mandate too. Only existing closure metadata is exempt.
-    mutable = {"status", "verified_by"} if art.type == "change-contract" else {"status"}
+    # outside a marker can change a mandate too. Exempt: the closure metadata, and on a change
+    # what withdrew it and its forecast (4.10.0). `affects` authorizes nothing -- paths,
+    # obligations and tests are the policy's -- and is written or corrected while the change is
+    # approved; exempt in every state, because a change is compared with itself across states,
+    # and `BR006` says it moving where or when it may not.
+    mutable = ({"status", "verified_by", "withdrawn_by", "affects"}
+               if art.type == "change-contract" else {"status"})
     return canonical(dict(meta={k: v for k, v in art.meta.items() if k not in mutable},
                           body=art.body))
 

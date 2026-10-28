@@ -1118,7 +1118,10 @@ def gantt_sheet(wb, ws, S, m, F, at: dict) -> None:
     for sr, g in verdicts:
         lo, hi = spans.get(id(g["phase"]), (0, -1))
         e = g["end"]
-        if lo <= hi:
+        if g["status"] == "completa":
+            # Every increment delivered with nothing under it: no row a formula could read.
+            ws.write_string(sr - 1, 3, label(g["status"]), S.cell(bold=True))
+        elif lo <= hi:
             span_d, span_f = f"D{lo}:D{hi}", f"F{lo}:F{hi}"
             verdict = (f'=IF(COUNTIF({span_f},"non stimabile")>0,"Non stimabile",'
                        f'IF(OR(COUNTIF({span_d},"da scomporre*")>0,COUNT({span_f})=0),'
@@ -1222,7 +1225,7 @@ def gantt_sheet(wb, ws, S, m, F, at: dict) -> None:
             "Un incremento «Da scomporre» non ha ancora niente sotto e non entra nella stima. "
             "La pietra miliare di una fase è «A rischio» quando l'ultima voce della fase "
             "finisce dopo la sua data, «Incompleta» quando la fase ha incrementi da "
-            "scomporre."]
+            "scomporre, «Completa» quando ogni suo incremento è consegnato senza voci sotto."]
     if outlined:
         notes.append("Una fase «Da dettagliare» non è ancora scomposta in voci e non entra "
                      "nella stima: la sua barra, più chiara, va dal primo all'ultimo giorno "

@@ -169,7 +169,8 @@ the end of their increment. Pinned items come before everything, and items in no
 everything, in `order.todo`, which then holds only those. An increment is not a piece of work
 here: it has a title in the state file and no theme, scope or size, because it is worth the
 sum of what composes it. One with nothing under it is «da scomporre», worth zero hours, and
-both the Gantt and the conversation say that the expected delivery leaves it out. A
+both the Gantt and the conversation say that the expected delivery leaves it out -- unless the
+roadmap says it `delivered`, and then it is «fatto». A
 conditional increment is counted like the others, and labelled. A stage not broken down yet
 can be drawn on the dates its plan gives it, with `gantt.outline`: it must have nothing to do
 in the perimeter, since the estimate would count what the Gantt does not show, and the script
@@ -363,7 +364,8 @@ and section 5 of the summary.
    and «Gli avvisi ai clienti» for a roadmap that names it «F2 · Gli avvisi ai clienti», or its
    identifier and its name; the row of an increment is the sum, the earliest start and the
    latest end of what composes it, and the milestone of a phase says by formula, on the rows of
-   its phase, whether it is «In tempo», «A rischio» or «Incompleta». A phase in `gantt.outline`
+   its phase, whether it is «In tempo», «A rischio» or «Incompleta» -- or, written out, «Completa»
+   when every increment of the phase is delivered with nothing under it. A phase in `gantt.outline`
    reads «Da dettagliare» on the dates declared, with no hours and nothing under it. With
    stages the rows also fold, closed when the file opens: the milestones, the requests and the
    phases in view, a phase's increments under its «+», an increment's components under its own,

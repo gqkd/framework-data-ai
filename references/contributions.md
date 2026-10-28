@@ -93,8 +93,11 @@ prematurely at the PR that builds the feature: evaluation/release obligations re
 existing lifecycle. Nothing in this phase certifies deployed versions.
 
 The complete immutable body and normative metadata are compared, including prose outside
-section markers. Existing status/CHG closure metadata can change without rewriting the
-mandate; status regression, rollback or revoked current approval cannot authorize work.
+section markers. The status and the closure metadata of a `CHG` -- `verified_by`,
+`withdrawn_by` -- and its forecast, `affects`, can change without rewriting the mandate: the
+forecast authorizes nothing, paths and obligations being the policy's, so since 4.10.0 an
+approved mandate no longer freezes it. Status regression, rollback, withdrawal or revoked
+current approval cannot authorize work.
 The policy and rules must remain consistent with the approved tip; linked mandates and
 classifications are rechecked there. A superseding document is not an edit of history.
 
@@ -337,8 +340,12 @@ copy of credentials. It does not look for copies nobody listed.
 | `EXC006` | a name the framework does not read: a loose file, a name not fixed, the exchange inside a git repository |
 | `EXC007` | a resource row without a known type, an absolute path where one is due, or a command; a copy of credentials without its keys; a declaration misnamed or without one of its sections |
 
-Done, for the exchange, means a change at `implemented`, `verified` or `rolled-back`, or an
-`OD` or `KI` entry `decided` or `superseded`: the work is merged, or the question answered.
+Done, for the exchange, means a change at `implemented`, `verified`, `rolled-back` or
+`withdrawn`, or an `OD` or `KI` entry `decided` or `superseded`: the work is merged, or the
+question answered. A change `withdrawn` integrates nothing, and its folder goes to `integrati/`
+all the same: its `INTEGRATO` names, as `commit`, the commit of the documentation that withdrew
+it, and says in `parts` of each delivered name that it was dropped, and why -- `parts: {}` when
+nothing was delivered.
 It is earlier than what the digest counts as closed, a change at `verified`, and on purpose:
 what a mandate created outside the repositories serves the work up to the merge. A change
 that two documents declare is done only when both say so. All seven are warnings.

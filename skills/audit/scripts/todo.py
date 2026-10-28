@@ -15,8 +15,11 @@ or a change will touch, and `AFF001` keeps it honest.
 THE NODES are the open entries of the open registers (not `parked`, and not closed as `View`
 reads it: by a decision their `closed_by` names, or an accepted one deriving from them), one node
 per `decide_with` group; the changes `approved`; and the increments of each
-product's current stage with nothing under them yet -- no `requires`, no `changes`, no change
-deriving from them -- which are to be decomposed. An increment is numbered per product, and is
+product's current stage with nothing under them yet -- no `requires`, no change listed in
+`changes` but a withdrawn one, no change carrying them -- which are to be decomposed. A change
+carries the increments it derives from; a `withdrawn` one hands them on along `withdrawn_by` to
+the changes of its product folder it reaches, and one nobody receives is to be decomposed again
+(`validate.carried_increments`). A listing in `changes` hands nothing on. An increment is numbered per product, and is
 `<product>/INC-NNN` here, as in its claim. A change in `draft` is not a node: it is listed to be
 approved, at a join.
 
@@ -43,8 +46,8 @@ brought and nobody has read since, with the day of that join; `LC009` reminds of
 
 A THREAD OPEN IS FIXED until the join that lands it: the nodes that would fall into its component
 wait for it, "after thread X". It is ready when its elements are done on its remote branch --
-an entry closed, a change `implemented`, an increment decomposed (a change deriving from it, or
-an effect on its anchor); in a thread with a decision and a change, all but its changes, which go
+an entry closed, a change `implemented`, an increment decomposed (a change carrying it, or an
+effect on its anchor); in a thread with a decision and a change, all but its changes, which go
 back to the main line for the next round -- and the branch carries a commit of its own past the
 main line.
 
@@ -70,7 +73,7 @@ import validate as v  # noqa: E402  (the validator's helpers, not its main)
 B = v._branches
 E = v._effects
 FAMILY = {"OD": 0, "KI": 1, "CHG": 2, "INC": 3}
-CLOSED_CHANGE = {"implemented", "verified", "rolled-back"}
+CLOSED_CHANGE = {"implemented", "verified", "rolled-back", "withdrawn"}
 
 
 def git(root: Path, *args: str) -> str:
@@ -135,6 +138,14 @@ class Tree:
                     if isinstance(row, dict):
                         self.increments[f"{product}/{key}"] = row
                         self.roadmap[f"{product}/{key}"] = rel
+        # What each change carries of the increments it derives from, `<product>/INC-NNN`, with
+        # what the withdrawn ones handed on. The product is the folder, here as for the roadmap.
+        self.carried: dict[str, set[str]] = {}
+        products = {c: product_of_path(a.rel.replace("\\", "/")) or "radice"
+                    for c, a in self.changes.items()}
+        for c, incs in v.carried_increments({c: dict(a.meta, product=products[c])
+                                             for c, a in self.changes.items()}).items():
+            self.carried[c] = {f"{products[c]}/{x}" for x in incs}
 
     def closed(self, ident: str) -> bool:
         fam = bare(ident).split("-", 1)[0]
@@ -155,11 +166,10 @@ class Tree:
 
     def derives(self, change) -> tuple[set[str], set[str]]:
         """What a change derives from: the identifiers it waits for, and the increments of its
-        product it decomposes, `<product>/INC-NNN`."""
-        product = product_of_path(change.rel.replace("\\", "/")) or "radice"
+        product it carries, `<product>/INC-NNN` -- its own, or handed on by a withdrawn one."""
         named = [str(x) for x in v.as_list(change.meta.get("derives_from"))]
         return ({x for x in named if not x.startswith("INC-")},
-                {f"{product}/{x}" for x in named if x.startswith("INC-")})
+                set(self.carried.get(change.id, set())))
 
 
 class Node:
@@ -226,7 +236,7 @@ def nodes_of(tree: Tree, policy: dict) -> tuple[list[Node], list[str]]:
         out.append(Node(ids, kind, home, products, anchors, bool(anchors), preds,
                         everywhere and not anchors))
     # Changes approved; drafts are listed apart. A change waits for what its increments require,
-    # the ones it derives from and, as the roadmaps written before 4.3.0 say it, the ones that
+    # the ones it derives from and, as the changes written before 4.3.0 are listed, the ones that
     # list it in `changes`.
     drafts = []
     proposed = sorted((d for d, s in tree.decisions.items() if s == "proposed"), key=order)
@@ -268,8 +278,14 @@ def nodes_of(tree: Tree, policy: dict) -> tuple[list[Node], list[str]]:
         for s in current:
             for inc in plan["per_stage"].get(s, []):
                 row = plan["increments"].get(inc) or {}
+                # A change it lists, as the changes written before 4.3.0 are listed, holds it
+                # as a change carrying it does -- unless it was withdrawn: the listing hands
+                # nothing on, and the increment is to be decomposed again.
+                listed = [c for c in v.as_list(row.get("changes"))
+                          if (tree.changes.get(str(c)) is None
+                              or tree.changes[str(c)].meta.get("status") != "withdrawn")]
                 if row.get("state") == "delivered" or v.as_list(row.get("requires")) \
-                        or v.as_list(row.get("changes")) or f"{product}/{inc}" in decomposed:
+                        or listed or f"{product}/{inc}" in decomposed:
                     continue
                 out.append(Node([f"{product}/{inc}"], "work", product, {product},
                                 {f"{rel}#{inc}"}, True,

@@ -3324,6 +3324,77 @@ def check_change_contracts(arts: list[Artifact], report: Report, *, references=N
                            "which is the question a `DEC` exists to answer.")
 
 
+def check_withdrawals(arts: list[Artifact], report: Report, *, references=None) -> None:
+    """`CHG004`: a `withdrawn` change names what withdrew it, and only a withdrawn one does.
+
+    What withdraws a mandate is a decision taken -- a `DEC` accepted, or superseded since,
+    which was taken all the same -- or another mandate, past the draft, that replaces or
+    absorbs it: one withdrawn later still withdrew it then, and the increments pass along it
+    to whatever it was withdrawn by in turn, within the change's product folder. A chain that comes back to itself withdrew
+    nothing. Read on one tree, so it sees the shape and not the moment: whether the change was
+    `approved` when it was withdrawn is `BR006`'s to say, against the main line.
+
+    Not one of `check_change_contracts`, which the release gate runs, where any finding stops
+    the release: what withdrew an old mandate is no reason to hold a new one.
+    """
+    references = references or reference_index(arts)
+    changes = [a for a in arts if a.type == "change-contract"]
+    by: dict[str, list] = {}
+    for a in changes:
+        status = a.meta.get("status")
+        named = [str(x) for x in as_list(a.meta.get("withdrawn_by"))]
+        if status != "withdrawn":
+            if named:
+                report.add("CHG004", a.rel,
+                           f"is `{status}` and names {', '.join(named)} in `withdrawn_by`. The "
+                           "field says what withdrew a `withdrawn` change: on any other it is "
+                           "a withdrawal half written, or one undone without saying so.")
+            continue
+        if not named:
+            report.add("CHG004", a.rel,
+                       "is `withdrawn` and `withdrawn_by` names nothing. A mandate does not "
+                       "lapse on its own: name the accepted `DEC`, or the `CHG` that replaces "
+                       "or absorbs it, so that whoever finds it knows why it will never be "
+                       "carried out.")
+            continue
+        for ref in named:
+            target = references.artifact(ref).target
+            other = target.artifact if target else None
+            if other is None or other.type not in ("decision-record", "change-contract"):
+                report.add("CHG004", a.rel,
+                           f"`withdrawn_by` names {ref!r}, which is not a decision or a "
+                           "change in this repository" + (f" but a {other.type!r}" if other
+                                                           else "") + ".")
+            elif other.type == "decision-record":
+                if other.meta.get("status") not in ("accepted", "superseded"):
+                    report.add("CHG004", a.rel,
+                               f"is withdrawn by {ref}, a decision that is "
+                               f"`{other.meta.get('status')}`: a decision not taken withdraws "
+                               "nothing.")
+            elif other is a:
+                report.add("CHG004", a.rel, "names itself in `withdrawn_by`.")
+            elif other.meta.get("status") == "draft":
+                report.add("CHG004", a.rel,
+                           f"is withdrawn by {ref}, a `draft`: a proposal authorizes nothing, "
+                           "so it replaces nothing yet.")
+            elif other.meta.get("status") == "withdrawn" and other.id:
+                by.setdefault(a.id or a.rel, []).append(other.id)
+    # Only between withdrawn changes: one that `withdrawn_by` leads back to.
+    for start in sorted(by):
+        seen, stack = set(), list(by[start])
+        while stack:
+            at = stack.pop()
+            if at == start:
+                rel = next(a.rel for a in changes if (a.id or a.rel) == start)
+                report.add("CHG004", rel,
+                           "is withdrawn by a chain of withdrawn changes that comes back to it: "
+                           "nothing in a circle withdrew the others. Name what did.")
+                break
+            if at not in seen:
+                seen.add(at)
+                stack += by.get(at, [])
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # The pull request
 
@@ -3427,8 +3498,12 @@ def check_pull_request(arts: list[Artifact], pr_text: str | None,
 
         status = a.meta.get("status")
         if status not in AUTHORIZED_FOR_A_PR:
+            withdrawer = ", ".join(str(x) for x in as_list(a.meta.get("withdrawn_by")))
             why = ("was rolled back: whatever it authorized has been taken out again, so "
                    "it cannot authorize this" if status == "rolled-back" else
+                   f"was withdrawn{' by ' + withdrawer if withdrawer else ''}: approved, and "
+                   "never to be carried out, so it cannot authorize this"
+                   if status == "withdrawn" else
                    f"is `{status}`, which is a proposal and not a mandate. The boundary "
                    "between an idea and authorized work is this field, and merging across "
                    "it is how the field stops meaning anything")
@@ -4059,6 +4134,14 @@ def check_roadmap(arts: list[Artifact], report: Report) -> None:
             if isinstance(row, dict):
                 entries.setdefault(str(key), []).append((o.rel, row, scope))
     changes = {a.id: a for a in arts if a.type == "change-contract" and a.id}
+    # The work of an increment is with the changes that carry it, what a withdrawn one handed
+    # on included; the chain of withdrawals follows the folder of each change, as the to-do
+    # and the digest read it.
+    folder = lambda rel: (rel.replace("\\", "/").split("/")[1]
+                          if rel.replace("\\", "/").startswith("products/")
+                          and rel.replace("\\", "/").count("/") >= 2 else None)
+    carried = carried_increments({c: dict(chg.meta, product=folder(chg.rel))
+                                  for c, chg in changes.items()})
 
     def bare(ref) -> str:
         return str(ref).split(":", 1)[-1].strip()
@@ -4190,8 +4273,8 @@ def check_roadmap(arts: list[Artifact], report: Report) -> None:
             for r in (str(x) for x in as_list(row.get("requires"))):
                 if any(e.get("status") in ("open", "parked") for _, e, _ in entries.get(r, [])):
                     still.append(r)
-            mine = [c for c, chg in changes.items()
-                    if inc in (bare(x) for x in as_list(chg.meta.get("derives_from")))
+            mine = [c for c in changes
+                    if inc in carried.get(c, ())
                     or c in (str(x) for x in as_list(row.get("changes")))]
             still += [c for c in sorted(mine)
                       if changes[c].meta.get("status") in ("draft", "approved", "implemented")]
@@ -4265,7 +4348,7 @@ def check_exchange(root: Path, declared: str | None, place: Path | None, arts: l
 
 def check_branch(root: Path, base: str, arts: list[Artifact], registry: dict, scan: dict,
                  repo: "Repository | None", work: dict | None, report: Report) -> None:
-    """What this branch adds, against the main line it will land on: `BR001`-`BR005`.
+    """What this branch adds, against the main line it will land on: `BR001`-`BR006`.
 
     THREE TREES, OR MORE. The working tree, which is the branch as it stands; the tip of `base`,
     which is what it will meet; and every best common ancestor of the two, which together say
@@ -4350,6 +4433,7 @@ def check_branch(root: Path, base: str, arts: list[Artifact], registry: dict, sc
     if branch in ("", "HEAD"):
         branch = os.environ.get("GITHUB_HEAD_REF", "")
     check_additive(root, bases, before, head, branch, report)
+    check_mandate_moves(root, tip, bases, before, head, branch, report)
 
     if work is None:
         return
@@ -4387,6 +4471,127 @@ def check_branch(root: Path, base: str, arts: list[Artifact], registry: dict, sc
                        "else's, or nobody's: the likeliest way two branches meet on one number "
                        "is the second writing the next free one while the first holds it. "
                        "Reserve a number of your own, from this branch, and renumber.")
+
+
+# Where a change has gone once it is no longer only approved: carried out, verified, taken out
+# again, or withdrawn. Its forecast is fixed from here on.
+PAST_APPROVED = {"implemented", "verified", "rolled-back", "withdrawn"}
+
+
+def check_mandate_moves(root: Path, tip: str, bases: list[str], before: list["_branches.View"],
+                        head: "_branches.View", branch: str, report: Report) -> None:
+    """`BR006`: what moves in place on a change contract moves when and where it may.
+
+    Since 4.10.0 three fields of an immutable `CHG` move in place besides `status` and
+    `verified_by`: `withdrawn_by`, with `status: withdrawn`, and `affects`. Each has its moment.
+    A change is withdrawn from `approved` only -- a draft that will not be done stays a draft,
+    and work built and taken out again is `rolled-back`. Its forecast is written or corrected
+    while it is `approved`, and is fixed once it is past it. And whoever withdraws it is told
+    which changes deriving from it stop waiting for it without being what withdrew it: they no
+    longer wait, and one of them may have needed its work. Those three in any mode.
+
+    In the additive mode, two more. The withdrawal, what withdrew it and the forecast of an
+    approved change are written by who decides, on the branch of a join: said on any other
+    branch -- "not a join", the name a pull request job leaves empty included, as `BR005`
+    reads it. And on a join, a change withdrawn that a thread this join merged has carried out,
+    or that a thread still open holds: the thread first -- released or joined --, and work a
+    thread carried out lands `implemented`, to be `rolled-back` if it must go.
+
+    Against every point where the branch left the main line, as `BR004` and `BR005`: said only
+    where each of them finds it, so that a branch that brought the main line in is not charged
+    with what the main line did.
+    """
+    try:
+        works = [_branches.work_at(root, b) for b in bases]
+    except _branches.BranchError as e:
+        refuse(f"--base: {e}. Nothing was checked.")
+        return
+    additive = any(w.get("mode") == "additive" for w in works)
+    prefix = str(next((w.get("branch_prefix") for w in works if w.get("branch_prefix")),
+                      "work/"))
+    name = branch[len(prefix):] if branch.startswith(prefix) else ""
+    on_join = name.startswith(_branches.JOIN)
+    norm = lambda a: a.rel.replace("\\", "/")
+    olds = [{norm(a): a for a in view.arts if a.type == "change-contract"} for view in before]
+    ids = lambda value: sorted(str(x).split(":", 1)[-1].strip() for x in as_list(value))
+    changes = [a for a in head.arts if a.type == "change-contract"]
+
+    joined: dict[str, str] = {}          # thread -> the commit of it this join merged
+    if additive and on_join:
+        log = _git(["log", "--merges", "--format=%B", f"{tip}..HEAD"], root)
+        for line in (log.stdout if log is not None and log.returncode == 0 else "").splitlines():
+            parts = line[len(_branches.JOINED):].split() if line.startswith(_branches.JOINED) else []
+            if len(parts) == 2:
+                joined[parts[0]] = parts[1]
+
+    for a in changes:
+        rel, status = norm(a), a.meta.get("status")
+        was = [o.get(rel) for o in olds]
+        states = [o.meta.get("status") if o else None for o in was]
+        said = []
+        newly_withdrawn = status == "withdrawn" and "withdrawn" not in states
+        if newly_withdrawn and "approved" not in states:
+            said.append(f"is brought to `withdrawn` from "
+                        f"{', '.join(sorted({str(s) for s in states if s})) or 'nothing'}, never "
+                        "`approved` where this branch left the main line. A mandate is withdrawn "
+                        "from `approved` only: a draft that will not be done stays a draft, and "
+                        "work built and taken out again is `rolled-back`")
+        if all(o is not None for o in was) and all(s in PAST_APPROVED for s in states) \
+                and all(ids(a.meta.get("affects")) != ids(o.meta.get("affects")) for o in was):
+            said.append(f"has its `affects` changed past `approved` "
+                        f"({', '.join(sorted({str(s) for s in states}))} where the branch "
+                        "left the main line). The forecast is written or corrected while the "
+                        "change is approved, and is fixed once it has been carried out or "
+                        "withdrawn")
+        if additive and not on_join and all(o is not None for o in was):
+            moved = []
+            if all(s == "approved" for s in states) and newly_withdrawn:
+                moved.append("withdrawn")
+            if all(s == "approved" for s in states) and \
+                    all(ids(a.meta.get("affects")) != ids(o.meta.get("affects")) for o in was):
+                moved.append("its `affects` changed")
+            if all(s == "withdrawn" for s in states) and all(
+                    ids(a.meta.get("withdrawn_by")) != ids(o.meta.get("withdrawn_by")) for o in was):
+                moved.append("its `withdrawn_by` changed")
+            if moved:
+                by = ", ".join(ids(a.meta.get("withdrawn_by")))
+                said.append(f"is {' and '.join(moved)}"
+                            f"{' (withdrawn by ' + by + ')' if status == 'withdrawn' and by else ''}"
+                            " on a branch that is not a join. In the "
+                            "additive mode a mandate is withdrawn, what withdrew it named and "
+                            "the forecast of an approved one written by who decides, on the "
+                            "branch of a join: a contributor proposes a withdrawal as a `DEC` "
+                            "`proposed`, and a forecast on a parking line")
+        if additive and on_join and newly_withdrawn and a.id:
+            for thread, sha in sorted(joined.items()):
+                # `<commit>:<path>` reads from the top of the repository, and the documentation
+                # may be a folder of it.
+                shown = _git(["show", f"{sha}:{_branches.prefix(root)}{rel}"], root)
+                meta = (parse_front_matter(shown.stdout)[0] or {}) \
+                    if shown is not None and shown.returncode == 0 else {}
+                if meta.get("status") in ("implemented", "verified"):
+                    said.append(f"is withdrawn on the join that merges {thread}, which carried it "
+                                f"to `{meta.get('status')}`. Work a thread carried out lands as "
+                                "the thread left it, and is `rolled-back` if it must go")
+            held = _git(["for-each-ref", "--format=%(contents)",
+                         f"{_branches.CLAIM_REF}{a.id}"], root)
+            owner = _branches.message_fields(held.stdout if held is not None else "").get("branch")
+            if owner and owner not in joined:        # branch names, as `JOINED` writes them
+                said.append(f"is withdrawn while {owner}, a thread this join does not merge, "
+                            "holds it. The thread first: released (`work.py release`, or "
+                            "`release --theirs` by an admin) or joined, then the withdrawal")
+        if newly_withdrawn and a.id:
+            by = set(ids(a.meta.get("withdrawn_by")))
+            waiting = sorted(c.id for c in changes if c is not a and c.id and c.id not in by
+                             and c.meta.get("status") != "withdrawn"
+                             and a.id in ids(c.meta.get("derives_from")))
+            if waiting:
+                said.append(f"is withdrawn, and {', '.join(waiting)} derive"
+                            f"{'s' if len(waiting) == 1 else ''} from it without being what "
+                            "withdrew it: they no longer wait for it. Look at whether one of "
+                            "them needed its work, before it lands")
+        for line in said:
+            report.add("BR006", a.rel, f"{a.id or rel} {line}.")
 
 
 def _own_text(a: Artifact) -> list[str]:
@@ -4482,7 +4687,8 @@ def check_additive(root: Path, bases: list[str], before: list["_branches.View"],
         report.add("BR005", rel, (
             f"changed on this branch other than by adding, against where it left the main line: "
             f"{said}. In the additive mode a thread writes new files, new entries, parking lines "
-            "and states; what a living document should say becomes an effect in "
+            "and states -- not a mandate withdrawn, which is a join's --; what a living document "
+            "should say becomes an effect in "
             f"`{_effects.THREADS}/<thread>/{_effects.EFFECTS}`, and the join rewrites the "
             "document."))
 
@@ -4572,7 +4778,8 @@ def check_affects(arts: list[Artifact], registry: dict, report: Report) -> None:
 # What a decision or an approval leaves in the front matter: a `DEC` accepted, a `CHG` approved
 # or any state past the approval, which a branch can reach without stopping at `approved`.
 DECIDED = {"decision-record": {"accepted"},
-           "change-contract": {"approved", "implemented", "verified", "rolled-back"}}
+           "change-contract": {"approved", "implemented", "verified", "rolled-back",
+                               "withdrawn"}}
 
 
 def check_approvers(root: Path, bases: list[str], before: list["_branches.View"],
@@ -4672,6 +4879,42 @@ def binds(prod: str, row: dict, scope: str | None) -> bool:
     # composition rule that changes under a document nobody edited is the one kind of
     # migration that cannot be reviewed.
     return ALL_PRODUCTS in named or prod in named or not named
+
+
+def carried_increments(changes: dict[str, dict]) -> dict[str, set[str]]:
+    """The increments each change carries: `CHG` -> the `INC-NNN` whose work it takes.
+
+    `changes` maps each `CHG` to its `status`, `derives_from`, `withdrawn_by` and `product`.
+    A change carries the increments it derives from. A `withdrawn` one carries none: it hands
+    them on along `withdrawn_by` -- through a change withdrawn after it, too -- to every change
+    it reaches that is not withdrawn and is of its own product. A decision, a cycle or a
+    change of another product receives nothing, and an increment nobody receives is carried
+    by nobody: it is work again, for the to-do and for the digest alike, which is why this is
+    one function they both call and not two readings of `derives_from`.
+    """
+    def ids(value) -> list[str]:
+        return [str(x).split(":", 1)[-1].strip() for x in as_list(value)]
+
+    own = {c: {x for x in ids(d.get("derives_from")) if x.startswith("INC-")}
+           for c, d in changes.items()}
+    out = {c: set() if d.get("status") == "withdrawn" else set(own[c])
+           for c, d in changes.items()}
+    for c, d in changes.items():
+        if d.get("status") != "withdrawn" or not own[c]:
+            continue
+        seen, stack = {c}, [c]
+        while stack:
+            for nxt in ids(changes[stack.pop()].get("withdrawn_by")):
+                if nxt in seen or nxt not in changes:
+                    continue
+                seen.add(nxt)
+                if changes[nxt].get("product") != d.get("product"):
+                    continue
+                if changes[nxt].get("status") == "withdrawn":
+                    stack.append(nxt)
+                else:
+                    out[nxt] |= own[c]
+    return out
 
 
 def build_regions(root: Path, arts: list[Artifact]) -> dict[Path, dict[str, str]]:
@@ -5014,6 +5257,7 @@ def main() -> int:
     check_release(arts, report)
     importlib.import_module(f"{_CORE_NAME}.release_sets").check(arts, registry, report)
     check_change_contracts(arts, report, references=references)
+    check_withdrawals(arts, report, references=references)
     check_pull_request(arts, pr_text, changed_files, report, references=references)
     check_framework_version(root, project, registry, report)
     check_framework_pin(project, report)

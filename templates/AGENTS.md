@@ -80,7 +80,7 @@ here.
    that needs no permission and no skill running, and it is the difference between a
    discovery and a remark. Say in the answer that you did it.
 5. **Respect the artifact class.**
-   - `immutable` → do not modify it; create a new one with `supersedes`
+   - `immutable` → do not modify it; create a new one with `supersedes`. Only `status` moves in place, and on a `CHG` `verified_by`, `withdrawn_by` and `affects`
    - `append-only` → do not rewrite lines; add a linked event
    - `living` → modify it in place; propose `last_review` and the `review_scope` sentence to a person, who attests with `attest.py`; never auto-attest a review and never run that command
 6. **If a fact is not documented, say so.** Absence is information. Prefer "it is not
@@ -134,7 +134,8 @@ outside the repositories.
 This project writes its documentation in threads that a script computes, each on a branch of
 its own, and lands them on the main line together, at a join that an admin runs. Never write
 the main line. On a thread's branch write new files, new entries in the open registers, parking
-lines and changes of state; anything else a living document should say -- an edit, a line the
+lines and changes of state -- but a `CHG` withdrawn, and the `affects` of an approved one, are
+written at a join, by who decides; anything else a living document should say -- an edit, a line the
 mandatory updates below ask for, a step of a cascade -- is a pending effect in
 `_filoni/<thread>/effetti.md`. What belongs to no thread goes on a parking branch, which the
 person opens; the parking line of rule 4 too, which here waits for that branch: say it in the

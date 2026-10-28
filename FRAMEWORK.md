@@ -71,9 +71,12 @@ decisions with total confidence. The class is what stops it.
 the decision: those never change, and if they change it is a new file that supersedes. The
 `status` field is a declared exception: `CHG`, `HYP` and `DEC-ADR` move it forward in the
 same file along the transitions enumerated in their schema (`draft → approved →
-implemented → verified → rolled-back`, for a `CHG`) because it records what happened to
-the decision, not what the decision says. That is not a rewrite. It is the only field for
-which the framework allows touching an immutable in place.
+implemented → verified → rolled-back`, for a `CHG`, or `approved → withdrawn` for a mandate
+that will never be carried out) because it records what happened to the decision, not what
+the decision says. That is not a rewrite. Beside it, on a `CHG`, three fields that say what
+happened to it or what it is expected to touch, never what it authorizes: `verified_by`,
+`withdrawn_by` and `affects`, the forecast of its thread. Nothing else on an immutable is
+touched in place.
 
 **Rule for append-only artifacts:** at the moment of observation you do not yet know cause
 and remedy. Do not update the line: add a linked event.
@@ -419,7 +422,7 @@ classification: internal
 
 `status` and `artifact_type` are defined by the artifact's **own schema**, not by a common
 enumeration: a `DEC` is `proposed | accepted | superseded`, a `CHG` is `draft | approved |
-implemented | verified | rolled-back`. A single enumeration would be too generic to be
+implemented | verified | rolled-back | withdrawn`. A single enumeration would be too generic to be
 useful. Those schemas are in `schemas/`, and the identifier resolves to a file:
 `framework/decision-record/v1` is `schemas/framework/decision-record/v1.json`. What each
 type may contain is declared once, in `schemas/artifact-types.yaml`.
@@ -670,7 +673,8 @@ completeness of the picture.
    product, and `platform/OPEN.md` for the substrate.
 4. **Respect the class.** Do not modify the body of an `immutable`: create a new one that
    supersedes it. The `status` field is the exception. It follows the transitions declared
-   in the schema of the type and is updated in place. Do not rewrite an `append-only` line:
+   in the schema of the type and is updated in place, and on a `CHG` so are `verified_by`,
+   `withdrawn_by` and `affects` (`references/preamble.md`). Do not rewrite an `append-only` line:
    add a linked event.
 5. **Mandatory updates after a change:** you touch the architecture → `ARC` **and** a `DEC`
    · you touch data or schema → the relevant `DC` · you touch an AI component → a new `EVR`

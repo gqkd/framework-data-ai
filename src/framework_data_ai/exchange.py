@@ -52,9 +52,13 @@ KEYS = re.compile(r"\(([^()]*)\)\s*$")
 # DONE, FOR THE EXCHANGE: the work an element asked for is merged, or its question answered. A
 # change is done here at `implemented`, which is earlier than the digest's "closed" (it waits for
 # `verified`, the Definition of Done) and on purpose: what a mandate created outside the
-# repositories serves the work up to the merge, and what was delivered is integrated then.
-# Every status the schemas allow is in one set or the other, and `tests/selfcheck.py` says so.
-CLOSED_CHANGE = {"implemented", "verified", "rolled-back"}
+# repositories serves the work up to the merge, and what was delivered is integrated then. A
+# change `withdrawn` is done too, with nothing to integrate: its folder goes to `integrati/` all
+# the same, its `INTEGRATO` naming the commit that withdrew it and saying in `parts` that what
+# was delivered was dropped.
+# Every status the schemas allow is in one set or the other, and `tests/selfcheck.py` says so;
+# `todo.py` holds the same set, and the self check holds the two to each other.
+CLOSED_CHANGE = {"implemented", "verified", "rolled-back", "withdrawn"}
 OPEN_CHANGE = {"draft", "approved"}
 CLOSED_ENTRY = {"decided", "superseded"}
 OPEN_ENTRY = {"open", "parked"}
@@ -345,7 +349,13 @@ def check(ex: Exchange, known: set[str], states: dict, projects: Path, in_histor
             report.add("EXC001", rel, f"{el.ident} is not an identifier the documentation "
                        "declares: a typo, or an element that was renamed or never written. "
                        "Nothing here can say whether its material was integrated.")
-        if el.stage == INCOMING and closed(states, el.ident):
+        if el.stage == INCOMING and closed(states, el.ident) \
+                and state(states, el.ident) == "withdrawn":
+            report.add("EXC002", rel, f"{el.ident} is withdrawn in the documents and its "
+                       f"folder is still in `{INCOMING}/`: nothing of it will be integrated. Move "
+                       f"the folder to `{INTEGRATED}/` with an `{MARK}` naming the commit that "
+                       "withdrew it and saying in `parts` that each delivered part was dropped.")
+        elif el.stage == INCOMING and closed(states, el.ident):
             report.add("EXC002", rel, f"{el.ident} is {state(states, el.ident)} in the "
                        f"documents and its folder is still in `{INCOMING}/`. If its material "
                        f"was integrated, move the folder to `{INTEGRATED}/` with an `{MARK}` "

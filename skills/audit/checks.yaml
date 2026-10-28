@@ -1288,6 +1288,21 @@ checks:
       which is what `none` is for, and a field that excused a `CHG` from classification
       would be a way around the way around.
 
+  CHG004:
+    level: warn
+    title: withdrawn change contract that does not say what withdrew it
+    prevents: >
+      A mandate that lapses with no reason anybody can find. `withdrawn` is the end of a
+      `CHG` approved and never to be carried out, because a later decision or another mandate
+      made it moot, and what made it moot is the one thing that tells the next reader it was
+      not simply forgotten: `withdrawn_by` names an accepted `DEC`, or the `CHG`, past its
+      draft, that replaces or absorbs it -- and the increments the change carried pass to that
+      one when it is of the same product folder, or go back to the to-do. Reported too: a `withdrawn_by` that names nothing in the repository, a decision not
+      taken, a draft, the change itself, a circle of withdrawn changes, and the field on a
+      change that is not withdrawn. One tree, so the shape and not the moment: whether the
+      change was `approved` when it was withdrawn is `BR006`'s, against the main line. It is
+      not run by the release gate, where a finding stops the release.
+
   # ── The pull request ───────────────────────────────────────────────────────
   #
   # THESE FOUR ARE THE ONLY ONES THAT NEED A CONTEXT THE REPOSITORY DOES NOT CONTAIN: what
@@ -1333,7 +1348,7 @@ checks:
       boundary is the field, and this is the only place it can be defended, because it is
       the only moment the two things -- the contract and the work -- are in the same place.
       `rolled-back` is reported too, and it is the stranger case: whatever it authorized has
-      already been taken out again.
+      already been taken out again. So is `withdrawn`: approved, and never to be carried out.
 
   PR004:
     level: warn
@@ -1498,7 +1513,7 @@ checks:
       The state measured in the first project to run sessions in parallel: nine elements out
       of thirteen already integrated into their mandates, their material still waiting beside
       the four that were not, and nothing saying which were which. A change at `implemented`,
-      `verified` or `rolled-back`, an `OD` or `KI` `decided` or `superseded`, is done; its
+      `verified`, `rolled-back` or `withdrawn`, an `OD` or `KI` `decided` or `superseded`, is done; its
       folder belongs in `integrati/` with the file that says where each part went, or it is
       waiting behind a state that says it is done.
   EXC003:
@@ -1598,9 +1613,9 @@ checks:
   #
   # The `BR` checks run only with `--base <ref>`: the main line a branch is compared with. A
   # run without it sees none of them, so a repository that does not work on branches sees
-  # nothing move. At `error`, like the `PR` checks -- all but `BR004` and `BR005`, warnings
-  # because `approvers` is declared and not proven, and because what a thread changes is read
-  # again at the join -- and MINOR for the same reason they were: they
+  # nothing move. At `error`, like the `PR` checks -- all but `BR004`, `BR005` and `BR006`,
+  # warnings because `approvers` is declared and not proven, and because what a thread or a
+  # join changes is read again at the join -- and MINOR for the same reason they were: they
   # run only when somebody asks for the comparison. `WK001` and `WK002` are warnings and run
   # on every run where `.framework/work.yaml` exists. What they compare is what a branch adds -- never
   # the history both sides share, where several decisions on one entry and numbers declared
@@ -1669,14 +1684,29 @@ checks:
     title: a thread's or a parking branch changes a living document other than by adding
     prevents: >
       Two threads rewriting one paragraph, met in a merge nobody can read. In the additive
-      mode a thread writes new files, new entries in a register, parking lines and states, and
-      everything a living document should say becomes an effect in `_filoni/<thread>/effetti.md`;
+      mode a thread writes new files, new entries in a register, parking lines and states -- not a
+      mandate withdrawn, which is a join's, as `BR006` says --, and everything a living document
+      should say becomes an effect in `_filoni/<thread>/effetti.md`;
       the join is the one moment living documents are rewritten. Measured on lines: in the
       body only lines added, outside the regions the generator owns; in the front matter only
       new `entries` of a register, the `status` and `closed_by` of an entry, and the two fields
       an attestation writes. Against every point where the branch left the main line, and not
       on the branch of a join. A parking branch (`parcheggio-<name>`, a thread without elements,
       for what belongs to no thread) is checked the same way. Runs with `--base`.
+  BR006:
+    level: warn
+    title: a change contract withdrawn, or its forecast moved, when or where it may not be
+    prevents: >
+      The fields that move in place on an immutable `CHG` since 4.10.0 -- `status: withdrawn`
+      with `withdrawn_by`, and `affects` -- moving without anybody deciding it. In any mode: a
+      change brought to `withdrawn` from a state other than `approved`; its `affects` changed
+      once it is past `approved`; and, said to whoever withdraws it, the changes deriving from
+      it that stop waiting for it without being what withdrew it. In the additive mode, also: a
+      withdrawal, a `withdrawn_by` or the forecast of an approved change written on a branch
+      that is not a join -- a contributor proposes them as a `DEC` `proposed` and a parking
+      line --; and on a join, a change withdrawn that a thread it merges carried out, or that
+      an open thread holds. Against every point where the branch left the main line; the join
+      prints it before it is pushed. Runs with `--base`.
   WK001:
     level: warn
     title: a key, a value or a threshold in .framework/work.yaml that this version does not read

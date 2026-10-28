@@ -26,21 +26,22 @@ forecasts nothing, so at the join every effect it wrote is shown as outside the 
 thread's branch goes what belongs to that thread's work; what does not, a parking line found on
 the way included, goes on a parking branch. The branch of a join is where living documents are rewritten, and where
 what only those who decide write goes: a release, a change `verified`, the freeze of the
-evaluation plan, an approval. An admin opens one with `work.py join --no-threads` when no thread
+evaluation plan, an approval, a mandate withdrawn, the forecast of an approved one. An admin opens one with `work.py join --no-threads` when no thread
 is ready.
 
 | Written directly on the thread's branch | Written as a pending effect |
 |---|---|
 | new files: a `DEC`, `CHG`, `ICG`, `EVR`, `REL`, `RLM`, and any other new artifact -- a `PRB`, `HYP`, `EVD`, `CMP`, `DFB`, `SD`, a new `DC` | every other change to a living document: `ARC`, `PBR`, `WF`, `GLOSSARY`, `DC`, `RSK`, `RMP`, `EVP`, `RB`, `IMP`, `COMMITMENTS`, `STACK`, `PLATFORM`, `AGENTS.md`, `product.yaml`, and the **body** of an `OPEN` register: an entry moved from §1 to §4, an entry rewritten |
 | new entries in the open registers -- in `entries:` and their section --, lines in `LOG` and `ING`, which are append-only, lines in the parking lot | a new key in another register that is a map: `commitments`, `risks`, `terms` of `GLOSSARY`, `stack`, `increments` and `delivery_stages` of `RMP` |
-| changes of state: `status` and `closed_by` of an entry, `status` of an immutable, the verification section of a `CHG` | |
+| changes of state: `status` and `closed_by` of an entry, `status` of an immutable -- but a `CHG` withdrawn is a join's, below --, the verification section of a `CHG` | |
 | `last_review` and `review_scope`, when a person attests a reading with `attest.py` | |
 
 `BR005` reports, on the branch of a thread or of parking, a living document changed in a way
 that is not additive. Never on those branches, and only on the branch of a join, with no thread
 if need be: `.framework/work.yaml`, the adoption of a framework version -- `migrate.py --adopt`
 run in the join's worktree --, `.framework/contribution-policy.json`, the annotations in
-`.framework/expected-findings.yaml`, and a `CHG` moving to `approved`. The one exception is the
+`.framework/expected-findings.yaml`, a `CHG` moving to `approved`, a `CHG` moving to
+`withdrawn` or a new `withdrawn_by` on one, and the `affects` of an approved `CHG`. The one exception is the
 commit that first writes `mode: additive`, which lands as any commit did before the mode; the
 section of `AGENTS.md` on threads and joins arrives with the next `--adopt`, on a join's branch.
 
@@ -51,7 +52,9 @@ document. It is the one input of the threads a person writes, and a forecast: th
 one thread the entries that forecast one anchor, `AFF001` reports an anchor that does not exist,
 and the join shows an effect written outside what its thread forecast. An entry with more anchors
 than `thresholds.od_affects` is worth proposing to split, and `requirement`, `resolve` and
-`cycle` propose it.
+`cycle` propose it. The `affects` of a `CHG` in draft is anybody's to write; that of an approved
+one is written or corrected by who decides, at a join, and is fixed once it is past `approved`
+-- `BR006` says it moving anywhere else.
 
 ## The effects
 
@@ -110,7 +113,8 @@ fast-forward -- is read as before.
 (`work.py delegate`) stand in for them; the other `people` are contributors. These are
 permissions in the documentation repository, not the responsibilities of `PROCESSES.md`. Nothing
 blocks. Most rows are seen one way or another: a command refuses (a thread with a decision, a
-delegation, the join), a check reports (`BR004`, on who approved), or the join shows the change
+delegation, the join), a check reports (`BR004`, on who approved; `BR006`, on a mandate
+withdrawn or a forecast moved), or the join shows the change
 to the admin before merging. Some are a convention nobody checks: releasing somebody else's
 claim, deleting an abandoned thread's branch, and `.framework/work.yaml`, an adoption or an
 annotation written on a thread's or a parking branch instead of a join's.
@@ -123,6 +127,7 @@ annotation written on a thread's or a parking branch instead of a join's.
 | Classify an impact (`ICG`) | confirms | confirms | writes the draft |
 | Write a `CHG` in draft; write the brief of an approved one and implement it | yes | yes | yes |
 | Approve a `CHG`, at a join, in bulk if need be | yes | yes | no |
+| Withdraw an approved `CHG` that will never be carried out (`withdrawn`, naming in `withdrawn_by` the accepted `DEC` or the `CHG` that replaces or absorbs it), or change its `withdrawn_by`; write or correct the `affects` of an approved `CHG`; at a join. One a thread holds is withdrawn once the thread is released or joined, and one the thread carried out lands `implemented`, to be `rolled-back` if its work must go | yes | yes | proposes a withdrawal as a `DEC` `proposed` deriving from the `CHG`, on a parking branch -- accepted, it is the `withdrawn_by` --, and a forecast on a parking line |
 | Mark a `CHG` implemented, close a `KI` fixed by a change or a commit | whoever holds the thread | the same | the same |
 | Close a `KI` without fixing it | yes | yes | no: it is a decision |
 | Freeze the `EVP`, say yes or no to a release, `REL` and `RLM`, `verified` | yes | yes | prepares the evidence |

@@ -13,6 +13,7 @@ derives_from: [product-a:SIG-NNN, INC-NNN, DEC-NNN]    # the signal is qualified
                                # product -- `REF008` reports a qualifier this document
                                # does not carry in `products:`
 verified_by: null               # the EVR, once there is one. Empty until `status: verified`
+withdrawn_by: null              # the DEC or CHG that withdrew it. Empty until `status: withdrawn`
 classification: internal
 ---
 
@@ -21,7 +22,7 @@ classification: internal
 **Question:** which change is authorized, within which boundaries, and how will we know it
 worked?
 
-`status`: `draft | approved | implemented | verified | rolled-back`
+`status`: `draft | approved | implemented | verified | rolled-back | withdrawn`
 
 **Why it exists.** An agent must not implement a `LOG` line, a piece of feedback, a request
 or an `RMP` increment: those are signals, not authorizations. It must implement a `CHG` with

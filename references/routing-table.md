@@ -89,7 +89,7 @@ A correction is the most delicate operation, because the class of the document d
 | Class of the document | Allowed operation |
 |---|---|
 | **living** | edit in place. `last_review` and `review_scope` are proposed and not written: they attest a reading, and the proposal carries the sentence for `review_scope` (what the reading covered, what it did not). The person writes both with `skills/audit/scripts/attest.py`, which stamps the instant it runs at, with its offset |
-| **immutable** | **never edit.** Create a new document with `supersedes`, and move the old one to `status: superseded` |
+| **immutable** | **never edit.** Create a new document with `supersedes`, and move the old one to `status: superseded`. Only `status` moves in place, and on a `CHG` `verified_by`, `withdrawn_by` and `affects` |
 | **append-only** | **never rewrite a line.** Add a linked event (`ANA-NNN` on `SIG-NNN`) |
 
 In the additive mode a living document is edited in place only on the branch of a join:

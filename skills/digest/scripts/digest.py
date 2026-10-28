@@ -118,14 +118,18 @@ BULK_KEYS = {"architettura", "sviluppo", "deploy", OUT}
 # and not which of them mean done, so the reading lives here, and `tests/selfcheck.py`
 # asserts that every status the registry declares for these types is mapped: a status added
 # there breaks the test, not the digest in silence. A `CHG` is closed at `verified` and not
-# before, which is the Definition of Done of `templates/AGENTS.md`. An `INC` has no status a
-# script can read: it is open until a `CHG` derives from it, and then the `CHG` replaces it.
+# before, which is the Definition of Done of `templates/AGENTS.md`. An `INC` has no status of its
+# own here -- the roadmap's `state` says only whether it is delivered, and a delivered one is
+# done --: it is open until a `CHG` carries it, and then the `CHG` replaces it. A `CHG`
+# carries what it derives from, and a `withdrawn` one hands that on along `withdrawn_by`, so an
+# increment whose only change was withdrawn by a decision is open again: `read_registers` reads
+# that once, with the validator's `carried_increments`, which the to-do reads too.
 STATES = {
     "open-register": {"open": "open", "parked": "open", "decided": "closed",
                       "superseded": "gone"},
     "decision-record": {"proposed": "open", "accepted": "closed", "superseded": "closed"},
     "change-contract": {"draft": "open", "approved": "open", "implemented": "open",
-                        "verified": "closed", "rolled-back": "gone"},
+                        "verified": "closed", "rolled-back": "gone", "withdrawn": "gone"},
     "evaluation-report": {"active": "closed"},
 }
 
@@ -305,6 +309,7 @@ class Entry:
     file: str
     closed_by: str | None = None
     derives_from: list = field(default_factory=list)
+    withdrawn_by: list = field(default_factory=list)
 
 
 @dataclass
@@ -384,11 +389,28 @@ def read_registers(arts: list, broken: list, product: str, v) -> Registers:
             title = next((m.group(2) for line in a.body.splitlines()
                           if line.startswith("# ") and (m := HEADING_ID.match(line))), None)
             add(Entry(a.id, a.id.split("-")[0], a.type, a.meta.get("status"), title, a.rel,
-                      derives_from=[bare(r) for r in v.as_list(a.meta.get("derives_from"))]))
+                      derives_from=[bare(r) for r in v.as_list(a.meta.get("derives_from"))],
+                      withdrawn_by=[bare(r) for r in v.as_list(a.meta.get("withdrawn_by"))]))
         elif a.type == "roadmap" and mine:
             for key, title in heading_titles(a.body).items():
                 if key.startswith("INC-"):
                     add(Entry(key, "INC", a.type, None, title, a.rel))
+    # The increments a change takes the place of are the ones it carries, not the ones it
+    # names: written back into `derives_from` here, every reading below -- the item an `INC`
+    # becomes, the stage it is counted in -- follows. One product, so every change is its own.
+    # The chain of withdrawals follows the folder of each change, as the to-do reads it. Which
+    # changes are this product's is read here from `products:` and there from the folder: the
+    # two differ for a change of several products, a difference older than `withdrawn` that
+    # this does not settle.
+    chgs = {k: e for k, e in entries.items() if e.kind == "CHG"}
+    folder = {k: (Path(e.file).parts[1] if Path(e.file).parts[:1] == ("products",)
+                  and len(Path(e.file).parts) > 2 else None) for k, e in chgs.items()}
+    carried = v.carried_increments({k: {"status": e.status, "derives_from": e.derives_from,
+                                        "withdrawn_by": e.withdrawn_by, "product": folder[k]}
+                                    for k, e in chgs.items()})
+    for k, e in chgs.items():
+        e.derives_from = ([x for x in e.derives_from if not x.startswith("INC-")]
+                          + sorted(carried.get(k, set())))
     name = str(manifest.meta.get("name") or product) if manifest else product
     return Registers(entries, broken, duplicated, manifest, arts, name)
 
@@ -725,8 +747,12 @@ def staging(ctx: Context, items: dict, todo: set, pinned: list, waits: list) -> 
             mine: list[str] = []
             for r in spec.get("requires") or []:
                 mine += expand(str(r), set())
+            # `derives_from` holds what a change carries; a change listed in `changes`, as those
+            # written before 4.3.0 are, is a component unless it was withdrawn.
             chgs = {i for i, it in items.items() if it.kind == "CHG" and inc in it.derives_from}
-            chgs |= {str(c) for c in spec.get("changes") or [] if str(c) in items}
+            chgs |= {str(c) for c in spec.get("changes") or [] if str(c) in items
+                     and (ctx.reg.entries.get(str(c)) is None
+                          or ctx.reg.entries[str(c)].status != "withdrawn")}
             mine += sorted(chgs, key=sort_id)
             components[inc] = []
             for i in mine:
@@ -1633,7 +1659,9 @@ def figures(m: Model) -> dict:
                             key=lambda c: (done_ids[c].closed_on, sort_id(c)))]
                         + [sched[it.id] for it in m.todo if it.id in comps])
                 if not st.components.get(inc):
-                    status = "da scomporre"
+                    # Delivered is done, carried by something or not: the to-do does not count
+                    # it either.
+                    status = "fatto" if st.states.get(inc) == "delivered" else "da scomporre"
                 elif not rows:
                     status = "fuori perimetro"
                 elif all(r["kind"] == "done" for r in rows):
@@ -1678,6 +1706,10 @@ def figures(m: Model) -> dict:
                 ends = [r["end"] for _, every in in_stage for r in every]
                 if any(e is None for e in ends):
                     verdict = "non stimabile"
+                elif not ends and in_stage and all(s.startswith("fatto") for s, _ in in_stage):
+                    # Every increment delivered with nothing under it: done, and no last day to
+                    # set against the date.
+                    verdict = "completa"
                 elif any(s.startswith("da scomporre") for s, _ in in_stage) or not ends:
                     verdict = "incompleta"
                 elif max(ends) > d:

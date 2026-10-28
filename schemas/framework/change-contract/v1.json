@@ -20,7 +20,8 @@
         "approved",
         "implemented",
         "verified",
-        "rolled-back"
+        "rolled-back",
+        "withdrawn"
       ]
     },
     "owners": {
@@ -29,6 +30,26 @@
     },
     "created": {},
     "derives_from": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "pattern": "^(?:(?:(PRB|HYP|EVD|CMP|DFB|SD|DEC|CHG|EVR|REL|RLM|DC|INC|OD|KI|RSK|CMT|ING|ICG)-(\\d{3,}|NNN))|(?:[a-z0-9][a-z0-9-]*:(SIG|ANA)-(\\d{3,}|NNN))|(?:ING-C\\d{2,}))$"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^(?:(?:(PRB|HYP|EVD|CMP|DFB|SD|DEC|CHG|EVR|REL|RLM|DC|INC|OD|KI|RSK|CMT|ING|ICG)-(\\d{3,}|NNN))|(?:[a-z0-9][a-z0-9-]*:(SIG|ANA)-(\\d{3,}|NNN))|(?:ING-C\\d{2,}))$"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      ]
+    },
+    "withdrawn_by": {
       "oneOf": [
         {
           "type": "null"
