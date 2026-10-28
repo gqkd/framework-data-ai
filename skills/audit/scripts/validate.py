@@ -4697,8 +4697,8 @@ def check_effects(root: Path, arts: list[Artifact], registry: dict, report: Repo
     """`EFF001`: the pending effects of every thread, in the format the to-do and the join read.
 
     Each effect names a living document of this tree and, where it has an anchor, the key of
-    an entry of a register that is a map, or a section marker of a document whose type
-    declares its sections. Where it comes from is said, and not checked against anything: the
+    an entry of a register that is a map, or a section marker that labels a heading
+    (`_anchor_problem`). Where it comes from is said, and not checked against anything: the
     plan fixes the three lines, not what a source may be.
     """
     folder = root / _effects.THREADS
@@ -4725,7 +4725,19 @@ def check_effects(root: Path, arts: list[Artifact], registry: dict, report: Repo
 def _anchor_problem(path: str, anchor: str | None, living: dict, registry: dict) -> str | None:
     """Why `<path>#<anchor>` names nothing an effect or a forecast can meet on, or None: the
     path of a living document, and the key of an entry of a register that is a map, or a
-    section marker of a type that declares its sections, or no anchor for the whole document."""
+    section marker that labels a heading, or no anchor for the whole document.
+
+    A MARKER ON ANY LIVING DOCUMENT, SINCE 4.10.0, AND ONLY ONE THAT LABELS A HEADING. Before,
+    only the types that declare their sections had anchors below the whole document, so a long
+    document without them, cited by many entries, held all of them in one thread. Read as
+    `locate_sections` reads a section -- the marker above a heading, with only blank lines
+    between, outside a fenced block -- so that what an anchor is valid for and how far it
+    reaches come from one reading: a marker written inline, after its heading or above a line
+    of text covers nothing, and is not an anchor. Which anchor is inside which the to-do reads
+    from the names (`todo.meet`): `delta-inc-17` is inside `delta`. So the name and the headings
+    are held to each other, both ways, where an anchor is in use: a section inside another
+    marked one by its heading is valid only named after it, and one named after another is
+    valid only inside it."""
     target = living.get(path)
     if target is None:
         return f"{path} is not a living document of this tree."
@@ -4733,22 +4745,72 @@ def _anchor_problem(path: str, anchor: str | None, living: dict, registry: dict)
         return None
     maps = _effects.ANCHOR_MAPS.get(target.type or "", ())
     keys = {str(k) for m in maps for k in as_map(target.meta.get(m))}
-    spec = registry["types"].get(target.type or "", {})
-    # Read as `SEC001` reads them: a marker anywhere in the body.
-    marks = set(SECTION_MARK.findall(target.body)) if spec.get("sections") else set()
-    if anchor in keys | marks:
+    spans = locate_sections(target.body)
+    if anchor in keys:
         return None
+    own = next((s for s in spans if s.marker == anchor), None)
+    if own is not None:
+        inside = lambda s: (s.level < own.level and s.start_line <= own.start_line
+                            and own.end_line <= s.end_line)
+        parents = [s for s in spans if s.marker and s is not own and inside(s)]
+        parent = max(parents, key=lambda s: s.level).marker if parents else None
+        # The name and the headings say the same thing, both ways: inside by the heading is
+        # named after it, and named after a section is inside it. Each way a disagreement
+        # costs something: two threads on the same lines that do not meet, or an effect a
+        # join takes as within a forecast it is not within.
+        named = max((s for s in spans if s.marker and s is not own
+                     and anchor.startswith(s.marker + "-")),
+                    key=lambda s: len(s.marker), default=None)
+        declared = set(registry["types"].get(target.type or "", {}).get("sections") or [])
+        fix = (" A section its type declares is not renamed: the level of a heading is what "
+               "to correct." if anchor in declared else "")
+        if parent and not anchor.startswith(parent + "-"):
+            return (f"`#{anchor}` sits inside `#{parent}` by its heading and is not named after "
+                    f"it: call it `{parent}-...`. The to-do reads one section inside another by "
+                    f"its name, so two threads on `#{parent}` and on `#{anchor}` would rewrite "
+                    "the same lines without meeting." + fix)
+        if named is not None and not inside(named):
+            return (f"`#{anchor}` is named after `#{named.marker}` and is not inside it by its "
+                    f"heading: rename it, or move it under `#{named.marker}`. The to-do reads "
+                    f"one section inside another by its name, so a join would take an effect "
+                    f"on `#{anchor}` as within a forecast on `#{named.marker}`." + fix)
+        return None
+    unfenced = "\n".join(line for line, fenced in _fenced_lines(target.body) if not fenced)
+    loose = anchor in set(SECTION_MARK.findall(unfenced))
+    fenced = not loose and anchor in set(SECTION_MARK.findall(target.body))
     return (f"`#{anchor}` is neither a key of {path}"
-            f"{' (' + ', '.join(maps) + ')' if maps else ''} nor a section its type declares, "
-            "so nothing could tell which pieces of work meet on it. Without an anchor, it is the "
-            "whole document.")
+            f"{' (' + ', '.join(maps) + ')' if maps else ''} nor a section marker that labels a "
+            "heading"
+            + (" -- the marker is there, but not above a heading with only blank lines between, "
+               "so it covers nothing --" if loose else "")
+            + (" -- the marker is inside a fenced block, which is an example --" if fenced else "")
+            + ", so nothing could tell which pieces of work meet on it. Without an anchor, it is "
+            "the whole document.")
+
+
+def _fenced_lines(body: str):
+    """Each line of a body, and whether it is inside a fenced block, as `locate_sections` reads
+    one: an opening run of three or more backticks or tildes, closed by a run as long."""
+    fence = None
+    for line in body.splitlines():
+        if fence:
+            yield line, True
+            if re.fullmatch(r" {0,3}" + re.escape(fence[0]) + "{" + str(fence[1]) + r",}\s*", line):
+                fence = None
+            continue
+        opening = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", line)
+        if opening and not (opening[1][0] == "`" and "`" in opening[2]):
+            fence = (opening[1][0], len(opening[1]))
+            yield line, True
+            continue
+        yield line, False
 
 
 def check_affects(arts: list[Artifact], registry: dict, report: Report) -> None:
     """`AFF001`: every anchor an open entry or a change forecasts in `affects` exists.
 
     The one input of the computed threads a person writes: two pieces of work are in one
-    thread when they forecast one anchor, so an anchor that names nothing separates what
+    thread when they forecast one anchor, or one inside the other, so an anchor that names nothing separates what
     meets, or joins what does not. Read only where it can still compute a thread -- an entry
     `open` or `parked`, a change `draft` or `approved` -- since a join that rewrites a section
     must not leave a warning on a closed entry or an immutable change nobody may touch again."""

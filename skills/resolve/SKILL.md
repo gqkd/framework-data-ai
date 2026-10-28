@@ -166,7 +166,8 @@ Only an admin, a deputy or a delegate decides (`references/additive.md`): to a c
 so, and offer to prepare the decision instead: a `DEC` in `proposed`, with the measures and the
 alternatives in its body and the entry in `derives_from`, on a parking branch, which an admin
 accepts or leaves at the join. An entry that forecasts more anchors
-than `thresholds.od_affects` is worth splitting before deciding: propose it. A decision is taken on the thread that holds its entry, which `work.py open
+than `thresholds.od_affects` is worth splitting before deciding: propose it, and anchor at the
+finest section the work touches (`references/additive.md`). A decision is taken on the thread that holds its entry, which `work.py open
 --thread` takes whole, or at a join, accepting one a contributor proposed. The `DEC` is a new file, and the entry's `status` and `closed_by` move on
 the thread's branch; the entry moving from §1 to §4 of its register and the rest of the cascade
 -- `ARC`, `PBR`, `PLATFORM` -- are pending effects, which the join applies.

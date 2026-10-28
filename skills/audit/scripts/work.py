@@ -1004,9 +1004,11 @@ def _before_merging(p: Project, r: dict, names: list[str], every: list[str]) -> 
         outside = []
         for path in (x for x in listed if x.endswith(f"/{E.EFFECTS}")):
             for eff in E.read(git(p.root, "show", f"{ref}:{path}").stdout)[0]:
-                if T.meet(declared[name], {eff.target}):
+                within, other = T.placed(eff.target, declared[name],
+                                         {n: declared[n] for n in every if n != name},
+                                         flat=tree.keys if tree else frozenset())
+                if within:
                     continue
-                other = [n for n in every if n != name and T.meet(declared[n], {eff.target})]
                 outside.append((not other, f"effect on {eff.target}, outside the forecast"
                                 + (f" -- {', '.join(other)} forecast it" if other else "")))
         said = [line for _, line in sorted(outside)] + said + _branch_findings(p, name, ref)

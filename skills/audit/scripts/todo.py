@@ -31,7 +31,9 @@ ready; AFTER THREAD X when it is closed on a thread open and not ready yet; WAIT
 and then it is only counted.
 
 TWO NODES TO DO ARE IN ONE THREAD when they are one `decide_with` group, when they forecast one
-anchor -- one `<path>#<anchor>`, or one document when either names it whole -- or when they are
+anchor -- one `<path>#<anchor>`, two of one document one inside the other by name (`#delta`,
+`#delta-inc-17`; the keys of a map stay flat), or one document when either names it whole -- or
+when they are
 changes whose mandates in the contribution policy overlap: code prefixes in one repository, or
 the `documents` prefixes, which also meet a forecast on a document under them. A node that
 declares no `affects` touches its whole product, whatever its mandate says. An entry of the root or
@@ -116,8 +118,12 @@ class Tree:
         self.increments: dict[str, dict] = {}   # <product>/INC -> row
         self.roadmap: dict[str, str] = {}       # <product>/INC -> path of its roadmap
         self.roadmaps = []
+        self.keys: set[str] = set()           # `<path>#<key>` of the maps an anchor can name
         for a in arts:
             rel = a.rel.replace("\\", "/")
+            if a.meta.get("lifecycle") == "living":
+                self.keys |= {f"{rel}#{k}" for m in E.ANCHOR_MAPS.get(a.type or "", ())
+                              for k in v.as_map(a.meta.get(m))}
             if a.type == "open-register":
                 for key, row in v.as_map(a.meta.get("entries")).items():
                     if isinstance(row, dict):
@@ -294,10 +300,26 @@ def nodes_of(tree: Tree, policy: dict) -> tuple[list[Node], list[str]]:
     return out, sorted(drafts, key=order) + proposed
 
 
-def meet(a: set[str], b: set[str]) -> list[str]:
-    """The anchors two forecasts share: one `<path>#<anchor>`; one document when either names
+def meet(a: set[str], b: set[str], nest: str = "both", flat=frozenset()) -> list[str]:
+    """The anchors two forecasts share: one `<path>#<anchor>`; two of one document one of which
+    is inside the other by name, `#delta` and `#delta-inc-17`; one document when either names
     it whole; a code prefix within another in one repository; a documents prefix with a
-    document under it."""
+    document under it.
+
+    INSIDE BY NAME, SINCE 4.10.0, `<id>-<rest>` within `<id>`, and not by the headings. A name
+    does not move when a thread adds lines, and a heading's reach does: a line between a marker
+    and its heading, a second marker, a heading of the same level, and two threads on a
+    section and on one inside it would stop meeting without anybody seeing it. A name the
+    headings contradict would err both ways -- in the threads one meeting too many, at the
+    join an effect taken as within a forecast it is not within --, and `AFF001` and `EFF001`
+    hold the name to the headings, both ways, wherever an anchor is in use. Keys of a map stay flat --
+    nothing in a body says for sure which section holds one, and a key of `STACK` or of
+    `GLOSSARY` is written with hyphens --: `flat` holds the anchors that are keys
+    (`Tree.keys`).
+
+    `nest="inside"` reads the second set inside the first and not the reverse: the join asks
+    whether an effect is within what its thread forecast, and one on `#delta` is not within a
+    forecast on `#delta-inc-17`, nor one on the whole document within a forecast on a section."""
     def doc(x: str) -> str | None:
         return x[4:] if x.startswith("doc:") else None
     out = []
@@ -305,6 +327,13 @@ def meet(a: set[str], b: set[str]) -> list[str]:
         for y in b:
             if x == y:
                 out.append(x)
+            elif "#" in x and "#" in y and not x.startswith(("code:", "doc:")) \
+                    and x.split("#", 1)[0] == y.split("#", 1)[0] and x not in flat and y not in flat:
+                ax, ay = x.split("#", 1)[1], y.split("#", 1)[1]
+                if ay.startswith(ax + "-"):
+                    out.append(x)
+                elif nest == "both" and ax.startswith(ay + "-"):
+                    out.append(y)
             elif x.startswith("code:") and y.startswith("code:"):
                 rx, _, px = x[5:].rpartition(":")
                 ry, _, py = y[5:].rpartition(":")
@@ -316,12 +345,21 @@ def meet(a: set[str], b: set[str]) -> list[str]:
                 if not other.startswith("code:") and (path == pre or path.startswith(pre + "/")
                                                      or pre.startswith(path + "/")):
                     out.append(pre)
-            elif "#" not in x and y.split("#", 1)[0] == x or "#" not in y and x.split("#", 1)[0] == y:
+            elif "#" not in x and y.split("#", 1)[0] == x or \
+                    nest == "both" and "#" not in y and x.split("#", 1)[0] == y:
                 out.append(x if "#" not in x else y)
     return sorted(set(out))
 
 
-def threads_of(nodes: list[Node]) -> list[dict]:
+def placed(target: str, own: set[str], others: dict[str, set[str]], flat=frozenset()) -> tuple[bool, list[str]]:
+    """Where an effect stands at the join: within what its own thread forecast -- the same
+    anchor, or one inside it --, and which other threads forecast anything it meets, in either
+    direction, so that two threads on the same lines are seen."""
+    return (bool(meet(own, {target}, nest="inside", flat=flat)),
+            sorted(n for n, anchors in others.items() if meet(anchors, {target}, flat=flat)))
+
+
+def threads_of(nodes: list[Node], flat=frozenset()) -> list[dict]:
     """The connected components of the nodes to do, with why each holds together."""
     parent = list(range(len(nodes)))
     why: dict[int, set[str]] = {i: set() for i in range(len(nodes))}
@@ -341,7 +379,7 @@ def threads_of(nodes: list[Node]) -> list[dict]:
     for i, a in enumerate(nodes):
         for j in range(i + 1, len(nodes)):
             b = nodes[j]
-            shared = meet(a.anchors, b.anchors)
+            shared = meet(a.anchors, b.anchors, flat=flat)
             if shared:
                 join(i, j, f"{bare(a.key)} and {bare(b.key)}: {', '.join(shared)}")
                 continue
@@ -534,7 +572,7 @@ def compute(root: Path, remote: str, main: str) -> dict:
     # The threads to take; what falls into the component of a thread open waits for it.
     claimed = {ident: name for name, t in open_threads.items() for ident, _ in t["claims"]}
     free = []
-    for t in threads_of([n for n in todo if not n.everywhere]):
+    for t in threads_of([n for n in todo if not n.everywhere], flat=main_tree.keys):
         holders = sorted({claimed[i] for n in t["nodes"] for i in n.ids if i in claimed})
         if holders:
             after_thread += [{"node": n, "threads": holders} for n in t["nodes"]

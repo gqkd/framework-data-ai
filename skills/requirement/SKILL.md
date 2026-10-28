@@ -113,7 +113,9 @@ living document -- a capability in `PBR`, a guarantee in a `DC`, a term in `GLOS
 of the cascade it obliges are pending effects, one per target, proposed in the same table and
 written in `_filoni/<slug>/effetti.md`. A contradiction with a living document is shown as
 always; its resolution is an effect. An entry that would forecast more anchors than
-`thresholds.od_affects` is worth splitting: propose it.
+`thresholds.od_affects` is worth splitting: propose it. Anchor at the finest section the work
+touches -- one as wide as a section meets every section inside it, though not the keys of a
+map it shows (`references/additive.md`).
 
 ## What you must not do
 

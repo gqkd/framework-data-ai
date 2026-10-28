@@ -13,7 +13,8 @@ two joins sees what is waiting on it. Both read this format, so it is fixed:
 
 One heading per target: the path of the document from the root of the documentation, and
 after `#` the anchor -- the key of an entry in a register that is a map, or the id of a
-`<!-- section: ... -->` marker -- or no anchor, where the effect is on the whole document.
+`<!-- section: ... -->` marker that labels a heading -- or no anchor, where the effect is on the
+whole document.
 Three lines under it, each once: where it comes from, what becomes true, and why. A line
 indented under one of them continues it. The labels are Italian, as the fixed names of the
 exchange are.

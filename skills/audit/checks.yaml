@@ -1577,10 +1577,17 @@ checks:
     title: an anchor an open entry or a change forecasts in affects names nothing
     prevents: >
       Threads computed from an anchor that is not there. In the additive mode two pieces of
-      work are in one thread when they forecast one anchor, and the forecast is the one input
+      work are in one thread when they forecast one anchor, or one inside the other by name,
+      and the forecast is the one input
       of the threads a person writes: an anchor naming no living document, no key of a
-      register that is a map and no section its type declares separates what meets, or joins
-      what does not, and nobody sees it until two threads collide at a join. Read on the entries
+      register that is a map and no section marker that labels a heading separates what meets,
+      or joins what does not, and nobody sees it until two threads collide at a join. Since
+      4.10.0 any living document can have such sections, not only the types that declare them,
+      and a marker counts only above a heading, with only blank lines between, as
+      `locate_sections` reads it; a section inside another marked one by its heading counts only
+      named after it, `<id>-<rest>`, which is how the to-do reads one inside the other, and one
+      named after another only inside it. A marker a thread moved off its heading, or a heading
+      that no longer agrees with the name, is reported here, on the main line. Read on the entries
       `open` or `parked` and not closed as the branches' reading closes them -- by a decision
       their `closed_by` names, or an accepted one deriving from them -- and on the changes
       `draft` or `approved`: what can still be a node.
@@ -1592,7 +1599,8 @@ checks:
       What a thread says a living document should say, lost at the join. An effect is read by
       a script: the to-do lists it under its document, and the join rewrites the document from
       it. A heading that names no living document, an anchor that is neither a key of a
-      register nor a section its type declares, a missing `Da`, `Diventa vero` or `Perché`, a
+      register nor a section marker that labels a heading -- or one whose name and headings
+      disagree, as `AFF001` reads them --, a missing `Da`, `Diventa vero` or `Perché`, a
       line that is none of them: each is an effect nobody can place. What a source may be is
       not checked.
 

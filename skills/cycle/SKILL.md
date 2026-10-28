@@ -157,7 +157,8 @@ A `CHG` starts at `status: draft` and becomes `approved` when the user approves 
 approved one authorizes anything. In the additive mode a change stays in draft on the thread:
 an admin, a deputy or a delegate approves it at a join (`references/additive.md`), and its brief
 comes in the round after. It carries `affects` in its front matter, the documents it is expected
-to touch, which put it in a thread; one that touches much is worth proposing to split.
+to touch -- at the finest section, as `references/additive.md` says --, which put it in a
+thread; one that touches much is worth proposing to split.
 
 **When it reaches `implemented`**, and the project declares an exchange, read the
 `risorse.md` in its folder and propose removing what is still there, one row at a time with

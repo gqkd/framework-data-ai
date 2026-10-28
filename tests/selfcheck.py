@@ -9292,7 +9292,7 @@ def _threads_write_by_adding():
                 "before the first effect", "`#parking`", "`#nope`", "products/x/ARC.md",
                 "`Perché`", "names no document")) or any(w in said for w in (
                 "a request", "#chosen", "cliente attivo")):
-            problems.append(f"EFF001 on a stray line, a section of a type that declares none, an "
+            problems.append(f"EFF001 on a stray line, a marker written after its heading, an "
                             f"anchor that is not there, a document that is not living, a missing "
                             f"line and a heading with no document, and not on a source, a "
                             f"declared section or a key with spaces: {said[:600]!r}")
@@ -10117,6 +10117,119 @@ def _affects_anchors():
         if not any(f["path"] == "products/p/changes/CHG-003-x.md" for f in repo.findings("FM002")):
             problems.append("`affects` written as one value on a change is not FM002: one field "
                             "name, one form")
+    return problems
+
+
+@check("a section marker before a heading is an anchor on any living document, and one inside another by name meets it")
+def _anchors_nest_by_name():
+    # 4.10.0. A long living document whose type declares no sections had one anchor, the whole
+    # document, and every entry citing it in one thread. Now any marker that labels a heading
+    # is one -- read as `locate_sections` reads it, so that a marker covering nothing is not --,
+    # and `delta-inc-17` is inside `delta` by its name, which a thread adding lines cannot move.
+    problems = []
+    todo = _load(TODO, "todo_nest")
+    for a, b, nest, want in (
+            ({"A.md#delta"}, {"A.md#delta-inc-17"}, "both", ["A.md#delta"]),
+            ({"A.md#delta-inc-17"}, {"A.md#delta"}, "both", ["A.md#delta"]),
+            ({"A.md#current"}, {"A.md#target"}, "both", []),
+            ({"A.md#delta"}, {"B.md#delta-inc-17"}, "both", []),
+            ({"S.md#chosen"}, {"S.md#postgres"}, "both", []),
+            ({"A.md#delta"}, {"A.md#delta-inc-17"}, "inside", ["A.md#delta"]),
+            ({"A.md#delta-inc-17"}, {"A.md#delta"}, "inside", []),
+            ({"A.md"}, {"A.md#delta"}, "inside", ["A.md"]),
+            ({"A.md#delta"}, {"A.md"}, "inside", [])):
+        if todo.meet(a, b, nest=nest) != want:
+            problems.append(f"meet({sorted(a)}, {sorted(b)}, {nest}) is "
+                            f"{todo.meet(a, b, nest=nest)}, expected {want}")
+    # The keys of a map stay flat, hyphens and all: `Tree.keys` says which anchors they are.
+    keys = {"S.md#storage", "S.md#storage-archive"}
+    if todo.meet({"S.md#storage"}, {"S.md#storage-archive"}, flat=keys):
+        problems.append("two keys of a map, one a prefix of the other, met by name")
+    # At the join: within its own thread's forecast only inside it; another thread named when
+    # its forecast meets the effect either way.
+    for target, own, others, want in (
+            ("A.md#delta-inc-17", {"A.md#delta"}, {}, (True, [])),
+            ("A.md#delta", {"A.md#delta-inc-17"}, {}, (False, [])),
+            ("A.md#delta", {"A.md#current"}, {"b": {"A.md#delta-inc-17"}}, (False, ["b"])),
+            ("A.md", {"A.md#delta"}, {}, (False, []))):
+        if todo.placed(target, own, others) != want:
+            problems.append(f"an effect on {target} with the forecast {sorted(own)} and the "
+                            f"others {others} is placed {todo.placed(target, own, others)}, "
+                            f"expected {want}")
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = _Repo(Path(tmp) / "docs")
+        repo.write("products/p/PBR.md", _fm(
+            schema="framework/product-brief/v1", artifact_type="product-brief",
+            lifecycle="living", status="active", products="[p]", owners="[o]",
+            created="2026-06-01", last_review="2026-06-01 09:00")
+            + "# Brief\n\n<!-- section: scope -->\n## Scope\n\nx\n\n"
+              "<!-- section: scope-api -->\n### API\n\ny\n\n"
+              "<!-- section: api -->\n### API, not named after its section\n\nz\n\n"
+              "A line with <!-- section: inline --> in it.\n\n## Other\n"
+              "<!-- section: after -->\nText under it.\n\n"
+              "```\n<!-- section: fenced -->\n## Fenced\n```\n\n"
+              "<!-- section: scope-out -->\n## Out of scope\n\nw\n")
+        # A section its type declares, a heading a level too deep: renamed it cannot be.
+        repo.write("products/p/ARC.md", _fm(
+            schema="framework/architecture/v1", artifact_type="architecture",
+            lifecycle="living", status="active", products="[p]", owners="[o]",
+            created="2026-06-01", last_review="2026-06-01 09:00")
+            + "# Arch\n\n<!-- section: current -->\n## Current\n\na\n\n"
+              "<!-- section: target -->\n### Target\n\nb\n\n"
+              "<!-- section: delta -->\n## Delta\n\nc\n")
+        repo.write("products/p/OPEN.md", _register({
+            "OD-001": {"status": "open", "affects": "[products/p/PBR.md#scope]"},
+            "OD-002": {"status": "open", "affects": "[products/p/PBR.md#scope-api]"},
+            "OD-003": {"status": "open", "affects": "[products/p/PBR.md#inline]"},
+            "OD-004": {"status": "open", "affects": "[products/p/PBR.md#after]"},
+            "OD-005": {"status": "open", "affects": "[products/p/PBR.md#fenced]"},
+            "OD-006": {"status": "open", "affects": "[products/p/PBR.md#api]"},
+            "OD-007": {"status": "open", "affects": "[products/p/PBR.md#scope-out]"},
+            "OD-008": {"status": "open", "affects": "[products/p/ARC.md#target]"},
+            "OD-009": {"status": "open", "affects": "[products/p/ARC.md#delta]"}}))
+        found = {f["message"].split(",")[0]: f["message"] for f in repo.findings("AFF001")}
+        want = {"entry OD-003": "covers nothing", "entry OD-004": "covers nothing",
+                "entry OD-005": "fenced block", "entry OD-006": "sits inside `#scope`",
+                "entry OD-007": "is named after `#scope`",
+                "entry OD-008": "the level of a heading"}
+        if sorted(found) != sorted(want) or any(w not in found[k] for k, w in want.items()
+                                                if k in found):
+            problems.append(f"AFF001 said {found}: on a type that declares no sections, a "
+                            "marker before its heading is an anchor; one inline or after its "
+                            "heading covers nothing, one in a fenced block is an example, one "
+                            "inside a marked section by its heading is named after it and one "
+                            "named after another is inside it -- a declared one fixed by its "
+                            "level, not renamed")
+        # The keys of a map stay flat through the to-do itself: two entries on `storage` and
+        # on `storage-archive` of the stack are two threads.
+        origin = Path(tmp) / "origin.git"
+        subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(origin)], check=True,
+                       env={**os.environ, **_WORK_ENV})
+        seed = _Repo(Path(tmp) / "seed")
+        seed.write(".framework/work.yaml", "mode: additive\npeople: [Owner]\nadmins: [Owner]\n")
+        seed.write("STACK.md", _fm(schema="framework/operational-stack/v1",
+                                   artifact_type="operational-stack", lifecycle="living",
+                                   status="active", owners="[o]", created="2026-06-01",
+                                   last_review="2026-06-01 09:00")
+                   .replace("---\n\n", "stack:\n  storage:\n    status: chosen\n"
+                            "  storage-archive:\n    status: chosen\n---\n\n", 1)
+                   + "# Stack\n\n<!-- section: chosen -->\n## Chosen\n\nx\n")
+        seed.write("products/p/OPEN.md", _register({
+            "OD-010": {"status": "open", "affects": "[STACK.md#storage]"},
+            "OD-011": {"status": "open", "affects": "[STACK.md#storage-archive]"}}))
+        seed.commit("base", "2026-06-01T09:00:00+02:00")
+        seed.git("remote", "add", "origin", str(origin))
+        seed.git("push", "-q", "origin", "main")
+        r = subprocess.run([sys.executable, str(TODO), "--root", str(seed.path), "--json"],
+                           capture_output=True, text=True, env={**os.environ, **_WORK_ENV})
+        try:
+            threads = [[i for n in th["nodes"] for i in n["ids"]]
+                       for th in json.loads(r.stdout).get("threads", [])]
+        except ValueError:
+            threads = None
+        if threads is None or sorted(threads) != [["OD-010"], ["OD-011"]]:
+            problems.append(f"two entries on the keys `storage` and `storage-archive` of the "
+                            f"stack gave the threads {threads}: keys are flat")
     return problems
 
 

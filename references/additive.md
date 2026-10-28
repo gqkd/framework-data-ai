@@ -49,8 +49,20 @@ A new entry, and a new `CHG` in its front matter, carries `affects`: the documen
 sections, it is expected to touch --
 `products/<p>/ARC.md#current`, `products/<p>/OPEN.md#OD-042`, or a path alone for a whole
 document. It is the one input of the threads a person writes, and a forecast: the to-do puts in
-one thread the entries that forecast one anchor, `AFF001` reports an anchor that does not exist,
-and the join shows an effect written outside what its thread forecast. An entry with more anchors
+one thread the entries that forecast one anchor, or two anchors of one document one of which is
+inside the other by name, `AFF001` reports an anchor that does not exist, and the join shows an effect
+written outside what its thread forecast. A section is an anchor on any living document when its
+marker, `<!-- section: <id> -->`, is above its heading, with only blank lines between; a section
+inside another is named after it, `<id>-<rest>` -- `delta-inc-17` inside `delta` --, and the two
+meet, by name. `AFF001`, and `EFF001` for an effect, hold the name to the headings both ways: a
+marked section inside another by its heading and not named after it is not an anchor, nor one
+named after another and not inside it -- `scope-out` beside `scope` is renamed where it is in
+use. So an anchor as wide as a section meets everything under it: anchor
+at the finest section the work touches. The keys of a map -- an increment, a tool of `STACK`,
+a term -- meet only themselves, not the section that shows them. A marker is an edit of a living
+document like any other: on a thread an effect, which the join writes -- `BR005` reads only that
+lines were added, and does not see one written directly --; and an `affects` names it once a
+join has brought it to the main line, or `AFF001` reports it there. An entry with more anchors
 than `thresholds.od_affects` is worth proposing to split, and `requirement`, `resolve` and
 `cycle` propose it. The `affects` of a `CHG` in draft is anybody's to write; that of an approved
 one is written or corrected by who decides, at a join, and is fixed once it is past `approved`
@@ -71,7 +83,10 @@ name after the prefix. One heading per target, and three lines under it, each on
 The target is the document's path from the root of the documentation and, after `#`, the anchor:
 the key of an entry in a register that is a map (`entries` of an `OPEN`, `commitments`, `terms`
 of `GLOSSARY`, `risks`, `stack`, `increments` and `delivery_stages` of `RMP`), or the id of a
-`<!-- section: ... -->` marker; no anchor where the effect is on the whole document. `Da` names
+`<!-- section: ... -->` marker that labels a heading; no anchor where the effect is on the whole
+document. An effect stands within its thread's forecast when its anchor is forecast or is inside
+one forecast by name; one on a section is within a forecast on its whole document, and not the
+reverse. The join names the other threads whose forecast meets it, either way. `Da` names
 the identifiers it comes from, `Diventa vero` what the document should say, `Perché` where that
 is written. The labels are Italian, as the fixed names of the exchange are, and `EFF001` reports
 a file that does not read. The file is edited freely while the thread is open; `_filoni/` is not

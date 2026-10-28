@@ -43,7 +43,7 @@ they describe the concrete ways that document becomes useless.
 
 ## The `<!-- section: ... -->` markers
 
-Four templates carry an invisible marker above some of their headings:
+Seven templates carry an invisible marker above some of their headings:
 
 ```markdown
 <!-- section: what-must-not-change -->
@@ -57,4 +57,7 @@ section. **Do not delete them and do not rename them.** Which sections are manda
 which artifact is in `schemas/artifact-types.yaml`.
 
 Only the mandatory ones are marked. A template with three markers and eight headings is
-not half done: the other five headings are yours to change.
+not half done: the other five headings are yours to change. Any other section of a living
+document may carry a marker too, above its heading, and then a forecast or an effect can name
+it (`references/additive.md`): a section inside another is named after it, `<id>-<rest>`. A marker inside the `state` section of a risk register cuts its table short, and
+`REG015` reports the risks after it as missing from the body.

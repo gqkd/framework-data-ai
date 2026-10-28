@@ -57,8 +57,9 @@ At the join the admin accepts it, and the entry closes, or leaves it proposed.
 
 The threads are computed, never drawn: do not propose to move an element from one thread to
 another, or to take part of one. What holds a thread together is the anchors its elements forecast
-in `affects`; if that is wrong, the repair is the anchor -- on an entry written as an effect, on
-an approved `CHG` by who decides at a join, proposed on a parking line.
+in `affects`; if that is wrong, the repair is the anchor -- the finest section the work touches,
+a section inside another named `<id>-<rest>` (`references/additive.md`) --, on an entry written
+as an effect, on an approved `CHG` by who decides at a join, proposed on a parking line.
 
 ## Taking a thread
 
