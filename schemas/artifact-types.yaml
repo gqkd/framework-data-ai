@@ -2167,7 +2167,84 @@
 # exchange, a line for credentials in every project, and two observations on the exchange: a
 # closing declaration that says nothing nobody removes, and the order of `cycle`'s steps with
 # `require_all: true`.
-version: "4.10.0"
+#
+# 4.10.0 -> 4.10.1. The main-line job reads a join as a join; five warnings of the exchange stop
+# turning into errors under `require_all`; and the texts say on which machine the code of a thread
+# is written, and what becomes of the resources of a delivery that came from another one.
+#
+# A JOIN READ AS A THREAD. The main-line job of `ci/branches.yml` validates each commit of a push
+# in a detached worktree, with `--base` on its first parent, and a push names no branch: the
+# validator read the merge `join --merge` makes as a thread's, so every living document the join
+# rewrote was a `BR005`, a mandate it withdrew or an approved change's `affects` it wrote a
+# `BR006`, and under `require_all: true` each an `AN003`, at `error`, new against the tree before
+# it and so written in the issue -- at every join that rewrote a living document or moved an
+# approved mandate, in a project that asked for every warning to be ruled on. The job now hands
+# the validator the join's branch as `GITHUB_HEAD_REF`, for that commit alone, and only for the
+# merge `join --merge` writes, "Merge <branch> into <line>", of a branch named
+# `<prefix>ricongiungimento-<n>` under the prefix the main line declares, whose tip is signed by
+# an admin, a deputy or a delegate, and which is what `join --merge` leaves: the tip holds the main
+# line before the merge, and the merge's tree is the tip's. The subject and the trailer are text
+# anybody can write; the history and the tree are what say the merge brought its second parent,
+# dropped nothing of the main line, and brought nothing else. A merge that dropped anything of
+# the main line or brought anything else, whatever its subject, a join signed by a contributor,
+# and commits after the signature get no name and are read as before; a merge that produced text
+# is still named by `LC006`. With the name the checks of a join's branch run too -- the
+# reservations (`BR003`) and the withdrawals a join may not make (`BR006`) --, as `join --merge`
+# ran them before it merged.
+#
+# FIVE WARNINGS OF THE EXCHANGE OUTSIDE `require_all`. A resource still there after its element is
+# done was said to be "a warning, never an error", and the removals are proposed once the change is
+# `implemented`; under `require_all: true` an `EXC004` was an `AN003` all the same, so a change could
+# not reach `implemented` cleanly before a cleaning that may be due on another machine. The exchange
+# is one machine's, and `EXC001`-`EXC004` and `EXC007` are its upkeep: the state and the shape of a
+# working folder that differs on every machine and that CI never sees. A ruling on them would go
+# into a file every machine shares, which in the additive mode only an admin writes, at a join.
+# `require_all` no longer counts them. They stay warnings, and an annotation on one stays lawful
+# and holds as before; one whose finding is gone is still an `AN001` where the exchange is read.
+# What exposes something keeps its `AN003`: `EXC005`, a credential in the list or a copy of one
+# under the projects folder, and `EXC006`, which says among other names an exchange inside a git
+# repository, where one `git add` publishes what is in it -- so a loose file in the exchange, its
+# other case, stays an error under `require_all` as before. So does `EXC008`, which reads the
+# value committed, the same on every machine. This is the order of `cycle`'s steps with
+# `require_all: true` that the 4.10.0 note sent to 4.11.0.
+#
+# THE MACHINE OF A THREAD. The exchange is one machine's and the thread's branch carries a delivery
+# to the others, committed in `_filoni/`. `references/additive.md` and `contribute` say what was
+# assumed: the usual way is that whoever takes a thread with a change runs its code session on the
+# same machine -- a recommendation, not a role, and nobody enters `people` for it. When somebody
+# else writes the code, the brief and the delivery are carried by hand, the brief with the
+# absolute paths of the thread's machine, and the rows of the delivery's `risorse.md`, which
+# describe the machine it came from, leave the table for a note above it that says whose machine
+# they are on, with their commands for that person (`references/contributions.md`, *A delivery
+# from another machine*); `cycle` says that a change reaches `implemented` without waiting for any
+# cleaning.
+#
+# PATCH, ARGUED. No document stops validating, and nothing arrives: no type, field or check of the
+# validator. What moves is a workflow, which tells the validator one more thing it already reads;
+# an error that should not have been there, `AN003` on five warnings of the exchange, which goes;
+# and the words of two references and three skills, none of them a section `--adopt` writes.
+# ADOPTION: each person updates the plugin; where the project declares `.framework/work.yaml`,
+# `work.py doctor` says when it is older than the version the project declares. Then `migrate.py
+# --root <project>` and `--adopt`, in the additive mode on the branch of a join, which moves
+# `framework_version`. A project that copied `ci/branches.yml` copies it again, with `ref:` at
+# `v4.10.1` and its placeholders filled -- `--adopt` does not touch the copy, and `work.py doctor`
+# says when it differs from the one of the version declared --; one that has no copy makes it
+# from this version. Copies of `ci/pull-request.yml` move `ref:` to `v4.10.1`, a copy of
+# `ci/contribution.yml` its sha to the commit `v4.10.1` names; nothing else in them changes, and
+# `FW003` sees a copy left behind only where the project writes `framework_commit`. Annotations
+# written for `require_all` on the five warnings of the exchange can go.
+#
+# WHAT IS NOT HERE. To 4.11.0, with the rest of what the 4.10.0 note sent there: `FM001` on files
+# git ignores, which the validator reads as documents; the critic, which reads none of the
+# framework's rules and so cannot see a procedure invented in their name; the to-do, which on a
+# register with many open entries can put nearly all of them in one thread; with
+# `rereading: optional`, an annotation on an `LC006` or an `LC001` that the branches of the mode
+# silence is an `AN001` there, which `join --merge` refuses; `join --merge`, which does not
+# refuse a local main line ahead of the remote as it says it does, so that its merge can bring
+# more than the join, gets no name and is read as a thread's; and lighter reviews, scripts for
+# the mechanical steps, and a code session that the thread's documentation session starts on the
+# same machine.
+version: "4.10.1"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of
