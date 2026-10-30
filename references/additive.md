@@ -107,6 +107,15 @@ delivered goes to the same folder, not into `.framework/`: an admin carries it t
 The delivery is copied and not moved, so the folder goes to `integrati/` as usual, and its
 `INTEGRATO` names `documentazione.md: _filoni/<slug>/consegne/<CHG>/` in `parts`.
 
+The exchange is one machine's, and the thread's branch is what carries the delivery to the
+others: it reaches the join committed on the branch. So the usual way is that whoever takes a
+thread with a change runs its code session too, on the same machine -- a recommendation, not a
+role, and whoever writes only code does not enter `people` for it. When somebody else writes
+the code, the brief is carried to that person's machine, with the absolute paths of this one;
+the delivery is carried back by hand to the thread's machine, and the rows of its `risorse.md`,
+which describe the machine it came from, leave the table for a note
+(`references/contributions.md`, *A delivery from another machine*).
+
 The reviewer's log of a thread is `_filoni/<slug>/revisione.md` on its branch, appended to and
 never rewritten, and that of a join `_filoni/ricongiungimento-<n>/revisione.md`: both stay in the
 history when `--finish` removes the folder.

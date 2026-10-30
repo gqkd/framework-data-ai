@@ -507,8 +507,19 @@ def load_annotations(root: Path) -> tuple[list[dict], bool, str | None]:
     return clean, strict, rel
 
 
+# The checks of the exchange that `require_all` does not count: its upkeep, the state and the
+# shape of a working folder that differs on every machine and that CI never sees. A ruling on
+# them would go into a file every machine shares, which in the additive mode only an admin
+# writes, at a join. Still warnings, still annotatable. Not what exposes something -- `EXC005`, a
+# credential in the list or a copy of one under the projects folder, and `EXC006`, which says
+# among other names an exchange inside a git repository, where one `git add` publishes what is
+# in it --, nor `EXC008`, which reads the value committed, the same on every machine.
+OUTSIDE_REQUIRE_ALL = ("EXC001", "EXC002", "EXC003", "EXC004", "EXC007")
+
+
 def apply_annotations(report: Report, rows: list[dict], require_all: bool,
-                      where: str, unread: tuple[str, ...] = ()) -> None:
+                      where: str, unread: tuple[str, ...] = (),
+                      outside: tuple[str, ...] = ()) -> None:
     """Join the annotations onto the findings, on `(code, path)` and nothing finer.
 
     THE KEY IS THE ONE `migrate.py` ALREADY USES, and that is the argument for it rather
@@ -575,7 +586,7 @@ def apply_annotations(report: Report, rows: list[dict], require_all: bool,
     if not require_all:
         return
     for f in list(report.findings):
-        if f.level == "warn" and not f.accepted:
+        if f.level == "warn" and not f.accepted and f.code not in outside:
             report.add("AN003", f.path,
                        f"[{f.code}] carries no annotation, and this repository asked for "
                        f"all of them with `require_all` in {where}. Write why it stays and "
@@ -5357,7 +5368,7 @@ def main() -> int:
     if annotations_rel is not None:
         apply_annotations(report, annotations, require_all, annotations_rel,
                           unread=tuple(f"EXC00{n}" for n in range(1, 8))
-                          if exchange != "read" else ())
+                          if exchange != "read" else (), outside=OUTSIDE_REQUIRE_ALL)
     if repo is not None:
         repo.close()
 

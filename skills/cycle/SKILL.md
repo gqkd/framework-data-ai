@@ -160,12 +160,17 @@ comes in the round after. It carries `affects` in its front matter, the document
 to touch -- at the finest section, as `references/additive.md` says --, which put it in a
 thread; one that touches much is worth proposing to split.
 
-**When it reaches `implemented`**, and the project declares an exchange, read the
-`risorse.md` in its folder and propose removing what is still there, one row at a time with
-the command the row gives. Run a command only on the person's approval, and delete the row
-when you have. Then, once the delivery is integrated, move the folder from `in-arrivo/` to
-`integrati/` with its `INTEGRATO`. `exchange.py` lists both; `EXC002` and `EXC004` are what
-the validator says when either is left undone.
+**When it reaches `implemented`** -- which it does when the work is merged, without waiting
+for any cleaning --, and the project declares an exchange, read the `risorse.md` in its
+folder and propose removing what is still there, one row at a time with the command the row
+gives, asking whether the row is this machine's. Run a command only on the person's approval,
+and delete the row when you have. A row of a delivery carried by hand from another machine,
+which the session that brought it in should have moved to the note above the table, goes there
+now, with its command for whoever is on that machine, and is not run here
+(`references/contributions.md`, *A delivery from another machine*). Then, once the delivery is
+integrated, move the folder from `in-arrivo/` to `integrati/` with its `INTEGRATO`.
+`exchange.py` lists both; `EXC002` and `EXC004` are what the validator says when either is
+left undone, warnings that `require_all` does not turn into errors.
 
 **The increment it realises.** When the roadmap declares `increments:`, ask which increment
 the change belongs to, proposing the one whose decisions or issues it derives from, and
@@ -249,10 +254,13 @@ Done when          CHG-NNN §how-we-know-it-worked
 **Where the brief goes.** When `.framework/sessions.yaml` declares `exchange:`, write the
 brief to `<exchange>/in-arrivo/CHG-NNN/brief.md`, creating the folder, and tell the person
 its absolute path: the code session reads it from there, and delivers into the same folder,
-so the brief and the verification of one mandate end up side by side. A brief left in this
-conversation, or in a session's scratchpad, is one somebody copies by hand. Without the key,
-hand it over as before. With it, the brief carries one more block, written with the absolute
-path of the folder, because the code session starts in another directory:
+so the brief and the verification of one mandate end up side by side. When the code is
+written on another machine, the brief is carried there, with the absolute paths of this one,
+and the delivery is carried back into this folder (`references/contributions.md`, *A delivery
+from another machine*). A brief left in this conversation, or in a session's scratchpad, is one
+somebody copies by hand. Without the key, hand it over as before. With it, the brief carries one
+more block, written with the absolute path of the folder, because the code session starts in
+another directory:
 
 ```
 Delivery           <absolute path>/in-arrivo/CHG-NNN/, under the fixed names: verifica.md,

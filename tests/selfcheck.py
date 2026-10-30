@@ -7801,6 +7801,57 @@ def _exc004():
         "element still approved keeps its resources"]
 
 
+@check("require_all leaves out five warnings of the exchange, its upkeep, and keeps EXC005, EXC006 and EXC008")
+def _exc_outside_require_all():
+    # `require_all` asks for a ruling, in a file every machine shares, on every warning: not on
+    # the upkeep of the exchange, a folder that differs on every machine. What exposes something
+    # -- a credential (`EXC005`), an exchange inside a repository among the names `EXC006` says
+    # -- and what is committed (`EXC008`) still need one. An annotation on an exchange warning that is gone is
+    # still an `AN001` where the exchange is read.
+    problems = []
+    strict = ("require_all: true\nexpected:\n  - code: EXC004\n"
+              "    path: ../_scambio/integrati/CHG-009/risorse.md\n"
+              "    reason: a resource on a machine nobody here can reach.\n"
+              "    clears_when: its row is removed.\n")
+    with tempfile.TemporaryDirectory() as tmp:
+        repo, ex, _ = _exchange_docs(Path(tmp))
+        repo.write(".framework/expected-findings.yaml", strict)
+        _put(ex, {"integrati/CHG-001/risorse.md": _RESOURCE_HEAD
+                  + "| ramo locale | chg-001 in /src/app | git -C /src/app branch -D chg-001 |\n",
+                  "integrati/CHG-001/INTEGRATO": "x: y\n",
+                  "in-arrivo/CHG-002/risorse.md": _RESOURCE_HEAD
+                  + "| copia di credenziali | /tmp/x/.env (DB_PASSWORD=hunter2) | rm /tmp/x/.env |\n"
+                  + "| container | app-db | docker rm -f app-db |\n",
+                  "in-arrivo/CHG-009/brief.md": "b",
+                  "in-arrivo/OD-002/verifica.md": "v",
+                  "appunti.txt": "a loose file\n"})
+        rc, out, err = repo.validate()
+        found = (out or {}).get("findings", [])
+        codes = {f["code"] for f in found}
+        unruled = {f["message"][1:7] for f in found if f["code"] == "AN003"
+                   and f["message"].startswith("[EXC")}
+        if out is None or not {f"EXC00{n}" for n in range(1, 8)} <= codes:
+            return [f"the exchange did not report each of EXC001-EXC007: "
+                    f"{sorted(codes)} {err[-200:]!r}"]
+        if unruled != {"EXC005", "EXC006"}:
+            problems.append(f"under require_all the exchange warnings that became AN003 are "
+                            f"{sorted(unruled)}, expected EXC005 and EXC006")
+        if not any(f["code"] == "AN001" and "[EXC004]" in f["message"] for f in found):
+            problems.append("an annotation on an EXC004 that is gone, with the exchange read, "
+                            "gave no AN001: it would stand as an exemption nobody sees")
+        other = _Repo(Path(tmp) / "other")
+        other.write("OPEN.md", _open_register({"OD-001": "open"}))
+        other.write(".framework/work.yaml", "people: [Admin]\n")
+        other.write(".framework/sessions.yaml", "exchange: ../altrove\n")
+        other.write(".framework/expected-findings.yaml", "require_all: true\nexpected: []\n")
+        rc, out, err = other.validate()
+        found = (out or {}).get("findings", [])
+        if not any(f["code"] == "AN003" and f["message"].startswith("[EXC008]") for f in found):
+            problems.append(f"an EXC008 under require_all gave no AN003: "
+                            f"{sorted({f['code'] for f in found})} {err[-200:]!r}")
+    return problems
+
+
 @check("EXC005: a copy of credentials is under the projects folder, or the list carries a value")
 def _exc005():
     with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as scratch:

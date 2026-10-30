@@ -78,6 +78,15 @@ whole. So commit, and bring the main line in with `sync --no-push`, until it is 
 push then. Given up, delete it on the remote (`git push origin --delete <branch>`) and here. It forecasts
 nothing, so the join shows every effect it wrote as outside the forecast.
 
+**A thread with a change, and its code.** The usual way is that whoever takes a thread with a
+`CHG` also runs its code session, on the same machine: the exchange is that machine's, so the
+delivery reaches the thread without being carried by hand. It is a recommendation, not a role:
+when somebody else writes the code -- a person who writes only code, the second developer of a
+thread with two changes --, the brief is carried to that person's machine, with the absolute
+paths of this one, which whoever carries it says; the delivery is carried back to the thread's
+machine, and its resources go as `references/contributions.md` says in *A delivery from another
+machine*. Whoever writes only code does not enter `people` for it.
+
 ## Working on the thread
 
 Write by `references/additive.md`: new files, new entries, parking lines and changes of state on

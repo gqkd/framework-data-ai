@@ -197,7 +197,7 @@ that leaves the decision where the next person will find it.
 `.framework/expected-findings.yaml`, at the project's root:
 
 ```yaml
-require_all: false        # optional; `true` makes every unannotated warning an error
+require_all: false        # optional; `true` makes every unannotated warning an error, five of the exchange excepted
 expected:
   - code: REG015
     path: OPEN.md
@@ -219,7 +219,7 @@ Three things it will not let you do, and each is an `error`:
 |---|---|
 | `AN001` | an annotation matching no finding. The claim is about nothing, and a reason left standing for a finding that is gone reads as current. When the finding is repaired, the annotation goes with it |
 | `AN002` | an annotation on a finding reported at `error`. An error that can be explained away in one project has stopped being an error. If the check is wrong the repair is in the framework, not in a paragraph here |
-| `AN003` | a warning with no annotation, only where `require_all: true` says the list has to be complete |
+| `AN003` | a warning with no annotation, only where `require_all: true` says the list has to be complete. Not on `EXC001`-`EXC004` and `EXC007`, the upkeep of the exchange, a folder that differs on every machine: a list in a shared file cannot rule on them |
 
 **You may propose an annotation. You do not write one on your own.** It is a decision about
 what this repository accepts, with the same weight as `XP003: off` in `framework.yaml`, and
@@ -519,7 +519,11 @@ What each finding asks of you, and none of it is a fix you apply in silence:
   `INTEGRATO`, with the commit that integrated it; if it was not, that is the work, and the
   state that says done is the thing to raise.
 - **`EXC004`, a resource still there.** Propose the removal with the command in the row, one
-  row at a time. Run it only on the person's approval, then delete the row. A worktree with
+  row at a time, asking whether the row is this machine's. Run it only on the person's
+  approval, then delete the row. A row of a delivery carried by hand from another machine,
+  which the session that brought it in should have moved to the note above the table, goes
+  there now, with its command for whoever is on that machine, and is not run here
+  (`references/contributions.md`, *A delivery from another machine*). A worktree with
   uncommitted work in it is the person's to look at before anything is removed.
 - **`EXC005`, credentials where they should not be.** Say where the copy is and which keys it
   holds, from the list. Never open the file to find out, never print a value, and propose the

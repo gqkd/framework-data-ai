@@ -1105,6 +1105,13 @@ checks:
       week. The report states how many warnings carry an annotation whether or not this is on,
       so the default hides nothing and turning it on is a decision rather than a discovery.
 
+      Five warnings of the exchange are outside it: `EXC001`-`EXC004` and `EXC007`, its upkeep,
+      the state and the shape of a working folder that differs on every machine and that CI
+      never sees. A ruling on them would go into a file every machine shares, which in the
+      additive mode only an admin writes, at a join. Not what exposes something -- `EXC005`, a
+      credential, and `EXC006`, which says among other names an exchange inside a git
+      repository --, nor `EXC008`, which reads the value committed, the same everywhere.
+
   LOC001:
     level: warn
     title: an artifact is not where its type says it lives

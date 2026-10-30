@@ -290,11 +290,23 @@ whatever directory the next session starts in. The list is what is still there: 
 removed is a row deleted.
 
 When the element is done, a change at `implemented`, the documentation session lists its
-resources with their commands and proposes the removal. It runs a command only on the
+resources with their commands and proposes the removal: after, never before -- moving a
+change to `implemented` does not wait for a cleaning. It runs a command only on the
 person's approval, and deletes the row when it has. A resource still there afterwards is a
-warning, never an error. A worktree or a copy of credentials is there when its path exists;
-the other kinds are names in tools the validator does not run, and are there while their row
-is.
+warning, never an error, `require_all` included. A worktree or a copy of credentials is
+there when its path exists; the other kinds are names in tools the validator does not run,
+and are there while their row is.
+
+**A delivery from another machine.** The table lists what is on the machine of the exchange
+it sits in. A delivery carried by hand from another machine -- the code written by somebody
+other than who has the thread -- brings rows of that machine, which nobody here can remove
+and the validator here would count as still there. The session that brings it in takes them
+out of the table and writes them in a note above it that says whose machine they are on,
+with their commands, and gives the commands to that person. The brief travelled the other
+way first, carried to that machine with the absolute paths of this one -- the exchange, the
+`CHG`, the framework --, which whoever carries it says. No line of the note starts with
+`|`, which the validator reads as a row wherever it stands, indented or not; and the note,
+like the table, never carries the value of a credential.
 
 **Copies of credentials.** A copy of a `.env` or of a key lives only in the scratchpad of the
 session that needs it, is in the list with its path and the names of the keys it holds,
@@ -348,7 +360,10 @@ it, and says in `parts` of each delivered name that it was dropped, and why -- `
 nothing was delivered.
 It is earlier than what the digest counts as closed, a change at `verified`, and on purpose:
 what a mandate created outside the repositories serves the work up to the merge. A change
-that two documents declare is done only when both say so. All seven are warnings.
+that two documents declare is done only when both say so. All seven are warnings, and five do
+not count for `require_all`: `EXC001`-`EXC004` and `EXC007` are the upkeep of a folder that
+differs from one machine to the next. `EXC005` and `EXC006` do, because each can say that
+something is exposed: a credential, an exchange inside a git repository.
 
 The rule has to reach sessions that run no skill, which only the project's `AGENTS.md` does.
 The template's section *Sessions and the exchange* says it, and `migrate.py --adopt` writes
