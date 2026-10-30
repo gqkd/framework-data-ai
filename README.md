@@ -16,7 +16,7 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/readme/skills-dark.png">
-    <img alt="The skills around one documentation repository: client documents, things said and decisions come in through start, requirement and resolve; a brief for a coding agent, the release and the updates for the business go out through cycle, release, business, presentation and digest; audit checks the repository and contribute writes it in parallel." src="docs/readme/skills.png">
+    <img alt="How it works, in four steps on one documentation repository: bring facts in with start and requirement, decide with resolve and cycle, build and ship through release, and tell the people outside with business, presentation and digest, which read the artifacts. Audit and the validator in CI check the repository, and in the additive mode contribute lets many people write it on threads." src="docs/readme/skills.png">
   </picture>
 </p>
 
@@ -42,31 +42,25 @@ document already answers?* If there is no answer, the answer is no.
 
 ## The model
 
-### Where each document lives, and how each is kept
+### Three kinds of document, in three places
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/readme/documents-dark.png">
-  <img alt="The artifact types placed by axis, platform, product or initiative, and by class, living, immutable or append-only. OPEN is highlighted as the register read before deciding anything." src="docs/readme/documents.png">
-</picture>
+**How a document is kept matters more than what it says.** An agent that reads an old
+decision as today's truth acts on it with total confidence, so every document declares its
+class:
 
-The maintenance regime of a document matters more than its content. An agent that reads a
-historical document as current truth makes wrong decisions with total confidence, and the
-class is what stops it: a **living** document is one file, always current (in the additive
-mode, as of the last join, with the effects waiting on it); an **immutable** one is never
-rewritten but superseded by a new file; an **append-only** one only grows, and a cause found
-later is a new linked line, not an edit. The declared exception is `status`, which `CHG`,
-`HYP` and `DEC-ADR` move forward in place along the transitions their schema enumerates,
-because it records what happened to a decision and not what the decision says; beside it, on
-a `CHG`, `verified_by`, `withdrawn_by` and `affects`, which say what happened to it or what
-it is expected to touch, never what it authorizes.
+- **Living**, how things are *now*: one file, always current (in the additive mode, as of the
+  last join). The architecture, the product brief, the glossary.
+- **Immutable**, *why* it was decided: never rewritten, only superseded by a new file. A
+  decision, a change contract, a release note.
+- **Append-only**, *what happened*: lines added, never edited. The signal log, the ingestion
+  log.
 
-The axis keeps the framework standing at the second initiative on the same system. Initiative
-artifacts are born and closed with the initiative; product artifacts live as long as the
-system and collect what every initiative contributes; platform artifacts are shared by every
-product. The chips of the picture are read from `schemas/artifact-types.yaml` whenever
-somebody runs `docs/readme/build.py`, and nothing checks that somebody did; the catalog in
-[`FRAMEWORK.md §7`](FRAMEWORK.md#7-the-artifact-catalog) is generated from the same file, and
-that one `generate.py --check` guards.
+**Where it lives follows whose it is.** What every product shares sits at the root, with one
+register of decisions for all of them; what a product keeps for as long as it runs sits in
+`products/<p>/`; what belongs to one initiative, from the problem statement to the solution
+design, sits in `initiatives/<i>/` and closes with it. And `OPEN.md`, one per product, one for a shared substrate and one at the root,
+says what has not been decided yet. The full catalog is in
+[`FRAMEWORK.md §7`](FRAMEWORK.md#7-the-artifact-catalog).
 
 ### The lifecycle and its gates
 
@@ -121,7 +115,7 @@ the repository, and the brief assembles, it does not compose
 | `tests/selfcheck.py` | The framework checked against itself. Runs in CI |
 | `tests/memory/` | Frozen acceptance inputs, deterministic memory tests and phase reports. Model evaluation results are separate |
 | `evals/` | The trigger and behaviour evaluations of the skills, and the fixtures they run in |
-| `docs/readme/` | The pictures in this README and `build.py`, which draws them in both themes. The chips of the map of the documents are read from the registry; everything else in the four is drawn by hand from `FRAMEWORK.md`, `framework-flow.mermaid.md`, `SKILLS.md` and the skills, `references/additive.md`, `work.py` and `todo.py`. **No check guards any of the four**: the changes that oblige a rerun of `python3 docs/readme/build.py`, in the same commit, are listed at the top of that file, which needs Playwright and Chromium, not part of `requirements.txt`. Regenerate them, do not edit them |
+| `docs/readme/` | The pictures in this README and `build.py`, which draws them in both themes, by hand, from `FRAMEWORK.md`, `framework-flow.mermaid.md`, `SKILLS.md` and the skills, `validate.py` and `ci/`, `references/additive.md`, `work.py` and `todo.py`. **No check guards them**: the changes that oblige a rerun of `python3 docs/readme/build.py`, in the same commit, are listed at the top of that file, which needs Playwright and Chromium, not part of `requirements.txt`. Regenerate them, do not edit them |
 
 ## Reading order
 
