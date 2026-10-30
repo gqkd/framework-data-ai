@@ -9166,13 +9166,20 @@ def _ci_recognises_joins():
         (t / "delegations.txt").write_text("delegate Del\n\nwho: Admin\nto: Del\n")
         additive = "mode: additive\npeople: [Admin, Dep, Del, Junior]\nadmins: [Admin]\ndeputies: [Dep]\n"
 
-        def job(merged: str, by: list[str], work: str = additive, changed: str = "a.md") -> str:
+        def job(merged: str, by: list[str], work: str = additive, changed: str = "a.md",
+                subject: str = "join", tip: list[str] | None = None, same: bool = True) -> str:
             (t / "join.txt").write_text("\n".join(["", *by, ""]))
             (t / "work.yaml").write_text(work)
             (t / "changed.txt").write_text(changed + "\n")
+            (t / "subject.txt").write_text(subject + "\n")
+            (t / "tip.txt").write_text("\n".join(["", *(by if tip is None else tip), ""]))
+            (t / "branch.txt").write_text("")
+            (t / "same.txt").write_text("same\n" if same else "")
             return subprocess.run([sys.executable, str(t / "s.py"), "abc123", merged,
                                    str(t / "join.txt"), str(t / "work.yaml"),
-                                   str(t / "delegations.txt"), str(t / "changed.txt")],
+                                   str(t / "delegations.txt"), str(t / "changed.txt"),
+                                   str(t / "subject.txt"), str(t / "tip.txt"),
+                                   str(t / "branch.txt"), str(t / "same.txt")],
                                   capture_output=True, text=True).stdout
         for merged, by, work, changed, want, why in (
                 ("0", ["Admin"], additive, "a.md", "", "a join by an admin"),
@@ -9197,6 +9204,39 @@ def _ci_recognises_joins():
             out = job(merged, by, work, changed)
             if (want and want not in out) or (not want and out.strip()):
                 problems.append(f"{why}: the job said {out.strip()!r}")
+        # The join's name, which the validator reads as `GITHUB_HEAD_REF`: only for the merge
+        # `join --merge` leaves, of a join's branch under the declared prefix, whose tip is
+        # signed by who decides, holds the main line before it and has the merge's tree.
+        prefixed = additive + "branch_prefix: doc/\n"
+        job("0", ["Admin"], subject="Merge work/ricongiungimento-3 into main", same=False)
+        if (t / "branch.txt").read_text():
+            problems.append("a merge that brought more than the join's tip, under the subject "
+                            "join --merge writes, was named a join for the validator")
+        for by, tip, work, subject, want, why in (
+                (["Admin"], None, additive, "Merge work/ricongiungimento-3 into main",
+                 "work/ricongiungimento-3", "an admin's join, landed by join --merge"),
+                (["Del"], None, additive, "Merge work/ricongiungimento-3 into main",
+                 "work/ricongiungimento-3", "a delegate's join"),
+                (["Admin"], None, prefixed, "Merge doc/ricongiungimento-3 into main",
+                 "doc/ricongiungimento-3", "a join under a declared prefix"),
+                (["Admin"], None, prefixed, "Merge work/ricongiungimento-3 into main", "",
+                 "a join's name under a prefix the project does not declare"),
+                (["Admin"], None, additive, "Merge branch 'work/ricongiungimento-3'", "",
+                 "a join merged by hand"),
+                (["Admin"], None, additive, "Merge work/beta-od-1 into main", "",
+                 "a thread merged as if it were a join"),
+                (["Admin", "Junior"], ["Junior"], additive,
+                 "Merge work/ricongiungimento-3 into main", "",
+                 "a tip signed by a contributor over an admin's signature"),
+                (["Admin"], [], additive, "Merge work/ricongiungimento-3 into main", "",
+                 "a commit after the admin's signature"),
+                (["Admin"], None, "people: [Admin]\nadmins: [Admin]\n",
+                 "Merge work/ricongiungimento-3 into main", "", "outside the additive mode")):
+            job("0", by, work, subject=subject, tip=tip)
+            named = (t / "branch.txt").read_text()
+            if named != want:
+                problems.append(f"{why}: the job named {named!r} for the validator, expected "
+                                f"{want!r}")
         # The trailer is below the tip when the main line was brought in after `--finish`, and
         # the roles are the first parent's: a join that names its author an admin does not
         # authorize itself.
@@ -9217,10 +9257,20 @@ def _ci_recognises_joins():
         roles = run[start:run.index('> "/tmp/work-$sha.yaml"', start)]
         start = run.index('git -C docs diff --name-only "$parent" "$sha"')
         diff = run[start:run.index('> "/tmp/changed-$sha.txt"', start)]
+        start = run.index("git -C docs log -1 --format='%(trailers:key=Ricongiungimento-di")
+        signed_tip = run[start:run.index('> "/tmp/tip-$sha.txt"', start)]
+        start = run.index("git -C docs log -1 --format=%s")
+        subject = run[start:run.index('> "/tmp/subject-$sha.txt"', start)]
+        start = run.index('if git -C docs merge-base --is-ancestor "$sha^1" "$sha^2"')
+        same_tree = run[start:run.index("fi", run.index('"/tmp/same-$sha.txt"', start)) + 2]
         found, read, changed = t / "found.txt", t / "first-parent.yaml", t / "job-changed.txt"
+        tip, said, same = t / "tip.txt", t / "subject.txt", t / "same.txt"
+        same.write_text("")
+        same_tree = same_tree.replace('"/tmp/same-$sha.txt"', f'"{same}"')
         env = {**os.environ, **_WORK_ENV, "sha": sha, "parent": f"{sha}^1"}
         r = subprocess.run(["bash", "-c", trailers + f' > "{found}" && ' + roles + f' > "{read}" '
-                            f'&& ' + diff + f' > "{changed}"'],
+                            f'&& ' + diff + f' > "{changed}" && ' + signed_tip + f' > "{tip}" '
+                            f'&& ' + subject + f' > "{said}" && ' + same_tree],
                            cwd=t, capture_output=True, text=True, env=env)
         if r.returncode or "Junior" not in (found.read_text() if found.exists() else ""):
             problems.append(f"the trailer of a commit below the tip of the join was not found: "
@@ -9228,13 +9278,69 @@ def _ci_recognises_joins():
         elif "admins: [Admin]" not in read.read_text():
             problems.append("the main-line job read the roles from the merge, not from its first "
                             "parent: a join can make its author an admin")
+        elif tip.read_text().strip() or said.read_text().strip() != "join":
+            problems.append(f"the main-line job read the tip's signers as {tip.read_text()!r} and "
+                            f"the merge's subject as {said.read_text()!r}: the tip is a commit "
+                            "after the signature, unsigned, and the subject is 'join'")
+        elif same.read_text().strip() != "same":
+            problems.append("the main-line job did not see that a merge of a branch holding the "
+                            "main line has the tree of the branch's tip")
         else:
             out = subprocess.run([sys.executable, str(t / "s.py"), sha, "0", str(found),
-                                  str(read), str(t / "delegations.txt"), str(changed)],
+                                  str(read), str(t / "delegations.txt"), str(changed),
+                                  str(t / "subject.txt"), str(t / "tip.txt"),
+                                  str(t / "branch.txt"), str(same)],
                                  capture_output=True, text=True).stdout
             if "as a join by Junior" not in out or "by an admin only" not in out:
                 problems.append(f"a join by somebody who made themselves an admin in it, changing "
                                 f"the roles, went unsaid: {out.strip()!r}")
+            # A merge that brings more than the branch it merges, under the subject `join --merge`
+            # writes: the branch holds the main line, and the merge adds a file of its own, so
+            # its tree is not the tip's.
+            _g(repo, "checkout", "-q", "-b", "other", "main")
+            (repo / "x.md").write_text("x\n")
+            _commit_all(repo, "x")
+            _g(repo, "checkout", "-q", "main")
+            _g(repo, "merge", "-q", "--no-ff", "--no-commit", "other")
+            (repo / "y.md").write_text("y\n")
+            _commit_all(repo, "Merge work/ricongiungimento-9 into main")
+            more = _g(repo, "rev-parse", "HEAD").stdout.strip()
+            held = _g(repo, "merge-base", "--is-ancestor", f"{more}^1", f"{more}^2",
+                      ok=False).returncode
+            same.write_text("")
+            r = subprocess.run(["bash", "-c", same_tree], cwd=t, capture_output=True, text=True,
+                               env={**env, "sha": more})
+            if held != 0:
+                problems.append("the case of a merge that adds a file of its own merged a branch "
+                                "that does not hold the main line, so it proves nothing about "
+                                "the tree")
+            elif r.returncode or same.read_text().strip():
+                problems.append(f"the main-line job read a merge that added a file of its own as "
+                                f"having the tree of the branch it merged "
+                                f"(exit {r.returncode}): {r.stderr[-200:]!r}")
+            # A merge that drops a commit of the main line and keeps the tip's tree: the line
+            # moved on under one line the branch rewrote too, and the merge took the branch's side.
+            # `join --merge` merges with no `-X`: a conflict stops it, and drops nothing.
+            _g(repo, "checkout", "-q", "-b", "dropping", "main")
+            (repo / "x.md").write_text("from the branch\n")
+            _commit_all(repo, "the branch rewrites x")
+            _g(repo, "checkout", "-q", "main")
+            (repo / "x.md").write_text("from the main line\n")
+            _commit_all(repo, "the main line rewrites x")
+            _g(repo, "merge", "-q", "--no-ff", "-X", "theirs", "-m",
+               "Merge work/ricongiungimento-9 into main", "dropping")
+            dropped = _g(repo, "rev-parse", "HEAD").stdout.strip()
+            kept = _g(repo, "diff", "--quiet", f"{dropped}^2", dropped, ok=False).returncode
+            same.write_text("")
+            r = subprocess.run(["bash", "-c", same_tree], cwd=t, capture_output=True, text=True,
+                               env={**env, "sha": dropped})
+            if kept != 0:
+                problems.append("the case of a merge that drops a commit of the main line did not "
+                                "keep the tip's tree, so it proves nothing")
+            elif r.returncode or same.read_text().strip():
+                problems.append(f"the main-line job read a merge that dropped a commit of the main "
+                                f"line as the one join --merge leaves (exit {r.returncode}): "
+                                f"{r.stderr[-200:]!r}")
     return problems
 
 
@@ -11665,8 +11771,9 @@ def _additive_end_to_end():
         # The main-line job, on the two merges `join --merge` made, both halves: who joined, read
         # from the trailer and the roles before the merge; and the tree after the merge validated
         # against the one before, which here says that a join brings no new error and no `BR002`.
-        # An `LC006` naming the merge cannot arise: `--merge` refuses a join's branch that does
-        # not hold the main line, so each merge equals its second parent, and the walk goes down it.
+        # An `LC006` naming the merge cannot arise here: the main checkout has no commit of its
+        # own when `--merge` runs, so each merge equals its second parent -- what the job checks
+        # before it gives the name -- and the walk goes down it. Checked below all the same.
         wf = yaml.safe_load((ROOT / "ci" / "branches.yml").read_text(encoding="utf-8"))
         run = next(st["run"] for st in wf["jobs"]["main"]["steps"]
                    if str(st.get("name", "")).startswith("how each commit"))
@@ -11678,14 +11785,33 @@ def _additive_end_to_end():
         roles = run[start:run.index('> "/tmp/work-$sha.yaml"', start)]
         start = run.index('git -C docs diff --name-only "$parent" "$sha"')
         diff = run[start:run.index('> "/tmp/changed-$sha.txt"', start)]
+        start = run.index("git -C docs log -1 --format='%(trailers:key=Ricongiungimento-di")
+        signed_tip = run[start:run.index('> "/tmp/tip-$sha.txt"', start)]
+        start = run.index("git -C docs log -1 --format=%s")
+        subject = run[start:run.index('> "/tmp/subject-$sha.txt"', start)]
+        start = run.index('if git -C docs merge-base --is-ancestor "$sha^1" "$sha^2"')
+        same_tree = run[start:run.index("fi", run.index('"/tmp/same-$sha.txt"', start)) + 2]
+        # The job's own line that validates the tree after the merge, with the name read from the
+        # file the step above wrote: run as it stands, its `/tmp/` moved here.
+        start = run.index("GITHUB_HEAD_REF=")
+        validate_at = run[start:run.index('> "/tmp/at-$sha.json"', start)]
+        validate_at = validate_at.replace("/tmp/", f"{tmp}/")
         (tmp / "delegations.txt").write_text("")
         merges = _g(a, "log", "--merges", "--first-parent", "--format=%H", "main").stdout.split()
         if len(merges) != 2:
             problems.append(f"{len(merges)} merges on the main line, 2 joins expected")
         for sha in merges:
             by, read, changed = tmp / f"by-{sha}", tmp / f"roles-{sha}", tmp / f"changed-{sha}"
+            tip, said_file = tmp / f"tip-{sha}", tmp / f"subject-{sha}"
+            branch = tmp / f"branch-{sha}.txt"      # where the job's own line reads the name
+            branch.write_text("")
+            same = tmp / f"same-{sha}"
+            same.write_text("")
             r = subprocess.run(["bash", "-c", f'{trailers} > "{by}" && {roles} > "{read}" && '
-                                f'{diff} > "{changed}"'], cwd=a.parent, capture_output=True,
+                                f'{diff} > "{changed}" && {signed_tip} > "{tip}" && '
+                                f'{subject} > "{said_file}" && '
+                                + same_tree.replace('"/tmp/same-$sha.txt"', f'"{same}"')],
+                               cwd=a.parent, capture_output=True,
                                text=True, env={**os.environ, **_WORK_ENV, "sha": sha,
                                                "parent": f"{sha}^1"})
             if r.returncode or "Owner" not in (by.read_text() if by.exists() else ""):
@@ -11693,19 +11819,61 @@ def _additive_end_to_end():
                                 f"{r.stderr[-200:]!r}")
                 continue
             said = subprocess.run([sys.executable, str(tmp / "s.py"), sha, "0", str(by), str(read),
-                                   str(tmp / "delegations.txt"), str(changed)],
+                                   str(tmp / "delegations.txt"), str(changed), str(said_file),
+                                   str(tip), str(branch), str(same)],
                                   capture_output=True, text=True)
             if said.returncode or said.stderr.strip() or said.stdout.strip():
                 problems.append(f"the main-line job on the admin's join {sha[:8]} (exit "
                                 f"{said.returncode}): {said.stdout.strip()!r} {said.stderr[-200:]!r}")
+            named = branch.read_text()
+            if not re.fullmatch(r"work/ricongiungimento-\d+", named):
+                problems.append(f"the main-line job named {named!r} for the validator on the "
+                                f"join {sha[:8]} that `join --merge` landed")
+            # As the job does: the tree after the merge validated by the job's own line, with the
+            # name the step above wrote, and the tree before it with no name -- emptied, since the
+            # framework's own CI runs this on pull requests too, where `GITHUB_HEAD_REF` names the
+            # pull request's branch.
             reports = []
-            for name, rev, extra in (("at", sha, ["--base", f"{sha}^1"]), ("before", f"{sha}^1", [])):
+            for name, rev in (("at", sha), ("before", f"{sha}^1")):
                 where = tmp / f"{name}-{sha}"
                 _g(a, "worktree", "add", "-q", "--detach", str(where), rev)
-                v = subprocess.run([sys.executable, str(VALIDATE), "--root", str(where), *extra,
-                                    "--json"], capture_output=True, text=True)
-                (tmp / f"{name}-{sha}.json").write_text(v.stdout)
+                if name == "at":
+                    v = subprocess.run(["bash", "-c", f'{validate_at} > "{where}.json"'],
+                                       capture_output=True, text=True,
+                                       env={**os.environ, "V": str(VALIDATE), "sha": sha,
+                                            "parent": f"{sha}^1", "PATH": os.pathsep.join(
+                                                [str(Path(sys.executable).parent),
+                                                 os.environ.get("PATH", "")])})
+                else:
+                    v = subprocess.run([sys.executable, str(VALIDATE), "--root", str(where),
+                                        "--json"], capture_output=True, text=True,
+                                       env={**os.environ, "GITHUB_HEAD_REF": ""})
+                    (tmp / f"{name}-{sha}.json").write_text(v.stdout)
                 reports.append(str(tmp / f"{name}-{sha}.json"))
+            # Without the name the merge reads as a thread's, and the register the second join
+            # rewrote is a `BR005` -- an `AN003` under `require_all`: what the name is for. With
+            # it, `rereading: optional` silences every `LC006` of the tree after the merge: that
+            # none names the merge is seen here, where nothing silences one that would.
+            v = subprocess.run([sys.executable, str(VALIDATE), "--root", str(tmp / f"at-{sha}"),
+                                "--base", f"{sha}^1", "--json"], capture_output=True, text=True,
+                               env={**os.environ, "GITHUB_HEAD_REF": ""})
+            try:
+                unnamed = json.loads(v.stdout)["findings"]
+                named_codes = {f["code"] for f in json.loads(
+                    (tmp / f"at-{sha}.json").read_text())["findings"]}
+            except (ValueError, KeyError):
+                unnamed = named_codes = None
+                problems.append(f"the validator on the join {sha[:8]} gave no report: "
+                                f"{v.stderr[-200:]!r}")
+            if unnamed is not None:
+                codes = {f["code"] for f in unnamed}
+                if sha == merges[0] and ("BR005" not in codes or "BR005" in named_codes):
+                    problems.append(f"the join that rewrote a register: BR005 without the name "
+                                    f"{'BR005' in codes}, with it {'BR005' in named_codes}; "
+                                    "expected only without")
+                if any(f["code"] == "LC006" and sha[:12] in f["message"] for f in unnamed):
+                    problems.append(f"an LC006 names the join {sha[:8]} that `join --merge` "
+                                    "landed, which the name silences on the tree after it")
             said = subprocess.run([sys.executable, str(tmp / "compare.py"), *reports, sha,
                                    f"{sha}^1"], capture_output=True, text=True)
             if said.returncode or said.stderr.strip() or said.stdout.strip():

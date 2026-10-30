@@ -171,19 +171,37 @@ jobs:
             # the first parent: from the merge itself, a join that changes `admins` would
             # authorize itself.
             : > "/tmp/join-$sha.txt"; : > "/tmp/work-$sha.yaml"; : > "/tmp/changed-$sha.txt"
+            : > "/tmp/subject-$sha.txt"; : > "/tmp/tip-$sha.txt"; : > "/tmp/branch-$sha.txt"
+            : > "/tmp/same-$sha.txt"
             if git -C docs rev-parse -q --verify "$sha^2" > /dev/null; then
               git -C docs log --format='%(trailers:key=Ricongiungimento-di,valueonly)' \
                 "$sha^1..$sha^2" > "/tmp/join-$sha.txt" || true
+              # Who signed the tip of what was merged: the join's name goes to the validator
+              # only when the commit on top is the one signed by who decides.
+              git -C docs log -1 --format='%(trailers:key=Ricongiungimento-di,valueonly)' \
+                "$sha^2" > "/tmp/tip-$sha.txt" || true
+              # And only when the merge is what `join --merge` leaves: what it merged holds the
+              # main line before it, so nothing of the line is dropped, and its tree is the
+              # tip's, so it brings nothing else.
+              if git -C docs merge-base --is-ancestor "$sha^1" "$sha^2" && \
+                 git -C docs diff --quiet "$sha^2" "$sha"; then
+                echo same > "/tmp/same-$sha.txt"
+              fi
             fi
+            git -C docs log -1 --format=%s "$sha" > "/tmp/subject-$sha.txt" || true
             if [ -n "$parent" ]; then
               git -C docs show "$parent:.framework/work.yaml" > "/tmp/work-$sha.yaml" 2> /dev/null || true
               git -C docs diff --name-only "$parent" "$sha" > "/tmp/changed-$sha.txt" || true
             fi
             python3 - "$sha" "$merged" "/tmp/join-$sha.txt" "/tmp/work-$sha.yaml" \
-              /tmp/delegations.txt "/tmp/changed-$sha.txt" >> /tmp/alerts.md <<'JOIN'
+              /tmp/delegations.txt "/tmp/changed-$sha.txt" "/tmp/subject-$sha.txt" \
+              "/tmp/tip-$sha.txt" "/tmp/branch-$sha.txt" "/tmp/same-$sha.txt" \
+              >> /tmp/alerts.md <<'JOIN'
+          import re
           import sys
           import yaml
-          sha, merged, joins, work, delegations, changed = sys.argv[1:7]
+          sha, merged, joins, work, delegations, changed, subject, tip, branch, same = \
+              sys.argv[1:11]
           def lines(path):
               try:
                   return [l.strip() for l in open(path, encoding="utf-8") if l.strip()]
@@ -204,6 +222,23 @@ jobs:
           joined = additive and bool(set(by) & deciders)
           outside = (f"- `{sha}` reached the main line outside a pull request: nobody reviewed "
                      "it, and nothing compared it with the main line before it landed.")
+          # The join's branch, for the validator. A push names no branch, and without one the
+          # merge reads as a thread's: every living document the join rewrote is a `BR005`, a
+          # mandate it withdrew a `BR006`, and under `require_all` each an `AN003`. Only for the
+          # merge `join --merge` leaves, "Merge <branch> into <line>", of a join's branch, whose
+          # tip is signed by who decides, holds the main line before it and has the merge's tree:
+          # a merge by hand that dropped anything of the line or brought anything else, whatever
+          # its subject, and commits after the signature are read as before, and a merge that
+          # produced text is still named by `LC006`.
+          # With the name the checks of a join's branch run too -- the reservations (`BR003`) and
+          # the withdrawals a join may not make (`BR006`) --, as `join --merge` ran them before
+          # it merged.
+          prefix = str(declared.get("branch_prefix") or "work/")
+          said = re.fullmatch(r"Merge (\S+) into \S+", (lines(subject) or [""])[0])
+          if (joined and said and set(lines(tip)) & deciders and lines(same)
+                  and re.fullmatch(re.escape(prefix) + r"ricongiungimento-\d+", said.group(1))):
+              with open(branch, "w", encoding="utf-8") as out:
+                  out.write(said.group(1))
           if joined:
               pass
           elif additive and by:
@@ -233,7 +268,8 @@ jobs:
               echo "- \`$sha\`: could not be checked out to be validated." >> /tmp/alerts.md
               continue
             fi
-            python3 "$V" --root "/tmp/at-$sha" ${parent:+--base "$parent"} --json \
+            GITHUB_HEAD_REF="$(cat "/tmp/branch-$sha.txt")" \
+              python3 "$V" --root "/tmp/at-$sha" ${parent:+--base "$parent"} --json \
               > "/tmp/at-$sha.json" || true
             : > "/tmp/before-$sha.json"
             if [ -n "$parent" ]; then
