@@ -3,7 +3,9 @@
 What a machine needs before a person writes documentation or code with the framework, the
 hooks the plugin brings into every session, and the rules on where an agent may write. Read
 it once per machine, and again when the plugin's version changes: the hooks follow the plugin,
-and the version a project pins decides only whether the to-do hook speaks.
+and the version a project pins decides whether the to-do hook speaks and, where a version
+brought a new rule -- the threads of 4.11.0, a code in a heading --, which one the to-do and the
+validator apply (`validate.rules_hold`).
 
 ## What to install
 

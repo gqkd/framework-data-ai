@@ -39,8 +39,8 @@ with tempfile.TemporaryDirectory() as tmp:
 # The register in the shape the threads are computed from: each open entry forecasts what it
 # will change. OD-004 and OD-012 are decisions, each a thread for those who decide; KI-003 and
 # KI-005 forecast one anchor, so they are one thread of work, which a contributor may take; the
-# approved CHG-001 forecasts another, and is a thread of its own. Its stamp is the one audit.py
-# gave the register, read rather than restated: those move with the calendar.
+# approved CHG-001 is a thread of its own, as every mandate from 4.11.0. Its stamp is the one
+# audit.py gave the register, read rather than restated: those move with the calendar.
 register = D / "products" / "atlas" / "OPEN.md"
 stamp = re.search(r"^last_review: (.+)$", register.read_text(encoding="utf-8"), re.M).group(1)
 register.write_text("""\

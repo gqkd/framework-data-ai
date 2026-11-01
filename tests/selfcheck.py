@@ -9869,6 +9869,10 @@ def _todo_computes_threads():
         subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(origin)], check=True,
                        env={**os.environ, **_WORK_ENV})
         seed = _Repo(tmp / "seed")
+        # The rules before mandates were kept apart: a pin a minor below the version that
+        # keeps them apart, read from the to-do's own constant and never written as a number.
+        major, minor, _ = (int(n) for n in _load(TODO, "todo_for_pins").APART_SINCE.split("."))
+        seed.write("framework.yaml", f"framework_version: {major}.{minor - 1}.0\n")
         seed.write(".framework/work.yaml",
                    "mode: additive\npeople: [Owner, Junior]\nadmins: [Owner]\n")
         seed.write(".framework/sessions.yaml", "exchange: ../_scambio\n")
@@ -10084,6 +10088,266 @@ def _todo_computes_threads():
             if r.returncode or (said and said not in r.stdout) or (not said and r.stdout.strip()):
                 problems.append(f"the SessionStart hook in {where.name}: exit {r.returncode}, "
                                 f"{r.stdout[-200:]!r}")
+
+        # A thread opened before the adoption -- `b-od-010`, a decision and a change -- keeps the
+        # rule it was opened under once the main line pins the version that keeps a mandate
+        # apart, where no thread computed holds both: ready with its entries closed, its change
+        # back on the main line. What waited for it only through a node of another kind stops
+        # waiting: KI-013, after it so far for sharing `products/b/PBR.md` with OD-010, a
+        # decision, and with CHG-001, a mandate, is a thread to take, and the join reconciles
+        # them on that document.
+        (a / "framework.yaml").write_text(
+            f"framework_version: {_load(TODO, 'todo_for_pins').APART_SINCE}\n")
+        _g(a, "add", "framework.yaml")
+        _g(a, "commit", "-qm", "adopted")
+        _g(a, "push", "-q", "origin", "main")
+        got = todo()
+        if got.get("open", {}).get("work/b-od-010", {}).get("ready") is not True:
+            problems.append("a thread holding a decision and a change, opened before the "
+                            "adoption, is no longer ready after it")
+        if threads(got).get("b-ki-013") != ["KI-013"]:
+            problems.append(f"after the adoption a known issue still waits for a thread open "
+                            f"through a decision or a mandate: {sorted(threads(got))}")
+    return problems
+
+
+@check("from 4.11.0 a mandate is a thread by itself, a contributor takes it, it waits for a decision it derives from, what its increments require and a thread open on its code, not for an issue it repairs, and the next join lands it once its code is merged")
+def _todo_keeps_mandates_apart():
+    # Two behaviours a project with one person deciding and others writing the code asked for,
+    # before switching the mode on: a mandate approved whose code is merged reaches `implemented`
+    # on the main line at the next join, waiting for no decision or entry it does not touch --
+    # but for the `requires` its roadmap declares, an order wanted --; and two mandates approved
+    # at once that do not change the same files are two threads, each for whoever among the
+    # `people` writes its code. What a mandate changes at the same time as another is code, so
+    # the code prefixes of the policy are its anchors: its `affects` and the documents of its
+    # block meet nobody, and two of them sharing a prefix are still two threads, the second
+    # waiting while the first is open, and of two opened in the same minute the one whose push
+    # lands second is told. An open known issue a mandate derives from and none of its increments
+    # requires is what it repairs: while the mandate is to do, no node of its own, unclaimed,
+    # listed with every mandate to do that repairs it, closed by its thread; while every mandate
+    # that repairs it waits, a node; parked and not required, it is not waited for either;
+    # required by an increment of the change -- one it carries, or one listing it in `changes`
+    # --, it is a wait, and a node while no other approved change to do repairs it.
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        origin = tmp / "origin.git"
+        subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(origin)], check=True,
+                       env={**os.environ, **_WORK_ENV})
+        seed = _Repo(tmp / "seed")
+        seed.write("framework.yaml",
+                   f"framework_version: {_load(TODO, 'todo_for_pins').APART_SINCE}\n")
+        seed.write(".framework/work.yaml",
+                   "mode: additive\npeople: [Owner, Junior, Senior]\nadmins: [Owner]\n")
+        seed.write(".framework/sessions.yaml", "exchange: ../_scambio\n")
+        api = "repository:product:q:api"
+        docs = ["products/q/RSK.md", "products/q/ARC.md"]
+        seed.write(".framework/contribution-policy.json", json.dumps({"mandates": {
+            "products/q/changes/CHG-101-x.md": {"paths": {"documents": docs, api: ["src/billing"]}},
+            "products/q/changes/CHG-102-x.md": {"paths": {"documents": docs, api: ["src/reports"]}},
+            "products/q/changes/CHG-103-x.md": {"paths": {api: ["src/billing/invoices"]}},
+            "products/q/changes/CHG-105-x.md": {"paths": {"documents": docs, api: ["src/auth"]}},
+            "products/q/changes/CHG-106-x.md": {"paths": {api: ["src/export"]}},
+            "products/q/changes/CHG-107-x.md": {"paths": {api: ["src/import"]}},
+            "products/q/changes/CHG-108-x.md": {"paths": {api: ["src/mail"]}},
+            "products/q/changes/CHG-109-x.md": {"paths": {api: ["src/sms"]}},
+            "products/q/changes/CHG-110-x.md": {"paths": {api: ["src/pdf"]}},
+            "products/q/changes/CHG-111-x.md": {"paths": {api: ["src/sync"]}},
+            "products/q/changes/CHG-112-x.md": {"paths": {api: ["src/sync/delta"]}},
+            "products/q/changes/CHG-113-x.md": {"paths": {api: ["src/cache"]}},
+            "products/q/changes/CHG-114-x.md": {"paths": {api: ["src/queue"]}}}}))
+        seed.write("products/q/OPEN.md", _register({
+            "OD-201": {"status": "open", "affects": "[products/q/RSK.md#RSK-001]"},
+            "KI-202": {"status": "open", "affects": "[products/q/RSK.md#RSK-001]"},
+            "KI-201": {"status": "open", "affects": "[products/q/ARC.md#current]"},
+            "OD-203": {"status": "open", "affects": "[products/q/A.md]"},
+            "OD-204": {"status": "open", "affects": "[products/q/B.md]"},
+            "OD-205": {"status": "open"},
+            "KI-206": {"status": "open", "affects": "[products/q/RSK.md#RSK-001-limiti]"},
+            "KI-207": {"status": "open", "affects": "[products/q/C.md]"},
+            "KI-208": {"status": "parked", "affects": "[products/q/D.md]"},
+            "KI-209": {"status": "open", "affects": "[products/q/G.md]"},
+            "KI-210": {"status": "open", "affects": "[products/q/H.md]"},
+            "KI-211": {"status": "open", "affects": "[products/q/J.md]"},
+            "KI-212": {"status": "open", "affects": "[products/q/K.md]"}}))
+
+        def chg(i, affects="", derives=""):
+            fields = dict(schema="framework/change-contract/v1", artifact_type="change-contract",
+                          lifecycle="immutable", status="approved", id=i, products="[q]",
+                          owners="[o]", created="2026-06-01")
+            if affects:
+                fields["affects"] = affects
+            if derives:
+                fields["derives_from"] = derives
+            seed.write(f"products/q/changes/{i}-x.md", _fm(**fields) + f"# {i} title\n")
+        # Every mandate forecasts the same section of the release, and two the anchor of an
+        # open decision and an open issue: none of it ties them.
+        chg("CHG-101", "[products/q/RSK.md#RSK-001, products/q/IMP.md#rilascio]")
+        chg("CHG-102", "[products/q/IMP.md#rilascio]")
+        chg("CHG-103", "[products/q/IMP.md#rilascio]")
+        chg("CHG-104", "[products/q/IMP.md#rilascio]")
+        chg("CHG-105", "[products/q/ARC.md#current]", "[KI-201]")
+        chg("CHG-106", "[products/q/X.md]", "[INC-001, KI-209]")
+        chg("CHG-107", "[products/q/Y.md]", "[OD-204, KI-210, KI-212]")
+        chg("CHG-113", "[products/q/J.md]", "[KI-211]")
+        chg("CHG-114", "[products/q/K.md]", "[KI-212]")
+        chg("CHG-108", "[products/q/C.md]", "[KI-207]")
+        chg("CHG-109", "[products/q/C.md]", "[KI-207]")
+        chg("CHG-110", "[products/q/D.md]", "[KI-208]")
+        chg("CHG-111", "[products/q/E.md]")
+        chg("CHG-112", "[products/q/F.md]")
+        # INC-001, which CHG-106 carries, requires KI-209 alone, which CHG-106 also derives
+        # from: the one wait that holds CHG-106, so that it counts in `waiting` only if KI-209
+        # is a wait.
+        seed.write("products/q/RMP.md", _fm(
+            schema="framework/roadmap/v1", artifact_type="roadmap", lifecycle="living",
+            status="active", products="[q]", owners="[o]", created="2026-06-01",
+            last_review="2026-06-01 09:00").replace("---\n\n", "delivery_stages:\n  s1:\n"
+            "    name: first\n    after: []\n    increments: [INC-001]\nincrements:\n  INC-001:\n"
+            "    state: committed\n    depends_on: []\n    requires: [KI-209]\n"
+            "    changes: []\n---\n\n", 1) + "# Roadmap\n\n### INC-001 · first\n")
+        seed.commit("base", "2026-06-01T09:00:00+02:00")
+        seed.git("remote", "add", "origin", str(origin))
+        seed.git("push", "-q", "origin", "main")
+        a = tmp / "projects" / "docs"
+        a.parent.mkdir()
+        subprocess.run(["git", "clone", "-q", str(origin), str(a)], check=True,
+                       env={**os.environ, **_WORK_ENV})
+
+        def todo() -> dict:
+            r = subprocess.run([sys.executable, str(TODO), "--root", str(a), "--json"],
+                               capture_output=True, text=True, env={**os.environ, **_WORK_ENV})
+            try:
+                return json.loads(r.stdout)
+            except ValueError:
+                problems.append(f"todo.py gave no JSON (exit {r.returncode}): {r.stderr[-300:]}")
+                return {}
+
+        # KI-211 claimed by a thread before CHG-113 was approved, made by hand: the to-do names
+        # it, for that thread to release it to the mandate.
+        _g(a, "branch", "work/q-ki-211", "origin/main")
+        _g(a, "tag", "-a", "claim/KI-211", "-m",
+           "claim KI-211\n\nwho: Senior\nbranch: work/q-ki-211\n", "origin/main")
+        _g(a, "push", "-q", "origin", "work/q-ki-211", "refs/tags/claim/KI-211")
+        _g(a, "fetch", "-q", "origin")
+        got = todo()
+        threads = {t["name"]: [i for n in t["nodes"] for i in n["ids"]] for t in got.get("threads", [])}
+        want = {f"q-chg-{n}": [f"CHG-{n}"]
+                for n in (101, 102, 103, 104, 108, 109, 110, 111, 112, 113, 114)}
+        # KI-210 is what CHG-107 repairs, and CHG-107 waits for a decision: a node, for anybody.
+        want.update({"q-chg-105": ["CHG-105"], "q-ki-209": ["KI-209"], "q-ki-210": ["KI-210"],
+                     "q-od-201": ["OD-201"], "q-ki-202": ["KI-202", "KI-206"],
+                     "q-od-203": ["OD-203"], "q-od-204": ["OD-204"]})
+        if threads != want:
+            problems.append(f"the threads computed are {threads}, expected {want}")
+        notes = {t["name"]: " ".join(t.get("notes", [])) for t in got.get("threads", [])}
+        if f"{api}:src/billing with CHG-103" not in notes.get("q-chg-101", "") \
+                or "with CHG-101" not in notes.get("q-chg-103", "") \
+                or "no code paths" not in notes.get("q-chg-104", "") or notes.get("q-chg-102"):
+            problems.append(f"what the mandates share, or lack, is not said: {notes}")
+        node = {i: n for t in got.get("threads", []) for n in t["nodes"] for i in n["ids"]
+                if i.startswith("CHG-")}
+        if node.get("CHG-105", {}).get("repairs") != ["KI-201"] \
+                or got.get("repaired") != {"KI-201": ["CHG-105"], "KI-207": ["CHG-108", "CHG-109"],
+                                           "KI-211": ["CHG-113"], "KI-212": ["CHG-114"]} \
+                or got.get("repaired_held") != {"KI-211": "work/q-ki-211"}:
+            problems.append(f"the issues the mandates repair are not listed with them: "
+                            f"{got.get('repaired')}, CHG-105 {node.get('CHG-105')}")
+        said = subprocess.run([sys.executable, str(TODO), "--root", str(a)], capture_output=True,
+                              text=True, env={**os.environ, **_WORK_ENV}).stdout
+        if "KI-211: CHG-113 -- claimed by work/q-ki-211, which releases it" not in said:
+            problems.append("the to-do does not say which thread releases a repaired issue it "
+                            "claimed before")
+        if got.get("unanchored") != [["OD-205"]] or got.get("waiting") != {"q": 2}:
+            problems.append(f"an entry without anchors is not to be anchored, or the mandates "
+                            f"that wait for a decision they derive from and for what their "
+                            f"increment requires are not two: {got.get('unanchored')}, "
+                            f"{got.get('waiting')}")
+
+        # Two mandates on one code opened in the same minute: the `open` of CHG-111 checks the
+        # to-do before CHG-112's claim lands -- a hook pushes it from another clone while CHG-111
+        # is pushing --, both pushes go, and the `open` whose push landed second, CHG-111's, is
+        # told. The one that landed first is not run here: it may be told by nothing.
+        b = tmp / "other"
+        subprocess.run(["git", "clone", "-q", str(origin), str(b)], check=True,
+                       env={**os.environ, **_WORK_ENV})
+        _g(b, "branch", "work/q-chg-112", "origin/main")
+        _g(b, "tag", "-a", "claim/CHG-112", "-m",
+           "claim CHG-112\n\nwho: Senior\nbranch: work/q-chg-112\n", "origin/main")
+        hook = a / ".git" / "hooks" / "pre-push"
+        hook.write_text("#!/bin/sh\nenv -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE "
+                        f"git -C '{b}' push -q origin work/q-chg-112 refs/tags/claim/CHG-112 "
+                        ">/dev/null 2>&1\nexit 0\n")
+        hook.chmod(0o755)
+        rc, out = _work(a, "open", "--who", "Junior", "--thread", "q-chg-111")
+        hook.unlink()
+        if rc or "CHG-112, which Senior holds on work/q-chg-112, shares" not in out:
+            problems.append(f"two mandates on one code opened at once were not told: exit {rc}, "
+                            f"{out[-300:]!r}")
+
+        # Each mandate for whoever writes its code, its thread claiming the change alone -- not
+        # the issue it repairs --; the one sharing a prefix waits; the one deriving from a parked
+        # issue does not.
+        for who, thread in (("Junior", "q-chg-101"), ("Senior", "q-chg-102"),
+                            ("Junior", "q-chg-105")):
+            rc, out = _work(a, "open", "--who", who, "--thread", thread)
+            if rc:
+                problems.append(f"{who} could not take {thread}: exit {rc}, {out[-200:]!r}")
+        got = todo()
+        after = sorted((i["ids"][0], tuple(i["threads"])) for i in got.get("after_thread", []))
+        if ("CHG-103", ("work/q-chg-101",)) not in after \
+                or "q-chg-103" in {t["name"] for t in got.get("threads", [])}:
+            problems.append(f"the mandate sharing a prefix with one open does not wait for it: "
+                            f"{after}")
+        if got.get("open", {}).get("work/q-chg-105", {}).get("claims") != ["CHG-105"]:
+            problems.append(f"the thread of a mandate claimed more than its change: "
+                            f"{got.get('open', {}).get('work/q-chg-105')}")
+        if "q-chg-110" not in {t["name"] for t in got.get("threads", [])}:
+            problems.append("a mandate deriving from a parked issue waits for it")
+
+        # The code merged: the thread closes its mandate and the issue it repairs, and is ready
+        # with the decisions and the other threads still open; the join lands it.
+        tree = a.parent / "docs--q-chg-105"
+        f = tree / "products" / "q" / "changes" / "CHG-105-x.md"
+        f.write_text(f.read_text().replace("status: approved", "status: implemented"))
+        reg = tree / "products" / "q" / "OPEN.md"
+        reg.write_text(reg.read_text().replace("  KI-201:\n    status: open",
+                                               "  KI-201:\n    status: decided\n"
+                                               "    closed_by: CHG-105"))
+        _commit_all(tree, "CHG-105 implemented, KI-201 closed by it")
+        _g(tree, "push", "-q", "origin", "work/q-chg-105")
+        _g(a, "fetch", "-q", "origin")
+        got = todo()
+        if got.get("ready") != ["work/q-chg-105"]:
+            problems.append(f"the mandate closed on its branch is not the one thread ready: "
+                            f"{got.get('ready')}")
+        for args in ((), ("--finish",), ("--merge",)):
+            rc, out = _work(a, "join", "--who", "Owner", *args)
+            if rc not in (0, 1):
+                problems.append(f"join {' '.join(args)}: exit {rc}, {out[-300:]!r}")
+                break
+        landed = _g(a, "show", "origin/main:products/q/changes/CHG-105-x.md", ok=False).stdout
+        closed = _g(a, "show", "origin/main:products/q/OPEN.md", ok=False).stdout
+        if "status: implemented" not in landed or "closed_by: CHG-105" not in closed:
+            problems.append("the next join did not land the mandate implemented and the issue "
+                            "it repairs closed on the main line")
+
+        # Pinned before 4.11.0 on the main line, the same registers are read as they were: the
+        # mandates meet the entries and each other, and CHG-104, free so far, falls by its
+        # `affects` into the component of CHG-101, which a thread holds. The pin is the main
+        # line's, as everything else the to-do reads: one written in this checkout and not
+        # landed changes nothing.
+        major, minor, _ = (int(n) for n in _load(TODO, "todo_for_pins").APART_SINCE.split("."))
+        (a / "framework.yaml").write_text(f"framework_version: {major}.{minor - 1}.0\n")
+        if "q-chg-104" not in {t["name"] for t in todo().get("threads", [])}:
+            problems.append("a pin written in the checkout, and not on the main line, changed "
+                            "the threads")
+        _g(a, "add", "framework.yaml")
+        _g(a, "commit", "-qm", "pinned before the mandates were kept apart")
+        _g(a, "push", "-q", "origin", "main")
+        if "q-chg-104" in {t["name"] for t in todo().get("threads", [])}:
+            problems.append("pinned before 4.11.0 on the main line the mandates are still kept "
+                            "apart")
     return problems
 
 
@@ -10543,6 +10807,10 @@ def _approved_mandates_end_to_end():
         subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(origin)], check=True,
                        env={**os.environ, **_WORK_ENV})
         repo = _Repo(tmp / "docs")
+        # The to-do as 4.10.0 computed it, which this case is about: a pin a minor below the
+        # version that keeps a mandate apart, from the to-do's own constant.
+        major, minor, _ = (int(n) for n in _load(TODO, "todo_for_pins").APART_SINCE.split("."))
+        repo.write("framework.yaml", f"framework_version: {major}.{minor - 1}.0\n")
         repo.write(".framework/work.yaml", "mode: additive\npeople: [Owner, Junior]\n"
                    "admins: [Owner]\n")
         repo.write("decisions/DEC-001-x.md", _decision("DEC-001", "OD-900"))
@@ -12099,7 +12367,10 @@ def _additive_end_to_end():
 def _contribute_fixture():
     # `evals/fixtures/README.md` says what `contribute/team` holds, and a sentence nothing
     # reads goes stale: a generator that failed would leave the corpus without it in silence,
-    # and an anchor lost would fold the four threads into one.
+    # and below 4.11.0 an anchor lost would fold the four threads into one. At the version the
+    # fixture pins, 4.11.0 or later, it takes an entry out of the threads, listed to be anchored,
+    # which the names below see only when it changes a name: when it empties a thread, or takes
+    # out the entry a thread is named after -- KI-003, and not KI-005.
     team = built("contribute")
     if team is None:
         return ["evals/fixtures/generators/additive.py did not build contribute/team"]

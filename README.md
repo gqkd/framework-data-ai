@@ -340,11 +340,20 @@ written directly on the branch, and what a living document should say waits, as 
 The threads are computed, never drawn. `todo.py` reads the registers of the main line and
 puts in one thread what has to be written together: the work whose forecasts in `affects`
 meet, on one anchor, on a section and one named inside it, or on a whole document and any of
-its sections; the entries decided together; the changes whose mandates overlap. `affects` is
-the one input of the threads a person writes, and work that declares none touches its whole
-product. A thread is taken whole with `work.py open --thread`, and what belongs to no thread
-goes on a parking branch with `work.py open --branch`. The join is run by an admin, a deputy
-or a delegate: `work.py join` merges the ready threads into a branch of its own, the living
+its sections; the entries decided together. From 4.11.0 a mandate approved is a thread by
+itself, for whoever among the `people` writes its code: it waits for the decisions and the
+changes it derives from and for what its increments require, not for a known issue it derives
+from and none of them requires -- open, it is a node anybody may take while every mandate that
+repairs it waits; once one is to do, nobody takes it, the to-do lists it with every mandate
+to do that repairs it, and the thread of the one it lists alone closes it, or the thread that
+claimed it before --; two mandates sharing a code prefix of the contribution policy are two
+threads, and whoever opens one makes the other wait; and an entry with no `affects` is listed
+to be anchored at the next join. Below 4.11.0 a mandate meets the other nodes by its `affects`
+and its whole block, and work that declares none touches its whole product. What a person
+writes for the threads is `affects` and, for a mandate from 4.11.0, the code prefixes of its
+block. A thread is taken whole with `work.py open --thread`, and what belongs to no thread goes
+on a parking branch with `work.py open --branch`. The join is run by an admin, a deputy or a
+delegate: `work.py join` merges the ready threads into a branch of its own, the living
 documents are rewritten there from the effects and the changes approved, and `join --merge`
 lands it on the main line by a merge of its own, the one push of the main line the tooling
 makes. The `contribute` skill carries all of it; [`references/additive.md`](references/additive.md)

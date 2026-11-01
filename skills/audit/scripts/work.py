@@ -71,9 +71,11 @@ done because the invocation or the repository does not allow it.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import difflib
 import importlib
 import importlib.metadata
+import io
 import json
 import os
 import re
@@ -439,12 +441,18 @@ def cmd_open(p: Project, args) -> int:
     # The entries decided in one sitting with these, and what another branch is already
     # changing without a claim. Told, not refused: the person decides what to do with it.
     idents = [k[1] for k, _ in wanted]
+    # A thread the to-do computes is taken whole, and nothing can be added to it: an open
+    # partner is in the same thread, so the one left out is closed, parked, or a known issue an
+    # approved mandate repairs, and is only said.
+    how = ("It is not in this thread -- closed, parked, or a known issue an approved mandate "
+           "repairs, which the to-do lists with its mandates --: decide with it in mind."
+           if additive and args.thread else
+           "Claim both in one `open`, or agree with whoever holds it.")
     for ident in idents:
         for other in v.as_list(main.entries.get(ident, {}).get("decide_with")):
             if isinstance(other, str) and other not in idents:
                 note = f", claimed by {claims[other].get('who')}" if other in claims else ""
-                say(f"note: {ident} is decided together with {other}{note}. Claim both in one "
-                    "`open`, or agree with whoever holds it.")
+                say(f"note: {ident} is decided together with {other}{note}. {how}")
     for name, work_branch in remote_work_branches(p).items():
         if work_branch == branch or work_branch[len(p.prefix):].startswith(B.JOIN):
             continue
@@ -517,6 +525,38 @@ def cmd_open(p: Project, args) -> int:
             say(f"  {branch} exists on {p.remote}: choose another `--branch`.")
         return 1
 
+    # Two mandates sharing a code prefix are two threads, and the to-do makes the second wait
+    # for the first; two people opening both in the same minute both pass that check, on two
+    # claims. Said by the `open` whose fetch, after its push, finds the other claim -- the one
+    # whose push landed second, unless that fetch or the compute fails; the first is told only if
+    # the other landed before its own fetch. Who goes first is theirs to agree.
+    ours = [n for n in thread["nodes"] if n.kind == "mandate" and n.declared] \
+        if additive and args.thread else []
+    try:
+        # A note, never a reason to stop: the claims are on the remote already, and the
+        # worktree below is still to be made.
+        if ours:
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                p.fetch()
+                r = T.compute(p.root, p.remote, p.main)
+    except (SystemExit, Exception):
+        ours = []
+    if ours:
+        policy = T.policy_at(p.root, r["base"])
+        for name, t in sorted(r.get("open", {}).items()):
+            if name == branch:
+                continue
+            for ident, holder in t["claims"]:
+                a = r["tree"].changes.get(ident)
+                if a is None or a.meta.get("status") != "approved":
+                    continue
+                for n in ours:
+                    shared = T.meet(n.anchors, T.code_prefixes(policy, a.rel.replace("\\", "/")))
+                    if shared:
+                        say(f"note: {ident}, which {holder} holds on {name}, shares "
+                            f"{', '.join(shared)} with {n.key}, opened at the same time: two "
+                            f"people on one code. Agree who goes first; `work.py release "
+                            f"{' '.join(i for i in n.ids)} --who \"{who}\"` gives this one up.")
     path = p.worktree_for(short)
     if not args.no_worktree:
         if path.exists():
@@ -944,7 +984,8 @@ def _before_merging(p: Project, r: dict, names: list[str], every: list[str]) -> 
             if tree and bare_id in tree.changes:
                 change = tree.changes[bare_id]
                 anchors |= {str(x) for x in v.as_list(change.meta.get("affects"))}
-                # The forecast the to-do reads: the mandate's prefixes too.
+                # The forecast: the mandate's prefixes too, its `documents` included, which the
+                # to-do reads only below 4.11.0 and the join reads whatever the version.
                 mandate = (policy.get("mandates") or {}).get(change.rel.replace("\\", "/")) or {}
                 for repo, prefixes in (mandate.get("paths") or {}).items():
                     kind = "doc" if repo == "documents" else f"code:{repo}"
@@ -1033,7 +1074,8 @@ def _join_start(p: Project, who: str, args) -> int:
                  "written only on a join's branch: `work.yaml`, an adoption, the contribution "
                  "policy, annotations, and what only those who decide write -- a release, a "
                  "change verified, the freeze of the evaluation plan, an approval, a mandate "
-                 "withdrawn or the forecast of an approved one.")
+                 "withdrawn or the forecast of an approved one, and from 4.11.0 a mandate no "
+                 "thread held written implemented once its code is merged.")
     if held:
         branch = held.get("branch", "")
         if _join_landed(p, branch):

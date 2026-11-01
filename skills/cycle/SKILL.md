@@ -157,8 +157,11 @@ A `CHG` starts at `status: draft` and becomes `approved` when the user approves 
 approved one authorizes anything. In the additive mode a change stays in draft on the thread:
 an admin, a deputy or a delegate approves it at a join (`references/additive.md`), and its brief
 comes in the round after. It carries `affects` in its front matter, the documents it is expected
-to touch -- at the finest section, as `references/additive.md` says --, which put it in a
-thread; one that touches much is worth proposing to split.
+to touch -- at the finest section, as `references/additive.md` says --, which the join reads as
+its forecast; from 4.11.0 pinned the change is a thread by itself, and the code prefixes of its
+block in the contribution policy say which other mandates wait for it; below 4.11.0 its
+`affects` and its whole block put it in a thread. One that touches much is worth proposing to
+split.
 
 **When it reaches `implemented`** -- which it does when the work is merged, without waiting
 for any cleaning --, and the project declares an exchange, read the `risorse.md` in its

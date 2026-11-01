@@ -4845,7 +4845,9 @@ def _fenced_lines(body: str):
 def check_affects(arts: list[Artifact], registry: dict, report: Report) -> None:
     """`AFF001`: every anchor an open entry or a change forecasts in `affects` exists.
 
-    The one input of the computed threads a person writes: two pieces of work are in one
+    The one input of the computed threads a person writes -- from 4.11.0 pinned, but for an
+    approved change, which the code prefixes of its block place and whose `affects` the join's
+    forecast still reads: two pieces of work are in one
     thread when they forecast one anchor, or one inside the other, so an anchor that names nothing separates what
     meets, or joins what does not. Read only where it can still compute a thread -- an entry
     `open` or `parked`, a change `draft` or `approved` -- since a join that rewrites a section

@@ -980,9 +980,10 @@ checks:
     title: a product is named like a branch of the additive mode, or starts like one
     prevents: >
       A thread that reads as something else. The additive mode names a computed thread after its
-      product and its lowest identifier, and keeps `parcheggio-` for parking branches and
-      `ricongiungimento-` for joins: a product called `parcheggio` gives a thread
-      `parcheggio-od-042`, which every tool reads as a parking branch.
+      product and its lowest identifier -- a mandate's after its change, from 4.11.0 --, and
+      keeps `parcheggio-` for parking branches and `ricongiungimento-` for joins: a product
+      called `parcheggio` gives a thread `parcheggio-od-042`, which every tool reads as a
+      parking branch.
   XP008:
     level: warn
     title: a product is named by a word that is reserved in `products:`
@@ -1591,7 +1592,9 @@ checks:
       Threads computed from an anchor that is not there. In the additive mode two pieces of
       work are in one thread when they forecast one anchor, or one inside the other by name,
       and the forecast is the one input
-      of the threads a person writes: an anchor naming no living document, no key of a
+      of the threads a person writes -- from 4.11.0 pinned, but for an approved change, whose
+      thread the code prefixes of its block place and whose `affects` the join's forecast
+      still reads --: an anchor naming no living document, no key of a
       register that is a map and no section marker that labels a heading separates what meets,
       or joins what does not, and nobody sees it until two threads collide at a join. Since
       4.10.0 any living document can have such sections, not only the types that declare them,

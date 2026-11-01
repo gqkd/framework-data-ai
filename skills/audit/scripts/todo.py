@@ -7,16 +7,19 @@
     python3 todo.py --root . --out <file>
 
 THE THREADS ARE COMPUTED, NEVER DRAWN. Nobody -- no person, no agent -- proposes which pieces of
-work go together: a script does, from the registers of the main line and the claims of the
-threads already open, with fixed rules, so that two people reading the to-do on the same day
-read the same threads. The one input a person writes is `affects`, the forecast of what an entry
-or a change will touch, and `AFF001` keeps it honest.
+work go together: a script does, from the registers, the contribution policy and the version
+pinned of the main line and the claims of the threads already open, with fixed rules, so that
+two people reading the to-do on the same day read the same threads. The one input a person
+writes is `affects`, the forecast of what an entry or a change will touch, and `AFF001` keeps it
+honest; where a mandate is kept apart (`MANDATES APART`, below), a mandate's is instead the code
+prefixes of its block in the contribution policy.
 
 THE NODES are the open entries of the open registers (not `parked`, and not closed as `View`
-reads it: by a decision their `closed_by` names, or an accepted one deriving from them), one node
-per `decide_with` group; the changes `approved`; and the increments of each
-product's current stage with nothing under them yet -- no `requires`, no change listed in
-`changes` but a withdrawn one, no change carrying them -- which are to be decomposed. A change
+reads it: by a decision their `closed_by` names, or an accepted one deriving from them; and,
+where a mandate is kept apart, not a known issue an approved change to do repairs), one node
+per `decide_with` group; the changes `approved`; and the increments of each product's current
+stage with nothing under them yet -- no `requires`, no change listed in `changes` but a
+withdrawn one, no change carrying them -- which are to be decomposed. A change
 carries the increments it derives from; a `withdrawn` one hands them on along `withdrawn_by` to
 the changes of its product folder it reaches, and one nobody receives is to be decomposed again
 (`validate.carried_increments`). A listing in `changes` hands nothing on. An increment is numbered per product, and is
@@ -24,23 +27,56 @@ the changes of its product folder it reaches, and one nobody receives is to be d
 approved, at a join.
 
 THE EDGES order and never join: an entry waits for what its `depends_on` names; a change for the
-decisions and entries it derives from and for the entries its increments require; an increment
-for the increments it depends on. A node is TO DO when everything it waits for is closed on the
-main line; AFTER THE JOIN when what it waits for is closed on the branch of a thread that is
-ready; AFTER THREAD X when it is closed on a thread open and not ready yet; WAITING otherwise,
-and then it is only counted.
+decisions and entries it derives from -- where a mandate is kept apart, not for a known issue
+but one its increments require, below -- and for the entries its increments require; an
+increment for the increments it depends on. A node is TO DO when everything it waits for is
+closed on the main line; AFTER THE JOIN when what it waits for is closed on the branch of a
+thread that is ready; AFTER THREAD X when it is closed on a thread open and not ready yet;
+WAITING otherwise, and then it is only counted.
 
 TWO NODES TO DO ARE IN ONE THREAD when they are one `decide_with` group, when they forecast one
 anchor -- one `<path>#<anchor>`, two of one document one inside the other by name (`#delta`,
-`#delta-inc-17`; the keys of a map stay flat), or one document when either names it whole -- or
-when they are
-changes whose mandates in the contribution policy overlap: code prefixes in one repository, or
-the `documents` prefixes, which also meet a forecast on a document under them. A node that
-declares no `affects` touches its whole product, whatever its mandate says. An entry of the root or
-the platform register with `products: [all]`, or with no `products`, stays out of the threads
-until it has anchors; one with `[none]` and no anchors is with the others `[none]`. A thread is a
-connected component; it is named after its product and its lowest identifier -- OD, then KI, then
-CHG, then INC, then the number.
+`#delta-inc-17`; the keys of a map stay flat), or one document when either names it whole -- or,
+below 4.11.0, when they are changes whose mandates in the contribution policy overlap: code
+prefixes in one repository, or the `documents` prefixes, which also meet a forecast on a
+document under them; below 4.11.0 too, a node that declares no `affects` touches its whole
+product, whatever its mandate says. An entry of the root or the platform register with
+`products: [all]`, or with no `products`, stays out of the threads until it has anchors; one
+with `[none]` and no anchors is with the others `[none]`. A thread is a connected component; it
+is named after its product and its lowest identifier -- OD, then KI, then CHG, then INC, then
+the number --, a mandate kept apart after its change. Where a mandate is kept apart, below, the
+mandates, the kinds and the nodes with no `affects` follow the rules of that paragraph.
+
+MANDATES APART, where the main line pins 4.11.0 or later, or no version that reads
+(`APART_SINCE`, `validate.rules_hold`). A change approved is a thread by itself: it never shares
+one with a decision or an entry, and two of them never share one. What two mandates change at
+the same time is code -- on the documentation a thread writes effects, and the join reconciles
+them -- so a mandate's anchors are the code prefixes of its block in the contribution policy,
+and nothing else: not its `affects`, not the `documents` of its block. Two mandates whose
+prefixes meet are two threads, each said to share them with the other; whoever opens one makes
+the other wait for it, "after thread X", until the join lands it. A mandate with no code
+prefixes is said to have none, and makes nobody wait. A known issue an approved change derives
+from is not waited for -- the change is what repairs it --, unless an increment of the change
+requires it, one it carries or one that lists it in `changes`: then it is a wait, the order a
+roadmap wants. An open one not waited for is what the change repairs; a parked one nothing
+requires is neither waited for nor listed. While an approved change to do repairs a known issue,
+it is no node of its own -- nobody takes it apart from them, even where another change waits for
+it -- and is listed with every mandate to do that repairs it; while every change that repairs
+it waits, the issue is a node, so that nothing a change waits for can wait on it in turn. The
+thread of the change closes it on its branch, `closed_by` the change, when the to-do lists that
+mandate alone for it -- of several listed together, none while another is still listed --; one
+its mandates land without closing is a node again. A mandate's thread does not claim it, and
+its own `depends_on` and `decide_with` are not followed while it is in their hands. One a
+thread claimed before -- while its change waited, before the change was approved, or before
+the adoption -- is said with that thread, which releases its claim: the mandate's thread then
+closes it, `closed_by` the change, once the code is merged, and two branches never write its
+row. The other edges stay: the
+decisions and the changes a change derives from, and the entries its increments require. So a
+mandate whose code is merged and whose closing is pushed is ready, and the next join opened on
+the ready threads lands it, whatever else is open. The other nodes meet only nodes of their
+own kind, decisions with decisions and work -- entries that are not decisions, increments to
+decompose -- with work, and an entry with no `affects` is out of the threads, listed to be
+anchored at the next join, instead of tying its whole product to itself.
 
 WHERE A JOIN WAITS FOR NO READING (`rereading: optional`), the living documents whose text a join
 brought and nobody has read since, with the day of that join; `LC009` reminds of them past
@@ -76,6 +112,9 @@ B = v._branches
 E = v._effects
 FAMILY = {"OD": 0, "KI": 1, "CHG": 2, "INC": 3}
 CLOSED_CHANGE = {"implemented", "verified", "rolled-back", "withdrawn"}
+# The first version whose to-do keeps a mandate apart (`MANDATES APART`, above): a project whose
+# main line pins an earlier one is computed as before, whatever plugin reads it.
+APART_SINCE = "4.11.0"
 
 
 def git(root: Path, *args: str) -> str:
@@ -180,28 +219,89 @@ class Tree:
 
 class Node:
     def __init__(self, ids: list[str], kind: str, home: str, products: set[str],
-                 anchors: set[str], declared: bool, preds: set[str], everywhere: bool):
+                 anchors: set[str], declared: bool, preds: set[str], everywhere: bool,
+                 repairs: tuple[str, ...] = ()):
         self.ids = sorted(ids, key=order)
         self.key = self.ids[0]
-        self.kind = kind                  # "decision" or "work"
+        self.kind = kind                  # "decision", "work", or "mandate" where kept apart
         self.home = home                  # the product the name carries: a product, radice, platform
         self.products = products
         self.anchors = anchors
         self.declared = declared          # it has `affects`, or is an increment with its anchor
         self.preds = preds - set(ids)
         self.everywhere = everywhere      # [all], or no products, and no anchors: out of the threads
+        self.repairs = sorted(repairs, key=order)   # the known issues a mandate repairs
 
     def as_dict(self, tree: Tree) -> dict:
-        return {"ids": self.ids, "kind": self.kind,
-                "titles": {i: tree.titles.get(i, "") for i in self.ids if tree.titles.get(i)}}
+        out = {"ids": self.ids, "kind": self.kind,
+               "titles": {i: tree.titles.get(i, "") for i in self.ids if tree.titles.get(i)}}
+        if self.repairs:
+            out["repairs"] = self.repairs
+        return out
 
 
-def nodes_of(tree: Tree, policy: dict) -> tuple[list[Node], list[str]]:
-    """The nodes of the main line, and the changes in draft, to be approved."""
+def listing_of(tree: Tree, change: str) -> set[str]:
+    """The increments that list `change` in their `changes`, as the changes written before
+    4.3.0 are listed."""
+    return {inc for inc, row in tree.increments.items()
+            if change in {str(c) for c in v.as_list(row.get("changes"))}}
+
+
+def policy_at(root: Path, ref: str) -> dict:
+    """The contribution policy `ref` holds, or none when it has none that reads."""
+    try:
+        return json.loads(git(root, "show", f"{ref}:{B.prefix(root)}.framework/contribution-policy.json")
+                          or "{}")
+    except ValueError:
+        return {}
+
+
+def code_prefixes(policy: dict, rel: str) -> set[str]:
+    """A mandate's anchors where it is kept apart: the code prefixes of its block, as
+    `code:<repository>:<prefix>`."""
+    mandate = (policy.get("mandates") or {}).get(rel) or {}
+    return {f"code:{repo}:{str(p).rstrip('/')}"
+            for repo, prefixes in (mandate.get("paths") or {}).items()
+            if repo != "documents" for p in v.as_list(prefixes)}
+
+
+def nodes_of(tree: Tree, policy: dict, apart: bool = False) -> tuple[list[Node], list[str]]:
+    """The nodes of the main line, and the changes in draft, to be approved. `apart`: a mandate
+    is kept apart, and an open known issue an approved change to do repairs is no node."""
     out: list[Node] = []
+    # A known issue an approved change derives from is not waited for: waiting for it to close
+    # first would hold the change on what the change itself repairs. Open, it is what the change
+    # repairs, and no node of its own while an approved change to do repairs it -- nobody takes
+    # it apart from them, even where another change waits for it -- but listed with them; the
+    # thread of a change that repairs it closes it when the to-do lists that change alone for it,
+    # and one its mandates land without closing is a node again, since they are approved no
+    # longer. A mandate's thread does not claim it, and its own `depends_on` and `decide_with`
+    # are not followed while it is in their hands. One an increment of the change requires --
+    # one it carries, or one that lists it in `changes` -- is the order a roadmap wants: a wait
+    # for that change, which does not repair it, and a node while no other approved change to
+    # do repairs it.
+    repairs: dict[str, set[str]] = {}
+    if apart:
+        for ident, a in tree.changes.items():
+            if a.meta.get("status") != "approved":
+                continue
+            named, carried = tree.derives(a)
+            required = {str(r) for inc in carried | listing_of(tree, ident)
+                        for r in v.as_list((tree.increments.get(inc) or {}).get("requires"))}
+            # Held only by a mandate that is to do: one that waits would hold its issue while
+            # what it waits for may wait on that issue, and neither would ever move.
+            waits = {w for w in named if not w.startswith("KI-") or w in required} | required
+            if any(tree.known(w) and not tree.closed(w) for w in waits):
+                continue
+            for x in v.as_list(a.meta.get("derives_from")):
+                x = str(x)
+                if x.startswith("KI-") and x not in required \
+                        and tree.entries.get(x, {}).get("status") == "open" and not tree.closed(x):
+                    repairs.setdefault(ident, set()).add(x)
+    repaired = set().union(*repairs.values())
     # Entries open, one node per `decide_with` group.
     open_entries = [k for k, row in tree.entries.items()
-                    if row.get("status") == "open" and not tree.closed(k)]
+                    if row.get("status") == "open" and not tree.closed(k) and k not in repaired]
     group: dict[str, str] = {k: k for k in open_entries}
 
     def find(k):
@@ -261,11 +361,23 @@ def nodes_of(tree: Tree, policy: dict) -> tuple[list[Node], list[str]]:
             continue
         rel = a.rel.replace("\\", "/")
         product = product_of_path(rel) or "radice"
+        derived_kis = {w for w in waits if w.startswith("KI-")}
+        required = set()
         for inc in incs | listing.get(ident, set()):
-            waits |= {str(r) for r in v.as_list((tree.increments.get(inc) or {}).get("requires"))}
+            required |= {str(r) for r in v.as_list((tree.increments.get(inc) or {}).get("requires"))}
+        waits |= required
         declared = {str(x) for x in v.as_list(a.meta.get("affects"))}
         anchors = set(declared)
         mandate = (policy.get("mandates") or {}).get(rel) or {}
+        if apart:
+            # What a mandate changes at the same time as another is code: on the documentation
+            # a thread writes effects, and the join reconciles them. Its anchors are its code
+            # prefixes, and nothing else.
+            code = code_prefixes(policy, rel)
+            out.append(Node([ident], "mandate", product, {product}, code, bool(code),
+                            (waits - derived_kis) | required, False,
+                            tuple(repairs.get(ident, ()))))
+            continue
         for repo, prefixes in (mandate.get("paths") or {}).items():
             kind = "doc" if repo == "documents" else f"code:{repo}"
             anchors |= {f"{kind}:{str(p).rstrip('/')}" for p in v.as_list(prefixes)}
@@ -359,8 +471,13 @@ def placed(target: str, own: set[str], others: dict[str, set[str]], flat=frozens
             sorted(n for n, anchors in others.items() if meet(anchors, {target}, flat=flat)))
 
 
-def threads_of(nodes: list[Node], flat=frozenset()) -> list[dict]:
-    """The connected components of the nodes to do, with why each holds together."""
+def threads_of(nodes: list[Node], flat=frozenset(), apart: bool = False) -> list[dict]:
+    """The connected components of the nodes to do, with why each holds together.
+
+    `apart`: a mandate is a thread by itself, and what it shares with another -- a code prefix
+    -- is said in its `notes`, for whoever opens one to know the other waits; the others meet
+    only nodes of their own kind, decisions with decisions and work with work, and a node with
+    no anchors is not here at all (`compute` lists it to be anchored)."""
     parent = list(range(len(nodes)))
     why: dict[int, set[str]] = {i: set() for i in range(len(nodes))}
 
@@ -376,12 +493,28 @@ def threads_of(nodes: list[Node], flat=frozenset()) -> list[dict]:
             parent[rj] = ri
             why[ri] |= why.pop(rj, set())
         why[find(i)].add(reason)
+    notes: dict[int, list[str]] = {i: [] for i in range(len(nodes))}
     for i, a in enumerate(nodes):
+        if apart and a.kind == "mandate" and not a.declared:
+            notes[i].append("no code paths in the contribution policy: nothing says which "
+                            "files it changes, and nothing makes another mandate wait for it")
         for j in range(i + 1, len(nodes)):
             b = nodes[j]
+            if apart and (a.kind == "mandate") != (b.kind == "mandate"):
+                continue
             shared = meet(a.anchors, b.anchors, flat=flat)
+            if apart and a.kind == "mandate":
+                if shared:
+                    for x, y in ((i, b), (j, a)):
+                        notes[x].append(f"shares {', '.join(shared)} with "
+                                        f"{bare(y.key)}: whoever opens one makes the other wait")
+                continue
+            if apart and a.kind != b.kind:
+                continue
             if shared:
                 join(i, j, f"{bare(a.key)} and {bare(b.key)}: {', '.join(shared)}")
+                continue
+            if apart:
                 continue
             # A node that declares no forecast touches its whole product.
             for x, y in ((a, b), (b, a)):
@@ -398,6 +531,7 @@ def threads_of(nodes: list[Node], flat=frozenset()) -> list[dict]:
         first = ns[0]
         threads.append({"name": slug(f"{first.home}-{bare(first.key)}"), "nodes": ns,
                         "why": sorted(why.get(root, set())),
+                        "notes": sorted({x for i in members for x in notes[i]}),
                         "mixed": any(n.kind == "decision" for n in ns)
                         and any(bare(n.key).startswith("CHG-") for n in ns)})
     return sorted(threads, key=lambda t: t["name"])
@@ -467,12 +601,18 @@ def compute(root: Path, remote: str, main: str) -> dict:
         return {"additive": False, "base": base}
     prefix = str(work.get("branch_prefix") or "work/")
     limits = {**B.THRESHOLDS, **(work.get("thresholds") or {})}
-    try:
-        policy = json.loads(git(root, "show", f"{base}:{B.prefix(root)}.framework/contribution-policy.json") or "{}")
-    except ValueError:
-        policy = {}
+    policy = policy_at(root, base)
     main_tree = Tree(B.snapshot(root, base, registry, scan), registry)
-    nodes, drafts = nodes_of(main_tree, policy)
+    # The version the main line pins, as its registers, `work.yaml` and policy are read here --
+    # the `scan` above is still the checkout's --: a pin in this checkout and not landed, or a
+    # checkout nobody brought up to the adoption, would give two people reading the same remote
+    # two sets of rules.
+    try:
+        pinned = v.yaml.safe_load(git(root, "show", f"{base}:{B.prefix(root)}framework.yaml")) or {}
+    except v.yaml.YAMLError:
+        pinned = {}
+    apart = v.rules_hold(pinned if isinstance(pinned, dict) else {}, APART_SINCE)
+    nodes, drafts = nodes_of(main_tree, policy, apart)
 
     # Threads open: a work branch with claims, or a parking branch. The others are abandoned,
     # and what they hold counts for nothing until somebody takes them again.
@@ -567,13 +707,23 @@ def compute(root: Path, remote: str, main: str) -> dict:
     for n in nodes:
         if states[id(n)][0] == "waiting":
             waiting[n.home] = waiting.get(n.home, 0) + 1
-    unanchored = [n for n in todo if n.everywhere]
+    # Out of the threads until somebody anchors them: where a mandate is kept apart, every entry
+    # with no `affects`, which is an exception for the next join to clear and no longer a node
+    # that ties its whole product to itself; before, those of every product.
+    unanchored = [n for n in todo if n.everywhere
+                  or (apart and n.kind != "mandate" and not n.declared)]
 
-    # The threads to take; what falls into the component of a thread open waits for it.
+    # The threads to take; what falls into the component of a thread open waits for it, and a
+    # mandate that shares a code prefix with one a thread open holds waits for that thread.
     claimed = {ident: name for name, t in open_threads.items() for ident, _ in t["claims"]}
+    held_mandates = [n for n in nodes if n.kind == "mandate" and n.key in claimed]
     free = []
-    for t in threads_of([n for n in todo if not n.everywhere], flat=main_tree.keys):
-        holders = sorted({claimed[i] for n in t["nodes"] for i in n.ids if i in claimed})
+    for t in threads_of([n for n in todo if n not in unanchored], flat=main_tree.keys,
+                        apart=apart):
+        holders = sorted({claimed[i] for n in t["nodes"] for i in n.ids if i in claimed}
+                         | {claimed[m.key] for n in t["nodes"] if n.kind == "mandate"
+                            for m in held_mandates
+                            if m is not n and meet(n.anchors, m.anchors)})
         if holders:
             after_thread += [{"node": n, "threads": holders} for n in t["nodes"]
                              if not any(i in claimed for i in n.ids)]
@@ -585,7 +735,22 @@ def compute(root: Path, remote: str, main: str) -> dict:
             "threads": free, "open": open_threads, "after_thread": after_thread,
             "after_join": after_join, "waiting": waiting, "drafts": drafts,
             "unanchored": unanchored, "abandoned": abandoned, "effects": effects,
-            "ready": ready, "join": join, "unread": unread, "tree": main_tree}
+            "ready": ready, "join": join, "unread": unread, "tree": main_tree,
+            "repaired": repaired_by(nodes),
+            # A repaired issue a thread claimed before -- while its change waited, before the
+            # change was approved, or before the adoption -- is said with that thread, which
+            # releases its claim so that the mandate's thread closes it.
+            "repaired_held": {k: claimed[k] for k in repaired_by(nodes) if k in claimed}}
+
+
+def repaired_by(nodes: list[Node]) -> dict[str, list[str]]:
+    """Each known issue an approved mandate to do repairs, with every mandate to do that does: a
+    mandate that waits holds none, and the issue it would repair stays a node while it waits."""
+    out: dict[str, list[str]] = {}
+    for n in nodes:
+        for k in n.repairs:
+            out.setdefault(k, []).append(n.key)
+    return {k: sorted(out[k], key=order) for k in sorted(out, key=order)}
 
 
 def _unread(repo, joins: dict, tree: Tree, base: str, now: datetime, out: list) -> None:
@@ -609,9 +774,10 @@ def _unread(repo, joins: dict, tree: Tree, base: str, now: datetime, out: list) 
 def describe(n: Node, tree: Tree) -> str:
     titles = "; ".join(f"{bare(i)} {tree.titles[i]}" if tree.titles.get(i) else
                        (f"{bare(i)} ({i.split('/')[0]})" if "/" in i else i) for i in n.ids)
-    kind = ("decision" if n.kind == "decision" else
+    kind = ("decision" if n.kind == "decision" else "mandate" if n.kind == "mandate" else
             "to decompose" if bare(n.key).startswith("INC-") else "work")
-    return f"{kind}: {titles}"
+    repairs = f" -- repairs {', '.join(n.repairs)}" if n.repairs else ""
+    return f"{kind}: {titles}{repairs}"
 
 
 def markdown(r: dict) -> str:
@@ -620,6 +786,8 @@ def markdown(r: dict) -> str:
     tree = r["tree"]
     out = [f"# To do, from {r['base']}", ""]
     out.append(f"Join: **{r['join']}**" + (f" -- ready: {', '.join(r['ready'])}" if r["ready"] else ""))
+    if r["unanchored"]:
+        out.append(f"To anchor, at the next join: **{len(r['unanchored'])}**")
     out.append("")
     if r["open"]:
         out.append("## Threads open")
@@ -642,6 +810,8 @@ def markdown(r: dict) -> str:
             out.append(f"- {describe(n, tree)}")
         for reason in t["why"]:
             out.append(f"  - together: {reason}")
+        for note in t.get("notes", []):
+            out.append(f"  - note: {note}")
     out.append("")
     if r["after_thread"]:
         out.append("## After a thread open")
@@ -653,12 +823,20 @@ def markdown(r: dict) -> str:
         for n in r["after_join"]:
             out.append(f"- {describe(n, tree)}")
         out.append("")
+    if r.get("repaired"):
+        out.append("## Known issues an approved mandate to do repairs: closed, `closed_by` the "
+                   "change, by the thread of a mandate listed alone for one")
+        held = r.get("repaired_held", {})
+        out += [f"- {k}: {', '.join(cs)}" + (f" -- claimed by {held[k]}, which releases it: "
+                                             "its mandate closes it" if k in held else "")
+                for k, cs in r["repaired"].items()]
+        out.append("")
     if r["drafts"]:
         out.append("## Changes to approve and decisions to accept, at a join")
         out += [f"- {d} {tree.titles.get(d, '')}".rstrip() for d in r["drafts"]]
         out.append("")
     if r["unanchored"]:
-        out.append("## For every product, with no anchors: out of the threads until anchored")
+        out.append("## Without anchors: out of the threads until somebody anchors them, at a join")
         out += [f"- {describe(n, tree)}" for n in r["unanchored"]]
         out.append("")
     if r["waiting"]:
@@ -691,7 +869,8 @@ def summary(r: dict) -> str:
     """The few lines the SessionStart hook puts in a session's context."""
     if not r["additive"]:
         return ""
-    lines = [f"Additive mode, from {r['base']}. Join: {r['join']}."]
+    lines = [f"Additive mode, from {r['base']}. Join: {r['join']}."
+             + (f" To anchor at the next join: {len(r['unanchored'])}." if r["unanchored"] else "")]
     for name, t in sorted(r["open"].items()):
         who = sorted({w for _, w in t["claims"]}) or ["-"]
         lines.append(f"- open: {name} ({', '.join(who)}){' ready' if t['ready'] else ''}")
@@ -716,14 +895,16 @@ def as_json(r: dict) -> dict:
         return {"additive": False, "base": r["base"]}
     tree = r["tree"]
     return {"additive": True, "base": r["base"], "join": r["join"], "ready": r["ready"],
-            "threads": [{"name": t["name"], "why": t["why"], "mixed": t["mixed"],
-                         "nodes": [n.as_dict(tree) for n in t["nodes"]]} for t in r["threads"]],
+            "threads": [{"name": t["name"], "why": t["why"], "notes": t.get("notes", []),
+                         "mixed": t["mixed"], "nodes": [n.as_dict(tree) for n in t["nodes"]]}
+                        for t in r["threads"]],
             "open": {k: {"claims": [i for i, _ in t["claims"]], "who": sorted({w for _, w in t["claims"]}),
                          "parking": t["parking"], "ready": t["ready"], "effects": t["effects"]}
                      for k, t in r["open"].items()},
             "after_thread": [{"ids": i["node"].ids, "threads": i["threads"]} for i in r["after_thread"]],
             "after_join": [n.ids for n in r["after_join"]], "waiting": r["waiting"],
             "drafts": r["drafts"], "unanchored": [n.ids for n in r["unanchored"]],
+            "repaired": r.get("repaired", {}), "repaired_held": r.get("repaired_held", {}),
             "abandoned": r["abandoned"], "effects": r["effects"],
             "unread": None if r["unread"] is None else
             [{"path": u["path"], "merged": u["merged"].date().isoformat(), "days": u["days"]}

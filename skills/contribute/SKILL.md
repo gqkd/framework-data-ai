@@ -44,14 +44,18 @@ python3 "$F/work.py" --root <documentation> list      # fetches: the to-do reads
 python3 "$F/todo.py" --root <documentation>
 ```
 
-Show, in this order: the threads to take, those with a decision marked as such; the threads open,
+Show, in this order: the threads to take, those with a decision marked as such, each with its
+notes -- a mandate that shares a code prefix with another, so that opening one makes the other
+wait, or one with no code prefixes -- and the known issues a mandate repairs; the threads open,
 in whose hands and whether ready; what waits after a thread or after the join; the changes to
-approve at a join; the entries for every product with no anchors, out of the threads until
-somebody anchors them; the effects waiting, per document; what a join brought and nobody has
-read; the branches without claims, abandoned.
+approve at a join; the entries with no anchors, out of the threads until somebody anchors them
+at a join -- from 4.11.0 pinned every entry with no `affects`, an exception the join clears --;
+the effects waiting, per document; what a join brought and nobody has read; the branches
+without claims, abandoned.
 Recommend one thread, and say why: the oldest decision first when the person decides, otherwise
 the thread whose work unblocks the most. A thread with a decision is for an admin, a deputy or a
-delegate; a contributor takes threads of work only, and prepares a decision without taking it:
+delegate; a contributor takes threads of work only -- from 4.11.0 pinned a mandate's, `mandate:`
+in the to-do, is one --, and prepares a decision without taking it:
 a `DEC` in `proposed`, with the measures and the alternatives in its body, on a parking branch.
 At the join the admin accepts it, and the entry closes, or leaves it proposed.
 
@@ -59,7 +63,9 @@ The threads are computed, never drawn: do not propose to move an element from on
 another, or to take part of one. What holds a thread together is the anchors its elements forecast
 in `affects`; if that is wrong, the repair is the anchor -- the finest section the work touches,
 a section inside another named `<id>-<rest>` (`references/additive.md`) --, on an entry written
-as an effect, on an approved `CHG` by who decides at a join, proposed on a parking line.
+as an effect, on an approved `CHG` by who decides at a join, proposed on a parking line. From
+4.11.0 pinned an approved `CHG` is a thread alone, and what makes it wait for another is the
+code prefixes of its block in the contribution policy, which who decides narrows, at a join.
 
 ## Taking a thread
 
@@ -90,7 +96,8 @@ machine*. Whoever writes only code does not enter `people` for it.
 ## Working on the thread
 
 Write by `references/additive.md`: new files, new entries, parking lines and changes of state on
-the branch -- not a `CHG` withdrawn or the forecast of an approved one, which are a join's --, and everything else a living document should say as an effect in
+the branch -- not a `CHG` withdrawn or the forecast of an approved one, nor, from 4.11.0, a
+mandate no thread holds written `implemented`, which is a join's --, and everything else a living document should say as an effect in
 `_filoni/<slug>/effetti.md`. The skills that write -- `requirement`, `resolve`, `cycle`, `release`
 -- run on the branch as usual and say their own exceptions; this skill does not repeat them. Reserve
 every new identifier before writing it, from this branch: `work.py --root <thread worktree>
@@ -126,9 +133,23 @@ never `git merge` and never a rebase, which `audit` explains.
 
 A thread is ready when every element it claimed is done on its branch -- an entry closed, a
 change `implemented`, an increment broken down -- and the branch carries a pushed commit of its
-own past the main line; in a thread with a decision and a change, when its entries are closed,
-and the change goes back to the main line for the next round. The to-do then lists it as ready.
-That is the end of a contributor's part: the join lands it, and nobody merges a thread by hand.
+own past the main line; in a thread with a decision and a change, which the to-do computes only
+below 4.11.0, when its entries are closed, and the change goes back to the main line for the next
+round. The to-do then lists it as ready. A mandate's thread is the mandate alone, from 4.11.0
+pinned: once its code is merged, write it `implemented` on the branch, and close each `KI` the
+to-do says it repairs -- `status: decided`, `closed_by` the change --, and push, at once: the
+next join opened on the threads ready lands it, whatever else is open; one already open, or one
+that names its threads without it, does not. Those `KI` are not claimed, so `list` says your
+branch changes them without a claim. Close one only when the to-do lists your mandate alone
+for it -- of several listed together, none closes it while another is still listed -- and not
+one it says a thread still claims: that thread releases it first. A thread of yours that claims
+a `KI` the to-do lists as repaired by a mandate releases it, `work.py release <KI> --who
+"<name>"`: the mandate closes it. One left open when its mandates land is a node of the to-do
+again. When two threads holding mandates on the same code are opened in
+the same minute, the `open` whose push landed second says so, unless its fetch or its
+computing of the to-do after the push fails, and the other may be told by nothing: agree with
+that person who goes first, and `release` if it is not you. That is the end of a
+contributor's part: the join lands it, and nobody merges a thread by hand.
 To give a thread up before then, `work.py release <IDs> --who "<name>"`: its branch stays, and
 whoever takes it again finds the work done so far.
 
@@ -148,17 +169,25 @@ branch of its own, by these steps:
    whoever decides that matter. `--no-threads` opens a join with no thread, for what is written
    only on a join's branch: `.framework/work.yaml`, an adoption, the contribution policy,
    annotations, and what only those who decide write -- a release, a change `verified`, the
-   freeze of the evaluation plan, an approval.
-2. In the join's worktree, rewrite the living documents from the effects of the threads merged,
+   freeze of the evaluation plan, an approval, a mandate withdrawn or the forecast of an approved
+   one, and from 4.11.0 a mandate no thread held written `implemented` once its code is merged
+   (step 2).
+2. In the join's worktree, anchor every entry the to-do lists with no anchors -- its `affects`,
+   the finest section it touches: from 4.11.0 pinned that list is an exception, long the first
+   time, short after: what a join anchors leaves it, and what reaches the main line with no
+   `affects`, or stops waiting, enters it for the next. Ask the person which approved mandates
+   no thread holds have their code merged -- one that waited for another on the same code, one
+   nobody opened -- and write those `implemented` here, with each `KI` the to-do lists that
+   mandate alone for. Then rewrite the living documents from the effects of the threads merged,
    each target once, and nothing an effect does not say but the cascade of a decision accepted
-   here. Two effects on one target from two
-   threads that contradict each other are put to the person, with both. On the same branch, the
-   person approves the changes in draft they choose -- those of the threads and those the to-do
-   lists to approve -- with their name in `approvers`, accepts or leaves the decisions a
-   contributor proposed, which `join` showed and the to-do lists -- accepting one, the person
-   writes here its cascade: the entry moved, the documents it obliges --, carries a delivered contribution policy into `.framework/`, sorts the
-   parking lot, writes the anchors of the entries that have none, and writes what only those who
-   decide write: a release, a change `verified`, the freeze of the evaluation plan.
+   here. Two effects on one target from two threads that contradict each other are put to the
+   person, with both. On the same branch, the person approves the changes in draft they choose
+   -- those of the threads and those the to-do lists to approve -- with their name in
+   `approvers`, accepts or leaves the decisions a contributor proposed, which `join` showed and
+   the to-do lists -- accepting one, the person writes here its cascade: the entry moved, the
+   documents it obliges --, carries a delivered contribution policy into `.framework/`, sorts
+   the parking lot, writes the anchors of the entries that have none, and writes what only
+   those who decide write: a release, a change `verified`, the freeze of the evaluation plan.
 3. `python3 "$F/validate.py" --root <join worktree> --emit-index`, then the validator again.
 4. The review the preamble asks for, on the diff of the living documents; its log goes to
    `_filoni/ricongiungimento-<n>/revisione.md`, committed before the next step.
@@ -167,7 +196,9 @@ branch of its own, by these steps:
    commit after the signature -- a `sync` because the main line moved, a correction -- is signed
    again by `--finish`, and `--merge` refuses a branch whose last commit is unsigned. When the
    push of the main line did not go, `--merge` says so: once the person has pushed it, `join
-   --close` releases what the join landed. `join --abandon` drops a join that did not land.
+   --close` releases what the join landed; when the remote refused it, `--merge` run again once
+   the remote takes it pushes the same merge and releases. `join --abandon` drops a join that
+   did not land.
 
 `--merge` is the one time anything writes the main line, and it is the person's gesture, with
 their name. A join takes longer the more threads it lands: for each it reads the branch and runs
