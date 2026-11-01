@@ -2244,7 +2244,139 @@
 # more than the join, gets no name and is read as a thread's; and lighter reviews, scripts for
 # the mechanical steps, and a code session that the thread's documentation session starts on the
 # same machine.
-version: "4.10.1"
+#
+# 4.10.1 -> 4.11.0. A mandate approved is a thread by itself, for whoever among the `people`
+# writes its code; the other nodes meet only their own kind, and an entry with no anchors is
+# listed to be anchored instead of tying its product; a file git ignores is not read;
+# `join --merge` refuses a local main line ahead of the remote; a code in a heading is not a date.
+#
+# A MANDATE APART. A project with one person deciding and others writing the code of the
+# mandates, each on a machine of their own, asked for two behaviours before switching the mode
+# on, and the to-do of 4.10.1 gave neither: a mandate approved whose code is merged reaches
+# `implemented` on the main line at the next join, waiting for no decision or entry it does not
+# touch -- but for the `requires` its roadmap declares, an order wanted --; and two mandates
+# approved at once that do not change the same files are two threads, each for whoever writes
+# its code, a contributor included -- one of the `people`, since a thread is taken by name, and
+# whoever writes only code still takes none. With 4.10.1 a mandate whose block in the
+# contribution policy named a whole document met every open entry anchored anywhere in it: its
+# thread held decisions, which only who decides takes, and was ready only when they were. From
+# 4.11.0 pinned a change approved never shares a thread with a decision, an entry or another
+# change; its anchors are the code prefixes of its block, and nothing else. The selfcheck case
+# "from 4.11.0 a mandate is a thread by itself" holds the two behaviours, on synthetic
+# documents: it is where the request is recorded, and what breaks if a later version loses
+# either.
+#
+# THE READINGS, CHOSEN AND SAID. "The same files" are code: in the additive mode a thread
+# changes no living document, it writes effects, and the join reconciles two of them on one
+# section -- so neither the `affects` of a mandate nor the `documents` of its block meet another
+# mandate. The code a mandate changes is what its block declares: one naming a whole folder is
+# declared to change anything under it, and the narrower the code prefixes of a block, the
+# fewer mandates wait. Two mandates sharing a prefix are not one thread: a thread is a connected
+# component, and through a third one two mandates sharing nothing would end in it. Each is a
+# thread of its own, said to share the prefix, and whoever opens one makes the other wait, "after
+# thread X", until the join lands it -- the promise holds pair by pair. Two people opening two of
+# them in the same minute both pass that check, on two claims, as two claims of 4.10.1 on one
+# thread could not: the `open` whose push lands second says so, unless its fetch or its
+# computing of the to-do after the push fails; the one that landed first may be told by nothing;
+# who goes first is theirs to agree. What a mandate touches, for the waits, is what it derives
+# from: the decisions and the changes its `derives_from` names, and what its increments require
+# -- those it carries, and those that list it in `changes` --, are waited for; a `KI` it derives
+# from is not, unless one of those increments requires it, the order a roadmap wants. An open
+# one not waited for is what the change repairs; a parked one nothing requires is neither
+# waited for nor listed. While an approved change to do repairs a `KI`, it is no node of its own,
+# even where another change waits for it, and the to-do lists it with every mandate to do that
+# repairs it; while every change that repairs it waits, the issue is a node, so that nothing a
+# change waits for can wait on it in turn. The change's thread closes it -- `status: decided`,
+# `closed_by` the change -- when the to-do lists that mandate alone for it, so that of several
+# listed together none closes it while another is still listed; one left open when its mandates
+# land is a node again. A mandate's thread does not claim it, nor has it in its forecast, and its
+# own `depends_on` and `decide_with` are not followed while it is in their hands: claiming it
+# would tie two mandates that repair it, and whether it is one mandate's or several's can
+# change while a thread is open. One a thread claimed before -- while its change waited, before
+# the change was approved, or before the adoption -- is named with that thread
+# (`repaired_held`), which releases its claim: the mandate's thread closes it, `closed_by` the
+# change, once the code is merged, and two branches never write its row. These closings, and a mandate written `implemented`, rest on
+# who writes them, on whatever branch: no check reads them. Before, a change deriving from an
+# open issue waited for it to close, and nothing closed it but the change. A mandate with no
+# code prefixes is said to have none, and makes nobody wait.
+#
+# WHAT STAYS. The contribution policy does not change, and the strict profile with it: the
+# documents of a block still bound what a contribution may change and which obligation document
+# it must change (`AUT004`, `AUT005`); the to-do no longer reads them. The join's forecast still
+# reads the whole block, so an effect of a mandate on a document of its block is within its
+# forecast, and the join names every other thread whose forecast meets it. A thread opened before
+# the adoption keeps its claims, and one holding a decision and a change keeps the rule it was
+# opened under: ready with its entries closed, the change back on the main line. What waited for
+# such a thread only by a tie the 4.10.1 rules made -- a known issue on a document a decision it
+# holds forecasts, a mandate that met it otherwise than by a code prefix of a mandate it holds,
+# an entry with no `affects`, tied to it by its product -- stops waiting: a thread to take, but
+# for an entry with no anchors, listed to be anchored -- a mandate is a thread with code prefixes
+# or without --; and the join reconciles what the two write on one document.
+#
+# WHAT THE TO-DO CANNOT GIVE. `implemented` is written on the thread's branch by whoever holds it,
+# and `contribute` says to write it, with the issues the to-do lists for that mandate alone and
+# no thread holds, as soon as the code is merged: a closing pushed after a join waits for the
+# next one, and a join that names its threads, or drops one, may not land a thread ready. A
+# mandate whose code was merged while no thread held it -- it waited for another on the same
+# code, or nobody opened it -- is written `implemented` by who decides at the first join after
+# the merge, which `contribute` asks about at every join. And a mandate waits for a decision it derives from that is still open, and for
+# a change it derives from until the join that lands it -- after the join, and not to be taken
+# before --, which is the order its derivation says.
+#
+# THE OTHERS BY KIND. Decisions meet decisions, and work -- entries that are not decisions,
+# increments to decompose -- meets work, so a known issue no longer becomes an admin's because a
+# decision forecasts its section; at the join the cascade of a decision and an effect of a piece
+# of work on one section meet, and who decides reconciles them. An entry with no `affects` stops
+# tying its whole product to itself: it is out of the threads, listed to be anchored, and the
+# to-do counts it on its first line. It is an exception, for the next join to clear by writing its
+# anchor, and that a skill writing an entry does not leave behind; the first join after the
+# adoption is where a long list is worked through once.
+#
+# THREE DEFECTS. `artifacts.discover` reads no file git ignores, where the root is in a
+# repository that does not ignore the root itself: such a file is in no clone and no CI, and its
+# broken front matter was an `FM001`, at `error`, on one machine; a tracked file is read whatever
+# the patterns say, and so is everything when git does not answer -- the side that hides nothing
+# --, and so is a file whose name git would read as a pattern (`:` first, or `*`, `?`, `[`, `\`),
+# which is not asked about. `join --merge` refuses a local main line with commits the remote does
+# not have, which `merge --ff-only` let through in silence into the push, but for the merge it
+# made itself before a push that did not go. `REG010` leaves out of a heading the codes of two
+# capitals or more, a hyphen and a number -- `KI-2015` -- before it looks for a year.
+#
+# A RULE FOLLOWS THE VERSION PINNED. `validate.rules_hold` says whether a rule a version brought
+# holds for a project: where it pins that version or a later one, or none that reads. The to-do
+# (`APART_SINCE`) and `REG010` (`CODES_NOT_DATES_SINCE`) ask it, so that between a plugin updated
+# and the adoption every machine reads one repository by one set of rules, and an annotation
+# written for the old reading is not an `AN001` on the machine that updated first. The validator
+# reads the pin of the tree it validates; the to-do that of the main line, as it reads its
+# registers, so a checkout nobody brought up to the adoption computes by the rules every other
+# one does -- the `scan` it reads the main line with is still the checkout's, as before.
+#
+# MINOR, ARGUED. Something arrived -- a way of computing the threads, a kind `mandate`, the keys
+# `notes` and `repairs` and the top-level `repaired` and `repaired_held` in the to-do's JSON --
+# and no document stops validating under the version it pins. Once a project pins 4.11.0, an
+# annotation on a `REG010` that only a code caused matches nothing, which is an `AN001`: remove
+# it at the adoption.
+# `migrate.py --adopt` does not see it beforehand, because it runs the validator with the version
+# still declared; the next version makes it read with the version of arrival.
+#
+# ADOPTION: each person updates the plugin; `migrate.py --root <project>` and `--adopt`, in the
+# additive mode on the branch of a join. The first join after it anchors the entries the to-do
+# lists with no anchors. A project that copied `ci/branches.yml` or `ci/pull-request.yml` moves
+# `ref:` to `v4.11.0`, a copy of `ci/contribution.yml` its sha to the commit `v4.11.0` names;
+# nothing else in them changes. The levers stay the project's: the `affects` of its entries, which
+# now decide the threads of entries alone; the code prefixes of the blocks of its mandates,
+# which decide which mandates wait for each other; and its contribution policy.
+#
+# WHAT IS NOT HERE. To 4.12.0: the review lighter on a thread and whole at the join, before the
+# acts that decide; the choices of form taken by default on a thread and written in `scelte.md`;
+# the effects of a delivery written without confirmation; `rereading: optional` as the default of
+# the mode, and the annotations on `LC006` and `LC001` the branches of the mode silence; the
+# mechanical steps as scripts (`attest.py --commit`, `work.py check`, `exchange.py integrate`) and
+# the join carried by the skill; the plugin's version said at every session; the resources of a
+# contributor out of the documentation, with `EXC004` retired; the hotfix; `FW001` and `FW003` out
+# of `require_all`; the critic reading the framework's rules; `--adopt` reading with the version of
+# arrival. To 4.13.0: the code session that the thread's documentation session starts.
+version: "4.11.0"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of
