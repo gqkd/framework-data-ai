@@ -220,7 +220,7 @@ def snapshot(root: Path, ref: str, registry: dict, scan: dict) -> list[Artifact]
         top = Path(tmp) / where if where else Path(tmp)
         if not top.is_dir():
             return []
-        return discover(top, scan, registry, _Sink())
+        return discover(top, scan, registry, _Sink(), gitignore=False)
 
 
 @dataclass(frozen=True)

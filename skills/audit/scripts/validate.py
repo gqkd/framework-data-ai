@@ -155,6 +155,15 @@ NO_COMMITMENT = "none"
 
 DATE_IN_TEXT = re.compile(r"(?<!\d)(?:19|20)\d{2}(?!\d)"
                           r"|(?<!\d)\d{1,2}[/.]\d{1,2}[/.]\d{2,4}(?!\d)")
+# Two capitals or more, a hyphen and a number: the shape of every identifier here and of most
+# codes a heading names. `KI-2015` carries four digits that read as a year, and is not one.
+# Narrow on purpose, because what it leaves out is no longer read: "Jun-2026", "mid-2026" and
+# "Q3-2026" are not codes and stay dates, and so does a number followed by more of one
+# (`KI-2015-03`); what it misses is a year written after a word in capitals and a hyphen --
+# "FY-2026", "EOY-2026", "MVP-2026" --, which reads as a code.
+CODE_LIKE = re.compile(r"\b[A-Z]{2,}-\d+\b(?!-\d)")
+# Where a code stopped reading as a year: the first version whose rules leave it out.
+CODES_NOT_DATES_SINCE = "4.11.0"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -2920,7 +2929,7 @@ def check_manifest_derived_fields(arts: list[Artifact], report: Report) -> None:
                            "anybody noticing, because the label says it is generated.")
 
 
-def check_open_register(arts: list[Artifact], report: Report) -> None:
+def check_open_register(arts: list[Artifact], report: Report, project: dict | None = None) -> None:
     opens = [a for a in arts if a.type == "open-register"]
     if not opens:
         report.add("REG001", "OPEN.md",
@@ -2951,6 +2960,7 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
     # Headings only, and that is what makes this checkable rather than a guess at prose: a
     # line starting with `#` is a structure a person wrote on purpose, and a date in one is
     # addressed to whoever files an entry underneath it.
+    codes_out = rules_hold(project or {}, CODES_NOT_DATES_SINCE)
     for a in opens:
         # A `#` inside a fenced block is a comment in somebody's example, not a heading, and
         # a bash snippet saying `# rigenerato il 2026-09-30` was reported as a heading
@@ -2963,7 +2973,8 @@ def check_open_register(arts: list[Artifact], report: Report) -> None:
                 continue
             if fenced:
                 continue
-            if line.startswith("#") and DATE_IN_TEXT.search(line):
+            heading = CODE_LIKE.sub("", line) if codes_out else line
+            if line.startswith("#") and DATE_IN_TEXT.search(heading):
                 report.add("REG010", a.rel,
                            f"a heading carries a date: {line.strip()[:70]!r}. It applies to "
                            "every entry filed under it and belongs to none of them, so no "
@@ -3568,6 +3579,20 @@ def semver(v) -> tuple[int, int, int] | None:
     """
     m = SEMVER.match(v.strip()) if isinstance(v, str) else None
     return (int(m.group(1)), int(m.group(2)), int(m.group(3))) if m else None
+
+
+def rules_hold(project: dict, since: str) -> bool:
+    """Whether a rule a version brought holds for this project: where it pins that version or a
+    later one, and where it pins none that reads as three numbers.
+
+    The one place that answers it. A rule follows the version the project pins, not the plugin
+    a person happens to run: between a plugin updated and the adoption, two machines would
+    otherwise read one repository by two sets of rules, and an annotation written for the old
+    one would turn into an `AN001` on the machine that updated first. A project that pins
+    nothing, or a number nobody can read, has the rules of this validator, as it has every
+    other one."""
+    declared, introduced = semver(project.get("framework_version")), semver(since)
+    return declared is None or introduced is None or declared >= introduced
 
 
 def check_framework_version(root: Path, project: dict, registry: dict,
@@ -5334,7 +5359,7 @@ def main() -> int:
     check_pull_request(arts, pr_text, changed_files, report, references=references)
     check_framework_version(root, project, registry, report)
     check_framework_pin(project, report)
-    check_open_register(arts, report)
+    check_open_register(arts, report, project)
     check_manifest_derived_fields(arts, report)
     unanswerable = check_unanswerable(arts, registry, report)
     unenforced = check_placement(arts, registry, report)

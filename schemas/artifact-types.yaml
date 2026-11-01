@@ -2527,6 +2527,10 @@ scan:
   # `_filoni` is the temporary folder of the threads of the additive mode: pending effects,
   # the reviser's log, deliveries copied from the exchange. Text to version, not artifacts:
   # no front matter, nothing to attest, gone at the join that reads it.
+  # Beside these, from 4.11.0, what git ignores, where the root is in a repository that does not
+  # ignore the root itself: a file git ignores is never committed, so no clone and no CI reads
+  # it, and an `FM001` on it stopped one machine over a file nobody else has
+  # (`artifacts.git_ignored`). Not a line here: the list is git's, and the project keeps it.
   skip_dirs: [templates, skills, schemas, references, corpus,
               "_meta/extract", "_meta/business", "_meta/presentation", "_meta/digest",
               ingest-out, _filoni,

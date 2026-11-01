@@ -680,7 +680,12 @@ checks:
       structure somebody wrote on purpose, and a date in one is addressed to whoever files
       an entry underneath. What a heading is for is what a group of entries have in common,
       which in this register is what changing your mind costs; when each has to be decided
-      is its own trigger.
+      is its own trigger. A code is not a date whatever its digits: two capitals or more, a
+      hyphen and a number -- `KI-2015`, the shape of every identifier here -- is left out
+      before the heading is read, where the project pins 4.11.0 or later, or no version that
+      reads. Narrow on purpose: "Jun-2026", "mid-2026", "Q3-2026" and a code followed by more
+      digits (`KI-2015-03`) stay dates; what it misses is a year written after a word in
+      capitals and a hyphen, "FY-2026", "EOY-2026", "MVP-2026", which reads as a code.
 
   REG011:
     level: warn

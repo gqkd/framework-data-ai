@@ -2784,7 +2784,8 @@ def _registers_are_per_product():
                           + f"\n{h}\n\n### OD-004 - A choice\n")
         for written in ("## Cost to reverse MEDIUM: decide by 2026-09-30",
                         "## Decide these in Q4 2026",
-                        "### OD-004 - move by 30/09/2026"):
+                        "### OD-004 - move by 30/09/2026",
+                        "## Waiting on AB-2010, decide by 2026-09-30"):
             (root / "products" / "beta" / "OPEN.md").write_text(head(written))
             codes = [f["code"] for f in json.loads(run().stdout)["findings"]]
             if "REG010" not in codes:
@@ -2812,6 +2813,26 @@ def _registers_are_per_product():
             if "REG010" in codes:
                 problems.append(f"a heading reading {written!r} was reported: the check is "
                                 "matching headings rather than dates in them")
+
+        # A code is not a date whatever its digits -- two capitals, a hyphen and a number, the
+        # shape of every identifier here --, from the version that says so; a project pinning
+        # an earlier one keeps the old reading, and with it the annotations it wrote for it.
+        since = _load(VALIDATE, "validate").CODES_NOT_DATES_SINCE
+        major, minor, _ = (int(n) for n in since.split("."))
+        pin = root / "framework.yaml"
+        kept = pin.read_text()
+        for pinned, words, want in (
+                (since, "## Waiting on AB-2010 and KI-2015", False),
+                (since, "## Decide by Jun-2026", True),
+                (since, "## KI-2015-03 is the day", True),
+                (f"{major}.{minor - 1}.0", "## Waiting on AB-2010 and KI-2015", True)):
+            pin.write_text(f"framework_version: {pinned}\n")
+            (root / "products" / "beta" / "OPEN.md").write_text(head(words))
+            codes = [f["code"] for f in json.loads(run().stdout)["findings"]]
+            if ("REG010" in codes) != want:
+                problems.append(f"pinned at {pinned}, a heading reading {words!r} was "
+                                f"{'not ' if want else ''}reported")
+        pin.write_text(kept)
 
         # `decide_with`: the pairing an ordering cannot express. Same resolution as
         # `depends_on`, because a pairing with an entry nobody can find reads as one that
@@ -7801,6 +7822,106 @@ def _exc004():
         "element still approved keeps its resources"]
 
 
+@check("FM001 does not read a file git ignores, and still reads one git tracks or has not been told to ignore, and every file outside a repository")
+def _fm001_skips_ignored():
+    # A file git ignores is never committed, so no clone and no CI reads it: its broken front
+    # matter stopped one machine over a file nobody else has. A file tracked against the
+    # patterns is in every clone, one not yet added may be committed tomorrow, and where there
+    # is no repository there is nothing to ask.
+    broken = "---\nartifact_type: [oops\n---\n\n# broken\n"
+    everything = ["appunti/note.md", "idea.bozza.md", "nuovo.md", "tenuto.bozza.md"]
+
+    def fm001(root: Path, env: dict | None = None):
+        r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(root), "--json",
+                            "--stale-days", "36500"], capture_output=True, text=True,
+                           env={**os.environ, **(env or {})})
+        try:
+            return sorted(f["path"] for f in json.loads(r.stdout)["findings"]
+                          if f["code"] == "FM001")
+        except (ValueError, KeyError):
+            return f"no report: {r.stderr[-300:]!r}"
+
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = _Repo(Path(tmp) / "docs")
+        repo.write(".gitignore", "appunti/\n*.bozza.md\n")
+        for rel in everything:
+            repo.write(rel, broken)
+        repo.git("add", ".gitignore")
+        repo.git("add", "-f", "tenuto.bozza.md")
+        found = fm001(repo.path)
+        if found != ["nuovo.md", "tenuto.bozza.md"]:
+            problems.append(f"in a repository FM001 named {found}, expected the file not yet "
+                            "added and the one tracked against the patterns")
+        bare = Path(tmp) / "bare"
+        shutil.copytree(repo.path, bare, ignore=shutil.ignore_patterns(".git"))
+        found = fm001(bare)
+        if found != everything:
+            problems.append(f"outside a repository FM001 named {found}, expected every file")
+        # A root that is a folder of the repository, as `docs/` in a code repository, under a
+        # pattern anchored at the top, and names that are not ASCII: git is asked from the root,
+        # and answers in the bytes it was given.
+        mono = _Repo(Path(tmp) / "mono")
+        mono.write(".gitignore", "/docs/appunti/\n*.bozza.md\n")
+        mono.write("docs/framework.yaml", f"framework_version: {REGISTRY['version']}\n")
+        for rel in ("appunti/città.md", "idèa.bozza.md", "perché.md", "tenuto.bozza.md"):
+            mono.write(f"docs/{rel}", broken)
+        # And a name that is not valid UTF-8, ignored: Linux takes it, macOS and Windows refuse
+        # it. Discovery read it before git was asked, and has to get past it still.
+        try:
+            mono.write("docs/" + os.fsdecode(b"rott\xff.bozza.md"), broken)
+        except (OSError, UnicodeError):
+            pass
+        mono.git("add", ".gitignore")
+        mono.git("add", "-f", "docs/tenuto.bozza.md")
+        found = fm001(mono.path / "docs")
+        if found != ["perché.md", "tenuto.bozza.md"]:
+            problems.append(f"with the root a folder of the repository FM001 named {found}, "
+                            "expected the file not yet added and the one tracked against the "
+                            "patterns, by their names")
+        # A git hook exports `GIT_DIR`, here another repository's: git is still asked from the
+        # root, not from wherever that points.
+        found = fm001(repo.path, {"GIT_DIR": str(mono.path / ".git")})
+        if found != ["nuovo.md", "tenuto.bozza.md"]:
+            problems.append(f"with GIT_DIR exported, FM001 named {found}: git was asked about "
+                            "another repository")
+        # A root the repository around it ignores whole, as generated output validated in
+        # place: it is nobody's documentation there, and every file is read.
+        built = mono.path / "build" / "fx"
+        mono.write(".gitignore", "/docs/appunti/\n*.bozza.md\n/build/\n")
+        for rel in everything:
+            mono.write(f"build/fx/{rel}", broken)
+        found = fm001(built)
+        if found != everything:
+            problems.append(f"with the root ignored whole by the repository around it, FM001 "
+                            f"named {found}, expected every file")
+        # A name git would read as a pattern is not asked about, and is read: ignored or not.
+        repo.write("[bozza].bozza.md", broken)
+        found = fm001(repo.path)
+        if found != ["[bozza].bozza.md", "nuovo.md", "tenuto.bozza.md"]:
+            problems.append(f"with a name git reads as a pattern, FM001 named {found}")
+        # The other side of a comparison, a ref copied into a temporary folder, is not a
+        # checkout: with that folder inside a repository, the `.gitignore` it copied would drop
+        # the file tracked against its patterns from the base view only.
+        repo.write("valido.bozza.md", "---\nartifact_type: open-register\n---\n\n# x\n")
+        repo.git("add", "-f", "valido.bozza.md")
+        repo.git("commit", "-q", "-m", "tracked")
+        v = _load(VALIDATE, "validate")
+        branches = importlib.import_module(f"{v._CORE_NAME}.branches")
+        (repo.path / "scratch").mkdir()
+        kept_tmp = tempfile.tempdir
+        tempfile.tempdir = str(repo.path / "scratch")
+        try:
+            seen = sorted(a.rel for a in branches.snapshot(
+                repo.path, "HEAD", REGISTRY, v.load_scan(REGISTRY, v.load_project(repo.path))))
+        finally:
+            tempfile.tempdir = kept_tmp
+        if "valido.bozza.md" not in seen:
+            problems.append(f"a ref copied into a folder inside a repository lost the file "
+                            f"tracked against the patterns: {seen}")
+    return problems
+
+
 @check("require_all leaves out five warnings of the exchange, its upkeep, and keeps EXC005, EXC006 and EXC008")
 def _exc_outside_require_all():
     # `require_all` asks for a ruling, in a file every machine shares, on every warning: not on
@@ -10651,6 +10772,34 @@ def _join_lands_threads():
                     "--format=%(trailers:key=Ricongiungimento-di,valueonly)").stdout.split()
         if len(signed) != 2:
             problems.append(f"join --finish after a correction signed {len(signed)} times, 2 expected")
+        # A commit on the local main line the remote does not have: `--ff-only` lets it through
+        # in silence, and the push would carry it inside the join.
+        before = _g(a, "rev-parse", "origin/main").stdout.strip()
+        (a / "local-only.md").write_text("on main, not pushed\n")
+        _commit_all(a, "a commit on the local main line")
+        local = _g(a, "rev-parse", "HEAD").stdout.strip()
+        rc, out = _work(a, "join", "--who", "Owner", "--merge")
+        _g(a, "fetch", "-q", "origin")
+        # Neither line moves: the reset below would otherwise erase a merge made before the refusal.
+        if rc != 2 or "does not have" not in out \
+                or _g(a, "rev-parse", "origin/main").stdout.strip() != before \
+                or _g(a, "rev-parse", "HEAD").stdout.strip() != local:
+            problems.append(f"join --merge with the local main line ahead of the remote: exit {rc}, "
+                            f"or a line moved: {out[-300:]!r}")
+        _g(a, "reset", "-q", "--keep", "origin/main")
+        # The remote refuses the push of the main line, a hook of its own: the merge stays
+        # here, and `--merge` run again takes it for its own -- the join's tip as second
+        # parent -- and lands it once the remote takes it.
+        hook = Path(_g(a, "remote", "get-url", "origin").stdout.strip()) / "hooks" / "pre-receive"
+        hook.write_text("#!/bin/sh\necho 'main is frozen' >&2\nexit 1\n")
+        hook.chmod(0o755)
+        rc, out = _work(a, "join", "--who", "Owner", "--merge")
+        hook.unlink()
+        tip = _g(a, "rev-parse", "origin/work/ricongiungimento-1").stdout.strip()
+        parents = _g(a, "rev-list", "--parents", "-n", "1", "HEAD").stdout.split()[1:]
+        if rc != 2 or parents != [before, tip]:
+            problems.append(f"join --merge with the push refused by the remote: exit {rc}, the "
+                            f"local merge's parents {parents}: {out[-300:]!r}")
         rc, out = _work(a, "join", "--who", "Owner", "--merge")
         heads, claims = remote_heads(), remote_claims()
         trailer = _g(a, "log", "origin/main", "--format=%(trailers:key=Ricongiungimento-di,valueonly)").stdout

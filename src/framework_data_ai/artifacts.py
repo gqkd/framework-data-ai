@@ -1,14 +1,17 @@
 """Shared artifact reading; no policy decisions or graph construction.
 
 The legacy validator re-exports this API. Discovery intentionally preserves the old
-body-ID declaration semantics and scan exclusions; changing those is a separate policy.
+body-ID declaration semantics and scan exclusions, to which 4.11.0 adds the files git
+ignores (`discover`); changing those is a separate policy.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date, datetime
+import os
 from pathlib import Path
 import re
+import subprocess
 from typing import Protocol
 
 import yaml
@@ -159,12 +162,59 @@ def document_selected(relative: Path, scan: dict) -> bool:
             and relative.name not in scan["skip_files"])
 
 
-def discover(root: Path, scan: dict, registry: dict, report: FindingSink) -> list[Artifact]:
+# What would point git at another repository than the one holding the root -- a hook exports
+# them -- or change how it reads a name. Without them git finds the repository from the root.
+GIT_REDIRECTS = ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR",
+                 "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_NAMESPACE",
+                 "GIT_LITERAL_PATHSPECS", "GIT_GLOB_PATHSPECS", "GIT_NOGLOB_PATHSPECS",
+                 "GIT_ICASE_PATHSPECS")
+
+
+def git_ignored(root: Path, relative: list[str]) -> set[str]:
+    """The paths of `relative`, written from `root`, that the repository holding `root` ignores.
+
+    None outside a repository, none when the repository ignores `root` itself -- a folder of
+    generated output somebody validates in place belongs to no repository's documentation --,
+    and none when git cannot answer: there is nothing to ask, and every document is read as it
+    always was, which is the safe side, since it hides nothing. A tracked file is never
+    ignored, whatever the patterns say, which is git's own rule and the right one here: it is
+    in every clone. A name git would read as a pattern rather than as a name -- `:` first, or
+    `*`, `?`, `[`, `\\` anywhere -- is not asked about, and is read."""
+    asked = [p for p in relative if not p.startswith(":") and not any(c in p for c in "*?[\\")]
+    if not asked:
+        return set()
+    env = {k: v for k, v in os.environ.items() if k not in GIT_REDIRECTS}
+    env["GIT_TERMINAL_PROMPT"] = "0"
+    try:
+        r = subprocess.run(["git", "-C", str(root), "check-ignore", "-z", "--stdin"],
+                           input=b"".join(os.fsencode(p) + b"\0" for p in [".", *asked]),
+                           capture_output=True, timeout=60, env=env)
+    except (OSError, subprocess.SubprocessError):
+        return set()
+    if r.returncode not in (0, 1):  # 128: not a repository, or one git cannot read
+        return set()
+    # The bytes of the file system both ways, not UTF-8: a name that is not valid UTF-8 comes
+    # back as the same `str` that `rglob` gave, instead of stopping discovery.
+    found = {os.fsdecode(p) for p in r.stdout.split(b"\0") if p}
+    return set() if "." in found else found
+
+
+def discover(root: Path, scan: dict, registry: dict, report: FindingSink,
+             gitignore: bool = True) -> list[Artifact]:
     id_re = re.compile(r"\b((?:%s)-\d{3,})\b" % "|".join(registry["id_prefixes"]))
 
+    candidates = [p for p in sorted(root.rglob("*"))
+                  if not p.is_dir() and document_selected(p.relative_to(root), scan)]
+    # A file git ignores is never committed, so no clone and no CI ever reads it: an error on
+    # it -- front matter that does not parse is `FM001`, at `error` -- would stop one machine
+    # over a file nobody else has, and a review could do nothing about it. `gitignore=False`
+    # is for a tree that is not a checkout -- a ref copied into a temporary folder holds only
+    # what was committed, and whatever repository that folder sits in has nothing to say of it.
+    ignored = git_ignored(root, [p.relative_to(root).as_posix() for p in candidates]) \
+        if gitignore else set()
     artifacts = []
-    for p in sorted(root.rglob("*")):
-        if p.is_dir() or not document_selected(p.relative_to(root), scan):
+    for p in candidates:
+        if p.relative_to(root).as_posix() in ignored:
             continue
         rel = str(p.relative_to(root))
         meta, body, err = parse_front_matter(

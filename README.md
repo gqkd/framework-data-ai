@@ -407,8 +407,8 @@ stops treating it as work outstanding. An annotation that matches no finding is 
 which is what keeps the file from becoming a list of permanent exemptions with a better name.
 
 The same file says which files are artifacts in the first place. The validator reads every
-`.md` and `.yaml` under the root, and a project that also holds code holds a great deal of
-neither:
+`.md` and `.yaml` under the root but what git ignores, and a project that also holds code holds
+a great deal of neither:
 
 ```yaml
 scan:

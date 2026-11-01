@@ -1227,6 +1227,20 @@ def _join_merge(p: Project, who: str) -> int:
     if r.returncode:
         v.refuse(f"{p.main} in {main} has commits of its own, or changes: it cannot move to "
                  f"{p.base}. Nothing was merged.")
+    # `--ff-only` says nothing, and exits 0, when the local line is ahead of the remote's: its
+    # own commits would go out in the push below, inside the join, read by nobody. One is
+    # allowed, the merge this command made before a push that was refused or did not go: the
+    # join's tip as its second parent, the remote's line as its first. Run again, the merge
+    # below finds the tip merged already and adds nothing, and the push lands it.
+    base_sha = git(main, "rev-parse", p.base).stdout.strip()
+    ahead = git(main, "rev-list", f"{p.base}..HEAD", "--not", tip).stdout.split()
+    own = len(ahead) == 1 and git(main, "rev-list", "--parents", "-n", "1",
+                                  ahead[0]).stdout.split()[1:] == [base_sha, tip]
+    if ahead and not own:
+        v.refuse(f"{p.main} in {main} has {len(ahead)} commit(s) {p.remote} does not have: they "
+                 f"would land with the join, unread. Move them off it -- `git -C {main} branch "
+                 f"<name>`, then `git -C {main} reset --keep {p.base}` -- and bring them in on a "
+                 "parking branch, which the next join lands. Nothing was merged.")
     where = B.prefix(p.root)
     check = subprocess.run([sys.executable, str(Path(v.__file__)), "--root",
                             str(tree / where if where else tree), "--base", p.base, "--json",
@@ -1246,7 +1260,9 @@ def _join_merge(p: Project, who: str) -> int:
                            {f"refs/heads/{p.main}": head})
     if outcome == "rejected" and "[remote rejected]" in said and "cannot lock ref" not in said:
         v.refuse(f"{p.remote} refused the push of {p.main} ({said}): a hook or a protection rule, "
-                 "the person's to look at. The merge is here, not pushed. Never --force.")
+                 "the person's to look at. The merge is here, not pushed: once the remote takes "
+                 f"it, `join --merge --who {who}` again pushes this merge and releases what it "
+                 "landed. Never --force.")
     if outcome == "rejected":
         v.refuse(f"{p.main} moved on {p.remote} while this merged ({said}). Undo the local merge "
                  f"-- `git -C {main} reset --keep HEAD~1` --, bring the join up to date with "
