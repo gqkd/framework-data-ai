@@ -806,8 +806,8 @@ over the same project, and splits the findings four ways. It is the distinction 
 exists to make possible, made finding by finding instead of as a general warning: getting it
 wrong twice is how a team stops reading the validator.
 
-`FW001` and `FW002` themselves are printed apart from the three: they are new on every
-migration by construction, and `--adopt` is what clears them.
+`FW001` to `FW005` themselves are printed apart from the three: they are about the version and
+the pin lines, and none of them is migration work.
 
 It also prints the migration note for every version crossed, read out of
 `schemas/artifact-types.yaml` where each one is written beside the number it explains, and

@@ -33,7 +33,7 @@ An admin opens one with `work.py join --no-threads` when no thread is ready.
 | Written directly on the thread's branch | Written as a pending effect |
 |---|---|
 | new files: a `DEC`, `CHG`, `ICG`, `EVR`, `REL`, `RLM`, and any other new artifact -- a `PRB`, `HYP`, `EVD`, `CMP`, `DFB`, `SD`, a new `DC` | every other change to a living document: `ARC`, `PBR`, `WF`, `GLOSSARY`, `DC`, `RSK`, `RMP`, `EVP`, `RB`, `IMP`, `COMMITMENTS`, `STACK`, `PLATFORM`, `AGENTS.md`, `product.yaml`, and the **body** of an `OPEN` register: an entry moved from §1 to §4, an entry rewritten |
-| new entries in the open registers -- in `entries:` and their section --, lines in `LOG` and `ING`, which are append-only, lines in the parking lot | a new key in another register that is a map: `commitments`, `risks`, `terms` of `GLOSSARY`, `stack`, `increments` and, below 4.12.0 pinned, `delivery_stages` of `RMP` -- from 4.12.0, or no version that reads, a thread or a parking line does not touch the `delivery_stages`: the join asks whoever decides |
+| new entries in the open registers -- in `entries:` and their section --, lines in `LOG` and `ING`, which are append-only, lines in the parking lot | a new key in another register that is a map: `commitments`, `risks`, `terms` of `GLOSSARY`, `stack`, `increments` and, below 4.12.0 pinned, `delivery_stages` of `RMP` -- from 4.12.0 pinned, or no version that reads, a thread or a parking line does not touch the `delivery_stages`: the join asks whoever decides |
 | changes of state: `status` and `closed_by` of an entry, `status` of an immutable -- but a `CHG` withdrawn is a join's, below, and from 4.11.0 so is a mandate no thread holds written `implemented`, above --, the verification section of a `CHG` | |
 | `last_review` and `review_scope`, when a person attests a reading with `attest.py` | |
 
@@ -201,11 +201,25 @@ passes wherever it is written (`references/preamble.md`, the review).
 
 ## The rereading
 
-With `rereading: required`, the default, a join's text owes a reading as any other text does.
-With `rereading: optional` it does not: `LC006` and `PR005` are quiet about what a join brought,
-`LC001` about a document a join brought into being and whose last change came from a join, and
-all three on the branches of the mode about everything, since what is written there reaches the
-main line through a join. `LC009` reminds of a join's text nobody has read once it has waited
+With `rereading: required` a join's text owes a reading as any other text does; below 4.12.0
+pinned it is the default. With `rereading: optional` -- from 4.12.0 pinned, or no version that
+reads, the default, which `required` written overrides -- it does not: `LC006` and `PR005` are
+quiet about what a join brought, `LC001` about a document a join brought into being and whose
+last change came from a join, and all three on a thread's or a parking branch about everything,
+since what is written there reaches the main line through a join. On the branch of a join, from
+4.12.0 pinned, or no version that reads, and read with `--base` -- as `join --finish` and
+`join --merge` read it --, the documents are read one by one as on the main line after the
+merge: what the join brings is a join's, and the rest speaks, so an annotation finds its
+finding before the merge and not after.
+
+The warnings of a thread's or a parking branch are the join's to count, from 4.12.0 pinned, or
+no version that reads: there `require_all` makes no `AN003`, since a contributor cannot
+annotate, but on `EXC005` and `EXC006`, which can say an exposure on the contributor's machine
+that the join, run on another one, never sees, and whose way out is the repair; and an
+annotation on what `rereading: optional` silences on that branch is not looked for -- nor on
+the branch of a join read without `--base`, silenced there as on a thread. With
+`rereading: required` `LC006` still speaks on a thread, as a warning, and `sync` draws from it
+the readings a merge makes due. `LC009` reminds of a join's text nobody has read once it has waited
 longer than `thresholds.unread_days`, and the to-do lists it. Text that reached the main line
 outside a join -- a direct commit, a join signed by somebody who does not decide, one landed by a
 fast-forward -- is read as before.

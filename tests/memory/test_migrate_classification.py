@@ -1,9 +1,10 @@
 """What `--adopt` clears by writing a number, and what it refuses to write over.
 
 `migrate.py` refuses to adopt while NEW is non-empty, which is right: the number it
-writes is the claim that the migration is done. `FW001`/`FW002`/`FW003` are excluded
-because `--adopt` is the only thing that clears them, and their absence from that list
-once deadlocked every project that pinned.
+writes is the claim that the migration is done. `FW001` to `FW005` are excluded because
+they are not migration work: they are about the lines `--adopt` writes -- `FW004` and `FW005`
+since 4.12.0, the version and the pin lines that are wrong --, and the absence of `FW003`
+from that list once deadlocked every project that pinned.
 
 The same deadlock returned one level up and nothing here saw it: a repository that asks
 for `require_all` gets an `AN003` for each of those warnings, and `AN003` was not on the
@@ -31,7 +32,7 @@ def finding(code: str, message: str = "") -> dict:
 class AdoptClears(unittest.TestCase):
 
     def test_the_version_line_itself_is_not_migration_work(self):
-        for code in ("FW001", "FW002", "FW003"):
+        for code in ("FW001", "FW002", "FW003", "FW004", "FW005"):
             self.assertTrue(migrate.adopt_clears(finding(code, "declares an older version")))
 
     def test_an_annotation_about_the_version_line_is_cleared_with_it(self):
@@ -39,7 +40,7 @@ class AdoptClears(unittest.TestCase):
         # only because the adoption has not happened, and the two ways out are to annotate
         # something about to vanish -- reported as AN001 next run -- or to stop asking for
         # all annotations. Both punish the project for taking the framework seriously.
-        for code in ("FW001", "FW002", "FW003"):
+        for code in ("FW001", "FW002", "FW003", "FW004", "FW005"):
             f = finding("AN003", f"[{code}] carries no annotation, and this repository "
                                  "asked for all of them with `require_all`")
             self.assertTrue(migrate.adopt_clears(f), code)

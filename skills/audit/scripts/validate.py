@@ -171,6 +171,15 @@ CODES_NOT_DATES_SINCE = "4.11.0"
 # annotated one of them on a code, and the finding gone would turn the annotation into an
 # `AN001` before it adopts.
 CODES_NOT_DATES_IN_FIELDS_SINCE = "4.12.0"
+# Where the warnings of a thread's or a parking branch are the join's to count: `require_all`
+# makes no `AN003` there but on the two warnings that can say an exposure on that machine
+# (`EXPOSURES`), the annotations on what `rereading: optional` silences there are not looked
+# for, and the branch of a join, read with `--base`, is read as the main line will be.
+WARNINGS_AT_THE_JOIN_SINCE = "4.12.0"
+# Where the additive mode waits for no reading unless `work.yaml` writes `rereading: required`.
+REREADING_OPTIONAL_SINCE = "4.12.0"
+# Where a change withdrawn stays withdrawn, and `BR006` says one brought back out of it.
+WITHDRAWN_STAYS_SINCE = "4.12.0"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -530,12 +539,31 @@ def load_annotations(root: Path) -> tuple[list[dict], bool, str | None]:
 # credential in the list or a copy of one under the projects folder, and `EXC006`, which says
 # among other names an exchange inside a git repository, where one `git add` publishes what is
 # in it --, nor `EXC008`, which reads the value committed, the same on every machine.
-OUTSIDE_REQUIRE_ALL = ("EXC001", "EXC002", "EXC003", "EXC004", "EXC007")
+# Since 4.12.0 also `FW001` and `FW003`, whatever version the project pins: they say which
+# validator, and which commit of the framework, a machine runs -- between a plugin updated and
+# an adoption a newer one is the normal state, and CI, which checks out the framework the project
+# pins, does not see them -- it does where it checks out another, as a project declaring a version
+# older than 4.8.1 may (`ci/pull-request.yml`). `FW004`, a `framework_version` that is not three
+# numbers, and `FW005`, a `framework_commit` that is a number or not a commit at all, are the
+# document's, and stay counted; a commit this checkout does not have is an `FW003`, since without
+# a fetch it cannot be told from a checkout behind a pin adopted elsewhere. The line between
+# them: what is the document's, or exposes something, is counted; what says only the state of a
+# machine is not.
+OUTSIDE_REQUIRE_ALL = ("EXC001", "EXC002", "EXC003", "EXC004", "EXC007", "FW001", "FW003")
+
+# What `require_all` still counts on a thread's or a parking branch, where the other warnings are
+# the join's to count (`WARNINGS_AT_THE_JOIN_SINCE`): the two warnings that can say an exposure on
+# the machine the session runs on, which the join, run on another machine, never sees -- a copy
+# of credentials under the projects folder or a value in the list (`EXC005`), the exchange inside
+# a git repository among the other names `EXC006` says. On the branch the annotations are the
+# join's to write, so the way out is the repair, and nobody but the person working sees it.
+EXPOSURES = ("EXC005", "EXC006")
 
 
 def apply_annotations(report: Report, rows: list[dict], require_all: bool,
                       where: str, unread: tuple[str, ...] = (),
-                      outside: tuple[str, ...] = ()) -> None:
+                      outside: tuple[str, ...] = (),
+                      only: tuple[str, ...] | None = None) -> None:
     """Join the annotations onto the findings, on `(code, path)` and nothing finer.
 
     THE KEY IS THE ONE `migrate.py` ALREADY USES, and that is the argument for it rather
@@ -602,13 +630,25 @@ def apply_annotations(report: Report, rows: list[dict], require_all: bool,
     if not require_all:
         return
     for f in list(report.findings):
-        if f.level == "warn" and not f.accepted and f.code not in outside:
-            report.add("AN003", f.path,
-                       f"[{f.code}] carries no annotation, and this repository asked for "
-                       f"all of them with `require_all` in {where}. Write why it stays and "
-                       "the event that removes it, or repair it. The cost of an unexplained "
-                       "warning is not paid on this one: it is paid on the first warning "
-                       "that reports something true inside a list nobody reads any more.")
+        if f.level != "warn" or f.accepted or f.code in outside:
+            continue
+        if only is not None:
+            # A thread's or a parking branch: only the two warnings that can say an exposure on
+            # this machine are counted, and the annotation is not the way out here.
+            if f.code in only:
+                report.add("AN003", f.path,
+                           f"[{f.code}] is one of the two warnings that can say an exposure on "
+                           "this machine, which the join, run on another one, does not see, "
+                           "and this repository asked for every warning to be ruled on with "
+                           f"`require_all` in {where}. On a thread's or a parking branch the "
+                           "annotations are the join's to write, so the way out is the repair.")
+            continue
+        report.add("AN003", f.path,
+                   f"[{f.code}] carries no annotation, and this repository asked for "
+                   f"all of them with `require_all` in {where}. Write why it stays and "
+                   "the event that removes it, or repair it. The cost of an unexplained "
+                   "warning is not paid on this one: it is paid on the first warning "
+                   "that reports something true inside a list nobody reads any more.")
 
 
 load_scan = _artifacts.load_scan
@@ -1570,9 +1610,13 @@ def check_review_gap(attestations: list[Attestation], repo: Repository | None,
     and disappears with every save.
 
     QUIET ON WHAT A JOIN BROUGHT, WHERE A JOIN WAITS FOR NO READING. `quiet` is given in the
-    additive mode with `rereading: optional`: a text whose last change reached the main line
-    through a join is no finding here, nor `PR005`'s, and on a branch of the mode nothing is,
-    since what is written there reaches the main line through a join. `LC009` reminds of a
+    additive mode with `rereading: optional`, its default where the project pins
+    `REREADING_OPTIONAL_SINCE` or later, or no version that reads: a text whose last change
+    reached the main line through a join is no finding here, nor `PR005`'s, and on a thread's or
+    a parking branch nothing is, since what is written there reaches the main line through a
+    join. On the branch of a join read with `--base`, from `WARNINGS_AT_THE_JOIN_SINCE` pinned
+    or no version that reads, what the join brings counts as a join's and the rest is read as
+    on the main line (`quiet_joins`). `LC009` reminds of a
     join's text once it has waited longer than the project allows.
     """
     if repo is None:
@@ -1864,39 +1908,92 @@ def read_joins(repo: Repository) -> dict[str, str]:
 @dataclass
 class Quiet:
     """Where a join waits for no reading: what the joins brought, the days after which `LC009`
-    speaks, and whether this is a branch of the additive mode -- a thread, a parking branch, the
-    branch of a join --, where nothing is owed, since what is written there reaches the main
-    line through a join."""
+    speaks, and whether this is a branch of the additive mode where nothing is owed, since what
+    is written there reaches the main line through a join -- a thread, a parking branch, and the
+    branch of a join read without `--base`, or below `WARNINGS_AT_THE_JOIN_SINCE`. `preview` is
+    the tip of a join's branch read with `--base`, standing for the merge that will land it."""
     joins: dict[str, str]
     days: int
     branch: bool
+    preview: str | None = None
 
 
-def quiet_joins(root: Path, repo: Repository | None) -> Quiet | None:
-    """`Quiet`, in the additive mode with `rereading: optional` in `.framework/work.yaml`; None
-    everywhere else, where every text is read as before.
-
-    The branch is HEAD's, or `GITHUB_HEAD_REF` where HEAD is detached, as `--base` reads it; a
-    branch of the mode is one whose name starts with the prefix. Read here and quietly, because
-    the checks of the readings run before `load_work`, which reports what the file gets wrong and
-    stops on what does not parse.
-    """
+def read_work_quietly(root: Path) -> dict:
+    """`.framework/work.yaml`, or an empty map: read here and quietly, because the checks of the
+    readings run before `load_work`, which reports what the file gets wrong and stops on what
+    does not parse."""
     try:
         work = yaml.safe_load((root / _branches.WORK).read_text(encoding="utf-8")) or {}
     except (OSError, UnicodeError, yaml.YAMLError):
+        return {}
+    return work if isinstance(work, dict) else {}
+
+
+def rereading_optional(work: dict, project: dict | None) -> bool:
+    """Whether a join waits for no reading: `rereading: optional` written, or, where the project
+    pins `REREADING_OPTIONAL_SINCE` or later, nothing written -- the default of the additive
+    mode from that version; `required` written stays required. The validator and the to-do read
+    it here, so that the two apply one rule -- each to its own files: the validator to the
+    checkout's, the to-do to the main line's."""
+    said = work.get("rereading")
+    if said is None:
+        return rules_hold(project or {}, REREADING_OPTIONAL_SINCE)
+    return said == "optional"
+
+
+def mode_branch(root: Path, work: dict) -> str | None:
+    """`"join"` on the branch of a join, `"branch"` on any other branch of the additive mode --
+    a thread, a parking branch --, None elsewhere and outside the mode.
+
+    The branch is HEAD's, or `GITHUB_HEAD_REF` where HEAD is detached, as `--base` reads it; a
+    branch of the mode is one whose name starts with the prefix, and a join's has the join's
+    name after it, as `check_mandate_moves` reads it."""
+    if work.get("mode") != "additive":
         return None
-    if (repo is None or not repo.has_head or not isinstance(work, dict)
-            or work.get("mode") != "additive" or work.get("rereading") != "optional"):
+    head = _git(["symbolic-ref", "--short", "-q", "HEAD"], root)
+    name = (head.stdout.strip() if head is not None and head.returncode == 0
+            else os.environ.get("GITHUB_HEAD_REF", ""))
+    prefix = str(work.get("branch_prefix") or "work/")
+    if not name or not name.startswith(prefix):
+        return None
+    return "join" if name[len(prefix):].startswith(_branches.JOIN) else "branch"
+
+
+def quiet_joins(root: Path, repo: Repository | None, project: dict | None = None,
+                base: str | None = None) -> Quiet | None:
+    """`Quiet`, in the additive mode where a join waits for no reading (`rereading_optional`);
+    None everywhere else, where every text is read as before.
+
+    THE BRANCH OF A JOIN IS READ AS THE MAIN LINE WILL BE, from `WARNINGS_AT_THE_JOIN_SINCE` and
+    with `--base`. It is the preview of the main line: what passes there passes there. Before
+    `--merge` the merge that names it does not exist, and before `--finish` neither does the
+    signature, so what the join brings is what HEAD holds and the base does not -- every common
+    ancestor left out, not the one `merge-base` picks: where there are two, as `check_branch`
+    says, a range from one alone would count as the join's what the main line holds through the
+    other --, standing for the merge, and `LC009` dates it today, as the merge would. The
+    text the join brings is then quiet, and what reached the main line by other roads speaks,
+    so an annotation finds its finding before the merge and not after. Without `--base` it
+    is quiet throughout, as a thread is: the validator does not know which line is the main one.
+    """
+    work = read_work_quietly(root)
+    if (repo is None or not repo.has_head or work.get("mode") != "additive"
+            or not rereading_optional(work, project)):
         return None
     limits = work.get("thresholds") if isinstance(work.get("thresholds"), dict) else {}
     days = limits.get("unread_days")
     if isinstance(days, bool) or not isinstance(days, int) or days < 1:
         days = _branches.THRESHOLDS["unread_days"]
-    head = _git(["symbolic-ref", "--short", "-q", "HEAD"], root)
-    name = (head.stdout.strip() if head is not None and head.returncode == 0
-            else os.environ.get("GITHUB_HEAD_REF", ""))
-    prefix = str(work.get("branch_prefix") or "work/")
-    return Quiet(read_joins(repo), days, bool(name) and name.startswith(prefix))
+    kind = mode_branch(root, work)
+    joins = read_joins(repo)
+    if kind == "join" and base is not None \
+            and rules_hold(project or {}, WARNINGS_AT_THE_JOIN_SINCE):
+        tip = repo.head()
+        brought = _git(["rev-list", f"{base}..HEAD"], root)
+        if tip is not None and brought is not None and brought.returncode == 0:
+            for sha in brought.stdout.split():
+                joins.setdefault(sha, tip)
+            return Quiet(joins, days, False, tip)
+    return Quiet(joins, days, kind is not None)
 
 
 def unread_join(repo: Repository, joins: dict[str, str], rel: str,
@@ -1936,7 +2033,9 @@ def check_unread_joins(arts: list[Artifact], attestations: list[Attestation],
     since.
 
     With `rereading: optional` a join waits for no reading, and `LC006`, `LC001` and `PR005`
-    are quiet about what it brought, and on the branches of the mode about everything: this is
+    are quiet about what it brought, and on a thread's or a parking branch about everything --
+    on a join's read with `--base`, from `WARNINGS_AT_THE_JOIN_SINCE` pinned or no version that
+    reads, about what the join brings, dated today: this is
     the one reminder that the text is still nobody's reading. It counts from the first join not read (see `unread_join`), and it is quiet where
     `LC002` speaks, which already says to reread the document, and where `LC004` does, whose
     `last_review` reads as no reading at all.
@@ -1953,6 +2052,8 @@ def check_unread_joins(arts: list[Artifact], attestations: list[Attestation],
         if hit is None:
             continue
         merge, landed = hit
+        if merge == quiet.preview:
+            landed = now                 # the merge that will land it, read as made today
         age = (now - landed).days
         if age > days:
             report.add("LC009", a.rel,
@@ -3641,8 +3742,10 @@ def check_framework_version(root: Path, project: dict, registry: dict,
     # that does not exist. That is the confusion this check exists to remove rather than
     # cause, so the shape is stated and the two near misses are named.
     want, got = semver(current), semver(declared)
+    # ITS OWN CODE SINCE 4.12.0, `FW004`: this one is the document's, and CI sees it, while
+    # `FW001` says which validator runs on a machine, and leaves `require_all` for that.
     if got is None:
-        report.add("FW001", "framework.yaml",
+        report.add("FW004", "framework.yaml",
                    f"framework_version is {declared!r}, which is not three numbers "
                    f"separated by dots. Write `framework_version: {current}`. In YAML a "
                    f"bare {current.split('.')[0]} reads as a whole number and a bare "
@@ -3734,15 +3837,19 @@ def check_framework_pin(project: dict, report: Report) -> None:
     # A hash made only of digits is a number to YAML: one written by hand without quotes, seven
     # characters long, is one about once in twenty-seven. Said as such, or "not a commit" sends
     # somebody to check a hash that is right.
+    # ITS OWN CODE SINCE 4.12.0, `FW005`, for what is wrong with the line itself -- a number,
+    # a name that is not a commit: the document's, and CI sees it, so `require_all` counts it.
+    # `FW003` is left with the commit a machine runs, a checkout that moved or one without the
+    # pinned commit, and leaves `require_all` for that, as `FW001` does.
     if isinstance(pinned, int) and not isinstance(pinned, bool):
-        report.add("FW003", "framework.yaml",
+        report.add("FW005", "framework.yaml",
                    f"framework_commit is {pinned}, a number: YAML reads a hash made only of "
                    "digits as one, and one that starts with 0 may not come back as written. "
                    'Write the hash in quotes, seven characters or more, `framework_commit: '
                    '"<hash>"`, as `migrate.py --adopt` writes it.')
         return
     if not isinstance(pinned, str) or not COMMIT.match(pinned.strip()):
-        report.add("FW003", "framework.yaml",
+        report.add("FW005", "framework.yaml",
                    f"framework_commit is {pinned!r}, which is not a commit. It takes the "
                    "hash the framework is pinned at, seven characters or more. A branch or "
                    "a tag name is not enough: both move, and a pin that moves is the state "
@@ -3754,14 +3861,19 @@ def check_framework_pin(project: dict, report: Report) -> None:
         return
     # A COMMIT THAT IS NOT HERE IS NOT A CHECKOUT THAT MOVED. Both produce a hash that does
     # not match, and the two need opposite responses: one is a migration to read, the other
-    # is a line that was never true. Sending somebody to look for the first when it is the
-    # second is the trip that teaches them to stop making it.
+    # is a fetch, or a line that was never true. Sending somebody to look for the first when it
+    # is the second is the trip that teaches them to stop making it. The same code, and outside
+    # `require_all`: without a fetch, which the validator does not make, a commit absent here
+    # cannot be told from one adopted elsewhere that this checkout has not fetched yet -- the
+    # common case --, and CI, which checks the pin out, fails on one that does not exist before
+    # the validator runs.
     if framework_has(pinned) is False and not framework_is_shallow():
         report.add("FW003", "framework.yaml",
-                   f"pins the framework at {pinned}, and no such commit exists in the "
-                   "framework being run. Either it was written by hand and never checked, "
-                   "or it belongs to a fork or a rewritten history -- and nothing was "
-                   "verified against it. There is no migration to read here: the pin has "
+                   f"pins the framework at {pinned}, and the framework being run has no such "
+                   "commit. First fetch the framework, or update the plugin, and run again: "
+                   "the pin may have been adopted after this checkout last fetched. If it is "
+                   "still absent, it was written by hand and never checked, or it belongs to a "
+                   "fork or a rewritten history: there is no migration to read, the pin has "
                    "never been true.")
         return
     shallow = (" This checkout is shallow, so whether it even contains the pinned commit "
@@ -3785,14 +3897,16 @@ def say_if_the_checkout_moved(root: Path, project: dict) -> None:
     the report carrying `FW003` is the one nobody is running, and it is not being run
     *because* the fault is present. The check is inside the thing that stops running.
 
-    This is not a second check and it takes no decision: same fact, same silences, said on
-    stderr before anything is scanned. Stderr and not stdout, which is not a preference:
+    This is not a second check and it takes no decision: the same fact, a pin that reads as a
+    commit and is not the one running, said on stderr before anything is scanned -- whether
+    or not the framework has the commit. It is not said on a shallow checkout, nor on a
+    number or a name, which are `FW005`. Stderr and not stdout, which is not a preference:
     stdout carries the JSON that every caller parses, `migrate.py` included, and a line
     printed there would break the tool the message is telling somebody to run.
     """
     pinned = project.get("framework_commit")
     if not isinstance(pinned, str) or not COMMIT.match(pinned.strip()):
-        return                      # `FW003` reports the malformed pin, in the report
+        return                      # `FW005` reports the malformed pin, in the report
     pinned = pinned.strip()
     head = framework_head()
     if head is None or head.lower().startswith(pinned.lower()) or framework_is_shallow():
@@ -4410,7 +4524,8 @@ def check_exchange(root: Path, declared: str | None, place: Path | None, arts: l
 
 
 def check_branch(root: Path, base: str, arts: list[Artifact], registry: dict, scan: dict,
-                 repo: "Repository | None", work: dict | None, report: Report) -> None:
+                 repo: "Repository | None", work: dict | None, report: Report,
+                 project: dict | None = None) -> None:
     """What this branch adds, against the main line it will land on: `BR001`-`BR006`.
 
     THREE TREES, OR MORE. The working tree, which is the branch as it stands; the tip of `base`,
@@ -4496,7 +4611,7 @@ def check_branch(root: Path, base: str, arts: list[Artifact], registry: dict, sc
     if branch in ("", "HEAD"):
         branch = os.environ.get("GITHUB_HEAD_REF", "")
     check_additive(root, bases, before, head, branch, report)
-    check_mandate_moves(root, tip, bases, before, head, branch, report)
+    check_mandate_moves(root, tip, bases, before, head, branch, report, project)
 
     if work is None:
         return
@@ -4542,7 +4657,8 @@ PAST_APPROVED = {"implemented", "verified", "rolled-back", "withdrawn"}
 
 
 def check_mandate_moves(root: Path, tip: str, bases: list[str], before: list["_branches.View"],
-                        head: "_branches.View", branch: str, report: Report) -> None:
+                        head: "_branches.View", branch: str, report: Report,
+                        project: dict | None = None) -> None:
     """`BR006`: what moves in place on a change contract moves when and where it may.
 
     Since 4.10.0 three fields of an immutable `CHG` move in place besides `status` and
@@ -4563,6 +4679,11 @@ def check_mandate_moves(root: Path, tip: str, bases: list[str], before: list["_b
     Against every point where the branch left the main line, as `BR004` and `BR005`: said only
     where each of them finds it, so that a branch that brought the main line in is not charged
     with what the main line did.
+
+    FROM 4.12.0, A CHANGE WITHDRAWN STAYS WITHDRAWN (`WITHDRAWN_STAYS_SINCE`), in any mode. The
+    states of a `CHG` go forward, and `withdrawn` is reached from `approved` only; nothing said
+    one brought back out of it, unless its `withdrawn_by` or its `affects` moved too. What it
+    would have done comes back as a new `CHG`, deriving from it or from the decision.
     """
     try:
         works = [_branches.work_at(root, b) for b in bases]
@@ -4593,6 +4714,12 @@ def check_mandate_moves(root: Path, tip: str, bases: list[str], before: list["_b
         states = [o.meta.get("status") if o else None for o in was]
         said = []
         newly_withdrawn = status == "withdrawn" and "withdrawn" not in states
+        if status != "withdrawn" and states and all(s == "withdrawn" for s in states) \
+                and rules_hold(project or {}, WITHDRAWN_STAYS_SINCE):
+            said.append(f"is brought back out of `withdrawn`, to `{status}`, withdrawn where this "
+                        "branch left the main line. A mandate withdrawn stays withdrawn: what it "
+                        "would have done comes back as a new `CHG`, deriving from it or from the "
+                        "decision")
         if newly_withdrawn and "approved" not in states:
             said.append(f"is brought to `withdrawn` from "
                         f"{', '.join(sorted({str(s) for s in states if s})) or 'nothing'}, never "
@@ -5387,12 +5514,16 @@ def main() -> int:
     # report, and `Repository.open` says so with exit 2 rather than with a clean report.
     repo = Repository.open(root)
     # Where a join waits for no reading: what the joins brought, read once.
-    quiet = quiet_joins(root, repo)
+    quiet = quiet_joins(root, repo, project, args.base)
+    # A thread's or a parking branch, whose warnings the join counts (`WARNINGS_AT_THE_JOIN_SINCE`).
+    at_the_join = rules_hold(project, WARNINGS_AT_THE_JOIN_SINCE)
+    on_branch = mode_branch(root, read_work_quietly(root)) == "branch"
 
     def by_join(rel: str) -> bool:
-        """On a branch of the mode, or born in a join and last changed by one: owes no stamp.
-        One that lacked it before a join changed it, or whose last change came outside a join,
-        still does."""
+        """On a branch of the mode read as one (`Quiet.branch`), or born in a join and last
+        changed by one -- on a join's branch read with `--base`, by this join too --: owes no
+        stamp. One that lacked it before a join changed it, or whose last change came outside a
+        join, still does."""
         if quiet.branch:
             return True
         born, last = repo.commits_of(rel), last_text_change(repo, rel)
@@ -5443,13 +5574,22 @@ def main() -> int:
     check_choices(root, report, project)
     check_affects(arts, registry, report)
     if args.base is not None:
-        check_branch(root, args.base, arts, registry, scan, repo, work, report)
+        check_branch(root, args.base, arts, registry, scan, repo, work, report, project)
     # Last, and it has to be: an annotation is a statement about the set of findings, so it
     # cannot be joined until every check has finished producing them.
     if annotations_rel is not None:
+        # On a thread's or a parking branch the warnings are the join's to count but the two
+        # that can say an exposure on this machine (`EXPOSURES`), and an annotation on what
+        # `rereading: optional` silences on this branch is not looked for -- nor on a join's
+        # read without `--base`, silenced as a thread (`Quiet.branch`): it is read where the
+        # text lands. Below `WARNINGS_AT_THE_JOIN_SINCE`, as before.
+        silenced = ("LC006", "LC001", "PR005") \
+            if at_the_join and quiet is not None and quiet.branch else ()
         apply_annotations(report, annotations, require_all, annotations_rel,
-                          unread=tuple(f"EXC00{n}" for n in range(1, 8))
-                          if exchange != "read" else (), outside=OUTSIDE_REQUIRE_ALL)
+                          unread=(tuple(f"EXC00{n}" for n in range(1, 8))
+                                  if exchange != "read" else ()) + silenced,
+                          outside=OUTSIDE_REQUIRE_ALL,
+                          only=EXPOSURES if at_the_join and on_branch else None)
     if repo is not None:
         repo.close()
 

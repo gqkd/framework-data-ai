@@ -371,7 +371,7 @@ python3 skills/audit/scripts/validate.py --root ../my-project --emit-index
 <!-- generated: counts -->
 *Generated from `schemas/artifact-types.yaml` and `skills/audit/checks.yaml`. Edit those, not this line.*
 
-**30 artifact types. 117 checks** (28 error, 87 warn, 2 info), each catalogued with the failure it prevents written next to it, and 1 retired code whose number is never reused.
+**30 artifact types. 119 checks** (28 error, 89 warn, 2 info), each catalogued with the failure it prevents written next to it, and 1 retired code whose number is never reused.
 <!-- /generated -->
 
 The count is generated because the one that used to be here was wrong by fifteen: true when it
@@ -523,9 +523,10 @@ without `status` and `owners` for as long as it did. The self check runs in CI h
   which answers the question that comes first: is this finding here because the rules moved,
   or because the document is wrong? Those need opposite responses, and guessing wrong twice is
   how people stop reading the validator. Beside it a project can write `framework_commit`,
-  and `FW003` compares it with the commit doing the checking; versions are tagged from
-  `v2.8.0` on. What is still missing is the install: the framework arrives by being cloned next
-  to the project, and a pin says which commit that clone has to be at rather than fetching it.
+  and `FW003` compares it with the commit doing the checking (`FW005` says a line that is not
+  a commit at all); versions are tagged from `v2.8.0` on. What is still missing is
+  the install: the framework arrives by being cloned next to the project, and a pin says which
+  commit that clone has to be at rather than fetching it.
 
   `skills/audit/scripts/migrate.py` answers the question finding by finding. It rebuilds the
   validator the project pinned out of this repository's git history (or accepts a trusted

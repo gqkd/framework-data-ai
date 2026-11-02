@@ -45,9 +45,10 @@ verify the archive source and digest before executing it. Neither a passing comp
 a same-version no-op establishes independent contribution authority.
 
 Review new findings and historical repairs separately; preserve annotations only while
-their findings still exist (`AN001`). `FW001`, `FW002` and `FW003` identify version and pin
-work. With explicit approval, add `--adopt`: it changes `framework.yaml` and the framework's
-sections of `AGENTS.md`, the ones marked `<!-- framework-section: ... -->` in the template,
+their findings still exist (`AN001`). `FW001`, `FW002`, `FW003` and, from 4.12.0, `FW004` and
+`FW005` identify version and pin work. With explicit approval, add `--adopt`: it changes
+`framework.yaml` and the framework's sections of `AGENTS.md`, the ones marked
+`<!-- framework-section: ... -->` in the template,
 and nothing else. The report lists those sections with the text to be written: a missing
 one is added; one nobody edited is brought to the new text, keeping the framework's path
 written in it (noted when it leads to no framework on this machine) and taking the exchange

@@ -835,8 +835,10 @@ def _pin_shapes():
                 f'framework_version: {REGISTRY["version"]}\nframework_commit: {pin}\n')
             r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(root),
                                 "--json"], capture_output=True, text=True)
-            found = [f["message"] for f in json.loads(r.stdout)["findings"]
-                     if f["code"] == "FW003"]
+            # The code in front: `FW005` is the line's own fault, `FW003` the commit a machine
+            # runs -- a checkout that moved, or one without the pinned commit.
+            found = [f"{f['code']} {f['message']}" for f in json.loads(r.stdout)["findings"]
+                     if f["code"] in ("FW003", "FW005")]
             return found[0] if found else ""
 
         if message(now):
@@ -846,22 +848,24 @@ def _pin_shapes():
                             "field that refuses what the tool accepts is a finding about a "
                             "shift key")
         moved = message(old)
-        if "no such commit" in moved or not moved:
+        if "no such commit" in moved or not moved.startswith("FW003"):
             problems.append(f"a pin at an older commit of this framework said {moved[:60]!r}: "
                             "the checkout moved, and that is a migration to read")
         never = message("deadbeefcafe")
-        if "no such commit" not in never:
+        if "no such commit" not in never or "fetch" not in never \
+                or not never.startswith("FW003"):
             problems.append("a pin at a commit this framework does not have was reported as a "
                             "checkout that moved, which sends somebody looking for a "
                             "migration that never happened")
-        if not message("main"):
+        if not message("main").startswith("FW005"):
             problems.append("a branch name was accepted as a pin: both a branch and a tag "
                             "move, which is the state the field exists to leave")
         # The first pin a person writes by hand, and seven digits are a number to YAML.
-        if "quotes" not in message("1234567", quoted=False):
+        digits = message("1234567", quoted=False)
+        if "quotes" not in digits or not digits.startswith("FW005"):
             problems.append("a pin of digits written without quotes was not told to be "
                             "quoted: YAML read it as a number, and the message sent somebody "
-                            f"to check a hash that may be right: {message('1234567', False)[:80]!r}")
+                            f"to check a hash that may be right: {digits[:80]!r}")
         # And `migrate.py`, which reads the same pin first in an adoption, said "not a valid
         # Git commit ID" of it.
         migrate = _load(ROOT / "skills" / "audit" / "scripts" / "migrate.py", "migrate")
@@ -1378,9 +1382,11 @@ def _framework_version():
         # decimal and `2` is a whole number, so neither is comparable with a version, and
         # both are what somebody reaches for when shortening it. Quoting, which used to be
         # the trap, is now fine: the value was always meant to be a string.
-        (f"framework_version: {major}.{minor}\n", {("FW001", "warn")},
+        # Since 4.12.0 a code of their own, `FW004`: the document's, and counted by
+        # `require_all`, while `FW001` says which validator a machine runs, and is not.
+        (f"framework_version: {major}.{minor}\n", {("FW004", "warn")},
          "two components, which YAML reads as a decimal"),
-        (f"framework_version: {major}\n", {("FW001", "warn")},
+        (f"framework_version: {major}\n", {("FW004", "warn")},
          "one component, which YAML reads as a whole number"),
     ]
     for config, want, what in cases:
@@ -1401,7 +1407,7 @@ def _framework_version():
         r = subprocess.run([sys.executable, str(VALIDATE), "--root", tmp, "--json",
                             "--stale-days", "36500"], capture_output=True, text=True)
         msg = next((f["message"] for f in json.loads(r.stdout)["findings"]
-                    if f["code"] == "FW001"), "")
+                    if f["code"] == "FW004"), "")
         if "three" not in msg and "dots" not in msg:
             problems.append("a version with two components is reported as a version "
                             f"mismatch rather than as a malformed one: {msg[:80]}")
@@ -2471,7 +2477,7 @@ def _version_is_not_restated():
     # It is the same failure as the count in prose, with a longer fuse: nothing is wrong on
     # the day it is written, and nothing reports it on the day it becomes wrong. So the
     # rule is the flat one -- no literal anywhere but the registry. An example writes `N`,
-    # and an `N` that reaches a real `framework.yaml` is an `FW001` saying it is a string
+    # and an `N` that reaches a real `framework.yaml` is an `FW004` saying it is a string
     # and not a whole number, which is a sentence a stale number never produces.
     literal = re.compile(r"framework_version:\s*['\"]?(\d[\d.]*)")
     skip = {"build", "__pycache__", ".git", "node_modules"}
@@ -5193,7 +5199,7 @@ def _the_pin_is_read():
         got = codes(config)
         if got is None:
             problems.append(f"the validator crashed on {what}")
-        elif ("FW003" in got) != want:
+        elif bool(got & {"FW003", "FW005"}) != want:
             problems.append(f"{what} was {'not ' if want else ''}reported")
     return problems
 
@@ -5767,7 +5773,10 @@ def _the_pin_is_said_before_the_scan():
          "a pin that is being honoured"),
         (declared + 'framework_commit: "0123456789abcdef"\n', True,
          "a pin naming a commit that is not the one running"),
-    ]:
+    ] + ([(declared + f'framework_commit: "{older.stdout.strip()}"\n', True,
+           "a pin at an older commit of this framework, a checkout that moved")]
+         if (older := subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD~3"],
+                                     capture_output=True, text=True)).returncode == 0 else []):
         with tempfile.TemporaryDirectory() as tmp:
             _annotation_fixture(Path(tmp), also={"framework.yaml": config})
             r = subprocess.run([sys.executable, str(VALIDATE), "--root", tmp, "--json",
@@ -8032,14 +8041,21 @@ def _fm001_skips_ignored():
     return problems
 
 
-@check("require_all leaves out five warnings of the exchange, its upkeep, and keeps EXC005, EXC006 and EXC008")
+@check("require_all leaves out five warnings of the exchange, its upkeep, and keeps EXC005, EXC006 and EXC008, the first two alone on a thread")
 def _exc_outside_require_all():
     # `require_all` asks for a ruling, in a file every machine shares, on every warning: not on
     # the upkeep of the exchange, a folder that differs on every machine. What exposes something
     # -- a credential (`EXC005`), an exchange inside a repository among the names `EXC006` says
-    # -- and what is committed (`EXC008`) still need one. An annotation on an exchange warning that is gone is
-    # still an `AN001` where the exchange is read.
+    # -- and what is committed (`EXC008`) still need one. An annotation on an exchange warning
+    # that is gone is still an `AN001` where the exchange is read. And on a thread's branch, from
+    # 4.12.0, where the join counts the other warnings, the two that can say an exposure still
+    # count: the join, run on another machine, never sees them, and the way out there is the
+    # repair.
     problems = []
+    val = _load(VALIDATE, "validate")
+    since = val.WARNINGS_AT_THE_JOIN_SINCE
+    major, minor, _ = (int(n) for n in since.split("."))
+    before = f"{major}.{minor - 1}.0"
     strict = ("require_all: true\nexpected:\n  - code: EXC004\n"
               "    path: ../_scambio/integrati/CHG-009/risorse.md\n"
               "    reason: a resource on a machine nobody here can reach.\n"
@@ -8070,6 +8086,27 @@ def _exc_outside_require_all():
         if not any(f["code"] == "AN001" and "[EXC004]" in f["message"] for f in found):
             problems.append("an annotation on an EXC004 that is gone, with the exchange read, "
                             "gave no AN001: it would stand as an exemption nobody sees")
+        # A thread's branch of the additive mode.
+        repo.write(".framework/work.yaml", "mode: additive\npeople: [Admin, Junior]\n"
+                   "admins: [Admin]\n")
+        repo.git("checkout", "-q", "-b", "work/t")
+        for pin in (since, before):
+            repo.write("framework.yaml", f"framework_version: {pin}\n")
+            rc, out, err = repo.validate()
+            found = (out or {}).get("findings", [])
+            subjects = {f["message"][1:7] for f in found if f["code"] == "AN003"}
+            repair = {f["message"][1:7] for f in found if f["code"] == "AN003"
+                      and "the way out is the repair" in f["message"]}
+            if out is None:
+                problems.append(f"on a thread at {pin}: no report (exit {rc}): {err[-200:]!r}")
+            elif pin == since and (subjects != {"EXC005", "EXC006"} or repair != subjects):
+                problems.append(f"on a thread at {pin} the warnings that became AN003 are "
+                                f"{sorted(subjects)}, {sorted(repair)} saying the repair, "
+                                "expected EXC005 and EXC006, both")
+            elif pin == before and (not {"EXC005", "EXC006"} <= subjects or repair):
+                problems.append(f"on a thread at {pin}, the version before: AN003 on "
+                                f"{sorted(subjects)}, {sorted(repair)} saying the repair, "
+                                "expected EXC005 and EXC006 as on the main line")
         other = _Repo(Path(tmp) / "other")
         other.write("OPEN.md", _open_register({"OD-001": "open"}))
         other.write(".framework/work.yaml", "people: [Admin]\n")
@@ -11396,6 +11433,222 @@ def _join_lands_threads():
     return problems
 
 
+@check("from 4.12.0 a thread's warnings are the join's to count, the join's branch is read as the main line, a withdrawn change stays withdrawn, and FW001 and FW003 are outside require_all, FW004 and FW005 inside")
+def _warnings_at_the_join():
+    # On a thread's or a parking branch `require_all` makes no `AN003` but on `EXC005` and
+    # `EXC006`, a contributor cannot annotate; with `rereading: optional`, from 4.12.0 the
+    # default of the mode, an annotation on what that silences there is not looked for;
+    # `required` written keeps `LC006` speaking on a thread, as a warning. The join's branch,
+    # read with `--base`, is read as the main line will be: what it brings is a join's, and a
+    # text that reached the main line by another road speaks. A `CHG` withdrawn stays
+    # withdrawn, in any mode. Each against the version before, where everything stays as it
+    # was. And whatever the version, `FW001` and `FW003` say which validator and which commit a
+    # machine runs, and `require_all` does not count them; `FW004` and `FW005`, the version and
+    # the pin lines that are wrong, it does -- on the main line: on a thread `FW005` is the
+    # join's to count too. The two exchange warnings that still count on a thread are
+    # `_exc_outside_require_all`'s.
+    problems = []
+    val = _load(VALIDATE, "validate")
+    since = val.WARNINGS_AT_THE_JOIN_SINCE
+    major, minor, _ = (int(n) for n in since.split("."))
+    before = f"{major}.{minor - 1}.0"
+    for name in ("REREADING_OPTIONAL_SINCE", "WITHDRAWN_STAYS_SINCE"):
+        if getattr(val, name) != since:
+            problems.append(f"{name} is {getattr(val, name)}, not {since}: the cases below pin "
+                            "one version for the three")
+    # One reading of the default, for the validator and the to-do alike.
+    for work, pin, want in (({}, since, True), ({}, before, False), ({}, "x", True),
+                            ({"rereading": "required"}, since, False),
+                            ({"rereading": "optional"}, before, True)):
+        if val.rereading_optional(work, {"framework_version": pin}) != want:
+            problems.append(f"rereading {work.get('rereading', 'unwritten')} pinned at {pin}: "
+                            f"optional is not {want}")
+    living = dict(lifecycle="living", status="active", owners="[o]", created="2026-06-01",
+                  last_review="2026-06-01 09:00")
+    additive = "mode: additive\npeople: [Admin, Junior]\nadmins: [Admin]\n"
+    note = ("expected:\n  - code: LC006\n    path: STACK.md\n    reason: read at the join.\n"
+            "    clears_when: somebody rereads it.\n")
+    chg = lambda status, extra="": (_fm(
+        schema="framework/change-contract/v1", artifact_type="change-contract",
+        lifecycle="immutable", status=status, id="CHG-001", products="[all]", owners="[o]",
+        created="2026-06-01", approvers="[Admin]") .replace("---\n\n", extra + "---\n\n", 1)
+        + "# CHG-001\n")
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = _Repo(Path(tmp) / "docs")
+        repo.write(".framework/work.yaml", additive)
+        repo.write("OPEN.md", _open_register({"OD-001": "open"}))
+        for doc, kind in (("STACK.md", "operational-stack"), ("GLOSSARY.md", "glossary")):
+            repo.write(doc, _fm(schema=f"framework/{kind}/v1", artifact_type=kind, **living)
+                       + f"# {doc}\n\nx\n")
+        repo.write("changes/CHG-001.md", chg("withdrawn", "withdrawn_by: [OD-001]\n"))
+        repo.commit("base", "2026-06-01T09:00:00+02:00")
+        # Changed on the main line after its reading, outside any join.
+        repo.write("STACK.md", (repo.path / "STACK.md").read_text() + "y\n")
+        repo.commit("an edit on the main line", "2026-06-02T09:00:00+02:00")
+
+        def run(pin: str, *extra: str) -> list[dict]:
+            repo.write("framework.yaml", f"framework_version: {pin}\n")
+            rc, out, err = repo.validate(*extra)
+            if out is None:
+                problems.append(f"pinned at {pin}, {extra}: no report (exit {rc}): {err[-200:]!r}")
+                return []
+            return out["findings"]
+
+        has = lambda found, code, path=None, text="": any(
+            f["code"] == code and (path is None or f["path"] == path) and text in f["message"]
+            for f in found)
+
+        # A thread. `rereading` unwritten: optional from 4.12.0, so `LC006` is quiet there and
+        # an annotation on it is not looked for; before, required, and it speaks.
+        repo.git("checkout", "-q", "-b", "work/t")
+        repo.write(".framework/expected-findings.yaml", note)
+        found = run(since)
+        if has(found, "LC006") or has(found, "AN001"):
+            problems.append(f"on a thread at {since}, rereading unwritten: LC006 or AN001 "
+                            f"{[f['code'] for f in found if f['code'] in ('LC006', 'AN001')]}")
+        found = run(before)
+        if not has(found, "LC006", "STACK.md"):
+            problems.append(f"on a thread at {before}, rereading unwritten: no LC006, the "
+                            "rereading required as before")
+        repo.write(".framework/work.yaml", additive + "rereading: optional\n")
+        if not has(run(before), "AN001", text="[LC006]"):
+            problems.append(f"on a thread at {before} with rereading optional: an annotation on "
+                            "LC006 was not an AN001, as before")
+        # `required` written: `LC006` speaks on a thread, as a warning, and `require_all` makes
+        # no `AN003` of it there from 4.12.0; on the join's branch it does.
+        repo.write(".framework/work.yaml", additive + "rereading: required\n")
+        repo.write(".framework/expected-findings.yaml", "require_all: true\nexpected: []\n")
+        found = run(since)
+        if not has(found, "LC006", "STACK.md") or has(found, "AN003"):
+            problems.append(f"on a thread at {since} with rereading required and require_all: "
+                            f"LC006 {has(found, 'LC006')}, AN003 {has(found, 'AN003')} -- a "
+                            "warning, counted at the join")
+        if not has(run(before), "AN003", text="[LC006]"):
+            problems.append(f"on a thread at {before} with require_all: no AN003 on LC006")
+        repo.git("checkout", "-q", "-f", "main")
+        repo.git("checkout", "-q", "-b", "work/ricongiungimento-1")
+        repo.write(".framework/work.yaml", additive + "rereading: required\n")
+        repo.write(".framework/expected-findings.yaml", "require_all: true\nexpected: []\n")
+        found = run(since)
+        if not has(found, "AN003", text="[LC006]"):
+            problems.append(f"on a join's branch at {since} with require_all: no AN003 on LC006, "
+                            "counted there as on the main line")
+
+        # The join's branch read with `--base`, rereading optional by default: what it brings
+        # is quiet, what reached the main line outside a join speaks; without `--base`, and
+        # before 4.12.0, it is quiet throughout.
+        repo.write(".framework/work.yaml", additive)
+        repo.write(".framework/expected-findings.yaml", "expected: []\n")
+        repo.commit("join setup", "2026-06-03T09:00:00+02:00")
+        repo.write("GLOSSARY.md", (repo.path / "GLOSSARY.md").read_text() + "z\n")
+        repo.commit("the join rewrites the glossary", "2026-06-04T09:00:00+02:00")
+        found = run(since, "--base", "main")
+        if not has(found, "LC006", "STACK.md") or has(found, "LC006", "GLOSSARY.md"):
+            problems.append(f"on a join's branch at {since} with --base: LC006 on "
+                            f"{sorted(f['path'] for f in found if f['code'] == 'LC006')}, "
+                            "expected STACK.md alone")
+        # Dated today for `LC009`, as the merge that will land it: the commit is months older
+        # than `unread_days`, and nothing else keeps `LC009` quiet on it.
+        if has(found, "LC009", "GLOSSARY.md"):
+            problems.append(f"on a join's branch at {since} with --base: LC009 on GLOSSARY.md, "
+                            "what the join brings not dated today")
+        # An annotation there finds its finding, and one on what the join brings is an `AN001`
+        # before the merge and not after.
+        repo.write(".framework/expected-findings.yaml",
+                   note + note.split("\n", 1)[1].replace("STACK.md", "GLOSSARY.md"))
+        found = run(since, "--base", "main")
+        if has(found, "AN001", text="[LC006] STACK.md") \
+                or not has(found, "AN001", text="[LC006] GLOSSARY.md"):
+            problems.append(f"on a join's branch at {since} with --base: AN001 "
+                            f"{[f['message'][:40] for f in found if f['code'] == 'AN001']}, "
+                            "expected on the annotation of GLOSSARY.md alone")
+        repo.write(".framework/expected-findings.yaml", "expected: []\n")
+        for pin, extra in ((since, ()), (before, ("--base", "main"))):
+            # Before 4.12.0 a join waits for no reading only where `work.yaml` says so.
+            repo.write(".framework/work.yaml",
+                       additive + ("rereading: optional\n" if pin == before else ""))
+            got = [f["path"] for f in run(pin, *extra) if f["code"] == "LC006"]
+            if got:
+                problems.append(f"on a join's branch at {pin} {extra or 'without --base'}: "
+                                f"LC006 on {got}, quiet as before")
+
+        # A withdrawn change brought back, on any branch.
+        repo.git("checkout", "-q", "-f", "main")
+        repo.git("checkout", "-q", "-b", "work/back")
+        repo.write("changes/CHG-001.md", chg("approved"))
+        said = "brought back out of `withdrawn`"
+        if not has(run(since, "--base", "main"), "BR006", text=said):
+            problems.append(f"at {since}: a change brought back out of withdrawn gave no BR006")
+        if has(run(before, "--base", "main"), "BR006", text=said):
+            problems.append(f"at {before}: BR006 on a change brought back, a rule of {since}")
+        repo.write("changes/CHG-001.md", chg("withdrawn", "withdrawn_by: [OD-001]\n"))
+
+        # `FW001` and `FW003` outside `require_all`, whatever the version; `FW004` and `FW005`
+        # inside.
+        repo.git("checkout", "-q", "-f", "main")
+        repo.write(".framework/expected-findings.yaml", "require_all: true\nexpected: []\n")
+        ahead = f"{int(REGISTRY['version'].split('.')[0]) + 1}.0.0"
+        # A commit this framework has, and not the one running: a checkout that moved.
+        older = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD~1"],
+                               capture_output=True, text=True)
+        if older.returncode != 0:
+            problems.append("git history is not available here, so FW003 outside require_all "
+                            "is not checked")
+        else:
+            repo.write("framework.yaml", f'framework_version: {ahead}\n'
+                                         f'framework_commit: "{older.stdout.strip()}"\n')
+            rc, out, err = repo.validate()
+            found = (out or {}).get("findings", [])
+            if not has(found, "FW001") or not has(found, "FW003") \
+                    or has(found, "AN003", text="[FW001]") \
+                    or has(found, "AN003", text="[FW003]"):
+                problems.append(f"FW001 {has(found, 'FW001')}, FW003 {has(found, 'FW003')}, "
+                                "and an AN003 on FW001 or FW003: "
+                                f"{[f['message'][:12] for f in found if f['code'] == 'AN003']}")
+        # `0000000` is a number to YAML: `FW005` says so whether or not the framework has a
+        # history, and it is the line's own fault, so `require_all` counts it.
+        repo.write("framework.yaml", f"framework_version: {ahead}\nframework_commit: 0000000\n")
+        rc, out, err = repo.validate()
+        found = (out or {}).get("findings", [])
+        if not has(found, "FW005") or not has(found, "AN003", text="[FW005]") \
+                or has(found, "FW003"):
+            problems.append(f"a pin of digits: FW005 {has(found, 'FW005')}, AN003 on it "
+                            f"{has(found, 'AN003', text='[FW005]')}, FW003 "
+                            f"{has(found, 'FW003')}: the line's own fault is counted")
+        if not has(run(f"{major}.{minor}"), "AN003", text="[FW004]"):
+            problems.append("a framework_version of two numbers: no AN003 on FW004 under "
+                            "require_all")
+        # On a thread, from 4.12.0, the same pin is the join's to count, as every warning but
+        # the two of the exchange: `FW005` said, and no `AN003` on it.
+        repo.git("checkout", "-q", "-b", "work/pin")
+        repo.write("framework.yaml", f"framework_version: {since}\nframework_commit: 0000000\n")
+        rc, out, err = repo.validate()
+        found = (out or {}).get("findings", [])
+        if not has(found, "FW005") or has(found, "AN003", text="[FW005]"):
+            problems.append(f"a pin of digits on a thread at {since}: FW005 "
+                            f"{has(found, 'FW005')}, AN003 on it "
+                            f"{has(found, 'AN003', text='[FW005]')}: the join's to count")
+
+    # In any mode: the same change brought back in a project without the additive mode.
+    with tempfile.TemporaryDirectory() as tmp:
+        plain = _Repo(Path(tmp) / "docs")
+        plain.write("OPEN.md", _open_register({"OD-001": "open"}))
+        plain.write("changes/CHG-001.md", chg("withdrawn", "withdrawn_by: [OD-001]\n"))
+        plain.commit("base", "2026-06-01T09:00:00+02:00")
+        plain.git("checkout", "-q", "-b", "back")
+        plain.write("changes/CHG-001.md", chg("approved"))
+        for pin, want in ((since, True), (before, False)):
+            plain.write("framework.yaml", f"framework_version: {pin}\n")
+            rc, out, err = plain.validate("--base", "main")
+            got = any(f["code"] == "BR006" and "brought back out of `withdrawn`" in f["message"]
+                      for f in (out or {}).get("findings", []))
+            if out is None or got != want:
+                problems.append(f"without the additive mode, pinned at {pin}: BR006 on a change "
+                                f"brought back {got}, {want} expected (exit {rc}) "
+                                f"{err.strip()[-200:]!r}")
+    return problems
+
+
 @check("with `rereading: optional` a join's text owes no reading until `unread_days`, and the to-do lists it")
 def _join_text_owes_no_reading():
     # What a join signed by somebody who decides and landed with a merge naming it brought is
@@ -11565,6 +11818,27 @@ def _join_text_owes_no_reading():
                       "products/z/PBR.md": 0}:
             problems.append(f"the to-do does not list what a join brought and nobody read: "
                             f"{unread} (exit {r.returncode}) {r.stderr.strip()[-200:]}")
+        # Where the main line pins the version that makes `optional` the default, the to-do reads
+        # `rereading` unwritten as the validator does, and lists the same. Undone after.
+        default_since = _load(VALIDATE, "validate").REREADING_OPTIONAL_SINCE
+        repo.write(".framework/work.yaml", work.replace("rereading: optional\n", ""))
+        repo.write("framework.yaml", f"framework_version: {default_since}\n")
+        repo.commit("rereading unwritten, pinned where it defaults to optional", ago(0.08))
+        repo.git("push", "-q", "origin", "main")
+        r = subprocess.run([sys.executable, str(todo_py), "--root", str(repo.path), "--json"],
+                           capture_output=True, text=True)
+        try:
+            listed = {u["path"] for u in json.loads(r.stdout).get("unread") or []}
+        except (json.JSONDecodeError, AttributeError):
+            listed = set()
+        want_unread = {"products/p/PBR.md", "products/q/PBR.md", "products/t/PBR.md",
+                       "products/z/PBR.md"}
+        if listed != want_unread:
+            problems.append(f"the to-do, rereading unwritten and pinned at {default_since}: "
+                            f"{sorted(listed)}, {sorted(want_unread)} expected "
+                            f"(exit {r.returncode}) {r.stderr.strip()[-200:]}")
+        repo.git("reset", "-q", "--hard", "HEAD~1")
+        repo.git("push", "-q", "-f", "origin", "main")
 
         # A thread brings the main line in: nothing is owed on a branch of the mode, and `sync`
         # says nothing; where the rereading is required it says what it always said.

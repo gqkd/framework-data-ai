@@ -59,7 +59,9 @@ VALIDATE_REL = "skills/audit/scripts/validate.py"
 # clears `FW003` is `--adopt` writing the pin. So pinning made adopting impossible, and the
 # way out was to delete the pin -- the field's own purpose, undone by the tool that exists to
 # move it.
-ADOPT_CLEARS = ("FW001", "FW002", "FW003")
+# `FW004`, since 4.12.0, is the version line that is not three numbers, and `FW005` the pin
+# line that is a number or not a commit at all: `--adopt` writes both.
+ADOPT_CLEARS = ("FW001", "FW002", "FW003", "FW004", "FW005")
 
 # `AN003` names the finding it is about in square brackets at the head of its message.
 ANNOTATION_SUBJECT = re.compile(r"^\[([A-Z]{2,3}\d{3})\]")
@@ -298,7 +300,7 @@ def previous_framework(args, declared, root, framework):
                               and not args.from_version else None)
     if pin is not None:
         # A hash made only of digits is a number to YAML, and this is the first thing that
-        # reads the pin in an adoption: said as such, as `FW003` says it.
+        # reads the pin in an adoption: said as such, as `FW005` says it.
         if isinstance(pin, int) and not isinstance(pin, bool):
             raise RuntimeError(f"framework_commit is {pin}, a number: YAML reads a hash made "
                                "only of digits as one, and one that starts with 0 may not "
@@ -933,7 +935,7 @@ def adopt(cfg: Path, version: str, commit: str | None, drop=()) -> str | None:
     the reasoning this framework asks people to write down.
     """
     # Quoted, always. A bare `2.7` is a decimal to YAML and a bare `3` a whole number,
-    # and `FW001` reports both as unusable -- which would be this tool writing the
+    # and `FW004` reports both as unusable -- which would be this tool writing the
     # finding it exists to clear.
     declared = f'framework_version: "{version}"'
     if not cfg.exists():
@@ -1103,13 +1105,16 @@ def main() -> int:
                     # it. There is now, and the guard keeps its meaning: it blocks on
                     # work outstanding, and an examined finding is not outstanding.
                     # AND THE SAME DEADLOCK RETURNS ONE LEVEL UP, THROUGH THE
-                    # ANNOTATION. A repository that asks for `require_all` gets an
+                    # ANNOTATION. A repository that asks for `require_all` got an
                     # `AN003` for every unannotated warning -- including the `FW001` and
                     # `FW003` that exist only because this migration has not happened
-                    # yet. That `AN003` is not in `ADOPT_CLEARS`, so it landed under NEW
-                    # and refused the adoption that would have removed the finding it
-                    # was reporting about. The only ways out were to annotate a finding
-                    # that is about to vanish -- which the next run reports as `AN001`,
+                    # yet; since 4.12.0 those two are outside `require_all`, and the
+                    # `AN003`s left are on `FW004`, a version line that is not three
+                    # numbers, and `FW005`, a pin line that is a number or not a commit at
+                    # all. Such an `AN003` is not in `ADOPT_CLEARS`, so it landed
+                    # under NEW and refused the adoption that would have removed the
+                    # finding it was reporting about. The only ways out were to annotate
+                    # a finding that is about to vanish -- which the next run reports as `AN001`,
                     # obsolete -- or to stop asking for all annotations. Both punish the
                     # project for taking the framework seriously, which is the sentence
                     # written above about the pin, word for word. An annotation finding

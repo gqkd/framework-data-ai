@@ -218,13 +218,14 @@ framework moved, and a skill that writes new repositories was seeding every one 
 with a version that was already wrong — an `FW001` on day one, on the file whose entire job
 is to tell a migration from a mistake. A literal here is a count in prose with a longer
 fuse, and there is a selfcheck against it now. If the `N.N.N` does reach a `framework.yaml`
-by accident, `FW001` says so: it is not three numbers separated by dots. A stale version
+by accident, `FW004` says so -- an `FW001` before 4.12.0: it is not three numbers separated by
+dots. A stale version
 produces no such sentence, which is the whole difference.
 
 **All three parts.** The version is the plugin's version too, so it is a three part string
 and the two shortenings anybody reaches for are both wrong in a way YAML hides: a bare
 `1.1` comes back a decimal and a bare `2` comes back a whole number, and neither can be
-compared with a version at all. `FW001` names both cases rather than reporting a skew,
+compared with a version at all. `FW004` names both cases rather than reporting a skew,
 because a skew tells you to migrate and there is nothing to migrate to.
 
 `scan` is the other half, and only when the project holds code. Without it the first run

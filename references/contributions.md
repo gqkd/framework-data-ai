@@ -363,7 +363,11 @@ what a mandate created outside the repositories serves the work up to the merge.
 that two documents declare is done only when both say so. All seven are warnings, and five do
 not count for `require_all`: `EXC001`-`EXC004` and `EXC007` are the upkeep of a folder that
 differs from one machine to the next. `EXC005` and `EXC006` do, because each can say that
-something is exposed: a credential, an exchange inside a git repository.
+something is exposed: a credential, an exchange inside a git repository -- and from 4.12.0
+pinned, or no version that reads, they are the only warnings `require_all` counts on a thread's
+or a parking branch, since the join, run on another machine, never sees them; there the way out
+is the repair. Since 4.12.0 `FW001` and `FW003` do not count either: they say which validator,
+and which commit of the framework, a machine runs.
 
 The rule has to reach sessions that run no skill, which only the project's `AGENTS.md` does.
 The template's section *Sessions and the exchange* says it, and `migrate.py --adopt` writes

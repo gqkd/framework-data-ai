@@ -198,10 +198,14 @@ checks:
       Without the field there is no way to notice the document has gone stale, and a stale
       living document is worse than an absent one because it gets read as current.
 
-      Quiet, in the additive mode with `rereading: optional`, on a document born in a join and
-      on every document of a branch of the mode: a join waits for no reading there, and `LC009`
-      reminds of it instead. A document that lacked the field before a join changed it, or whose
-      last change came outside a join, still owes it.
+      Quiet, in the additive mode with `rereading: optional` -- from 4.12.0 pinned, or no
+      version that reads, the default of the mode, where `work.yaml` does not write `required`
+      --, on a document born in a join and on every document of a thread's or a parking branch:
+      a join waits for no reading there, and `LC009` reminds of it instead. A document that
+      lacked the field before a join changed it, or whose last change came outside a join, still
+      owes it. On the branch of a join, from 4.12.0 pinned, or no version that reads, and with
+      `--base`, it is read as on the main line after the merge, what the join brings counted as
+      a join's; without `--base` it is quiet there as on a thread.
 
   LC002:
     level: warn
@@ -339,9 +343,16 @@ checks:
       names the join's branch and the signer is an admin or a deputy of that first parent, or
       holds a delegation whose tag is older than that merge. A commit made on the join's branch after it was signed, a join signed
       by a contributor, one landed by a fast-forward, and a text that reached the main line any
-      other way are reported, as before. On a branch of the mode -- a thread, a parking branch,
-      a join's -- nothing is, since what is written there reaches the main line through a join;
-      the message of `sync`, which repeats what this says of its merge, says nothing either.
+      other way are reported, as before. On a thread's or a parking branch nothing is, since what
+      is written there reaches the main line through a join; the message of `sync`, which
+      repeats what this says of its merge, says nothing either. On the branch of a join, from
+      4.12.0 pinned, or no version that reads, and with `--base`, the documents are read one by
+      one as on the main line after the merge: what the tip holds and the base does not is the
+      join's, quiet, and dated today for `LC009`, while a text that reached the main line by
+      another road speaks, so an annotation finds its finding before the merge; without
+      `--base`, or below 4.12.0 pinned, nothing is said there either. From the same version
+      `rereading: optional` is the default of the additive mode, and `required` written keeps
+      every text owed, on a thread too, where this stays a warning.
       `LC009` is the reminder that a join's text has waited unread longer than the project
       allows.
 
@@ -1021,6 +1032,24 @@ checks:
       learn to clear without reading, and this check is the one that has to be believed
       on the day the rules really do move.
 
+      Since 4.12.0 `require_all` does not count it: it says which validator runs on a machine,
+      not what the documents say, and CI, which checks out the framework the project pins, does
+      not see it -- it does where it checks out another, as a project declaring a version older
+      than 4.8.1 may, `ci/pull-request.yml` says --, so an annotation on it would read as
+      obsolete there. A version that is
+      not three numbers is `FW004`.
+
+  FW004:
+    level: warn
+    title: framework_version is not three numbers
+    prevents: >
+      A version nobody can compare, read as a skew. In YAML a bare `4` is a whole number and a
+      bare `4.12` a decimal, and neither can be compared with the registry's version: reported
+      as a mismatch, it sends somebody looking for a migration that does not exist. Until 4.12.0
+      it was an `FW001`; it has a code of its own because it is the document's, and CI sees it,
+      so `require_all` counts it, while `FW001` says only which validator a machine runs. The
+      rules that follow a version hold for such a project as for one that pins nothing.
+
   FW002:
     level: info
     title: the repository does not say which framework version it was written against
@@ -1040,6 +1069,14 @@ checks:
       the repository records. `framework_commit` is the project writing the commit down, and
       this is what makes writing it down mean something.
 
+      Since 4.12.0 it says only the commit a machine runs -- a checkout that moved, or one
+      without the pinned commit, which its message sends to fetch before reading the pin as
+      never true --, and `require_all` does not count it, for the reason it does not count
+      `FW001`: without a fetch, which the validator does not make, a commit absent from the
+      checkout cannot be told from one adopted elsewhere and not fetched yet, and CI, which
+      checks the pin out, fails on one that does not exist before the validator runs. What is
+      wrong with the line itself, a number or a name that is not a commit, is `FW005`.
+
       It is silent when the field is absent, and that is correct rather than a gap: pinning
       costs a deliberate bump for every fix the framework ships, and a project with one
       developer and no CI has no reason to pay that yet. It is also silent when the framework
@@ -1055,7 +1092,21 @@ checks:
       is present. Reading this at the end of a report has a precondition that the fault
       itself removes. Both entry points therefore say the same thing on stderr before they
       scan anything; that line is not a second check and takes no decision, it is this
-      finding said where the circularity cannot swallow it.
+      finding said where the circularity cannot swallow it, whether or not the framework has
+      the commit. It is not said on a shallow checkout, nor on a pin that is not a commit
+      (`FW005`).
+
+  FW005:
+    level: warn
+    title: framework_commit is not a commit
+    prevents: >
+      A pin that cannot be true. A hash made only of digits is a number to YAML, and one that
+      starts with 0 may not come back as written; a branch or a tag name moves, which is the
+      state the field exists to leave. Neither is a migration to read. Until 4.12.0 they were an
+      `FW003`; they have a code of their own because they are the document's, and CI sees them,
+      so `require_all` counts them, while `FW003` says only which commit a machine runs. A
+      commit the framework checkout does not have stays an `FW003`: without a fetch it cannot be
+      told from one adopted elsewhere that the checkout has not fetched yet.
 
   # ── Findings a project has examined and left standing ──────────────────────
   #
@@ -1120,7 +1171,21 @@ checks:
       never sees. A ruling on them would go into a file every machine shares, which in the
       additive mode only an admin writes, at a join. Not what exposes something -- `EXC005`, a
       credential, and `EXC006`, which says among other names an exchange inside a git
-      repository --, nor `EXC008`, which reads the value committed, the same everywhere.
+      repository --, nor `EXC008`, which reads the value committed, the same everywhere. Since
+      4.12.0, whatever version the project pins, `FW001` and `FW003` are outside it too: which
+      validator and which commit of the framework a machine runs, a newer one being the normal
+      state between a plugin updated and an adoption, which CI, checking out the framework the
+      project pins, does not see -- it does where it checks out another --; `FW004`, a version
+      that is not three numbers, and `FW005`, a pin that is a number or not a commit at all, are
+      the document's and are counted. The line: what is the document's, or exposes something,
+      is counted; what says only the state of a machine is not.
+
+      From 4.12.0 pinned, or no version that reads, on a thread's or a parking branch of the
+      additive mode it fires only on `EXC005` and `EXC006`: the join counts the other warnings,
+      where an admin annotates them or has the text reread, and a contributor cannot annotate.
+      Those two can say an exposure on the machine the session runs on -- `EXC006` among other
+      names --, which the join, run on another one, never sees; there the way out is the repair.
+      On the branch of a join it fires as on the main line.
 
   LOC001:
     level: warn
@@ -1633,8 +1698,8 @@ checks:
     level: warn
     title: a choice of form a thread took by default, which the join cannot show
     prevents: >
-      A default confirmed without being seen. From 4.12.0, on the branch of a thread or of a
-      parking line, what is placement, form or the classification of an `ICG` is not asked: the
+      A default confirmed without being seen. From 4.12.0 pinned, on the branch of a thread or of
+      a parking line, what is placement, form or the classification of an `ICG` is not asked: the
       session takes the default, writes it, and notes it in `_filoni/<slug>/scelte.md`, one row
       of one table per choice -- `Scelta`, `Preso`, `Alternative`, `Perché` --, which the join
       shows to whoever decides, to confirm or change. A line outside the table, a row without
@@ -1740,7 +1805,7 @@ checks:
       for what belongs to no thread) is checked the same way. Runs with `--base`.
   BR006:
     level: warn
-    title: a change contract withdrawn, or its forecast moved, when or where it may not be
+    title: a change contract withdrawn, brought back, or its forecast moved, when or where it may not be
     prevents: >
       The fields that move in place on an immutable `CHG` since 4.10.0 -- `status: withdrawn`
       with `withdrawn_by`, and `affects` -- moving without anybody deciding it. In any mode: a
@@ -1750,8 +1815,11 @@ checks:
       withdrawal, a `withdrawn_by` or the forecast of an approved change written on a branch
       that is not a join -- a contributor proposes them as a `DEC` `proposed` and a parking
       line --; and on a join, a change withdrawn that a thread it merges carried out, or that
-      an open thread holds. Against every point where the branch left the main line; the join
-      prints it before it is pushed. Runs with `--base`.
+      an open thread holds. From 4.12.0 pinned, or no version that reads, in any mode, a change
+      brought back out of `withdrawn`: the states of a `CHG` go forward, and what a withdrawn one
+      would have done comes back as a new `CHG`, deriving from it or from the decision. Against
+      every point where the branch left the main line; the join prints it before it is pushed.
+      Runs with `--base`.
   WK001:
     level: warn
     title: a key, a value or a threshold in .framework/work.yaml that this version does not read

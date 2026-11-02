@@ -670,7 +670,7 @@ def compute(root: Path, remote: str, main: str) -> dict:
     # `LC009` reads it, a bare `last_review` in the offset of the commit that wrote the line.
     # A shallow clone has no history to read it from, and the to-do says so rather than stop.
     unread: list[dict] | None = []
-    if work.get("rereading") == "optional":
+    if v.rereading_optional(work, pinned if isinstance(pinned, dict) else {}):
         repo = None
         try:
             # A refusal here leaves the rest of the to-do standing: what it would print is

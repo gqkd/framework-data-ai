@@ -197,7 +197,7 @@ that leaves the decision where the next person will find it.
 `.framework/expected-findings.yaml`, at the project's root:
 
 ```yaml
-require_all: false        # optional; `true` makes every unannotated warning an error, five of the exchange excepted
+require_all: false        # optional; `true` makes every unannotated warning an error, but those AN003 names
 expected:
   - code: REG015
     path: OPEN.md
@@ -219,7 +219,7 @@ Three things it will not let you do, and each is an `error`:
 |---|---|
 | `AN001` | an annotation matching no finding. The claim is about nothing, and a reason left standing for a finding that is gone reads as current. When the finding is repaired, the annotation goes with it |
 | `AN002` | an annotation on a finding reported at `error`. An error that can be explained away in one project has stopped being an error. If the check is wrong the repair is in the framework, not in a paragraph here |
-| `AN003` | a warning with no annotation, only where `require_all: true` says the list has to be complete. Not on `EXC001`-`EXC004` and `EXC007`, the upkeep of the exchange, a folder that differs on every machine: a list in a shared file cannot rule on them |
+| `AN003` | a warning with no annotation, only where `require_all: true` says the list has to be complete. Not on `EXC001`-`EXC004` and `EXC007`, the upkeep of the exchange, a folder that differs on every machine: a list in a shared file cannot rule on them; since 4.12.0 not on `FW001` and `FW003`, which say which validator and which commit of the framework a machine runs, while `FW004` and `FW005`, the version or the pin line that is wrong, are the document's and count; and from 4.12.0 pinned, or no version that reads, on a thread's or a parking branch, whose warnings the join counts, only on `EXC005` and `EXC006`, which can say an exposure on that machine the join never sees, and whose way out is the repair |
 
 **You may propose an annotation. You do not write one on your own.** It is a decision about
 what this repository accepts, with the same weight as `XP003: off` in `framework.yaml`, and
@@ -473,9 +473,12 @@ after a fast-forward the main line comes in the same run, after a merge on the n
 two texts of which one holds, and when the text is a decision's, which one holds is for
 whoever decides that matter: show both, with their branch and author, and ask. After a merge,
 the living documents it produced owe a reading -- a merge records no reading, and `LC006` says
-so -- which the person attests. Not where `.framework/work.yaml` says `rereading: optional`:
-there nothing is owed on the branches of the additive mode, a join's text owes nothing either,
-and `LC009` reminds of what a join brought once it has waited past `thresholds.unread_days`.
+so -- which the person attests. Not where `.framework/work.yaml` says `rereading: optional`,
+from 4.12.0 pinned, or no version that reads, the default of the additive mode where it says
+nothing: there nothing is owed on a thread's or a parking branch, a join's text owes nothing
+either -- on the join's branch read with `--base`, from the same version, it is read as on the
+main line after the merge --, and `LC009` reminds of what a join brought once it has waited
+past `thresholds.unread_days`.
 
 Before a pull request is proposed for merging, fetch, and run the validator against the main
 line as the remote has it now -- a stale `origin/main` passes what the real one would not:
@@ -490,7 +493,9 @@ with a new reservation. `BR002` is a decision deciding an entry the main line ha
 closed: put the two decisions side by side for the person, and do not choose. `BR003` is a
 number written without a reservation. `BR006` is a mandate withdrawn, or its forecast moved,
 when or where it may not be: say which of its cases it is, and leave the move to who decides,
-at a join. `ci/branches.yml` runs the same comparison on every pull
+at a join. From 4.12.0 pinned, or no version that reads, it is also a mandate brought back out
+of `withdrawn`: it stays withdrawn, and what it would have done comes back as a new `CHG`,
+deriving from it or from the decision. `ci/branches.yml` runs the same comparison on every pull
 request, and opens an issue for what reaches the main line without one.
 
 ## The exchange between sessions
@@ -559,10 +564,13 @@ findings:
   version.
 - **gone** — reported only by the old one. Cleared by the move.
 
-`FW001` and `FW002` are printed apart from those three, under *the version line itself*.
-They are new on every migration by construction — they are the finding that says the two
-numbers disagree — and what clears them is `--adopt`, not an edit to any document. Reporting
-them as migration work sends somebody looking for a repair that does not exist.
+`FW001` to `FW005` are printed apart from those three, under *the version line itself*.
+`FW001` is new on every migration by construction — it is the finding that says the two
+numbers disagree —, `FW004` and `FW005`, a version that is not three numbers and a pin that is
+not a commit, reach the comparison only with `--from`, and what clears each of them is
+`--adopt` — or, for an `FW003` on a commit the checkout does not have, a fetch —, not an edit
+to any document. Reporting them as migration work sends somebody looking for a repair that
+does not exist.
 
 It also prints the migration note for every version crossed, read out of
 `schemas/artifact-types.yaml` where it is written beside the number it explains, and the
