@@ -160,19 +160,25 @@ merged, by the framework plugin's `framework-data-ai:reviser` subagent: it runs 
 hands back in a few lines what a person has to settle, with a diff that cites a `CHG` held to
 what must not change. Give it the diff as a file, new files included
 (`git diff --no-index /dev/null <file>`, which exits 1 when it writes one), with the root of
-its working tree, or the plan as a file, the absolute path of the `CHG`, and a file in your
+its working tree, or the plan as a file, with the root of this repository and whether it is a
+brief, the absolute path of the `CHG`, the absolute path of
+`FRAMEWORK_PATH`, where the critic reads the rules the work invokes, and a file in your
 scratchpad for its log. Whenever its fixes or yours change files, run the tests and the
 validator again and write the diff again. Present the work with what it hands back, each
 objection answered or left with why, and none on the substance presented as settled. Exempt:
 the parking-lot line, the `SIG` appended to `LOG`, and the commit a script makes of its own
-output.
+output. On the branch of a thread or of a parking line, where this project pins 4.12.0 or
+later, or no version that reads, ask it for one pass: the substance it hands back is yours to
+fix or to bring to the join, whose review is whole. A brief keeps up to three passes: it
+reaches no join.
 
-If the reviser is not available, or cannot launch the critic, run the critic yourself, or a
-general-purpose agent told to follow `FRAMEWORK_PATH/agents/critic.md` with read-only tools,
-and say so; fix the objections on the proposal, show the others, and ask again on your
-corrections and on the points it left out only when `FRAMEWORK_PATH/agents/reviser.md`
-would, at most three passes. If you cannot run a subagent at all, say that the review did
-not run. A review that did not run is said, never skipped in silence.
+If the reviser is not available, or cannot launch the critic, run the critic yourself, with
+the absolute path of `FRAMEWORK_PATH`, or a general-purpose agent told to follow
+`FRAMEWORK_PATH/agents/critic.md` with read-only tools, and say so; fix the objections on the
+proposal, show the others, and ask again on your corrections and on the points it left out
+only when `FRAMEWORK_PATH/agents/reviser.md` would, with the passes it would have. If you
+cannot run a subagent at all, say that the review did not run. A review that did not run is
+said, never skipped in silence.
 
 Write only inside this repository and its worktrees, the exchange -- `_scambio` beside the
 repositories, and the folder `.framework/sessions.yaml` declares, if it declares one -- and

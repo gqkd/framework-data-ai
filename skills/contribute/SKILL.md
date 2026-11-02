@@ -124,7 +124,9 @@ living document changed in a way that is not additive -- move the change into an
 as `audit` says; `BR006` a mandate withdrawn or its forecast moved off a join -- take it out
 and propose it, a withdrawal as a `DEC` `proposed`, a forecast on a parking line --; `EFF001` is an effects file that does not read,
 `AFF001` an anchor that does not exist. Then the review the preamble asks for, on the diff of the
-branch against `origin/main`, effects included, with `_filoni/<slug>/revisione.md` as its log.
+branch against `origin/main`, effects included, with `_filoni/<slug>/revisione.md` as its log:
+one pass, where the project pins 4.12.0 or later, or no version that reads, and the substance it
+leaves is the contributor's to fix or to bring to the join.
 Then the push, and `work.py --root <thread worktree> sync` whenever the main line has moved --
 on a parking branch not yet complete, `sync --no-push`:
 never `git merge` and never a rebase, which `audit` explains.
@@ -189,7 +191,14 @@ branch of its own, by these steps:
    the parking lot, writes the anchors of the entries that have none, and writes what only
    those who decide write: a release, a change `verified`, the freeze of the evaluation plan.
 3. `python3 "$F/validate.py" --root <join worktree> --emit-index`, then the validator again.
-4. The review the preamble asks for, on the diff of the living documents; its log goes to
+4. The review the preamble asks for, on the diff of the living documents -- from 4.12.0 pinned,
+   or no version that reads, whole, on the diff of the join's branch against `origin/main`:
+   everything the threads bring and what the join writes, the living documents rewritten
+   included, and a join that brings only states reviewed too; with it, the log of each thread
+   and parking branch merged, `_filoni/<slug>/revisione.md` in the join's worktree, whose
+   substance left open is reviewed again against that diff; what whoever decides corrects of
+   the substance it hands back goes to the reviser again, relaunched with those corrections,
+   as `agents/reviser.md` says --; its log goes to
    `_filoni/ricongiungimento-<n>/revisione.md`, committed before the next step.
 5. `join --finish --who "<name>"` removes `_filoni/` and signs the branch; `join --merge --who
    "<name>"` lands it on the main line, by a merge of its own, and releases what it landed. A

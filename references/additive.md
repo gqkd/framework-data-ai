@@ -155,7 +155,12 @@ which describe the machine it came from, leave the table for a note
 
 The reviewer's log of a thread is `_filoni/<slug>/revisione.md` on its branch, appended to and
 never rewritten, and that of a join `_filoni/ricongiungimento-<n>/revisione.md`: both stay in the
-history when `--finish` removes the folder.
+history when `--finish` removes the folder. Where the project pins 4.12.0 or later, or no
+version that reads, the review on a thread or on a parking line is one pass -- the slips fixed,
+the substance left to the contributor or to the join --, and the join's is whole, up to three
+passes, on everything the threads and parking branches bring and on the substance their logs
+left open, with the corrections of whoever decides read again; a brief keeps up to three
+passes wherever it is written (`references/preamble.md`, the review).
 
 ## The rereading
 

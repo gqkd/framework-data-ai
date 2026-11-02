@@ -159,8 +159,12 @@ of it.
 - **a plan** -- the proposal table above, a classification, a brief, any work you are about
   to ask the person to approve -- before you show it. Write it to a file in your scratchpad,
   or a brief that goes to the exchange to its place there, pass its path as the one file the
-  reviser may write, and show the plan as that file holds it afterwards. Its rows or its
-  numbered points are what the critic answers on.
+  reviser may write, with the root of its repository, and show the plan as that file holds it
+  afterwards. Its rows or its numbered points are what the critic answers on: on a plan, where
+  the repository under review pins 4.12.0 or later, or no version that reads, with the
+  substance and the errors of fact; what the plan leaves incomplete it lists in a line, for the
+  review of the diff. A brief is the exception, and you say it is one: no review of a diff
+  reads it again, and what it leaves out is an objection.
 - **a diff** -- what the run wrote, after the validator and before the two closing blocks.
   Write `git diff` of the files you touched to a file in your scratchpad and pass its path,
   the root of the working tree -- the reviser may write there the files the diff touches, and
@@ -178,10 +182,27 @@ is the person's to settle, and is never presented as settled. Exempt: the two wr
 that need no asking, a `SIG` appended to `LOG` and a line in the parking lot, and the commit
 a script makes of its own output.
 
+Pass it, every time, the absolute path of this framework, the parent of `references/`: the
+critic reads there the rules the work invokes before saying a procedure exists.
+
+**On a thread, one pass; at the join, the whole review.** In the additive mode, where the
+project pins 4.12.0 or later, or no version that reads, ask the reviser for one pass on the
+branch of a thread or of a parking line: it fixes the slips and does not relaunch, and what is
+substance goes to the contributor, who fixes it or brings it to the join, written in the
+thread's log. The join has the review whole, up to three passes, on everything the threads
+bring, with the logs of the threads and parking branches it lands, whose substance left open
+the critic reads again; what whoever decides corrects of the substance it hands back, the
+reviser reads again, relaunched with those corrections, among the three passes or, once they
+are spent, in one more on them alone (`contribute`, the join). A brief keeps up to three
+passes wherever it is written: it reaches no join, and a code session follows it to the
+letter. Where the project pins less, every review is up to three passes, as before.
+
 If the reviser is not in this session, or says it could not launch the critic, run the
-critic yourself: fix the objections on the proposal, run the validator again, show the
-others, and ask it again on your corrections and on the points it left out only when
-`agents/reviser.md` would, at most three passes. If the critic is
+critic yourself, with this framework's path: fix the objections on the proposal, run the
+validator again, show the others, and ask it again on your corrections and on the points it
+left out only when `agents/reviser.md` would, with the passes it would have -- three at most,
+one where the paragraph above asks for one, and on the corrections of whoever decides one more
+once the three are spent. If the critic is
 not in this session either -- the plugin was installed or updated after the session started,
 or the framework is read from a checkout with no plugin enabled -- run a general-purpose
 agent told to read `agents/critic.md` in the framework directory this file sits in, the

@@ -244,9 +244,11 @@ Done when          CHG-NNN §how-we-know-it-worked
                    the diff, new files included (git diff --no-index /dev/null <file>,
                    which exits 1 when it writes one), reviewed before it is committed by
                    framework-data-ai:reviser, which runs framework-data-ai:critic, given
-                   <absolute path of CHG-NNN> and a file in the session's scratchpad for
-                   its log; where the reviser cannot run, by the critic alone, or by a
-                   general agent following <framework>/agents/critic.md read only, its
+                   <absolute path of CHG-NNN>, the absolute path of <framework>, where
+                   the critic reads the rules the work invokes, and a file in the
+                   session's scratchpad for its log; where the reviser cannot run, by
+                   the critic alone, or by a general agent following
+                   <framework>/agents/critic.md read only, its
                    objections on the proposal fixed and asked again as
                    <framework>/agents/reviser.md says; if files changed after the review,
                    the checks above run again; what it hands back, each objection
