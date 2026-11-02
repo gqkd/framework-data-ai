@@ -661,11 +661,15 @@ checks:
       promise by somebody who never opened the register. What closes the window is an event
       -- the second customer, the first line of code written against it, the signature -- or
       entry: `depends_on` for one before the other, `decide_with` for two that have to be
-      taken together. Every date is reported and not only a bare one, because a date beside
-      an event is still the half that gets quoted back. Read on `open` entries only: a
-      decided one has spent its trigger. The digits are what is matched, so "by the end of
-      the quarter" passes -- that is a limit of the check and not permission, and the
-      template says so where a person is writing the line.
+      taken together. A date beside an event is reported as a bare one is, because it is
+      still the half that gets quoted back. Read on `open` entries only: a decided one has
+      spent its trigger. The digits of a year or of a full date are what is matched, so "by
+      the end of the quarter" passes, and so does "15/10" -- that is a limit of the check and
+      not permission, and the template says so where a person is writing the line. A code
+      is not a date: naming another entry is what this asks for, and `KI-2015` carries four
+      digits, so two capitals or more, a hyphen and a number are left out before the trigger
+      is read, in the narrow form `REG010` gives, where the project pins 4.12.0 or later, or
+      no version that reads.
 
   REG010:
     level: warn
@@ -1244,7 +1248,8 @@ checks:
       `warn` rather than `error`, and the same limit stated openly: this catches a year or a
       day-first date, and it cannot catch "by the end of the quarter". The template says an
       event, the catalog says an event, and this reports the half that can be reported without
-      guessing.
+      guessing. A code in the event -- the repair of `KI-2015` -- is not a date, in the form
+      and from the version `REG009` gives.
 
   ICG001:
     level: info    # the first `info` in this catalog, and the reason is below
@@ -1496,7 +1501,11 @@ checks:
     prevents: >
       `state: delivered` on an increment whose required decisions or issues are still open,
       or whose changes are not verified. The presentation and the business update retell the
-      roadmap, and would show as done what the registers say is not.
+      roadmap, and would show as done what the registers say is not. The changes of an
+      increment are those of the roadmap's folder that carry it, and those its `changes:`
+      lists: increments are numbered per product, and a change of another folder deriving
+      from an `INC-001` of its own held this one's open, by the number alone. Read by folder
+      where the project pins 4.12.0 or later, or no version that reads.
   RMP005:
     level: warn
     title: the name of a stage or of its milestone carries a date
@@ -1504,7 +1513,8 @@ checks:
       A date in the one document that has none by design. A milestone called "demo on 15/10"
       puts a term of time in the roadmap that no field records and nothing reports going
       stale, while the date the digest draws is the one declared in its state: two dates for
-      one milestone, and the one in the roadmap is the one people read.
+      one milestone, and the one in the roadmap is the one people read. A code in the name --
+      "after KI-2015" -- is not a date, in the form and from the version `REG009` gives.
 
   # ── The exchange between sessions ──────────────────────────────────────────
   # Run only where `.framework/sessions.yaml` declares `exchange:` and the directory is here,

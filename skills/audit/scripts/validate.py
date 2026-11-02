@@ -164,6 +164,13 @@ DATE_IN_TEXT = re.compile(r"(?<!\d)(?:19|20)\d{2}(?!\d)"
 CODE_LIKE = re.compile(r"\b[A-Z]{2,}-\d+\b(?!-\d)")
 # Where a code stopped reading as a year: the first version whose rules leave it out.
 CODES_NOT_DATES_SINCE = "4.11.0"
+# The same, in the three other places that look for a date in what a person wrote: the
+# `trigger` of an open entry (`REG009`, which asks for another entry of the register to be
+# named there), the `settled_by` of a declaration (`UNA003`), the name and the milestone of a
+# stage (`RMP005`). A version of their own: a project pinning the one before may have
+# annotated one of them on a code, and the finding gone would turn the annotation into an
+# `AN001` before it adopts.
+CODES_NOT_DATES_IN_FIELDS_SINCE = "4.12.0"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -2828,7 +2835,8 @@ def check_product_of_the_directory(arts: list[Artifact], registry: dict,
                        "of that product lists it.")
 
 
-def check_unanswerable(arts: list[Artifact], registry: dict, report: Report) -> int:
+def check_unanswerable(arts: list[Artifact], registry: dict, report: Report,
+                       project: dict | None = None) -> int:
     """Fields a map entry declares it cannot answer, and how many there are.
 
     THE FAILURE THIS ANSWERS IS DESCRIBED IN THE REGISTRY AND WAS LEFT WITHOUT A REPAIR. Faced
@@ -2848,6 +2856,7 @@ def check_unanswerable(arts: list[Artifact], registry: dict, report: Report) -> 
     """
     types = registry["types"]
     declared = 0
+    codes_out = rules_hold(project or {}, CODES_NOT_DATES_IN_FIELDS_SINCE)
     for a in arts:
         maps = (types.get(a.type or "", {}) or {}).get("maps") or {}
         for field, rule in maps.items():
@@ -2895,7 +2904,9 @@ def check_unanswerable(arts: list[Artifact], registry: dict, report: Report) -> 
                                    "this was written to explain. It says it would be settled "
                                    f"by: {' '.join(str(decl.get('settled_by', '')).split())}")
                         continue
-                    if DATE_IN_TEXT.search(str(decl.get("settled_by") or "")):
+                    settled = str(decl.get("settled_by") or "")
+                    if DATE_IN_TEXT.search(CODE_LIKE.sub("", settled) if codes_out
+                                           else settled):
                         report.add("UNA003", a.rel,
                                    f"{key} says {name!r} would be settled by a date. It takes "
                                    "the event after which the field would have a true value, "
@@ -2961,6 +2972,7 @@ def check_open_register(arts: list[Artifact], report: Report, project: dict | No
     # line starting with `#` is a structure a person wrote on purpose, and a date in one is
     # addressed to whoever files an entry underneath it.
     codes_out = rules_hold(project or {}, CODES_NOT_DATES_SINCE)
+    codes_in_fields_out = rules_hold(project or {}, CODES_NOT_DATES_IN_FIELDS_SINCE)
     for a in opens:
         # A `#` inside a fenced block is a comment in somebody's example, not a heading, and
         # a bash snippet saying `# rigenerato il 2026-09-30` was reported as a heading
@@ -3078,13 +3090,17 @@ def check_open_register(arts: list[Artifact], report: Report, project: dict | No
             # What forces the decision, and a date on its own does not force anything. The
             # field was called `deadline` until 2.0.0, and a field named for a date collects
             # dates: an end of quarter that reads as a commitment and was picked because the
-            # line had to say something. A date inside a trigger is legitimate and stays
-            # silent -- "the external audit, 2026-10-31" says what arrives on the day. A bare
-            # does not, and the entry it sits on is by definition one nobody has decided.
+            # line had to say something. A date is reported bare or beside an event alike --
+            # "the external audit, 2026-10-31" -- because the date is the half that gets quoted
+            # back, on an entry that is by definition one nobody has decided. What is matched
+            # is a year or a full date, so "15/10" passes, as "by the end of the quarter" does.
+            # Where the project's rules hold `CODES_NOT_DATES_IN_FIELDS_SINCE`, a code is not a
+            # date: naming another entry is what this asks for.
             if row.get("status") == "open":
                 trg = row.get("trigger")
                 if isinstance(trg, (date, datetime)) or (
-                        isinstance(trg, str) and DATE_IN_TEXT.search(trg)):
+                        isinstance(trg, str) and DATE_IN_TEXT.search(
+                            CODE_LIKE.sub("", trg) if codes_in_fields_out else trg)):
                     report.add("REG009", a.rel,
                                f"{od} has a date in its `trigger`. A date does not force a "
                                "decision by arriving; something does, and the entry is open "
@@ -4152,7 +4168,14 @@ def roadmap_plan(meta: dict) -> dict:
             "stage_cycle": stage_cycle, "increment_cycle": inc_cycle}
 
 
-def check_roadmap(arts: list[Artifact], report: Report) -> None:
+# Where `RMP004` stopped counting against an increment the changes of another product that
+# derive from one with the same number. Increments are numbered per product, and a change is
+# of the product of its folder, as the to-do and the carrying read it; a change another
+# folder's roadmap lists in its `changes:` still counts, because that roadmap says so.
+INCREMENTS_OF_THE_FOLDER_SINCE = "4.12.0"
+
+
+def check_roadmap(arts: list[Artifact], report: Report, project: dict | None = None) -> None:
     """A roadmap's stages and increments against themselves and against the registers.
 
     Only a roadmap that declares the maps is read; one that does not is the roadmap of
@@ -4178,6 +4201,8 @@ def check_roadmap(arts: list[Artifact], report: Report) -> None:
                           and rel.replace("\\", "/").count("/") >= 2 else None)
     carried = carried_increments({c: dict(chg.meta, product=folder(chg.rel))
                                   for c, chg in changes.items()})
+    by_folder = rules_hold(project or {}, INCREMENTS_OF_THE_FOLDER_SINCE)
+    codes_out = rules_hold(project or {}, CODES_NOT_DATES_IN_FIELDS_SINCE)
 
     def bare(ref) -> str:
         return str(ref).split(":", 1)[-1].strip()
@@ -4310,7 +4335,8 @@ def check_roadmap(arts: list[Artifact], report: Report) -> None:
                 if any(e.get("status") in ("open", "parked") for _, e, _ in entries.get(r, [])):
                     still.append(r)
             mine = [c for c in changes
-                    if inc in carried.get(c, ())
+                    if (inc in carried.get(c, ())
+                        and (not by_folder or folder(changes[c].rel) == folder(a.rel)))
                     or c in (str(x) for x in as_list(row.get("changes")))]
             still += [c for c in sorted(mine)
                       if changes[c].meta.get("status") in ("draft", "approved", "implemented")]
@@ -4324,7 +4350,8 @@ def check_roadmap(arts: list[Artifact], report: Report) -> None:
         for s, row in stages.items():
             for what in ("name", "milestone"):
                 text = str(row.get(what) or "")
-                if DATE_IN_TEXT.search(text) or DAY_MONTH.search(text):
+                read = CODE_LIKE.sub("", text) if codes_out else text
+                if DATE_IN_TEXT.search(read) or DAY_MONTH.search(read):
                     report.add("RMP005", a.rel,
                                f"the {what} of stage {s!r} carries a date: {text!r}. The "
                                "roadmap has no dates by design; the date of a milestone "
@@ -5363,7 +5390,7 @@ def main() -> int:
     check_framework_pin(project, report)
     check_open_register(arts, report, project)
     check_manifest_derived_fields(arts, report)
-    unanswerable = check_unanswerable(arts, registry, report)
+    unanswerable = check_unanswerable(arts, registry, report, project)
     unenforced = check_placement(arts, registry, report)
     check_product_of_the_directory(arts, registry, report)
     attestations = read_attestations(arts, repo)
@@ -5381,7 +5408,7 @@ def main() -> int:
     check_triage(arts, report, references=references)
     check_stack(arts, report)
     check_cross_product(arts, report)
-    check_roadmap(arts, report)
+    check_roadmap(arts, report, project)
     work = load_work(root, report)
     exchange = check_exchange(root, *exchange_declared, arts, references, repo, work, report)
     if not (args.emit_index and not args.check):

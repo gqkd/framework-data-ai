@@ -443,16 +443,35 @@ def cmd_open(p: Project, args) -> int:
     idents = [k[1] for k, _ in wanted]
     # A thread the to-do computes is taken whole, and nothing can be added to it: an open
     # partner is in the same thread, so the one left out is closed, parked, or a known issue an
-    # approved mandate repairs, and is only said.
-    how = ("It is not in this thread -- closed, parked, or a known issue an approved mandate "
-           "repairs, which the to-do lists with its mandates --: decide with it in mind."
-           if additive and args.thread else
-           "Claim both in one `open`, or agree with whoever holds it.")
+    # approved mandate repairs, and is only said. Elsewhere the note says where the partner
+    # stands, and it is said before the claim this `open` goes on to make: one `open` refuses
+    # an entry closed on the main line and stops on one somebody holds, and outside a thread
+    # taken again nothing adds a claim to a branch that exists. To a partner nobody holds it
+    # adds how two entries are taken together -- in the `open` that names both --, a rule for
+    # the next time and not a road from here: this `open` has already taken its own.
+    def how(other: str) -> str:
+        if additive and args.thread:
+            return ("It is not in this thread -- closed, parked, or a known issue an approved "
+                    "mandate repairs, which the to-do lists with its mandates --: decide with "
+                    "it in mind.")
+        if other not in main.entries:
+            return (f"It is not an entry on {p.base}: the `decide_with` binds this to nothing, "
+                    "and the register is where it is put right.")
+        if main.closed(other):
+            return f"It is closed on {p.base}: decide with it in mind."
+        holder = claims.get(other)
+        if holder and holder.get("who") == who:
+            return (f"You hold it on {holder.get('branch', '?')}: decide the two with each "
+                    "other in mind.")
+        if holder:
+            return "Agree with whoever holds it: an element has one claim."
+        return ("Nobody holds it: decide with it in mind. Taking the two together is done in "
+                "one `open` that names both.")
     for ident in idents:
         for other in v.as_list(main.entries.get(ident, {}).get("decide_with")):
             if isinstance(other, str) and other not in idents:
                 note = f", claimed by {claims[other].get('who')}" if other in claims else ""
-                say(f"note: {ident} is decided together with {other}{note}. {how}")
+                say(f"note: {ident} is decided together with {other}{note}. {how(other)}")
     for name, work_branch in remote_work_branches(p).items():
         if work_branch == branch or work_branch[len(p.prefix):].startswith(B.JOIN):
             continue

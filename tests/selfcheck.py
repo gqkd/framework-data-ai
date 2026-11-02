@@ -2701,6 +2701,26 @@ def _registers_are_per_product():
                 problems.append(f"a trigger reading {written!r} was reported: the check is "
                                 "matching prose rather than digits")
 
+        # Another entry of the register is what `REG009` asks a trigger to name, and `KI-2015`
+        # carries four digits: a code is not a date there either, from the version that says
+        # so. A project pinning the one before keeps the old reading, and the annotations it
+        # wrote for it.
+        since = _load(VALIDATE, "validate").CODES_NOT_DATES_IN_FIELDS_SINCE
+        major, minor, _ = (int(n) for n in since.split("."))
+        pin = root / "framework.yaml"
+        kept = pin.read_text()
+        for pinned, written, want in (
+                (since, "the repair of KI-2015", False),
+                (since, "the repair of KI-2015, by 2026", True),
+                (f"{major}.{minor - 1}.0", "the repair of KI-2015", True)):
+            pin.write_text(f"framework_version: {pinned}\n")
+            (root / "products" / "beta" / "OPEN.md").write_text(entry(written))
+            codes = [f["code"] for f in json.loads(run().stdout)["findings"]]
+            if ("REG009" in codes) != want:
+                problems.append(f"pinned at {pinned}, a trigger reading {written!r} was "
+                                f"{'not ' if want else ''}reported")
+        pin.write_text(kept)
+
         # Who an entry at the root binds: `[all]` is a statement, absence is a gap, and
         # before this they were written identically. The root register of this fixture is
         # the one with no `entries:` at all, so the entry is added here and removed after.
@@ -3074,6 +3094,78 @@ def _roadmap_stages():
             got, _ = codes()
             if code not in (got or []):
                 problems.append(f"{what}: {code} was not reported ({got})")
+        target.write_text(clean)
+
+        # From the version that says each, a code in a milestone is not a date, and a change
+        # of another product does not hold an increment of this one open because the two share
+        # a number: increments are numbered per product, and a change is of its folder's. A
+        # change the roadmap lists in its own `changes:` still counts, because the roadmap
+        # says so. Pinned at the version before, the old readings stay, with the annotations
+        # written for them.
+        since = _load(VALIDATE, "validate_roadmap_since")
+        pin = root / "framework.yaml"
+        kept = pin.read_text()
+        (root / "products" / "q").mkdir(parents=True)
+        (root / "products" / "q" / "product.yaml").write_text(
+            base["products/p/product.yaml"].replace("[p]", "[q]").replace("name: p", "name: q"))
+        theirs = root / "products" / "q" / "RMP.md"
+        delivered = lambda listed: rmp(
+            "  t1:\n    name: First\n    increments: [INC-001, INC-002, INC-003]\n",
+            "  INC-001:\n    state: delivered\n" + listed
+            + "  INC-002:\n    state: shaped\n  INC-003:\n    state: shaped\n"
+        ).replace("products: [p]", "products: [q]", 1)
+        for rule, pinned, mutate, listed, want in (
+                ("CODES_NOT_DATES_IN_FIELDS_SINCE", "since",
+                 lambda t: t.replace("Two customers apart", "Two customers apart, after KI-2015"),
+                 "", set()),
+                ("CODES_NOT_DATES_IN_FIELDS_SINCE", "since",
+                 lambda t: t.replace("Two customers apart", "KI-2015, and 15/10"),
+                 "", {"RMP005"}),
+                ("CODES_NOT_DATES_IN_FIELDS_SINCE", "previous",
+                 lambda t: t.replace("Two customers apart", "Two customers apart, after KI-2015"),
+                 "", {"RMP005"}),
+                ("INCREMENTS_OF_THE_FOLDER_SINCE", "since", lambda t: t, "", set()),
+                ("INCREMENTS_OF_THE_FOLDER_SINCE", "since", lambda t: t,
+                 "    changes: [CHG-002]\n", {"RMP004"}),
+                ("INCREMENTS_OF_THE_FOLDER_SINCE", "previous", lambda t: t, "", {"RMP004"})):
+            version = getattr(since, rule)
+            if pinned == "previous":
+                major, minor, _ = (int(n) for n in version.split("."))
+                version = f"{major}.{minor - 1}.0"
+            pin.write_text(f"framework_version: {version}\n")
+            target.write_text(mutate(clean))
+            theirs.write_text(delivered(listed))
+            got, found = codes()
+            if got is None:
+                problems.append(f"pinned at {version}, the validator did not run: {found}")
+                continue
+            watched = "RMP005" if rule == "CODES_NOT_DATES_IN_FIELDS_SINCE" else "RMP004"
+            said = {f["code"] for f in found if f["code"] == watched
+                    and (watched == "RMP005" or f["path"].endswith("q/RMP.md"))}
+            if said != want:
+                problems.append(f"pinned at {version} ({rule}), {sorted(said) or 'nothing'} "
+                                f"was reported where {sorted(want) or 'nothing'} was expected: "
+                                f"{[f['message'][:90] for f in found if f['code'] in said]}")
+        # The reading narrows to the folder and does not drop it: a change of the roadmap's
+        # own folder that carries the delivered increment still holds it open, from the
+        # version that reads by folder.
+        ours = root / "products" / "q" / "changes" / "CHG-003.md"
+        ours.parent.mkdir(parents=True)
+        ours.write_text(chg("CHG-003", "[INC-001]").replace("products: [p]", "products: [q]", 1))
+        pin.write_text(f"framework_version: {since.INCREMENTS_OF_THE_FOLDER_SINCE}\n")
+        target.write_text(clean)
+        theirs.write_text(delivered(""))
+        got, found = codes()
+        if got is None:
+            problems.append(f"with a change of its own folder, the validator did not run: {found}")
+        elif not any(f["code"] == "RMP004" and f["path"].endswith("q/RMP.md")
+                     and "CHG-003" in f["message"] for f in found):
+            said = [f["message"][:90] for f in found if f["code"] == "RMP004"]
+            problems.append("pinned at the version that reads by folder, a change of the "
+                            "roadmap's own folder carrying its delivered increment did not hold "
+                            f"it open: {said}")
+        ours.unlink()
+        pin.write_text(kept)
         target.write_text(clean)
 
     v = _load(VALIDATE, "validate_roadmap")
@@ -5891,6 +5983,24 @@ def _unanswerable_is_declared_and_guarded():
         problems.append("a date in `settled_by` was accepted. It takes the event after "
                         "which the field would have a true value, for the reason REG009 "
                         "gives one field over")
+
+    # A code in the event is not a date, from the version that says so; pinned at the one
+    # before, the old reading and the annotations written for it stay.
+    since = _load(VALIDATE, "validate").CODES_NOT_DATES_IN_FIELDS_SINCE
+    major, minor, _ = (int(n) for n in since.split("."))
+    for pinned, written, want in (
+            (since, "the repair of KI-2015.", False),
+            (since, "the repair of KI-2015, in 2026.", True),
+            (f"{major}.{minor - 1}.0", "the repair of KI-2015.", True)):
+        got = _vocabulary_run(BINDS_NOTHING, extra={
+            "framework.yaml": f"framework_version: {pinned}\n",
+            "COMMITMENTS.md": COMMITMENTS_WITH.replace(
+                "          the decision on the scope.", f"          {written}") % ("", "")})[0]
+        if got is None:
+            problems.append(f"pinned at {pinned}, the validator returned nothing")
+        elif bool([f for f in got["findings"] if f["code"] == "UNA003"]) != want:
+            problems.append(f"pinned at {pinned}, a `settled_by` reading {written!r} was "
+                            f"{'not ' if want else ''}reported")
     return problems
 
 
@@ -8498,15 +8608,15 @@ def _g(where: Path, *args: str, ok: bool = True) -> subprocess.CompletedProcess:
     return r
 
 
-def _work_origin(tmp: Path) -> tuple[Path, Path, Path]:
+def _work_origin(tmp: Path, register: str | None = None) -> tuple[Path, Path, Path]:
     """A remote and two clones of it, side by side under different parents, whose root
-    register carries the union as the generator writes it."""
+    register carries the union as the generator writes it: `register`, or two open entries."""
     origin = tmp / "origin.git"
     subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(origin)], check=True,
                    env={**os.environ, **_WORK_ENV})
     seed = _Repo(tmp / "seed")
     seed.write(".framework/work.yaml", "people:\n  Owner: {}\n  Junior: {}\n")
-    seed.write("OPEN.md", _open_register({"OD-001": "open", "OD-002": "open"}))
+    seed.write("OPEN.md", register or _open_register({"OD-001": "open", "OD-002": "open"}))
     seed.write("platform/OPEN.md", _open_register({"OD-003": "open"}).replace(
         "products: [all]\nowners", "products: [none]\nowners", 1))
     seed.validate("--emit-index")
@@ -8619,6 +8729,63 @@ def _work_claims_and_reserves():
         if "DEC-004" not in out:
             problems.append(f"a released claim gave back a number, or reservations were "
                             f"deleted: {out!r}")
+    return problems
+
+
+@check("work.py open says, of an entry decided together with the one claimed, the road there is")
+def _work_open_partner_road():
+    # Outside the additive mode every partner left out was told "Claim both in one `open`", and
+    # one `open` refuses an entry closed on the main line and stops on one somebody holds --
+    # the advice sent the person to a refusal. And the note is said before the claim this
+    # `open` goes on to make. Each partner gets where it stands, and the one nobody holds also
+    # how two entries are taken together: a rule for the next time, not a road from here.
+    register = _open_register({"OD-001": "open", "OD-002": "decided", "OD-004": "open",
+                               "OD-005": "open", "OD-006": "open", "OD-007": "open",
+                               "OD-008": "open"}).replace(
+        "  OD-001:\n    status: open\n",
+        "  OD-001:\n    status: open\n"
+        "    decide_with: [OD-002, OD-004, OD-005, OD-006, OD-009]\n", 1)
+    for ident, other in (("OD-007", "OD-008"), ("OD-008", "OD-007")):
+        register = register.replace(f"  {ident}:\n    status: open\n",
+                                    f"  {ident}:\n    status: open\n    decide_with: [{other}]\n",
+                                    1)
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        _, a, b = _work_origin(Path(tmp), register)
+        for clone, who, short, ident in ((b, "Junior", "od-005", "OD-005"),
+                                         (a, "Owner", "od-006", "OD-006")):
+            rc, out = _work(clone, "open", "--who", who, "--branch", short, ident,
+                            "--no-worktree")
+            if rc:
+                return [f"{ident} could not be claimed first (exit {rc}): {out[-300:]!r}"]
+        rc, out = _work(a, "open", "--who", "Owner", "--branch", "od-001", "OD-001",
+                        "--no-worktree")
+        if rc:
+            return [f"the claim with its notes failed (exit {rc}): {out[-300:]!r}"]
+        notes = {m.group(1): m.group(2) for m in re.finditer(
+            r"note: OD-001 is decided together with (OD-\d+)[^.]*\. (.*)", out)}
+        for other, want, why in (
+                ("OD-002", "It is closed on", "closed on the main line"),
+                ("OD-004", "Nobody holds it: decide with it in mind. Taking the two together "
+                 "is done in one `open` that names both.", "open and held by nobody"),
+                ("OD-005", "Agree with whoever holds it", "held by somebody else"),
+                ("OD-006", "You hold it on work/od-006: decide the two with each other in mind",
+                 "held by the same person elsewhere"),
+                ("OD-009", "It is not an entry on", "declared nowhere")):
+            if not notes.get(other, "").startswith(want):
+                problems.append(f"of a partner {why}, `open` said {notes.get(other)!r}: "
+                                f"expected {want!r}")
+        if "claimed by Junior" not in out:
+            problems.append(f"the partner's holder was not named: {out[-400:]!r}")
+        # The rule that note states holds: two entries decided together, taken in the one
+        # `open` that names both, are claimed on one branch, and neither is a partner left out.
+        # Walked on a fresh pair, since the pair the note was said for is past it: OD-001 is
+        # claimed.
+        rc, out = _work(b, "open", "--who", "Junior", "--branch", "od-007-008", "OD-007",
+                        "OD-008", "--no-worktree")
+        if rc or "decided together with" in out:
+            problems.append(f"two entries decided together, taken in one `open`, gave exit {rc} "
+                            f"or a note on each other: {out[-300:]!r}")
     return problems
 
 
