@@ -371,7 +371,7 @@ python3 skills/audit/scripts/validate.py --root ../my-project --emit-index
 <!-- generated: counts -->
 *Generated from `schemas/artifact-types.yaml` and `skills/audit/checks.yaml`. Edit those, not this line.*
 
-**30 artifact types. 116 checks** (28 error, 86 warn, 2 info), each catalogued with the failure it prevents written next to it, and 1 retired code whose number is never reused.
+**30 artifact types. 117 checks** (28 error, 87 warn, 2 info), each catalogued with the failure it prevents written next to it, and 1 retired code whose number is never reused.
 <!-- /generated -->
 
 The count is generated because the one that used to be here was wrong by fifteen: true when it

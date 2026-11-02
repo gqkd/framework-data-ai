@@ -4785,6 +4785,32 @@ def check_effects(root: Path, arts: list[Artifact], registry: dict, report: Repo
                     "one is written directly." if eff.path not in living else ""))
 
 
+# Where the choices of form a thread took by default are read: from this version, the file is one
+# the skills write and the join shows.
+CHOICES_SINCE = "4.12.0"
+
+
+def check_choices(root: Path, report: Report, project: dict | None = None) -> None:
+    """`EFF002`: the choices of form each thread took by default, in the table the join shows.
+
+    A row that does not read is a choice the join does not show, and whoever decides confirms
+    what they never saw. What a choice may be, and whether its default is the right one, is
+    not checked: that is the join's to read.
+    """
+    folder = root / _effects.THREADS
+    if not folder.is_dir() or not rules_hold(project or {}, CHOICES_SINCE):
+        return
+    for path in sorted(folder.glob(f"*/{_effects.CHOICES}")):
+        rel = path.relative_to(root).as_posix()
+        try:
+            _, problems = _effects.read_choices(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError) as e:
+            report.add("EFF002", rel, f"cannot be read: {e}")
+            continue
+        for line, problem in problems:
+            report.add("EFF002", rel, f"line {line}: {problem}")
+
+
 def _anchor_problem(path: str, anchor: str | None, living: dict, registry: dict) -> str | None:
     """Why `<path>#<anchor>` names nothing an effect or a forecast can meet on, or None: the
     path of a living document, and the key of an entry of a register that is a map, or a
@@ -5414,6 +5440,7 @@ def main() -> int:
     if not (args.emit_index and not args.check):
         check_generated_regions(root, arts, report)  # a run that rewrites them has the answer
     check_effects(root, arts, registry, report)
+    check_choices(root, report, project)
     check_affects(arts, registry, report)
     if args.base is not None:
         check_branch(root, args.base, arts, registry, scan, repo, work, report)

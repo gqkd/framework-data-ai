@@ -33,7 +33,7 @@ An admin opens one with `work.py join --no-threads` when no thread is ready.
 | Written directly on the thread's branch | Written as a pending effect |
 |---|---|
 | new files: a `DEC`, `CHG`, `ICG`, `EVR`, `REL`, `RLM`, and any other new artifact -- a `PRB`, `HYP`, `EVD`, `CMP`, `DFB`, `SD`, a new `DC` | every other change to a living document: `ARC`, `PBR`, `WF`, `GLOSSARY`, `DC`, `RSK`, `RMP`, `EVP`, `RB`, `IMP`, `COMMITMENTS`, `STACK`, `PLATFORM`, `AGENTS.md`, `product.yaml`, and the **body** of an `OPEN` register: an entry moved from §1 to §4, an entry rewritten |
-| new entries in the open registers -- in `entries:` and their section --, lines in `LOG` and `ING`, which are append-only, lines in the parking lot | a new key in another register that is a map: `commitments`, `risks`, `terms` of `GLOSSARY`, `stack`, `increments` and `delivery_stages` of `RMP` |
+| new entries in the open registers -- in `entries:` and their section --, lines in `LOG` and `ING`, which are append-only, lines in the parking lot | a new key in another register that is a map: `commitments`, `risks`, `terms` of `GLOSSARY`, `stack`, `increments` and, below 4.12.0 pinned, `delivery_stages` of `RMP` -- from 4.12.0, or no version that reads, a thread or a parking line does not touch the `delivery_stages`: the join asks whoever decides |
 | changes of state: `status` and `closed_by` of an entry, `status` of an immutable -- but a `CHG` withdrawn is a join's, below, and from 4.11.0 so is a mandate no thread holds written `implemented`, above --, the verification section of a `CHG` | |
 | `last_review` and `review_scope`, when a person attests a reading with `attest.py` | |
 
@@ -65,7 +65,10 @@ document like any other: on a thread an effect, which the join writes -- `BR005`
 lines were added, and does not see one written directly --; and an `affects` names it once a
 join has brought it to the main line, or `AFF001` reports it there. An entry with more anchors
 than `thresholds.od_affects` is worth proposing to split, and `requirement`, `resolve` and
-`cycle` propose it. The `affects` of a `CHG` in draft is anybody's to write; that of an approved
+`cycle` propose it. From 4.12.0 pinned, or no version that reads, the skill that writes an entry
+or a `CHG` writes its `affects` always, from the text, at the finest section, and never leaves it
+empty, and on a thread notes it in `scelte.md` (below).
+The `affects` of a `CHG` in draft is anybody's to write; that of an approved
 one is written or corrected by who decides, at a join, and is fixed once it is past `approved`
 -- `BR006` says it moving anywhere else.
 
@@ -132,6 +135,35 @@ scanned as documentation, and `join --finish` removes it, leaving it in the hist
 Between two joins the living documents are behind. Before reading one as current, look at the
 effects waiting on it: the to-do lists them per document (`skills/audit/scripts/todo.py`).
 
+## The choices of form
+
+Where the project pins 4.12.0 or later, or no version that reads, a session on the branch of a
+thread or of a parking line does not ask what is placement, form or the classification of an
+`ICG`: it takes the default, writes it, and notes it in `_filoni/<slug>/scelte.md`, one row of
+one table per choice:
+
+| Scelta | Preso | Alternative | Perché |
+|---|---|---|---|
+| l'incremento di CHG-031 | INC-004 | INC-005; nessuno | le decisioni da cui deriva vengono da INC-004 |
+
+The defaults: the destination the routing table gives; the anchor of what the session creates,
+from its text, never empty; the classification of an `ICG` that the rules of `routing` give; the
+increment of a `CHG`, the one its decisions or issues derive from, none where there is not one
+only. The stages of the roadmap are not touched on these branches: `delivery_stages` is
+living, and the join asks whoever decides, when a thread or a parking branch brings a new
+increment or an effect on the roadmap -- the stages read back in the compact view of `cycle`,
+and written on the join's branch (`contribute`, the join); a roadmap without them is asked
+whether to set them up, as `cycle` does the first time --; a join that leaves the roadmaps as
+they were asks nothing. What is substance stays a question, on the thread as before: a
+contradiction with what is written, what must not change, the strength of a piece of
+information, a real decision, a content of the product no source gives. `join` shows the
+choices of each thread beside its effects, with what it brought with no anchor and the to-do's
+whole list to anchor; whoever decides confirms or changes them on the join's branch, where the
+whole review reads them. The labels are Italian, as those of the effects; every cell is written,
+`nessuna` in `Alternative` where there is none; a `|` inside a cell is written `\|`. `EFF002`
+reports a file that does not read, and `join --finish` removes it with `_filoni/`, leaving it
+in the history.
+
 ## What a code session delivers
 
 A code session works in another repository and writes nothing in this one. In the additive mode
@@ -139,7 +171,12 @@ the brief asks it for `documentazione.md` in the element's folder of the exchang
 `verifica.md`: what the documentation should say after the change, in its own words. The
 documentation session of the thread copies it to `_filoni/<slug>/consegne/<CHG>/documentazione.md`,
 commits it, and draws the effects from it with the rules of the `requirement` skill -- proposed
-line by line, confirmed once --, touching no living document. A `contribution-policy.json`
+line by line, confirmed once; from 4.12.0 pinned, or no version that reads, written without
+asking and said in the session's last answer, target by target, after the push, for whoever
+followed the code to correct by a commit on the branch, pushed with the checks and the review
+of any push (`contribute`), before the join, a row of substance still a question --, touching
+no living document. The check that holds is the join's, whose review
+reads them beside the delivery. A `contribution-policy.json`
 delivered goes to the same folder, not into `.framework/`: an admin carries it there at a join.
 The delivery is copied and not moved, so the folder goes to `integrati/` as usual, and its
 `INTEGRATO` names `documentazione.md: _filoni/<slug>/consegne/<CHG>/` in `parts`.
@@ -189,7 +226,7 @@ mandate written `implemented` or a `KI` it repairs closed, on whatever branch.
 | What | Admin | Deputy or delegate | Contributor |
 |---|---|---|---|
 | Decide an open decision (a `DEC` accepted, the entry closed), supersede a `DEC`, accept a risk | yes | yes | prepares it as a `DEC` in `proposed`, its measures and alternatives in the body, on a parking branch, deriving from the entry: `join` shows it, and the admin accepts it -- writing on the join's branch its cascade, the entry moved and the documents it obliges -- or leaves it proposed, where the to-do lists it until a later join accepts it or another decision supersedes it |
-| Split an open decision, change its question, dependencies or `affects`; the order and stages of `RMP` | applies the effect at the join | the same | proposes it as an effect |
+| Split an open decision, change its question, dependencies or `affects`; the order and stages of `RMP` | applies the effect at the join; from 4.12.0 pinned, or no version that reads, the `delivery_stages` are no effect: written at the join, on the answer to its question | the same | proposes it as an effect; from 4.12.0 pinned, or no version that reads, not the `delivery_stages`, which the join asks whoever decides about |
 | Open a new `OD` or `KI`, parking lines, new information | yes | yes | yes: they become true at the join |
 | Classify an impact (`ICG`) | confirms | confirms | writes the draft |
 | Write a `CHG` in draft; write the brief of an approved one and implement it | yes | yes | yes |

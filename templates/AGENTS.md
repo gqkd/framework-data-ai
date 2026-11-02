@@ -142,8 +142,13 @@ person opens; the parking line of rule 4 too, which here waits for that branch: 
 answer, and write it there. A parking branch is pushed only when what it carries is complete:
 from its first commit pushed, the next join lands it whole. Rule 5 for a living document, the mandatory
 updates and the Definition of Done below hold here as effects: a change is done on a thread
-when its effects are written, and `verified` is for whoever decides, at a join. `FRAMEWORK_PATH/references/additive.md` has the table, the
-format of an effect and who decides what. Between two joins the living documents are behind:
+when its effects are written, and `verified` is for whoever decides, at a join. Where this
+project pins 4.12.0 or later, or no version that reads, a choice that is placement, form or
+the classification of an `ICG` is not asked on a thread: take the default, write it, and note
+it in `_filoni/<thread>/scelte.md`, which the join shows to whoever decides; what is substance
+is asked. `FRAMEWORK_PATH/references/additive.md` has the table, the
+format of an effect and of a choice, and who decides what.
+Between two joins the living documents are behind:
 before reading one as current, look at the effects waiting on it, which the to-do lists per
 document. If this session did not start with the to-do in its context, run it:
 `python3 FRAMEWORK_PATH/skills/audit/scripts/todo.py --root .`.

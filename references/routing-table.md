@@ -183,6 +183,15 @@ fact. A run proposes the sentence for `review_scope` and stops. It does not run 
 one file · an immutable is involved · you detected a conflict · the classification was
 ambiguous · the write would close an `OPEN.md` entry.
 
+On the branch of a thread or of a parking line in the additive mode, where the project pins
+4.12.0 or later, or no version that reads, what is placement or form -- the destination, the
+anchor, the classification of an `ICG`, a cascade or an immutable that only carries what a
+source says -- does not wait: it takes its default, written and noted in
+`_filoni/<slug>/scelte.md`, which the join shows to whoever decides (`references/preamble.md`,
+*How to propose a write*). A conflict with what is written, an ambiguous classification -- the
+strength of a piece of information --, a decision and the entry it closes, what must not change
+and a content no source gives are substance, and wait as above.
+
 The reason is precise: the cascade is the point where an agent's confidence exceeds its
 accuracy. A wrong classification writes a plausible fact into the authoritative place, and
 from then on everyone, people and agents, reads it as true. Asking costs ten seconds. This

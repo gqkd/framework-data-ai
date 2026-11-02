@@ -162,11 +162,11 @@ gantt:                             # optional, every key
 ```
 
 **When the roadmap orders its increments in stages** (`delivery_stages` in `RMP.md`, kept by
-`cycle`), the digest takes the order from there and not from `order.todo`. The stages in their
-sequence; in each one the increments, those that others depend on first; in each increment
-the decisions and issues it requires, then its changes, and the items blocked by a wait at
-the end of their increment. Pinned items come before everything, and items in no stage after
-everything, in `order.todo`, which then holds only those. An increment is not a piece of work
+`cycle` and, in the additive mode, by the join), the digest takes the order from there and
+not from `order.todo`. The stages in their sequence; in each one the increments, those that
+others depend on first; in each increment the decisions and issues it requires, then its
+changes, and the items blocked by a wait at the end of their increment. Pinned items come
+before everything, and items in no stage after everything, in `order.todo`, which then holds only those. An increment is not a piece of work
 here: it has a title in the state file and no theme, scope or size, because it is worth the
 sum of what composes it. One with nothing under it is «da scomporre», worth zero hours, and
 both the Gantt and the conversation say that the expected delivery leaves it out -- unless the

@@ -9741,6 +9741,33 @@ def _threads_write_by_adding():
                             f"anchor that is not there, a document that is not living, a missing "
                             f"line and a heading with no document, and not on a source, a "
                             f"declared section or a key with spaces: {said[:600]!r}")
+        # The choices of form a thread took by default, from the version that brings them:
+        # one table, each row with its four cells; what cannot be read is `EFF002`, and a
+        # project pinning the version before has no such file to read.
+        since = _load(VALIDATE, "validate").CHOICES_SINCE
+        major, minor, _ = (int(n) for n in since.split("."))
+        head = "| Scelta | Preso | Alternative | Perché |\n|---|---|---|---|\n"
+        for pinned, text, want in (
+                (since, f"# Scelte\n\n{head}| l'incremento di CHG-001 | INC-001 | nessuno | "
+                        "deriva da OD-001 |\n| la destinazione | a \\| b | nessuna | x |\n", []),
+                (since, f"a stray line\n{head}| a | b |  | d |\n| a | b | c |\nloose\n",
+                 ["before the table", "no `Alternative`", "3 cells", "outside the table"]),
+                (since, f"{head}| a | b | c | d |\n{head}", ["a header again", "a header again"]),
+                (since, "| Scelta | Preso | Alternative | Perché |\n| a | b | c | d |\n",
+                 ["is not followed"]),
+                (f"{major}.{minor - 1}.0", f"{head}| a | b | c |\n", None)):
+            repo.write("framework.yaml", f"framework_version: {pinned}\n")
+            repo.write("_filoni/t/scelte.md", text)
+            got = [f for f in codes() if f["code"] == "EFF002"]
+            said = " ".join(f["message"] for f in got)
+            if want is None:
+                if got:
+                    problems.append(f"EFF002 where the project pins {pinned}: {said[:300]!r}")
+            elif len(got) != len(want) or not all(w in said for w in want):
+                problems.append(f"EFF002 pinned at {pinned}: {len(got)} findings, expected "
+                                f"{want}: {said[:600]!r}")
+        repo.write("framework.yaml", f"framework_version: {REGISTRY['version']}\n")
+        (repo.path / "_filoni" / "t" / "scelte.md").unlink()
         (repo.path / "_filoni" / "t" / "effetti.md").unlink()
         (repo.path / "_filoni" / "t" / "revisione.md").unlink()
 
@@ -11098,6 +11125,12 @@ def _join_lands_threads():
             "OD-001": {"status": "open", "affects": "[products/a/OPEN.md#OD-001]"},
             "KI-002": {"status": "open", "affects": "[products/a/OPEN.md#KI-002]"},
             "OD-005": {"status": "open", "affects": "[products/a/OPEN.md#OD-005]"}}))
+        # A change in draft with no `affects` already on the main line: no thread brings it, so
+        # the join does not ask to anchor it.
+        seed.write("products/a/changes/CHG-001.md", _fm(
+            schema="framework/change-contract/v1", artifact_type="change-contract",
+            lifecycle="immutable", status="draft", id="CHG-001", products="[a]", owners="[o]",
+            created="2026-06-01") + "# CHG-001\n")
         seed.commit("base", "2026-06-01T09:00:00+02:00")
         seed.git("remote", "add", "origin", str(origin))
         seed.git("push", "-q", "origin", "main")
@@ -11118,7 +11151,7 @@ def _join_lands_threads():
             rc, out = _work(a, *args)
             if rc != want:
                 problems.append(f"{why}: exit {rc}, expected {want}: {out[-200:]!r}")
-        new_kis = []
+        new_kis, quiet_kis = [], []
         for thread, entry in (("a-ki-002", "KI-002"), ("a-od-001", "OD-001")):
             tree = a.parent / f"docs--{thread}"
             if not tree.is_dir():
@@ -11135,12 +11168,29 @@ def _join_lands_threads():
                 problems.append(f"no KI reserved on {thread}: {out[-200:]!r}")
                 return problems
             new_kis.append(new_ki.group(1))
+            # The KI-002 thread brings its new entry with no anchor: the join says so, and,
+            # landed, it is on the to-do's list to anchor, which the next join shows.
+            anchor = "" if entry == "KI-002" else f"    affects: [products/a/OPEN.md#{entry}]\n"
             text = text.replace("---\n\n# Open", f"  {new_ki.group(1)}:\n    status: open\n"
-                                f"    affects: [products/a/OPEN.md#{entry}]\n---\n\n# Open", 1)
+                                f"{anchor}---\n\n# Open", 1)
             if entry == "KI-002":
                 # Rewritten, not added: an effect, and `BR005` on the branch, which the join shows.
                 text = text.replace("### KI-002 · ki-002 title", "### KI-002 · renamed by hand", 1)
-            reg.write_text(text + f"### {new_ki.group(1)} · new\n\n")
+            tail = f"### {new_ki.group(1)} · new\n\n"
+            if entry == "KI-002":
+                # Two more new entries with no anchor, which the join does not ask to anchor: one
+                # parked, one closed on the thread by its row -- both left out by their status. An
+                # entry still `open` closed by an accepted decision deriving from it, the other
+                # clause of that filter, is not tried here.
+                for status in ("parked", "decided"):
+                    rc, out = _work(tree, "reserve", "KI", "--who", "Owner")
+                    quiet = re.search(r"Reserved: (KI-\d+)", out)
+                    if quiet:
+                        quiet_kis.append(quiet.group(1))
+                        text = text.replace("---\n\n# Open", f"  {quiet.group(1)}:\n    status: "
+                                            f"{status}\n---\n\n# Open", 1)
+                        tail += f"### {quiet.group(1)} · {status}\n\n"
+            reg.write_text(text + tail)
             if entry == "KI-002":
                 # A decision a contributor prepares, proposed, for the admin to accept at the join.
                 rc, out = _work(tree, "reserve", "DEC", "--who", "Owner")
@@ -11157,6 +11207,22 @@ def _join_lands_threads():
             (tree / "_filoni" / thread / "effetti.md").write_text(
                 f"# Effetti\n\n## products/a/OPEN.md#{entry}\n- Da: {entry}\n- Diventa vero: x\n"
                 "- Perché: y\n" + extra)
+            if entry == "KI-002":
+                # A change in draft with no `affects`, which the join shows to be anchored.
+                rc, out = _work(tree, "reserve", "CHG", "--who", "Owner")
+                chg = re.search(r"Reserved: (CHG-\d+)", out)
+                if chg:
+                    (tree / "products" / "a" / "changes").mkdir(exist_ok=True)
+                    (tree / "products" / "a" / "changes" / f"{chg.group(1)}.md").write_text(
+                        _fm(schema="framework/change-contract/v1",
+                            artifact_type="change-contract", lifecycle="immutable",
+                            status="draft", id=chg.group(1), products="[a]", owners="[o]",
+                            created="2026-06-01") + f"# {chg.group(1)}\n")
+                new_chg = chg.group(1) if chg else "a CHG reserved"
+                (tree / "_filoni" / thread / "scelte.md").write_text(
+                    "| Scelta | Preso | Alternative | Perché |\n|---|---|---|---|\n"
+                    "| la destinazione del nuovo KI | products/a/OPEN.md | OPEN.md "
+                    "| il prodotto a |\nuna riga fuori dalla tabella\n")
             _commit_all(tree, f"{entry} closed")
             _g(tree, "push", "-q", "origin", f"work/{thread}")
 
@@ -11182,6 +11248,20 @@ def _join_lands_threads():
                 or not re.search(r"DEC-\d+ proposed: accept it", out):
             problems.append(f"before merging, the join did not show an effect outside the forecast, "
                             f"a KI closed without a change, or BR005 on a branch: {out[:900]!r}")
+        if "choice taken by default -- la destinazione del nuovo KI: products/a/OPEN.md " \
+                "(alternatives: OPEN.md; why: il prodotto a)" not in out \
+                or f"{new_kis[0]} brought with no anchor" not in out \
+                or f"{new_chg} brought with no anchor" not in out \
+                or f"{new_kis[1]} brought with no anchor" in out \
+                or "CHG-001 brought with no anchor" in out:
+            problems.append(f"before merging, the join did not show the choice a thread took by "
+                            f"default, or which new entry came with no anchor -- and not one the "
+                            f"main line had already: {out[:1200]!r}")
+        if len(quiet_kis) != 2 or any(f"{k} brought with no anchor" in out for k in quiet_kis) \
+                or "scelte.md line 4: a line outside the table" not in out:
+            problems.append(f"before merging, the join asked to anchor a new entry parked or "
+                            f"closed on the thread ({quiet_kis}, two expected), or did not show "
+                            f"the line of `scelte.md` that does not read: {out[:1200]!r}")
         # A thread that moves after the join merged it is kept, with its claims.
         ki = a.parent / "docs--a-ki-002"
         (ki / "after.md").write_text("x\n")
@@ -11266,6 +11346,9 @@ def _join_lands_threads():
         rc, out = _work(a, "join", "--who", "Owner", "--no-threads")
         if rc or "work/ricongiungimento-2" not in remote_heads():
             problems.append(f"a join with no thread (exit {rc}): {out[-200:]!r}")
+        if "To anchor at this join, from the to-do (1)" not in out or new_kis[0] not in out:
+            problems.append(f"a join did not show the to-do's list to anchor, the entry landed "
+                            f"with no anchor: {out[:600]!r}")
         rc, out = _work(a, "join", "--who", "Owner", "--abandon")
         if rc or "ricongiungimento" in remote_heads() or "ricongiungimento" in remote_claims():
             problems.append(f"join --abandon (exit {rc}): {out[-200:]!r}")

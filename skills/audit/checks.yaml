@@ -1629,6 +1629,18 @@ checks:
       line that is none of them: each is an effect nobody can place. What a source may be is
       not checked.
 
+  EFF002:
+    level: warn
+    title: a choice of form a thread took by default, which the join cannot show
+    prevents: >
+      A default confirmed without being seen. From 4.12.0, on the branch of a thread or of a
+      parking line, what is placement, form or the classification of an `ICG` is not asked: the
+      session takes the default, writes it, and notes it in `_filoni/<slug>/scelte.md`, one row
+      of one table per choice -- `Scelta`, `Preso`, `Alternative`, `Perché` --, which the join
+      shows to whoever decides, to confirm or change. A line outside the table, a row without
+      its four cells, a cell left empty: each is a choice the join does not show. Whether the
+      default is the right one is not checked: it is the join's to read.
+
   GEN001:
     level: warn
     title: a region the generator owns is not what the registers derive to

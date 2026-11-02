@@ -146,6 +146,19 @@ applies even though nobody asked you to write anything, and it says it there rat
 here because that rule has to reach an agent answering a question with no skill running,
 which never reaches this file.
 
+**On a thread, a choice of form takes its default.** In the additive mode, on the branch of a
+thread or of a parking line, where the project pins 4.12.0 or later, or no version that reads,
+what is placement, form or the classification of an `ICG` is not asked: take the default,
+write it, and note it in `_filoni/<slug>/scelte.md`, one row per choice -- what, the default
+taken, the alternatives, why in one sentence (`references/additive.md`, *The choices of
+form*). The table above stays for the rows of substance: those that contradict what is
+written, touch what must not change, change the strength of a piece of information, carry a
+decision, or put into the product a content no source gives -- not the person, not a delivery,
+not a document. A row that carries into its default destination what a source says is not
+substance, even when it says what the product does. Whoever decides confirms or changes the
+choices at the join, which shows them and whose review reads them. Outside the additive mode
+nothing changes.
+
 ## The review: every plan before it is shown, every diff before it is handed back
 
 A plan or a diff nobody else has read looks the same as a reviewed one, so every run has both
@@ -189,10 +202,11 @@ critic reads there the rules the work invokes before saying a procedure exists.
 project pins 4.12.0 or later, or no version that reads, ask the reviser for one pass on the
 branch of a thread or of a parking line: it fixes the slips and does not relaunch, and what is
 substance goes to the contributor, who fixes it or brings it to the join, written in the
-thread's log. The join has the review whole, up to three passes, on everything the threads
-bring, with the logs of the threads and parking branches it lands, whose substance left open
-the critic reads again; what whoever decides corrects of the substance it hands back, the
-reviser reads again, relaunched with those corrections, among the three passes or, once they
+thread's log. A plan there is the rows of substance of the proposal table and the brief: a
+choice of form is noted in `scelte.md`, not shown. The join has the review whole, up to three
+passes, on everything the threads bring, with the logs of the threads and parking branches it
+lands, whose substance left open the critic reads again; what whoever decides corrects of the
+substance it hands back, the reviser reads again, relaunched with those corrections, among the three passes or, once they
 are spent, in one more on them alone (`contribute`, the join). A brief keeps up to three
 passes wherever it is written: it reaches no join, and a code session follows it to the
 letter. Where the project pins less, every review is up to three passes, as before.

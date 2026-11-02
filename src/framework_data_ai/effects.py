@@ -26,6 +26,7 @@ from dataclasses import dataclass, field
 
 THREADS = "_filoni"
 EFFECTS = "effetti.md"
+CHOICES = "scelte.md"
 REVIEW = "revisione.md"
 DELIVERIES = "consegne"
 
@@ -108,3 +109,93 @@ def read(text: str) -> tuple[list[Effect], list[tuple[int, str]]]:
         if missing and e.path:
             problems.append((e.line, f"{e.target} has no {', '.join(f'`{m}`' for m in missing)}."))
     return [e for e in effects if e.path], problems
+
+
+# THE CHOICES OF FORM, FROM 4.12.0. On a thread no session asks what is placement, form or the
+# classification of an `ICG`: it takes the default, writes it, and notes it in
+# `_filoni/<slug>/scelte.md`, one row per choice of one table, for whoever decides to confirm or
+# change at the join, which shows them:
+#
+#     | Scelta | Preso | Alternative | Perché |
+#     |---|---|---|---|
+#     | l'incremento di CHG-031 | INC-004 | INC-005; nessuno | le sue decisioni vengono da INC-004 |
+#
+# The labels are Italian, as those of the effects are; a `|` inside a cell is written `\|`.
+CHOICE_COLUMNS = ("Scelta", "Preso", "Alternative", "Perché")
+_SEPARATOR = re.compile(r"^:?-{3,}:?$")
+
+
+@dataclass
+class Choice:
+    line: int
+    what: str
+    taken: str
+    alternatives: str
+    why: str
+
+
+def _cells(line: str) -> list[str] | None:
+    r"""The cells of a table row, `\|` kept as a `|` inside one, or None when the line is not
+    a row: it begins and ends with `|`."""
+    text = line.strip()
+    if len(text) < 2 or not text.startswith("|") or not text.endswith("|") or text.endswith("\\|"):
+        return None
+    cells, cell, i = [], "", 1
+    while i < len(text) - 1:
+        if text[i] == "\\" and text[i + 1] == "|":
+            cell, i = cell + "|", i + 2
+            continue
+        if text[i] == "|":
+            cells.append(cell.strip())
+            cell = ""
+        else:
+            cell += text[i]
+        i += 1
+    return cells + [cell.strip()]
+
+
+def read_choices(text: str) -> tuple[list[Choice], list[tuple[int, str]]]:
+    """The choices in the text, and what in it cannot be read, by line: a title, blank lines
+    and one table with the four columns, each cell of a row written."""
+    choices: list[Choice] = []
+    problems: list[tuple[int, str]] = []
+    state = "before"                       # before the header, after it, in the rows
+    for n, line in enumerate(text.splitlines(), 1):
+        if not line.strip() or (line.startswith("# ") and state == "before"):
+            continue
+        cells = _cells(line)
+        if state == "before":
+            if cells is not None and tuple(cells) == CHOICE_COLUMNS:
+                state = "header"
+            else:
+                problems.append((n, "before the table, a line that is not its header: the file "
+                                    "is a title and one table, `| "
+                                    + " | ".join(CHOICE_COLUMNS) + " |`."))
+            continue
+        if state == "header":
+            if cells is not None and len(cells) == 4 and all(_SEPARATOR.match(c) for c in cells):
+                state = "rows"
+            else:
+                problems.append((n, "the header is not followed by `|---|---|---|---|`."))
+                state = "rows"
+            continue
+        if cells is None:
+            problems.append((n, "a line outside the table: one row per choice, `| "
+                                + " | ".join(CHOICE_COLUMNS) + " |`."))
+            continue
+        if tuple(cells) == CHOICE_COLUMNS or (cells and all(_SEPARATOR.match(c) for c in cells)):
+            problems.append((n, "a header again: the file holds one table."))
+            continue
+        if len(cells) != 4:
+            problems.append((n, f"{len(cells)} cells, not the four `"
+                                + "`, `".join(CHOICE_COLUMNS) + "`: a `|` inside a cell is "
+                                "written `\\|`."))
+            continue
+        empty = [label for label, cell in zip(CHOICE_COLUMNS, cells) if not cell]
+        if empty:
+            problems.append((n, f"no {', '.join(f'`{e}`' for e in empty)}" + (
+                "; `nessuna` is what is written where there is no alternative"
+                if "Alternative" in empty else "") + "."))
+            continue
+        choices.append(Choice(n, *cells))
+    return choices, problems

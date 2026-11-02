@@ -120,7 +120,10 @@ after reading, left nothing behind at all.
 
 **Propose the classification, do not decide it.** The `ICG` is written `status: proposed`
 and becomes `accepted` when the user says so -- in the additive mode, when an admin, a deputy or
-a delegate says so: a contributor's stays proposed, and the join shows one accepted on a thread. A gate crossed automatically is a gate that
+a delegate says so: a contributor's stays proposed, and the join shows one accepted on a thread.
+On a thread, where the project pins 4.12.0 or later, or no version that reads, the classification
+the rules above give is written without asking and noted in `_filoni/<slug>/scelte.md`; an
+ambiguity that only a decision settles stays a question. A gate crossed automatically is a gate that
 does not exist. The two invalidation rows especially: if the hypothesis is invalidated, the
 honest outcome is that this is not a change, it is discovery starting again, and saying so
 is more valuable than producing a change contract that pretends otherwise.
@@ -157,8 +160,10 @@ A `CHG` starts at `status: draft` and becomes `approved` when the user approves 
 approved one authorizes anything. In the additive mode a change stays in draft on the thread:
 an admin, a deputy or a delegate approves it at a join (`references/additive.md`), and its brief
 comes in the round after. It carries `affects` in its front matter, the documents it is expected
-to touch -- at the finest section, as `references/additive.md` says --, which the join reads as
-its forecast; from 4.11.0 pinned the change is a thread by itself, and the code prefixes of its
+to touch -- at the finest section, as `references/additive.md` says, and from 4.12.0 pinned, or
+no version that reads, written always and never left empty --, which the join reads as its
+forecast;
+from 4.11.0 pinned the change is a thread by itself, and the code prefixes of its
 block in the contribution policy say which other mandates wait for it; below 4.11.0 its
 `affects` and its whole block put it in a thread. One that touches much is worth proposing to
 split.
@@ -180,7 +185,10 @@ the change belongs to, proposing the one whose decisions or issues it derives fr
 write it in the change's own `derives_from` beside the rest: a `CHG` cannot be edited after
 approval, so this is the one moment its place in the plan can be written where it belongs.
 A change that belongs to no increment is legal, and the digest places it after every stage;
-say so when the person chooses it.
+say so when the person chooses it. On a thread, where the project pins 4.12.0 or later, or no
+version that reads, do not ask: write the increment its decisions or issues derive from -- none
+where there is not one only -- and note it in `_filoni/<slug>/scelte.md`, which the join shows
+to whoever decides.
 
 ## Step 5 · The cycle plan
 
@@ -219,10 +227,21 @@ says what each field means; what follows is when to touch them.
   4. Write the maps on the person's confirmation, and run the validator: `RMP001`-`RMP005`
      report what does not agree.
 
+  In the additive mode, where the project pins 4.12.0 or later, or no version that reads, a
+  thread writes no stage, so the first time is a join's: it asks whoever decides whether to
+  set them up, when a thread or a parking branch brings a change to a roadmap without them,
+  and follows these four steps on its branch (`contribute`, the join).
+
 Every change to `RMP.md` is a change to a living document: the person rereads it and
 attests it, as for any other (`LC006`). That is the reason to touch the stages at the pace
 of the cycles, and not every day. In the additive mode it is a pending effect, and the stages
-change at a join.
+change at a join; where the project pins 4.12.0 or later, or no version that reads, a thread
+or a parking line does not touch the `delivery_stages`, nor asks whether their sequence still
+holds: the join asks whoever decides, when a branch it lands brings a new increment or an
+effect on that roadmap, and one that leaves the roadmaps as they were asks nothing
+(`contribute`, the join). The rest of this step -- the increments, their breaking down, `state:
+delivered` -- stays on the branch: what it changes in `RMP.md` as pending effects, the entries
+and the changes it creates written on the branch.
 
 ## Step 6 · The agent brief
 

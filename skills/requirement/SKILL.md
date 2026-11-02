@@ -107,11 +107,17 @@ surfaces.
 The classification and the destination do not change; how the write happens does
 (`references/additive.md`). A new entry, a new file, a line in `LOG` or in the parking lot is
 written on the thread's branch as usual when it belongs to that thread's work, a new entry with
-its `affects`; when it does not, on a parking branch the person opens. A new key in another register that is a map -- a
-commitment, a risk, a term, a tool of `STACK`, an increment -- is an effect, as is a change to a
-living document -- a capability in `PBR`, a guarantee in a `DC`, a term in `GLOSSARY` -- and every step
-of the cascade it obliges are pending effects, one per target, proposed in the same table and
-written in `_filoni/<slug>/effetti.md`. A contradiction with a living document is shown as
+its `affects` -- from 4.12.0 pinned, or no version that reads, written always, from the text,
+and never left empty --; when it does not, on a parking branch the person opens. A new key in
+another register that is a map -- a commitment, a risk, a term, a tool of `STACK`, an increment
+-- is an effect, as is a change to a living document -- a capability in `PBR`, a guarantee in a
+`DC`, a term in `GLOSSARY` -- and every step of the cascade it obliges are pending effects, one
+per target, proposed in the same table and written in `_filoni/<slug>/effetti.md`. Where the
+project pins 4.12.0 or later, or no version
+that reads, the table holds only the rows of substance (`references/preamble.md`, *How to
+propose a write*): the destination, the anchor and a cascade that carries what a source says
+take their default, written and noted in `_filoni/<slug>/scelte.md`, which the join shows.
+A contradiction with a living document is shown as
 always; its resolution is an effect. An entry that would forecast more anchors than
 `thresholds.od_affects` is worth splitting: propose it. Anchor at the finest section the work
 touches -- one as wide as a section meets every section inside it, though not the keys of a
@@ -122,8 +128,10 @@ map it shows (`references/additive.md`).
 **Do not turn a request into a mandate.** "The customer wants Excel export" is a `SIG` in
 `LOG`, and at most a conditional increment in `RMP`, with its row in `increments:` when the
 roadmap has one (`RMP001` reports a heading without a row). Placing it in a stage is not
-this skill's: the stages are kept by `cycle`, at the next opening of a cycle. It does not
-become a `CHG` and does not get built. That path runs through intake, triage and the `ICG`, which is the `cycle` skill.
+this skill's: the stages are kept by `cycle`, at the next opening of a cycle -- on a thread or
+a parking line, where the project pins 4.12.0 or later, or no version that reads, by the join,
+which asks whoever decides --. It does not become a `CHG` and does not get built. That path
+runs through intake, triage and the `ICG`, which is the `cycle` skill.
 Skipping it is how a product becomes the sum of the last things anyone asked for.
 
 **Do not close an `OPEN.md` entry as a side effect.** If the information you were given

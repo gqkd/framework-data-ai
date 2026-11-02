@@ -98,8 +98,12 @@ machine*. Whoever writes only code does not enter `people` for it.
 Write by `references/additive.md`: new files, new entries, parking lines and changes of state on
 the branch -- not a `CHG` withdrawn or the forecast of an approved one, nor, from 4.11.0, a
 mandate no thread holds written `implemented`, which is a join's --, and everything else a living document should say as an effect in
-`_filoni/<slug>/effetti.md`. The skills that write -- `requirement`, `resolve`, `cycle`, `release`
--- run on the branch as usual and say their own exceptions; this skill does not repeat them. Reserve
+`_filoni/<slug>/effetti.md`. Where the project pins 4.12.0 or later, or no version that reads,
+what is placement, form or the classification of an `ICG` takes its default, noted in
+`_filoni/<slug>/scelte.md` (`references/additive.md`, *The choices of form*), and only
+substance is asked. The skills that
+write -- `requirement`, `resolve`, `cycle`, `release` -- run on the branch as usual and say their
+own exceptions; this skill does not repeat them. Reserve
 every new identifier before writing it, from this branch: `work.py --root <thread worktree>
 reserve`, as `audit` describes. From here on `<thread worktree>` is the root: run on the main
 checkout, the checks below compare the main line with itself and find nothing.
@@ -107,7 +111,12 @@ checkout, the checks below compare the main line with itself and find nothing.
 **What a code session delivered.** When `in-arrivo/<CHG>/documentazione.md` is in the declared
 exchange, copy it to `_filoni/<slug>/consegne/<CHG>/documentazione.md` and commit it, then draw the
 effects from it with the rules of `requirement`: each line proposed with its target, confirmed once
-by the person. A `contribution-policy.json` delivered goes to the same folder. Then the delivery
+by the person -- where the project pins 4.12.0 or later, or no version that reads, written
+without asking, and said in your last answer, target by target, after the push: whoever followed
+the code corrects one by a commit on the branch, pushed by the steps of *Before each push*,
+before the join, whose review reads the effects beside the delivery in any case; a line of
+substance stays a question.
+A `contribution-policy.json` delivered goes to the same folder. Then the delivery
 moves to `integrati/` as `references/contributions.md` describes, with `documentazione.md` named in
 `parts` at its place on the branch.
 
@@ -123,7 +132,8 @@ living document changed in a way that is not additive -- move the change into an
 `BR001` and `BR003` are numbers, and `BR002` a decision on an entry the main line has closed,
 as `audit` says; `BR006` a mandate withdrawn or its forecast moved off a join -- take it out
 and propose it, a withdrawal as a `DEC` `proposed`, a forecast on a parking line --; `EFF001` is an effects file that does not read,
-`AFF001` an anchor that does not exist. Then the review the preamble asks for, on the diff of the
+`EFF002` a choices file, `AFF001` an anchor that does not exist.
+Then the review the preamble asks for, on the diff of the
 branch against `origin/main`, effects included, with `_filoni/<slug>/revisione.md` as its log:
 one pass, where the project pins 4.12.0 or later, or no version that reads, and the substance it
 leaves is the contributor's to fix or to bring to the join.
@@ -164,8 +174,10 @@ branch of its own, by these steps:
    threads to land, or none for all those ready. It shows, thread by thread, what the roles keep
    to those who decide -- a classification accepted, the evaluation plan frozen, a change
    `verified`, a known issue closed without a change, the contribution policy -- the effects
-   written outside the forecast, and what the checks of the branches find on each, then merges
-   the threads one by one, in the same run. Read what it showed to the person before anything
+   written outside the forecast, what it brought with no anchor, the choices of form it took by
+   default, from its `scelte.md`, and what the checks of the branches find on each, with the
+   to-do's whole list to anchor first, then merges the threads one by one, in the same run.
+   Read what it showed to the person before anything
    else: it is to be judged, not filtered. A thread that should not land is dropped by `join
    --abandon` and a new `join` naming the threads to keep. A conflict it leaves is two texts of which one holds: show both, and ask
    whoever decides that matter. `--no-threads` opens a join with no thread, for what is written
@@ -182,21 +194,39 @@ branch of its own, by these steps:
    nobody opened -- and write those `implemented` here, with each `KI` the to-do lists that
    mandate alone for. Then rewrite the living documents from the effects of the threads merged,
    each target once, and nothing an effect does not say but the cascade of a decision accepted
-   here. Two effects on one target from two threads that contradict each other are put to the
-   person, with both. On the same branch, the person approves the changes in draft they choose
+   here; those a thread drew from a delivery without asking, from 4.12.0 pinned, or no version
+   that reads, are read beside its `_filoni/<slug>/consegne/<CHG>/documentazione.md`. Two
+   effects on one target from two threads that contradict each other are put to the person,
+   with both. On the same branch, the person approves the changes in draft they choose
    -- those of the threads and those the to-do lists to approve -- with their name in
    `approvers`, accepts or leaves the decisions a contributor proposed, which `join` showed and
    the to-do lists -- accepting one, the person writes here its cascade: the entry moved, the
-   documents it obliges --, carries a delivered contribution policy into `.framework/`, sorts
-   the parking lot, writes the anchors of the entries that have none, and writes what only
+   documents it obliges --, confirms or changes the choices of form the threads took by default,
+   which `join` showed -- a change is written here, as an edit of what the thread wrote --,
+   carries a delivered contribution policy into `.framework/`, sorts the parking lot, writes the
+   anchors of the entries that have none and of every change a thread brought with no
+   `affects`, which `join` showed, and writes what only
    those who decide write: a release, a change `verified`, the freeze of the evaluation plan.
+   Where the project pins 4.12.0 or later, or no version that reads, and a thread or a parking
+   branch brings a new increment or an effect on an `RMP.md` -- the targets of its `effetti.md`
+   say it --, read back to the person the stages of that roadmap in the compact view of `cycle`
+   (Step 5b) -- the stages in their sequence, the increments of each, the new ones with no
+   stage -- ask whether the sequence still holds and where each new increment goes, and write
+   the `delivery_stages` here. A roadmap with no `delivery_stages` yet has nothing to read
+   back: ask whether to set its stages up; on a yes, do it here as `cycle` says for the first
+   time (Step 5b) -- proposed from its body, the lines quoted, what the digest will show the
+   day after, written on the person's confirmation --; on a no, ask again only when a later
+   join brings another change to that roadmap. A join whose threads and parking branches leave
+   the roadmaps as they were asks nothing.
 3. `python3 "$F/validate.py" --root <join worktree> --emit-index`, then the validator again.
 4. The review the preamble asks for, on the diff of the living documents -- from 4.12.0 pinned,
    or no version that reads, whole, on the diff of the join's branch against `origin/main`:
    everything the threads bring and what the join writes, the living documents rewritten
    included, and a join that brings only states reviewed too; with it, the log of each thread
    and parking branch merged, `_filoni/<slug>/revisione.md` in the join's worktree, whose
-   substance left open is reviewed again against that diff; what whoever decides corrects of
+   substance left open is reviewed again against that diff, and each delivery a thread drew
+   effects from without asking, `_filoni/<slug>/consegne/<CHG>/documentazione.md`, beside which
+   those effects and what the join rewrote from them are read; what whoever decides corrects of
    the substance it hands back goes to the reviser again, relaunched with those corrections,
    as `agents/reviser.md` says --; its log goes to
    `_filoni/ricongiungimento-<n>/revisione.md`, committed before the next step.
@@ -235,8 +265,11 @@ hand. **Do not run `attest.py`**, as the preamble says, even where the rereading
 
 ## Handing back
 
-Say which thread, which branch and worktree, what was written on it and what as effects, what the
-checks of the branch said, and what the review left standing. For a join: the threads landed and
-kept, the effects applied, what the person decided at the join, and what the main line holds now.
+Say which thread, which branch and worktree, what was written on it and what as effects -- those
+drawn from a delivery without asking, from 4.12.0 pinned, or no version that reads, target by
+target, for whoever followed the code to correct by a commit on the branch, pushed, before the
+join --, what the checks of the branch
+said, and what the review left standing. For a join: the threads landed and kept, the effects
+applied, what the person decided at the join, and what the main line holds now.
 Then the two closing blocks the preamble describes, last. The next steps are derived: the to-do's
 threads to take, the thread that waits for this one, the join when the to-do suggests one.

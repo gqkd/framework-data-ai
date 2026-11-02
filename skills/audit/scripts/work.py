@@ -983,9 +983,10 @@ def _branch_findings(p: Project, name: str, ref: str) -> list[str]:
 
 def _before_merging(p: Project, r: dict, names: list[str], every: list[str]) -> None:
     """What the threads bring that the roles keep to those who decide (§10), the effects each
-    wrote outside what it forecast -- first those another thread of this join forecast -- and
-    what the checks of the branches find on each: shown to the admin before anything is merged,
-    to be read, not judged here."""
+    wrote outside what it forecast -- first those another thread of this join forecast --, what
+    it brought with no anchor, the choices of form it took by default in its `scelte.md`, with
+    the lines of it that do not read, and what the checks of the branches find on each: shown
+    to the admin before anything is merged, to be read, not judged here."""
     tree = r.get("tree")
     where = B.prefix(p.root)
     try:
@@ -1059,8 +1060,29 @@ def _before_merging(p: Project, r: dict, names: list[str], every: list[str]) -> 
                     said.append(f"{k} closed by {', '.join(closers) or 'its row'}, not by a "
                                 "change: a commit, or kept as it is, which only who decides "
                                 "can say")
+        # What the thread brought with no anchor -- an entry still open, a change in draft or
+        # approved, with no `affects` --: written at this join, by whoever decides, before
+        # anything is approved. A skill writes the anchor always; this is the exception.
+        unanchored = [f"{k} brought with no anchor: write its `affects` at this join"
+                      for k, row in sorted(thread_view.entries.items())
+                      if k not in main_view.entries and row.get("status") == "open"
+                      and not thread_view.closed(k) and not v.as_list(row.get("affects"))]
+        on_main = {a.rel.replace("\\", "/") for a in main_view.arts}
+        unanchored += [f"{a.id or a.rel} brought with no anchor: write its `affects` at this join"
+                       for a in thread_view.arts
+                       if a.type == "change-contract" and a.rel.replace("\\", "/") not in on_main
+                       and a.meta.get("status") in ("draft", "approved")
+                       and not v.as_list(a.meta.get("affects"))]
         listed = git(p.root, "ls-tree", "-r", "--name-only", "--full-tree", ref, "--",
                      f"{where}{E_THREADS}").stdout.split("\n")
+        # The choices of form the thread took by default instead of asking (from 4.12.0), each
+        # with what it took and the alternatives: to confirm or change on the join's branch.
+        chosen = []
+        for path in (x for x in listed if x.endswith(f"/{E.CHOICES}")):
+            choices, unread = E.read_choices(git(p.root, "show", f"{ref}:{path}").stdout)
+            chosen += [f"choice taken by default -- {c.what}: {c.taken} (alternatives: "
+                       f"{c.alternatives}; why: {c.why})" for c in choices]
+            chosen += [f"{path} line {line}: {problem}" for line, problem in unread]
         outside = []
         for path in (x for x in listed if x.endswith(f"/{E.EFFECTS}")):
             for eff in E.read(git(p.root, "show", f"{ref}:{path}").stdout)[0]:
@@ -1071,7 +1093,8 @@ def _before_merging(p: Project, r: dict, names: list[str], every: list[str]) -> 
                     continue
                 outside.append((not other, f"effect on {eff.target}, outside the forecast"
                                 + (f" -- {', '.join(other)} forecast it" if other else "")))
-        said = [line for _, line in sorted(outside)] + said + _branch_findings(p, name, ref)
+        said = ([line for _, line in sorted(outside)] + said + unanchored + chosen
+                + _branch_findings(p, name, ref))
         if said:
             say(f"{name}, before it is merged:")
             for line in said:
@@ -1163,6 +1186,12 @@ def _join_start(p: Project, who: str, args) -> int:
     where = B.prefix(p.root)
     done = {name for name, _ in _joined(p, branch)}
     todo_now = sorted(set(wanted) - done)
+    # The whole list the to-do keeps to be anchored, from the main line: it empties here.
+    if r.get("unanchored"):
+        say(f"To anchor at this join, from the to-do ({len(r['unanchored'])}): each its "
+            "`affects`, the finest section it touches.")
+        for node in r["unanchored"]:
+            say(f"  - {T.describe(node, r['tree'])}")
     _before_merging(p, r, todo_now, sorted(done | set(todo_now)))
     again = (f"--who \"{who}\" " + (" ".join(n[len(p.prefix):] for n in sorted(set(wanted)))
                                      or "--no-threads"))
@@ -1190,9 +1219,12 @@ def _join_start(p: Project, who: str, args) -> int:
         git(tree, "commit", "-q", "-m", msg)
         say(f"Merged {name} at {sha[:12]}.")
     say(f"\nJoin: {branch}, in {tree}. Now rewrite the living documents from the effects in "
-        f"`{E_THREADS}/*/effetti.md`, approve the changes to approve, accept or leave the "
-        "decisions proposed, regenerate the views (`validate.py --emit-index`), have the reviser "
-        "read the diff, commit, and `join --finish`.")
+        f"`{E_THREADS}/*/effetti.md`, confirm or change the choices in "
+        f"`{E_THREADS}/*/{E.CHOICES}`, anchor what is listed to anchor, ask whoever decides "
+        "about the stages of a roadmap a branch brings a new increment or an effect to, approve "
+        "the changes to approve, accept or leave the decisions proposed, regenerate the views "
+        "(`validate.py --emit-index`), have the reviser read the diff, commit, and "
+        "`join --finish`.")
     return 0
 
 
