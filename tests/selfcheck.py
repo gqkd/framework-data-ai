@@ -10706,10 +10706,13 @@ def _todo_computes_threads():
                 problems.append(f"join_state{args} is {x.join_state(*args, limits)}, expected "
                                 f"{want_state}")
 
-        # The hook says the to-do in a project in the additive mode, and nothing elsewhere.
+        # The hook says the to-do in a project in the additive mode, and in another project of
+        # the framework the versions alone.
         hook = ROOT / "hooks" / "session_start.py"
-        # The pins written from the hook's own threshold, not as numbers: a project at the
-        # first version that knows the mode, and one a version below it.
+        # The pins written from the hook's own threshold, not as numbers: the first version that
+        # knows the mode, and one a version below it. The mode and the pin are read as the
+        # to-do reads them, from the main line where there is one: the pin in the checkout of
+        # `a` is not read.
         since = _load(hook, "session_start_for_pins").SINCE
         pin = lambda version: "framework_version: " + ".".join(map(str, version)) + "\n"
         (a / "framework.yaml").write_text(pin(since))
@@ -10718,12 +10721,30 @@ def _todo_computes_threads():
         (older / ".git").mkdir()
         (older / ".framework" / "work.yaml").write_text("mode: additive\n")
         (older / "framework.yaml").write_text(pin((since[0], since[1] - 1, 0)))
+        # A checkout stopped before the adoption -- no mode, a pin below it -- whose main line
+        # is in the mode: the to-do is said.
         (tmp / "seed" / ".framework" / "work.yaml").write_text("people: [Owner]\n")
-        # Where the to-do cannot be computed, one line says why.
+        (tmp / "seed" / "framework.yaml").write_text(pin((since[0], since[1] - 1, 0)))
+        # A project outside the mode, with no main line: the versions alone.
+        plain = tmp / "plain"
+        (plain / ".git").mkdir(parents=True)
+        (plain / "framework.yaml").write_text(pin(since))
+        # A main line that is `main`, with no remote: read there, as the to-do reads it.
+        local = _Repo(tmp / "local")
+        local.write(".framework/work.yaml", "mode: additive\npeople: [Owner]\n")
+        local.commit("base", "2026-06-01T09:00:00+02:00")
+        # A checkout that declares the mode its main line does not: outside it, as for the to-do.
+        ahead = _Repo(tmp / "ahead")
+        ahead.write(".framework/work.yaml", "people: [Owner]\n")
+        ahead.commit("base", "2026-06-01T09:00:00+02:00")
+        ahead.write(".framework/work.yaml", "mode: additive\npeople: [Owner]\n")
+        # Where the to-do cannot be computed, one line says why; a pin at the first version that
+        # knows the mode lets it try.
         broken = tmp / "broken"
         (broken / ".framework").mkdir(parents=True)
         subprocess.run(["git", "init", "-q", str(broken)], check=True, env={**os.environ, **_WORK_ENV})
         (broken / ".framework" / "work.yaml").write_text("mode: additive\n")
+        (broken / "framework.yaml").write_text(pin(since))
         # The reason is the line that names what is missing, where there is one.
         reason = _load(hook, "session_start_for_reasons").reason
         for lines, want in ((["Needs jsonschema:  pip install jsonschema", "It is not optional."],
@@ -10731,14 +10752,51 @@ def _todo_computes_threads():
                             (["a", "the last"], "the last")):
             if want not in reason(lines, 1):
                 problems.append(f"the hook's reason for {lines} is {reason(lines, 1)!r}")
-        for where, said in ((a, "Join: needed"), (tmp / "seed", None), (older, None),
-                            (broken, "neither origin/main nor main")):
+        # From 4.12.0 it says the plugin's version in any project of the framework, and the
+        # to-do only in the additive mode, from the version that brought it; nothing where
+        # there is no project. Claude Code's records and the plugin's data here are empty
+        # folders: no marketplace to read a release from, no network.
+        nothing = tmp / "nothing"
+        (nothing / ".git").mkdir(parents=True)
+        # A `framework.yaml` of another tool, with no `framework_version:` line, is not a project
+        # of the framework: nothing said. One with `.framework/` and no pin is.
+        foreign = tmp / "foreign"
+        (foreign / ".git").mkdir(parents=True)
+        (foreign / "framework.yaml").write_text("name: another tool\nscan:\n  skip_dirs: [x]\n")
+        unpinned = tmp / "unpinned"
+        (unpinned / ".framework").mkdir(parents=True)
+        (unpinned / ".git").mkdir()
+        (unpinned / ".framework" / "work.yaml").write_text("people: [Owner]\n")
+        (unpinned / "framework.yaml").write_text("scan:\n  skip_dirs: [x]\n")
+        # Saved with a byte order mark, as an editor may save it: still the framework's, and its
+        # pin reads.
+        bom = tmp / "bom"
+        (bom / ".git").mkdir(parents=True)
+        (bom / "framework.yaml").write_text(chr(0xFEFF) + pin(since), encoding="utf-8")
+        isolated = {"CLAUDE_PLUGIN_DATA": str(tmp / "plugin-data"),
+                    "CLAUDE_CODE_PLUGIN_CACHE_DIR": str(tmp / "plugins")}
+        for where, said in ((a, "Join: needed"), (tmp / "seed", "Additive mode, from"),
+                            (plain, None), (older, None), (local.path, " on main."),
+                            (ahead.path, None),
+                            (broken, "neither origin/main nor main"), (nothing, ""),
+                            (foreign, ""),
+                            (unpinned, "pins no version that reads in this checkout."),
+                            (bom, f"pins {'.'.join(map(str, since))} in this checkout.")):
             r = subprocess.run([sys.executable, "-I", str(hook)], input="{}", capture_output=True,
-                               text=True, env={**os.environ, **_WORK_ENV,
+                               text=True, env={**os.environ, **_WORK_ENV, **isolated,
                                                "CLAUDE_PROJECT_DIR": str(where)})
-            if r.returncode or (said and said not in r.stdout) or (not said and r.stdout.strip()):
+            versions = "framework-data-ai: this plugin is" in r.stdout
+            wrong = (r.returncode or (said and said not in r.stdout)
+                     or (said == "" and r.stdout.strip())
+                     or (said is None and (not versions or "to-do" in r.stdout
+                                           or "Additive mode" in r.stdout))
+                     or (said and not versions)
+                     or (where == a and "on origin/main." not in r.stdout)
+                     # Its mode read from the main line, the pin is the checkout's.
+                     or (where == ahead.path and "in this checkout." not in r.stdout))
+            if wrong:
                 problems.append(f"the SessionStart hook in {where.name}: exit {r.returncode}, "
-                                f"{r.stdout[-200:]!r}")
+                                f"{r.stdout[-300:]!r}")
 
         # A thread opened before the adoption -- `b-od-010`, a decision and a change -- keeps the
         # rule it was opened under once the main line pins the version that keeps a mandate
@@ -12423,7 +12481,8 @@ def _doctor_reads_a_machine():
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
         repo = _Repo(tmp / "projects" / "docs")
-        repo.write(".framework/work.yaml", "mode: additive\npeople: [Owner]\nadmins: [Owner]\n")
+        team = "people: [Owner, Junior]\nadmins: [Owner]\n"
+        repo.write(".framework/work.yaml", "mode: additive\n" + team)
         repo.write(".framework/sessions.yaml", "exchange: ../_scambio\n")
         (tmp / "projects" / "_scambio").mkdir()
         sha, why = migrate.commit_declaring(pin, ROOT)
@@ -12478,13 +12537,41 @@ def _doctor_reads_a_machine():
                  **good["sandbox"], "excludedCommands": [work.SANDBOX_EXCLUDED[0]]}}),
              lambda: settings(config / "settings.json", good), 0,
              f"are recommended, and only `{work.SANDBOX_EXCLUDED[0]}` is there"),
+            # No remote yet: the main line is `main`, as the hook and the to-do read it.
             ("a plugin newer than the pin", lambda: claude("framework-data-ai 99.0.0\\n  Hooks (2)\\n"),
-             None, 0, "note  the plugin installed is 99.0.0"),
+             None, 0, f"ok    the plugin installed is 99.0.0, and the project pins {pin} on main: "
+             "newer"),
             ("a plugin older than the pin, no hooks", lambda: claude("framework-data-ai 0.0.1\\n  Hooks (0)\\n"),
              None, 1, "todo  the plugin installed is 0.0.1"),
             ("Claude Code that does not answer", lambda: claude(None), None, 1, "gave no version"),
             ("no exchange", lambda: (tmp / "projects" / "_scambio").rmdir(),
              lambda: (tmp / "projects" / "_scambio").mkdir(), 1, "which this machine does not have"),
+            # Undeclared, in the additive mode: a join declares it, so it is owed by who decides.
+            ("no exchange declared, for an admin",
+             lambda: repo.write(".framework/sessions.yaml", "{}\n"),
+             lambda: repo.write(".framework/sessions.yaml", "exchange: ../_scambio\n"), 1,
+             "by an admin, a deputy or a delegate: yours to do"),
+            ("no exchange declared, for a contributor",
+             lambda: repo.write(".framework/sessions.yaml", "{}\n"),
+             lambda: repo.write(".framework/sessions.yaml", "exchange: ../_scambio\n"), 0,
+             "note  `_scambio` is beside the repositories on this machine"),
+            ("no exchange declared, with no name",
+             lambda: repo.write(".framework/sessions.yaml", "{}\n"),
+             lambda: repo.write(".framework/sessions.yaml", "exchange: ../_scambio\n"), 0,
+             "a delegate: `--who` says whether that is you"),
+            ("no exchange declared, nor `_scambio` on this machine",
+             lambda: (repo.write(".framework/sessions.yaml", "{}\n"),
+                      (tmp / "projects" / "_scambio").rmdir()),
+             lambda: (repo.write(".framework/sessions.yaml", "exchange: ../_scambio\n"),
+                      (tmp / "projects" / "_scambio").mkdir()), 1,
+             "note  `_scambio` is not beside the repositories on this machine"),
+            # Outside the mode it is optional, for an admin too.
+            ("no exchange declared, outside the mode",
+             lambda: (repo.write(".framework/work.yaml", team),
+                      repo.write(".framework/sessions.yaml", "{}\n")),
+             lambda: (repo.write(".framework/work.yaml", "mode: additive\n" + team),
+                      repo.write(".framework/sessions.yaml", "exchange: ../_scambio\n")), 0,
+             "Declaring it is optional."),
             ("a name not among the people", None, None, 1, "`Nobody` is not among the people"),
             ("another project beside", lambda: _Repo(tmp / "projects" / "another").write(
                 ".framework/work.yaml", "people: [X]\n"),
@@ -12507,12 +12594,195 @@ def _doctor_reads_a_machine():
                 says_hooks = "todo  the plugin brings 0 hook(s)" if hooks_owed else "note  the plugin brings 0 hook(s)"
             else:
                 says_hooks = None
-            rc, out = run("--who", "Nobody" if name == "a name not among the people" else "Owner")
+            given = ("Nobody" if name == "a name not among the people" else
+                     "Junior" if name.endswith("for a contributor") else "Owner")
+            rc, out = run(*(() if name.endswith("with no name") else ("--who", given)))
+            if name.endswith("for a contributor") \
+                    and "a delegate, not from this machine" not in out:
+                problems.append(f"{name}: the line is not a note for whoever decides elsewhere: "
+                                f"{out[-500:]!r}")
             if rc != want or says not in out or (says_hooks and says_hooks not in out):
                 problems.append(f"{name}: exit {rc} ({want} expected), {says!r} "
                                 f"{'and ' + repr(says_hooks) if says_hooks else ''} in {out[-500:]!r}")
             if after:
                 after()
+        # The main line's roles first: a checkout that has dropped the mode its main line
+        # declares still owes the exchange to whoever decides there. Last, since it adds a remote.
+        bare = tmp / "origin.git"
+        subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(bare)], check=True,
+                       env={**os.environ, **_WORK_ENV})
+        repo.git("remote", "add", "origin", str(bare))
+        repo.git("push", "-q", "origin", "main")
+        repo.write(".framework/work.yaml", team)
+        repo.write(".framework/sessions.yaml", "{}\n")
+        rc, out = run("--who", "Owner")
+        if "a deputy or a delegate: yours to do" not in out:
+            problems.append(f"no exchange declared, the mode on the main line alone: "
+                            f"{out[-500:]!r}")
+        # The pin as the hook at the start of a session reads it: the main line's, where it
+        # declares the mode, and not the one of a checkout stopped before.
+        repo.write("framework.yaml", f"framework_version: {int(pin.split('.')[0]) - 1}.0.0\n")
+        rc, out = run("--who", "Owner")
+        if f"ok    the plugin installed is {pin}, and the project pins {pin} on origin/main" \
+                not in out:
+            problems.append(f"the pin of a checkout behind its main line: {out[-500:]!r}")
+    return problems
+
+
+@check("the SessionStart hook says the plugin's version against the latest release and the pin, reads the release at most once a day, asks only when an attended session starts, and gives the commands of the way the plugin was installed")
+def _hook_says_the_versions():
+    # The release is what the plugin's data folder kept today, or the remote of a checkout on
+    # disk: nothing reads the network. The framework's checkout, the GitHub repository and the
+    # plugin loaded for one session have their answer kept; two marketplaces added from local
+    # folders are read for real, by `git ls-remote`. Git runs without the person's configuration.
+    problems = []
+    hook = ROOT / "hooks" / "session_start.py"
+    mine = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text())["version"]
+    today = date.today().isoformat()
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        plugins, data = tmp / "plugins", tmp / "data" / "framework-data-ai-mkt"
+        data.mkdir(parents=True)
+
+        def plugin_at(place: Path) -> Path:
+            """The hook and `plugin.json` where Claude Code would have put a plugin."""
+            (place / "hooks").mkdir(parents=True)
+            (place / ".claude-plugin").mkdir()
+            shutil.copy(hook, place / "hooks" / "session_start.py")
+            shutil.copy(ROOT / ".claude-plugin" / "plugin.json", place / ".claude-plugin")
+            return place / "hooks" / "session_start.py"
+
+        cached = lambda market: plugin_at(plugins / "cache" / market / "framework-data-ai" / mine)
+        # A repository on disk with two releases, one annotated, and a tag that is not one; two
+        # checkouts that each hold the plugin, as the framework's own does, one whose remote is
+        # that repository and one whose remote is not there yet.
+        origin = _Repo(tmp / "origin")
+        origin.commit("base", "2026-06-01T09:00:00+02:00")
+        origin.git("tag", "v1.2.3")
+        origin.git("tag", "-a", "-m", "a release", "v98.1.0")
+        origin.git("tag", "not-a-release")
+        missing = tmp / "no-repository-yet"
+        reads, fails = _Repo(tmp / "reads"), _Repo(tmp / "fails")
+        reads.git("remote", "add", "origin", str(origin.path))
+        fails.git("remote", "add", "origin", str(missing))
+        from_folder = lambda place: {"source": {"source": "directory", "path": str(place)},
+                                     "installLocation": str(place)}
+        (plugins / "known_marketplaces.json").parent.mkdir(parents=True)
+        (plugins / "known_marketplaces.json").write_text(json.dumps({
+            "local": from_folder(ROOT),
+            "acme-mkt": {"source": {"source": "github", "repo": "acme/framework-data-ai"},
+                         "installLocation": str(plugins / "marketplaces" / "acme-mkt")},
+            "reads-mkt": from_folder(reads.path), "fails-mkt": from_folder(fails.path)}))
+
+        def kept(source: str, latest: str, folder: Path = data) -> None:
+            folder.mkdir(parents=True, exist_ok=True)
+            (folder / "latest-release.json").write_text(json.dumps(
+                {"source": source, "checked": today, "latest": latest}))
+
+        project = tmp / "docs"
+        (project / ".git").mkdir(parents=True)
+        (project / "framework.yaml").write_text(f"framework_version: {mine}\n")
+
+        def run(script: Path, source: str | None, folder: Path | None = data,
+                attended: str | None = None) -> str:
+            # Repositories on disk only: a read that reaches past the answers kept -- a run
+            # across midnight -- fails here rather than going to the network. Whether the
+            # session is attended is what each case says, not what the session running these
+            # checks is.
+            env = {**os.environ, **_WORK_ENV, "CLAUDE_PROJECT_DIR": str(project),
+                   "CLAUDE_CODE_PLUGIN_CACHE_DIR": str(plugins), "GIT_ALLOW_PROTOCOL": "file"}
+            env.pop("CLAUDE_PLUGIN_DATA", None)
+            env.pop("CLAUDE_CODE_SESSION_ATTENDED", None)
+            if folder is not None:
+                env["CLAUDE_PLUGIN_DATA"] = str(folder)
+            if attended is not None:
+                env["CLAUDE_CODE_SESSION_ATTENDED"] = attended
+            r = subprocess.run([sys.executable, "-I", str(script)],
+                               input=json.dumps({"source": source}) if source else "",
+                               capture_output=True, text=True, env=env)
+            if r.returncode:
+                problems.append(f"the hook exited {r.returncode}: {r.stderr[-200:]!r}")
+            return r.stdout
+
+        kept(str(ROOT), mine)
+        out = run(hook, "startup")
+        if f"this plugin is {mine}; the latest release is {mine}; the project pins {mine} in " \
+                "this checkout." not in out or "Before anything else" in out:
+            problems.append(f"a plugin at the latest release and at the pin: {out!r}")
+        kept(str(ROOT), "99.0.0")
+        for source, asks in (("startup", True), (None, True), ("resume", False),
+                             ("clear", False), ("compact", False), ("fork", False)):
+            out = run(hook, source)
+            if "older than the latest release" not in out \
+                    or ("Before anything else, tell the person" in out) != asks \
+                    or ("do not ask the person to accept it" in out) == asks \
+                    or f"the person runs `git -C {ROOT} pull`" not in out \
+                    or "/reload-plugins" not in out:
+                problems.append(f"a plugin read in place, behind the latest release, source "
+                                f"{source}: {out!r}")
+        # Where Claude Code says nobody attends the session, nobody is asked, whatever the source;
+        # any other value of its variable, or none, is an attended session.
+        for source, attended, alone in (("startup", "0", True), ("resume", "0", True),
+                                        ("startup", "1", False), ("startup", "", False)):
+            out = run(hook, source, attended=attended)
+            if ("Nobody attends this session" in out) != alone \
+                    or ("at the top of your final answer" in out) != alone \
+                    or ("Before anything else" in out) == (alone or source != "startup") \
+                    or "older than the latest release" not in out:
+                problems.append(f"a plugin behind the latest release, source {source}, "
+                                f"CLAUDE_CODE_SESSION_ATTENDED {attended!r}: {out!r}")
+        newer = f"{int(mine.split('.')[0]) + 1}.0.0"       # a pin ahead of the plugin
+        (project / "framework.yaml").write_text(f"framework_version: {newer}\n")
+        out = run(hook, "startup")
+        if "older than the version the project pins" not in out \
+                or "problems here are certain" not in out:
+            problems.append(f"a plugin older than the pin: {out!r}")
+        # Installed in a way the records do not show: both roads.
+        out = run(plugin_at(tmp / "stray"), "startup", tmp / "data" / "framework-data-ai-stray")
+        if "the latest release is unknown (where the plugin comes from does not say)" not in out \
+                or "How it was installed could not be read" not in out:
+            problems.append(f"a plugin whose installation does not read: {out!r}")
+        (project / "framework.yaml").write_text(f"framework_version: {mine}\n")
+        kept("https://github.com/acme/framework-data-ai.git", "99.0.0")
+        out = run(cached("acme-mkt"), "startup")
+        if "`claude plugin marketplace update acme-mkt`" not in out \
+                or "`claude plugin update framework-data-ai@acme-mkt`" not in out:
+            problems.append(f"a plugin copied from a marketplace added by URL: {out!r}")
+        inline = tmp / "data" / "framework-data-ai-inline"
+        kept(str(ROOT), "99.0.0", inline)
+        out = run(hook, "startup", inline)
+        if "no update command touches it" not in out or "claude plugin update" in out:
+            problems.append(f"a plugin loaded with --plugin-dir: {out!r}")
+
+        # Read for real, on the remote of the checkout the plugin is in, and kept with the day.
+        fresh = tmp / "data" / "framework-data-ai-reads-mkt"
+        reads_hook = plugin_at(reads.path)
+        out = run(reads_hook, "startup", fresh)
+        try:
+            answer = json.loads((fresh / "latest-release.json").read_text())
+        except (OSError, ValueError):
+            answer = {}
+        if "the latest release is 98.1.0;" not in out or answer.get("checked") != today:
+            problems.append(f"a release read from a repository on disk: {out!r}, kept {answer}")
+        # With no data folder to keep the day in, nothing is read.
+        nothing = "the latest release is unknown (no data folder to keep it in, so it is not read)"
+        out = run(reads_hook, "startup", None)
+        if nothing not in out:
+            problems.append(f"a release with no data folder: {out!r}")
+        # A read that fails says the last answer kept, and is not tried again that day.
+        gone = tmp / "data" / "framework-data-ai-fails-mkt"
+        gone.mkdir()
+        (gone / "latest-release.json").write_text(json.dumps(
+            {"source": str(fails.path.resolve()), "checked": "2000-01-01", "latest": "97.0.0"}))
+        said = "the latest release is 97.0.0 (as read on 2000-01-01: it could not be read today)"
+        gone_hook = plugin_at(fails.path)
+        out = run(gone_hook, "startup", gone)
+        if said not in out:
+            problems.append(f"a release that could not be read, with an older answer: {out!r}")
+        shutil.copytree(origin.path, missing)
+        out = run(gone_hook, "resume", gone)
+        if said not in out:
+            problems.append(f"a release read twice in a day: {out!r}")
     return problems
 
 
@@ -13434,7 +13704,9 @@ def _additive_end_to_end():
         # The hook, now that the registry declares the version it waits for, and migrate.
         r = subprocess.run([sys.executable, "-I", str(ROOT / "hooks" / "session_start.py")],
                            input="{}", capture_output=True, text=True,
-                           env={**os.environ, **_WORK_ENV, "CLAUDE_PROJECT_DIR": str(a)})
+                           env={**os.environ, **_WORK_ENV, "CLAUDE_PROJECT_DIR": str(a),
+                                "CLAUDE_PLUGIN_DATA": str(tmp / "plugin-data"),
+                                "CLAUDE_CODE_PLUGIN_CACHE_DIR": str(tmp / "plugins")})
         if "Additive mode, from" not in r.stdout or "to take: a-od-001" not in r.stdout:
             problems.append(f"the hook in the project adopted did not say the to-do: {r.stdout!r}")
         r = subprocess.run([sys.executable, str(migrate_py), "--root", str(a),

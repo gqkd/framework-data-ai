@@ -2705,6 +2705,26 @@ def _filled_copy(expected: str, copy: str) -> bool:
     return True
 
 
+def pinned(p: Project) -> tuple[str, str]:
+    """The version the project pins, and where it was read, as the to-do and the hook at the
+    start of a session read it: on the main line -- `<remote>/<main>`, or `<main>` where that is
+    not a commit here -- where its `work.yaml` declares the mode, in this checkout otherwise. `""`
+    where none reads."""
+    base = next((b for b in (p.base, p.main)
+                 if not git(p.root, "rev-parse", "--verify", "-q", f"{b}^{{commit}}",
+                            check=False).returncode), None)
+    if base and B.work_at(p.root, base).get("mode") == "additive":
+        try:
+            data = v.yaml.safe_load(str(B.git(p.root, "show",
+                                              f"{base}:{B.prefix(p.root)}framework.yaml")))
+        except (B.BranchError, v.yaml.YAMLError):
+            data = {}
+        where = f"on {base}"
+    else:
+        data, where = v.load_project(p.root), "in this checkout"
+    return str((data if isinstance(data, dict) else {}).get("framework_version") or ""), where
+
+
 def cmd_doctor(p: Project, args) -> int:
     """What this machine has of what `references/workstation.md` asks: read only and offline.
 
@@ -2720,9 +2740,10 @@ def cmd_doctor(p: Project, args) -> int:
         if not ok and needed:
             todo.append(text)
 
-    pin = str(v.load_project(p.root).get("framework_version") or "")
+    pin, where = pinned(p)
     if not pin:
-        say("note  the project pins no version in framework.yaml: nothing to compare the plugin with")
+        say(f"note  the project pins no version in framework.yaml {where}: nothing to compare the "
+            "plugin with")
     framework = Path(__file__).resolve().parents[3]
     top = Path(git(p.root, "rev-parse", "--show-toplevel").stdout.strip())
     say("Read only and offline: what the files of this machine declare.")
@@ -2739,17 +2760,21 @@ def cmd_doctor(p: Project, args) -> int:
     if version is None:
         line(False, "`claude plugin details framework-data-ai` gave no version: Claude Code is not "
              "on the PATH, or the plugin is not installed. Install it at the version the project "
-             f"pins{', ' + pin if pin else ''}.")
+             f"pins{', ' + pin if pin else ''}, or a later one: the latest release best.")
     else:
         have, want = _semver(version.group(1)), _semver(pin)
         older = bool(have and want and have < want)
-        line(version.group(1) == pin, f"the plugin installed is {version.group(1)}, and the "
-             f"project pins {pin or 'no version'}" + (": older, so its skills and validator do not "
-             "know what the project declares" if older else ""), needed=older)
+        # From 4.12.0 a newer plugin is fine: what is pinned is the least it must know.
+        line(bool(have and want and have >= want), f"the plugin installed is "
+             f"{version.group(1)}, and the project pins {pin or 'no version'} {where}"
+             + (": older, so its skills and validator do not know what the project declares"
+                if older else ": newer, which reads what the project declares"
+                if have and want and have > want else ""), needed=older)
         n = int(hooks.group(1)) if hooks else 0
-        line(n >= 2, f"the plugin brings {n} hook(s)" + (": the write guard and the to-do at the "
-             "start of a session" if n >= 2 else ", and the write guard and the to-do at the start "
-             "of a session are two"), needed=bool(want and want >= SINCE_HOOKS))
+        line(n >= 2, f"the plugin brings {n} hook(s)" + (": the write guard and the one at the "
+             "start of a session, the versions and the to-do" if n >= 2 else ", and the write "
+             "guard and the one at the start of a session, the versions and the to-do, are two"),
+             needed=bool(want and want >= SINCE_HOOKS))
     say("      A plugin loaded with `--plugin-dir` replaces the one installed for that session "
         "alone, and is not seen here.")
 
@@ -2836,8 +2861,27 @@ def cmd_doctor(p: Project, args) -> int:
         sessions = {}
     declared = sessions.get("exchange") if isinstance(sessions, dict) else None
     if not declared:
-        line(False, "no `exchange:` in .framework/sessions.yaml: a code session has nowhere to "
-             "deliver what the documentation should say")
+        # A fact of the project, committed and the same on every machine: in the additive mode
+        # a join changes it, so it is a `todo` only for whoever may run one. The roles of the
+        # main line as the last fetch left it, this checkout's where it does not read.
+        roles = main_roles(p) or p.work
+        additive = roles.get("mode") == "additive"
+        delegated = {c.get("to") for c in p.held(B.DELEGATION_REF).values() if c.get("to")}
+        who = (args.who or "").strip()
+        decides = bool(who) and who in B.deciders(roles, delegated)
+        line(False, "the project declares no exchange in .framework/sessions.yaml: every project "
+             "has `_scambio` beside the repositories, and declaring it turns on its discipline "
+             "-- the brief written there, the delivery taken from there, `exchange.py`, the "
+             "checks of the validator. " + (
+                 "In the additive mode it is declared at a join, `exchange: ../_scambio`, by an "
+                 "admin, a deputy or a delegate" + (": yours to do" if decides else
+                                                     ", not from this machine" if who else
+                                                     ": `--who` says whether that is you")
+                 if additive else "Declaring it is optional."),
+             needed=additive and decides)
+        here = parent / "_scambio"
+        say(f"note  `_scambio` {'is' if here.is_dir() else 'is not'} beside the repositories on "
+            f"this machine ({here})")
     else:
         place = (p.root / str(declared)).resolve()
         line(place.is_dir(), f"the exchange {declared} is {place}"
@@ -2878,7 +2922,10 @@ def cmd_doctor(p: Project, args) -> int:
     else:
         say(f"note  the names `--who` takes: {', '.join(sorted(people)) or 'any, no people declared'}")
 
-    # The workflow of the branches, as the pinned version has it.
+    # The workflow of the branches, as the pinned version has it: this checkout's copy against
+    # this checkout's pin, which a join moves together. A checkout behind its main line is
+    # brought forward with a pull, not by copying the workflow again.
+    own = str(v.load_project(p.root).get("framework_version") or "")
     flows = top / ".github" / "workflows"
     branches, request = flows / "branches.yml", flows / "pull-request.yml"
     if request.is_file():
@@ -2892,17 +2939,17 @@ def cmd_doctor(p: Project, args) -> int:
     else:
         copy = branches.read_text(encoding="utf-8")
         import migrate as M                  # the framework's history, read as `migrate.py` reads it
-        sha, why = M.commit_declaring(pin, framework) if pin else (None, "the project pins no version")
+        sha, why = M.commit_declaring(own, framework) if own else (None, "the project pins no version")
         shown = git(framework, "show", f"{sha}:ci/branches.yml", check=False) if sha else None
         if shown is None or shown.returncode:
-            line(False, f"branches.yml cannot be compared with the one of {pin or 'the pin'}: "
+            line(False, f"branches.yml cannot be compared with the one of {own or 'the pin'}: "
                  f"{why or 'that version has no ci/branches.yml'}", needed=False)
         elif any(name in copy for name in PLACEHOLDERS):
             line(False, "branches.yml still has OWNER/framework-data-ai or COMMIT_OR_TAG: fill them")
         else:
             same = _filled_copy(shown.stdout, copy)
-            line(same, f"branches.yml is the one of {pin}, its placeholders filled" if same else
-                 f"branches.yml differs from the one of {pin}: copy ci/branches.yml again and "
+            line(same, f"branches.yml is the one of {own}, its placeholders filled" if same else
+                 f"branches.yml differs from the one of {own}: copy ci/branches.yml again and "
                  "fill its placeholders")
     return 1 if todo else 0
 

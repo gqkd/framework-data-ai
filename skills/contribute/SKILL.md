@@ -33,9 +33,10 @@ name as they give it, one of `people` in `.framework/work.yaml`, never read from
 ## The first time on a machine
 
 Run `python3 "$F/work.py" --root <documentation> doctor --who "<name>"` and show what it says.
-A `todo` line is something the framework needs and the person installs or fixes; a `note` is a
-recommendation. It reads files, not the session: say so when it reports a plugin or a setting the
-person believes is otherwise.
+A `todo` line is something the framework needs and the person installs or fixes -- the one on an
+exchange not declared is the project's, fixed at a join, and only whoever decides gets it --; a
+`note` is a recommendation. It reads files, not the session: say so when it reports a plugin or a
+setting the person believes is otherwise.
 
 ## What there is to do
 

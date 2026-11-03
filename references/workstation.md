@@ -3,18 +3,18 @@
 What a machine needs before a person writes documentation or code with the framework, the
 hooks the plugin brings into every session, and the rules on where an agent may write. Read
 it once per machine, and again when the plugin's version changes: the hooks follow the plugin,
-and the version a project pins decides whether the to-do hook speaks and, where a version
-brought a new rule -- the threads of 4.11.0, a code in a heading --, which one the to-do and the
-validator apply (`validate.rules_hold`).
+and the version a project pins decides whether the hook at the start of a session says the to-do
+and, where a version brought a new rule -- the threads of 4.11.0, a code in a heading --, which
+one the to-do and the validator apply (`validate.rules_hold`).
 
 ## What to install
 
-- **Claude Code**, with the framework installed as a plugin at the version the project pins
-  in `framework.yaml` at the root of the documentation. The README says how to install it and
-  why a change is picked up by reinstalling rather than updating. The symlink into
-  `~/.claude/skills/` the README also describes brings the skills and not the hooks: no
-  guard. Tested with Claude Code 2.1.310 on Linux; the earliest version that works is not
-  known.
+- **Claude Code**, with the framework installed as a plugin at the version the project pins in
+  `framework.yaml` at the root of the documentation or a later one, the latest release best: the
+  hook at the start of a session says where it stands. The README says how to install it and how to
+  update it. The symlink into `~/.claude/skills/` the README also describes brings the skills and
+  not the hooks: no guard. Tested with Claude Code 2.1.310 on Linux, the hook at the start of a
+  session with 2.1.317; the earliest version that works is not known.
 - **Python 3** with the framework's dependencies, from the framework's directory:
   `python3 -m pip install -r requirements.txt -c constraints.txt`. The write guard runs as
   `python3 -I` and needs nothing else: with no `python3` on the PATH the hook fails, and a
@@ -84,19 +84,49 @@ server that writes files, writes wherever the operating system lets it. The limi
 is the rule below, which an agent follows and nothing enforces; the sandbox Claude Code
 offers for Bash is what can enforce it.
 
-**The to-do at the start of a session** (`hooks/session_start.py`, a `SessionStart` hook). In a
-project whose `.framework/work.yaml` declares `mode: additive`, and that pins in `framework.yaml`
-the version that brought the mode or a later one -- or pins none --, it runs `skills/audit/scripts/todo.py --summary` and puts its lines in the session's context:
-the threads open and who has them, the threads to take, whether a join is needed, the effects
-waiting by document. Anywhere else it says nothing. The whole to-do is
+**The versions, and the to-do, at the start of a session** (`hooks/session_start.py`, a
+`SessionStart` hook). In a project of the framework -- a `framework.yaml` with a
+`framework_version:` line, or `.framework/work.yaml`, above the folder the session started in; a
+`framework.yaml` of another tool, with no such line, leaves it silent -- it puts in the session's
+context, from 4.12.0, three versions: the plugin's, from its `plugin.json`; the latest release,
+the highest `v<x>.<y>.<z>` tag where the plugin comes from, read with `git ls-remote --tags`, with
+no terminal and git's and ssh's prompts turned off -- a credential helper of another system, as
+Git Credential Manager from Windows under WSL, may still open a window for a private source --, at
+most once a day whether the read succeeds or not, the day and the last answer kept in the plugin's
+data folder (`CLAUDE_PLUGIN_DATA`) -- when it cannot be read it says so and uses the last answer
+kept --; and the one the project pins. The mode and
+the pin are read as the to-do reads them: from the main line's `.framework/work.yaml` and, in the
+mode, its `framework.yaml`; from the checkout's where the main line does not read, and the
+checkout's pin outside the mode. A plugin older than the latest release is said first, and older
+than the pin more strongly, since there the problems are certain: the agent tells the person and
+asks them to accept going on with it or to update first, an answer recorded nowhere, which is a
+fact of their machine. It asks when the session starts, and on a resumption, a `/clear`, a
+compaction or a fork puts the versions back without asking. Where Claude Code says nobody attends
+the session -- `CLAUDE_CODE_SESSION_ATTENDED` is `0` under `claude -p`, seen with 2.1.317 and not
+in its documentation --, nobody is asked: the agent says it at the top of its final answer. Where
+that variable is missing or says anything else, the session counts as attended, and the person is
+asked. The evaluations' runners, which run `claude -p`, do not turn it off: where the plugin is
+installed as a plugin, and not through the symlink alone, the line of the versions is in their
+sessions as in anybody's. The commands it gives, for the person
+to run, follow the way the plugin was installed, read from Claude Code's
+`known_marketplaces.json` and from where the plugin's files are: from a marketplace added by URL,
+`claude plugin marketplace update` and `claude plugin update`; from a local folder that is a git
+checkout, read in place, `git pull` there, and from one that is not, as from a URL; with
+`--plugin-dir`, none. Then a new session or `/reload-plugins`.
+
+In a project in the additive mode, read as above, whose pin is the version that brought the mode
+or a later one -- or none --, it also runs `skills/audit/scripts/todo.py --summary` and puts its
+lines in the session's context: the threads open and who has them, the threads to take, whether a
+join is needed, the effects waiting by document. In another project of the framework it says the
+versions alone, and outside one nothing. The whole to-do is
 `python3 <framework>/skills/audit/scripts/todo.py --root <documentation>`; where the hook could
 not compute it -- the scripts' dependencies missing, no main line in the clone -- it says so in
 one line, with the reason. The summary is computed by the plugin's `todo.py`; a `<framework>`
 checkout at another version may compute the whole to-do differently.
 
-**Updating the plugin changes the sessions of the working folder** -- reinstalling it, as the
-README says, and starting the session again -- whatever version a project pins and with no
-`--adopt`: the guard follows the plugin. A session started with
+**Updating the plugin changes the sessions of the working folder** -- as the README says, then
+a new session or `/reload-plugins` -- whatever version a project pins and with no `--adopt`: the
+guard follows the plugin. A session started with
 `claude --plugin-dir <checkout>` has the hooks of that checkout instead.
 
 ## The Bash sandbox, recommended
@@ -193,7 +223,10 @@ working in one is for the agent to know and for this rule to hold, not for the g
   the framework needs, and makes it exit 1; a `note` is what it recommends, or only tells. It
   does not see the settings an organisation manages, nor a plugin loaded with `--plugin-dir`.
 - `claude plugin details framework-data-ai` shows the version installed and where it is read
-  from; it should be the version the project pins.
+  from; it should be the version the project pins or a later one. `doctor`, for the plugin, and
+  the hook at the start of a session read the pin as the to-do does: in the additive mode on the
+  main line, `origin/main` or `main` where there is none. The copy of `ci/branches.yml` `doctor`
+  compares with this checkout's pin, which a join moves with it.
 - `python3 -c "import yaml, jsonschema"` from the environment the scripts use.
 - `git worktree list` in the documentation repository.
 - From a session in the documentation repository, ask the agent to write a file in the

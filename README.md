@@ -108,7 +108,7 @@ the repository, and the brief assembles, it does not compose
 | `schemas/` | The artifact catalog and what each type is allowed to be. `artifact-types.yaml` is the source; `generate.py` projects it into the JSON Schemas, into `FRAMEWORK.md §7` and into `templates/README.md` |
 | `skills/` | The skills themselves. `audit/` also carries the gate: `scripts/validate.py`, `scripts/migrate.py`, `scripts/attest.py` (how a person attests a reading; with `--commit`, which the session runs once they have, the attestations committed on their own), `scripts/exchange.py` (what waits in the exchange between sessions, and `integrate`, which closes one element), `scripts/work.py` (documentation written on branches: claims, reservations, delegations, bringing a branch up to date, threads and joins, `check`, the offline round of views and validator, `renumber`, which gives a number a branch created and found taken the next one, `meetings`, the cards of where the threads of a join meet, and `doctor`, what a machine has), `scripts/todo.py` (in the additive mode, what there is to do and the threads computed from the main line) and `checks.yaml` |
 | `agents/` | The subagents the plugin ships, invoked as `framework-data-ai:critic` and `framework-data-ai:reviser`. `critic.md` is an external reviewer, read only, that reviews every plan before it is presented and every diff before it is committed or merged, each objection classed as on the proposal, on the substance or out of scope. `reviser.md` stands between a session and the critic: it fixes the objections on the proposal in the files it may write, has its fixes reviewed again when they were many, an objection needed a person or the critic said it left some out, at most three passes -- one on the branch of a thread or of a parking line, from 4.12.0 pinned or with no version that reads, where the join reviews again, and at the join one more on the corrections of whoever decides once the three are spent --, and hands back in a few lines what a person has to settle |
-| `hooks/` | What the plugin brings into every session where it is installed as a plugin, not through the symlink. `guard.py` is the write guard: in the working folder, Write, Edit and NotebookEdit reach only the session's repository and its worktrees, the exchange, Claude Code's own folders and the `allowed_dirs` option. `session_start.py` puts the to-do, in a few lines, in a session that starts in a project in the additive mode. See `references/workstation.md` |
+| `hooks/` | What the plugin brings into every session where it is installed as a plugin, not through the symlink. `guard.py` is the write guard: in the working folder, Write, Edit and NotebookEdit reach only the session's repository and its worktrees, the exchange, Claude Code's own folders and the `allowed_dirs` option. `session_start.py`, at the start of a session in a project of the framework, says the plugin's version against the latest release and the version the project pins -- asking the person to accept an older one, with the commands to update it -- and, in the additive mode, the to-do in a few lines. See `references/workstation.md` |
 | `references/` | Shared by the skills: the common preamble, the routing table, the operating-mode and evidence rules, the contribution trust boundary, the adoption procedure, what a workstation needs, and the rule of the additive mode |
 | `src/framework_data_ai/` | Shared reading and resolution, the artifact contracts and a separate code-observation layer, used by the opt-in verification profiles. Loaded from this checkout; no package installation required |
 | `ci/` | Legacy PR template and workflow, the optional trusted-base documentary controller, contribution-policy and CODEOWNERS adoption examples; see `references/contributions.md` |
@@ -177,24 +177,26 @@ claude plugin marketplace add $PWD
 claude plugin install framework-data-ai@framework-data-ai
 ```
 
-This copies the repository into `~/.claude/plugins/cache/` at install time, hooks included,
-so an edit to a skill does not reach it until you reinstall. Having both is safe: installing
-the plugin disables the symlink, uninstalling re-enables it, and
-`claude plugin details framework-data-ai` shows which one is live under `Source:`.
+Claude Code reads a plugin from a marketplace added from a local folder in place, hooks
+included: an edit to a skill reaches the next session, or the running one after
+`/reload-plugins`, with nothing to reinstall, and `claude plugin list --json` shows the folder
+as `readFromFolder`. Having both is safe: installing the plugin disables the symlink,
+uninstalling re-enables it, and `claude plugin details framework-data-ai` shows which one is
+live under `Source:`.
 
-**To pick up a change, reinstall rather than update.** `claude plugin update` exists and is
-shorter, but the install path is keyed on the `version` in `plugin.json`, which does not move
-when a skill is edited, so it can find nothing to do and say so cheerfully:
+**To pick up a release**, bring the folder to it -- `git pull` there -- and start a new session
+or run `/reload-plugins`. Installed from a URL instead, as in step 3, the plugin is a copy in
+`~/.claude/plugins/cache/`, keyed on the `version` in `plugin.json`, which every release
+changes:
 
 ```bash
-claude plugin uninstall framework-data-ai@framework-data-ai
-claude plugin install framework-data-ai@framework-data-ai
+claude plugin marketplace update framework-data-ai
+claude plugin update framework-data-ai@framework-data-ai
 ```
 
-Then restart the session: the copy is read at start-up. The marketplace does not need
-re-adding, because its source is this directory. To check the copy actually moved, look for
-something you know is new in `~/.claude/plugins/cache/framework-data-ai/framework-data-ai/<version>/`
-rather than trusting the command's own report.
+then a new session or `/reload-plugins`. In every project of the framework the hook at the
+start of a session says whether the plugin is behind the latest release or the version the
+project pins, and which of these applies (`references/workstation.md`).
 
 <details>
 <summary><b>Why there is no <code>--scope</code> in these commands</b></summary>
