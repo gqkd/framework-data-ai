@@ -180,6 +180,9 @@ WARNINGS_AT_THE_JOIN_SINCE = "4.12.0"
 REREADING_OPTIONAL_SINCE = "4.12.0"
 # Where a change withdrawn stays withdrawn, and `BR006` says one brought back out of it.
 WITHDRAWN_STAYS_SINCE = "4.12.0"
+# Where a change may be a hotfix, `hotfix: true`, and `CHG005` reads the field: the version that
+# brought it. `join` and the to-do read it with their own constants.
+HOTFIX_SINCE = "4.12.0"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -3470,6 +3473,65 @@ def check_change_contracts(arts: list[Artifact], report: Report, *, references=N
                            "which is the question a `DEC` exists to answer.")
 
 
+def check_hotfixes(arts: list[Artifact], report: Report, project: dict | None, *,
+                   references=None) -> None:
+    """`CHG005`, from 4.12.0 pinned (`HOTFIX_SINCE`), in any mode: a hotfix routed past the
+    product without the decision that says why, and the field on what is not a change.
+
+    A hotfix is a cycle of its own, classified by its `ICG` like any change. Its lightning join
+    is for one routed `none` or `product`; one the classification routes `architecture` or
+    `both` wants a `DEC` in its `derives_from`, which the skill writes in the same join -- that
+    it is of the same join the skill says, since outside the mode there is no join to look at.
+    Where the classification's `impacts` say `architecture` too, `CHG002` says the same from
+    `approved` on, and this check leaves it those states: in a draft is where the hotfix's one
+    pass reads it. A change with no classification that reads is `CHG003`'s. A hotfix withdrawn,
+    its code never reaching production, is not said: it moved nothing.
+    """
+    if not rules_hold(project or {}, HOTFIX_SINCE):
+        return
+    references = references or reference_index(arts)
+    for a in arts:
+        if "hotfix" not in a.meta:
+            continue
+        if a.type != "change-contract":
+            report.add("CHG005", a.rel,
+                       f"carries `hotfix`, and is a {a.type}: only a change contract is a "
+                       "hotfix. A hotfix is a cycle of its own -- its `ICG`, its `CHG` with "
+                       "`hotfix: true` -- and this field here says nothing anybody reads.")
+            continue
+        if a.meta.get("hotfix") is not True or a.meta.get("status") == "withdrawn":
+            continue                     # withdrawn: never carried out, its routing moved nothing
+        resolved = references.artifact(a.meta.get("icg"), kind="impact-classification")
+        icg = resolved.target.artifact if resolved.target else None
+        if icg is None:
+            continue
+        rows: dict = {}
+        for key, value in as_map(icg.meta.get("routing")).items():
+            candidate = references.normalize_candidate(key, icg)
+            if candidate.identity is not None:
+                rows.setdefault(candidate.identity, set()).add(str(value))
+        routed: set[str] = set()
+        for ref in as_list(a.meta.get("derives_from")):
+            candidate = references.normalize_candidate(ref, a)
+            if candidate.identity is not None:
+                routed |= rows.get(candidate.identity, set())
+        wide = sorted(routed & {"architecture", "both"})
+        if not wide:
+            continue
+        if any(references.artifact(r, kind="decision-record").target is not None
+               for r in as_list(a.meta.get("derives_from"))):
+            continue
+        status = a.meta.get("status")
+        if status in ("approved", "implemented", "verified") \
+                and "architecture" in references.impacts_for(a, icg).impacts:
+            continue                     # `CHG002` says it
+        report.add("CHG005", a.rel,
+                   f"a hotfix, which {icg.id} routes to {' and '.join(wide)}, with no decision "
+                   "record in `derives_from`. A lightning join is for a hotfix routed `none` or "
+                   "`product`: one that moves the architecture wants a `DEC` in the same join, "
+                   "which says why it moved.")
+
+
 def check_withdrawals(arts: list[Artifact], report: Report, *, references=None) -> None:
     """`CHG004`: a `withdrawn` change names what withdrew it, and only a withdrawn one does.
 
@@ -4708,6 +4770,13 @@ def check_mandate_moves(root: Path, tip: str, bases: list[str], before: list["_b
     states of a `CHG` go forward, and `withdrawn` is reached from `approved` only; nothing said
     one brought back out of it, unless its `withdrawn_by` or its `affects` moved too. What it
     would have done comes back as a new `CHG`, deriving from it or from the decision.
+
+    FROM 4.12.0, A HOTFIX IS WHOEVER DECIDES' (`HOTFIX_SINCE`), in the additive mode: `hotfix:
+    true` is written on the branch of a join -- the lightning one, or the one that regularises an
+    emergency merge --, and written or taken off on any other branch, on a new change as on one
+    the main line holds, it is said. A contributor's change is a draft a join approves as a
+    mandate; one marked a hotfix there would be no thread to take, with no brief and no code
+    under way, and would hold the mandates on its code prefixes for code nobody writes.
     """
     try:
         works = [_branches.work_at(root, b) for b in bases]
@@ -4776,6 +4845,22 @@ def check_mandate_moves(root: Path, tip: str, bases: list[str], before: list["_b
                             "the forecast of an approved one written by who decides, on the "
                             "branch of a join: a contributor proposes a withdrawal as a `DEC` "
                             "`proposed`, and a forecast on a parking line")
+        if additive and not on_join and rules_hold(project or {}, HOTFIX_SINCE):
+            marked = a.meta.get("hotfix") is True
+            if was and all(marked != (o is not None and o.meta.get("hotfix") is True)
+                           for o in was):
+                said.append(f"{'is marked' if marked else 'has'} `hotfix: true`"
+                            f"{'' if marked else ' taken off'} on a branch that is not a join. "
+                            "A hotfix is whoever "
+                            "decides': the field is written on the branch of a join -- the "
+                            "lightning one, or the one that regularises an emergency merge --, "
+                            "and a change written on a thread or a parking line is a draft a "
+                            "join approves as a mandate. "
+                            + ("Marked there, it would be no thread to take, with no brief and "
+                               "no code under way, and would hold the mandates on its code "
+                               "prefixes for code nobody writes" if marked else
+                               "Taken off there, an approved hotfix, its brief written and its "
+                               "code under way, would land as a mandate a thread may take"))
         if additive and on_join and newly_withdrawn and a.id:
             for thread, sha in sorted(joined.items()):
                 # `<commit>:<path>` reads from the top of the repository, and the documentation
@@ -5566,6 +5651,7 @@ def main() -> int:
     importlib.import_module(f"{_CORE_NAME}.release_sets").check(arts, registry, report)
     check_change_contracts(arts, report, references=references)
     check_withdrawals(arts, report, references=references)
+    check_hotfixes(arts, report, project, references=references)
     check_pull_request(arts, pr_text, changed_files, report, references=references)
     check_framework_version(root, project, registry, report)
     check_framework_pin(project, report)

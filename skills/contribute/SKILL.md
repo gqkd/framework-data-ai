@@ -52,7 +52,8 @@ in whose hands and whether ready; what waits after a thread or after the join; t
 approve at a join; the entries with no anchors, out of the threads until somebody anchors them
 at a join -- from 4.11.0 pinned every entry with no `affects`, an exception the join clears --;
 the effects waiting, per document; what a join brought and nobody has read; the branches
-without claims, abandoned.
+without claims, abandoned; from 4.12.0 the hotfixes approved, which are no thread to take
+(*The hotfix*).
 Recommend one thread, and say why: the oldest decision first when the person decides, otherwise
 the thread whose work unblocks the most. A thread with a decision is for an admin, a deputy or a
 delegate; a contributor takes threads of work only -- from 4.11.0 pinned a mandate's, `mandate:`
@@ -155,8 +156,10 @@ created is the same --, and `BR002` a decision on
 an entry the main line has closed, as `audit` says; `BR006` a mandate withdrawn or its forecast
 moved off a join -- take it out and propose it, a withdrawal as a `DEC` `proposed`, a forecast
 on a parking line --, or, from 4.12.0 pinned, one brought back out of `withdrawn`, which stays
-withdrawn: a new `CHG` carries what it would have done; `EFF001` is an effects file that does
-not read, `EFF002` a choices file, `AFF001` an anchor that does not exist. Where the project asks
+withdrawn: a new `CHG` carries what it would have done, or `hotfix: true` written or taken off,
+put back as the main line has it -- a hotfix is whoever decides' (*The hotfix*) --; `EFF001` is
+an effects file that does not read, `EFF002` a choices file, `AFF001` an anchor that does not
+exist. Where the project asks
 for `require_all`, from 4.12.0 pinned, or no version that reads, the only `AN003` on a thread is on
 `EXC005` or `EXC006`, which can say an exposure on this machine the join never sees: the annotation
 is the join's to write, so the way out is the repair of what each finding names, on this machine --
@@ -219,9 +222,11 @@ step 3 is skipped, and the review reads them committed.
    plan frozen, a change `verified`, a known issue closed without a change, the contribution
    policy -- the effects written outside the forecast, what it brought with no anchor, the
    choices of form it took by default, from its `scelte.md`, and what the checks of the
-   branches find on each, with the to-do's whole list to anchor first, then merges the threads
-   one by one, in the same run. Read what it showed to the person before anything else: it is
-   to be judged, not filtered. A thread that should not land is dropped by `join --abandon` and
+   branches find on each, with the to-do's whole list to anchor first and the hotfixes the whole
+   review reads outside the diff -- approved by a join with one pass since the last one signed
+   `Revisione: completa` --, then merges the threads one by one, in the same run. Read what it
+   showed to the person before anything else: it is to be judged, not filtered. A thread that
+   should not land is dropped by `join --abandon` and
    a new `join` naming the threads to keep. A thread that creates a number the join already
    created, or one with no reservation of its own -- written with none, or reserved for another
    branch --, stops `join` before it is merged: run `join` again, naming the threads still to
@@ -238,12 +243,15 @@ step 3 is skipped, and the review reads them committed.
    the contribution policy, annotations, and what only those who decide write -- a release, a
    change `verified`, the freeze of the evaluation plan, an approval, a mandate withdrawn or the
    forecast of an approved one, and from 4.11.0 a mandate no thread held written `implemented`
-   once its code is merged (step 5).
+   once its code is merged (step 5); from 4.12.0 a hotfix (*The hotfix*, below).
 2. **The texts**, in the join's worktree, and no act of decision. Anchor every entry the to-do
    lists with no anchors -- its `affects`, the finest section it touches: from 4.11.0 pinned
    that list is an exception, long the first time, short after: what a join anchors leaves it,
    and what reaches the main line with no `affects`, or stops waiting, enters it for the next
-   --, and every change a thread brought with no `affects`, which `join` showed. Rewrite the
+   --, and every change a thread brought with no `affects`, which `join` showed. Put back as the
+   main line has it a `hotfix: true` a thread wrote or took off, which `join` showed as a
+   `BR006`: a thread's change is a draft a join approves as a mandate, and a hotfix is whoever
+   decides' to call (*The hotfix*). Rewrite the
    living documents from the effects of the threads merged, each target once, and nothing an
    effect does not say but the cascade of a decision whoever decides means to accept -- the
    entry moved, the documents it obliges --; those a thread drew from a delivery without
@@ -301,9 +309,10 @@ step 3 is skipped, and the review reads them committed.
    version that reads, whole, on the diff of the join's branch against `origin/main`:
    everything the threads bring and what the join writes, the living documents rewritten
    included, and a join that brings only states reviewed too --, with the outcome of the
-   rehearsal, the folder of the meeting cards, the log of each thread and parking branch
-   merged, `_filoni/<slug>/revisione.md` in the join's worktree, whose substance left open is
-   reviewed again against that diff, and
+   rehearsal, the folder of the meeting cards, the hotfixes `join` listed to review in full,
+   which are not in the diff -- the path of each `CHG`, read whole --, the log of each thread and
+   parking branch merged, `_filoni/<slug>/revisione.md` in the join's worktree, whose substance
+   left open is reviewed again against that diff, and
    each delivery a thread drew effects from without asking,
    `_filoni/<slug>/consegne/<CHG>/documentazione.md`, beside which those effects and what the
    join rewrote from them are read. A substance objection is settled by whoever decides: the
@@ -326,12 +335,18 @@ step 3 is skipped, and the review reads them committed.
    withdrawn, naming in `withdrawn_by` the accepted `DEC` or the `CHG` that replaces or absorbs
    it; the freeze of the evaluation plan; and from 4.11.0
    the mandates no thread held, whose code is merged, written `implemented`, with each `KI` the
-   to-do lists that mandate alone for closed. States and names only: the texts they oblige were
-   written at step 2 and the review read them, so this commit is not reviewed again. An act the
+   to-do lists that mandate alone for closed; from 4.12.0 a hotfix whose code is merged written
+   `implemented` the same way, with the known issues it repairs. States and names only: the
+   texts they oblige were written at step 2 and the review read them, so this commit is not
+   reviewed again. An act the
    person no longer takes here has its cascade taken back as at step 4, by the revert of its
    commit, before this one.
-6. **The check, and the landing.** `check` once more; then `join --finish --who "<name>"`,
-   which removes `_filoni/` and signs the branch. Read the `BR` findings it prints back to the
+6. **The check, and the landing.** `check` once more; then `join --finish --who "<name>"
+   --review full`, which removes `_filoni/`, signs the branch and writes beside the signature
+   `Revisione: completa` -- the review it had, which tells the next join which hotfixes are still
+   to read whole; `--review one-pass` in a lightning join, and with no `--review` the mark of the
+   last signature -- one pass where the join approved a hotfix after it --, or one pass where
+   there is none. Read the `BR` findings it prints back to the
    person, in plain words, and ask "procedo?". The person's yes in the chat is the gesture that
    lands the join, with their name, and you never give it in their place: then `join --merge
    --who "<name>"` merges it into the main line, by a merge of its own, and releases what it
@@ -346,7 +361,8 @@ step 3 is skipped, and the review reads them committed.
 
 When it goes wrong:
 - **the main line moved before `--merge`**, which refuses: `sync` in the join's worktree, `check`,
-  `--finish` again, the `BR` read back and "procedo?", and after the yes `--merge` again;
+  `--finish` again with the same `--review`, the `BR` read back and "procedo?", and after the yes
+  `--merge` again;
 - **the main line moved while `--merge` pushed**: first `git -C <main checkout> reset --keep
   HEAD~1`, as `--merge` says -- with the sandbox it writes outside the session's worktree, and is
   the person's --, then as above;
@@ -364,6 +380,55 @@ framework version and annotating an expected finding are for an admin alone.
 **Delegation.** An admin who will be away gives a delegation:
 `work.py delegate --to "<name>" --who "<admin>"`, taken back with `work.py revoke --to "<name>"
 --who "<admin, or the delegate>"`.
+
+## The hotfix
+
+From 4.12.0 pinned, or no version that reads, for an admin, a deputy or a delegate: whoever decides
+says "facciamo una hotfix", and you carry the lightning join, with the commands as for any join
+(`cycle`, *A hotfix*, says what a hotfix is and what its code goes through):
+
+1. `join --who "<name>" --no-threads`; the hotfixes it lists to review in full are not this
+   join's, whose one pass reads the hotfix alone: they wait for the next join with the whole
+   review;
+2. in its worktree, the `SIG` in the `LOG` where the signal is not there yet, the `ICG` with its
+   true classification and a short `CHG` deriving from the signal, with its three
+   sections, `hotfix: true` and its `affects`, each number reserved as you reserve any; where the
+   project has a contribution policy, the change's block with its code prefixes, the anchors on
+   which the to-do makes other mandates wait; routed `architecture` or `both`, a minimal `DEC` in
+   its `derives_from` (`CHG005`);
+3. the review, one pass, before anybody decides; then the approval, asked and written with the
+   views `check` regenerates; then the brief, in the same join, with the rules of `cycle` (Step 6)
+   and one pass of review too -- the one exception to the brief of the round after, since a hotfix
+   has no thread and cannot wait for one;
+4. `check`, `join --finish --who "<name>" --review one-pass`, the `BR` read back and "procedo?",
+   and after the yes `join --merge`.
+
+The next join with the whole review reads its `CHG` again, and its delivery when it comes; the
+brief keeps its one pass. `join` lists the `CHG`, from the `Revisione:` line `--finish` writes,
+until a join signed `Revisione: completa` lands. After the lightning join a
+hotfix is no thread to take: the to-do lists it apart, `open` refuses it, a mandate on the same
+code prefixes waits for it, and whoever decides writes it `implemented` at the first join after its
+code is merged, at step 5, with the known issues it repairs; the to-do says the days since each
+was approved. An objection on a hotfix already in production is a new `CHG` deriving from it, never
+a withdrawal; one whose code will not reach production whoever decides withdraws at a join,
+`withdrawn_by` the `DEC` that says so, and the mandates it held stop waiting, the known issues it
+repairs threads to take again. `hotfix: true` is whoever decides', written on a join's branch,
+here or at the first join after an emergency merge: written or taken off on a thread or a parking
+line it is a `BR006`, and a contributor's change stays a draft a join approves as a mandate.
+
+With a join already open: where its whole review is done -- step 4, the corrections read again
+included --, the hotfix is written on it, reviewed in one pass on the hotfix alone, and the join
+closed at once, `--review one-pass`. Where it is not, the hotfix goes the way of the next
+paragraph; where that way is closed -- a contribution policy for the code with no
+`exception_reviewers`, where `no-chg` never passes (`AUT006`) --, say how far the review is, and
+whoever decides chooses: finish it, where it is near the end, and the hotfix enters there; or
+`join --abandon` and the lightning join, the threads staying ready for the join after, what was
+rewritten written again.
+
+When nobody who decides can be reached, or the join open is not reviewed whole, the code goes with
+`no-chg: hotfix <reference>` in its merge request; at the first join whoever decides writes, at
+step 2, the `SIG`, the `ICG` and a `CHG` with `hotfix: true` that says it was authorized after,
+approved and written `implemented` at step 5.
 
 ## With the sandbox
 

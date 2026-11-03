@@ -3538,6 +3538,11 @@ types:
     # form. The code paths are not repeated here; the to-do reads them from the change's
     # mandate in the contribution policy, where there is one.
     anchor_fields: [affects]
+    # `hotfix`, since 4.12.0: `true` on a change that is a hotfix, written in draft and approved
+    # with the rest. `CHG005` reads it, `join` lists the hotfixes a join with one pass approved
+    # for the next full review, and the to-do keeps an approved one out of the threads. Typed
+    # as a yes or a no, so that a quoted "true" does not pass for one.
+    flag_fields: [hotfix]
     sections: [what-changes, what-must-not-change, how-we-know-it-worked]
 
   cycle-plan:

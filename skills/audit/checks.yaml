@@ -1386,6 +1386,21 @@ checks:
       change that is not withdrawn. One tree, so the shape and not the moment: whether the
       change was `approved` when it was withdrawn is `BR006`'s, against the main line. It is
       not run by the release gate, where a finding stops the release.
+  CHG005:
+    level: warn
+    title: a hotfix routed past the product without a decision, or the field on what is not a change
+    prevents: >
+      An architecture moved through the shortest road there is, with nothing saying why. Since
+      4.12.0 a change may be a hotfix, `hotfix: true`, landed by a lightning join with one pass
+      of review before anybody decides. That road is for a hotfix its `ICG` routes `none` or
+      `product`; one routed `architecture` or `both` wants a `DEC` in its `derives_from`,
+      written in the same join -- which join the skill says, not this check: outside the
+      additive mode there is no join to look at. Where the classification's `impacts` say
+      `architecture` too, `CHG002` says it from `approved` on and this check leaves it those
+      states; in a draft is where the hotfix's one pass reads it. A hotfix withdrawn, which
+      moved nothing, is not said. Reported too: `hotfix` on a document that is not a change,
+      where it says nothing anybody reads. From 4.12.0 pinned, or no version that reads, in any
+      mode.
 
   # ── The pull request ───────────────────────────────────────────────────────
   #
@@ -1817,7 +1832,7 @@ checks:
       for what belongs to no thread) is checked the same way. Runs with `--base`.
   BR006:
     level: warn
-    title: a change contract withdrawn, brought back, or its forecast moved, when or where it may not be
+    title: a change contract withdrawn, brought back, its forecast moved, or marked a hotfix, when or where it may not be
     prevents: >
       The fields that move in place on an immutable `CHG` since 4.10.0 -- `status: withdrawn`
       with `withdrawn_by`, and `affects` -- moving without anybody deciding it. In any mode: a
@@ -1829,9 +1844,12 @@ checks:
       line --; and on a join, a change withdrawn that a thread it merges carried out, or that
       an open thread holds. From 4.12.0 pinned, or no version that reads, in any mode, a change
       brought back out of `withdrawn`: the states of a `CHG` go forward, and what a withdrawn one
-      would have done comes back as a new `CHG`, deriving from it or from the decision. Against
-      every point where the branch left the main line; the join prints it before it is pushed.
-      Runs with `--base`.
+      would have done comes back as a new `CHG`, deriving from it or from the decision. From
+      4.12.0 pinned, or no version that reads, in the additive mode, `hotfix: true` written or
+      taken off on a branch that is not a join: a hotfix is whoever decides', written on the
+      lightning join or on the one that regularises an emergency merge, and a contributor's
+      change is a draft a join approves as a mandate. Against every point where the branch left
+      the main line; the join prints it before it is pushed. Runs with `--base`.
   WK001:
     level: warn
     title: a key, a value or a threshold in .framework/work.yaml that this version does not read

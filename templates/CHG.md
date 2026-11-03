@@ -14,6 +14,8 @@ derives_from: [product-a:SIG-NNN, INC-NNN, DEC-NNN]    # the signal is qualified
                                # does not carry in `products:`
 verified_by: null               # the EVR, once there is one. Empty until `status: verified`
 withdrawn_by: null              # the DEC or CHG that withdrew it. Empty until `status: withdrawn`
+# hotfix: true                  # only on a hotfix, written by whoever decides, from 4.12.0:
+                               # `cycle`, *A hotfix*
 classification: internal
 ---
 

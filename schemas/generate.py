@@ -357,6 +357,13 @@ def build(name: str, spec: dict, registry: dict) -> dict:
             raise SystemExit(f"{name}.anchor_fields: {field!r} is already declared elsewhere")
         properties[field] = {"type": "array", "items": anchor, "minItems": 1}
 
+    # A FIELD THAT SAYS YES OR NO, optional: `hotfix` on a change, since 4.12.0. A boolean and
+    # nothing else, since a quoted "true" read as one is the kind of yes nobody wrote.
+    for field in spec.get("flag_fields", []):
+        if field in properties:
+            raise SystemExit(f"{name}.flag_fields: {field!r} is already declared elsewhere")
+        properties[field] = {"type": "boolean"}
+
     for field, definition in (spec.get("memory_fields") or {}).items():
         if field in properties or field in spec.get("required", []) or field in spec.get("required_if_active", []):
             raise SystemExit(f"{name}.memory_fields: {field!r} must be optional and declared once")

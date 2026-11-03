@@ -76,6 +76,9 @@
         "pattern": "^[^\\s#]+(#.+)?$"
       },
       "minItems": 1
+    },
+    "hotfix": {
+      "type": "boolean"
     }
   },
   "required": [

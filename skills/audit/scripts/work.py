@@ -14,7 +14,7 @@ what, release a claim, and bring a branch up to date with the main line.
     python3 work.py --root . revoke --to "Name" --who "Admin"         # or the delegate, for their own
     python3 work.py --root . open --thread beta-od-042 --who "Name"   # the additive mode
     python3 work.py --root . join --who "Admin" [THREAD ...] [--no-threads]
-    python3 work.py --root . join --finish --who "Admin"
+    python3 work.py --root . join --finish --who "Admin" --review full    # or one-pass
     python3 work.py --root . join --merge --who "Admin"               # or --close, --abandon
     python3 work.py --root . meetings --out <scratchpad>              # at a join, offline
     python3 work.py --root . doctor [--who "Name"]                    # read only: this machine
@@ -352,6 +352,14 @@ def _computed_thread(p: Project, name: str) -> dict:
         if f"{p.prefix}{name}" in r.get("open", {}):
             v.refuse(f"{name} is open already: {p.prefix}{name}. A thread open is fixed until "
                      "the join that lands it.")
+        hotfix = next((n for n in r.get("hotfixes", [])
+                       if T.slug(f"{n.home}-{T.bare(n.key)}") == name), None)
+        if hotfix is not None:
+            v.refuse(f"{name} is the hotfix {T.bare(hotfix.key)}, which is no thread to take: its "
+                     "brief was written by the lightning join that approved it, and its code is "
+                     "under way. Whoever decides writes it `implemented` at the first join after "
+                     "its code is merged, with the known issues it repairs; until then a mandate "
+                     "on the same code waits for it.")
         v.refuse(f"{name} is not a thread the to-do computes now. The threads to take: "
                  f"{', '.join(t['name'] for t in r.get('threads', [])) or 'none'}.")
     return found
@@ -1240,6 +1248,99 @@ def cmd_revoke(p: Project, args) -> int:
 
 JOIN_CLAIM = "ricongiungimento"       # claim/ricongiungimento: one join at a time
 E_THREADS = "_filoni"
+# The line `join --finish` writes beside `Ricongiungimento-di:`, since 4.12.0: the review the
+# join had, the full one or the one pass of a lightning join for a hotfix. A join whose signature
+# does not carry it -- signed by an older `work.py`, or by hand -- counts as one pass.
+REVIEW_TRAILER = "Revisione"
+REVIEWS = {"full": "completa", "one-pass": "una passata"}
+# A change in one of these states is approved, or past it: one a join brought into them from none
+# of them is a change that join approved.
+APPROVED_ON = ("approved", "implemented", "verified", "rolled-back")
+
+
+def _front_at(p: Project, ref: str, name: str) -> dict | None:
+    """The front matter of `name`, a path from the top of the repository, as `ref` holds it;
+    None where it holds no such file, or none that reads."""
+    r = git(p.root, "show", f"{ref}:{name}", check=False)
+    if r.returncode:
+        return None
+    meta = v.parse_front_matter(r.stdout)[0]
+    return meta if isinstance(meta, dict) else None
+
+
+def _approved_hotfixes(p: Project, before: str | None, after: str) -> list[str]:
+    """The changes with `hotfix: true` that `after` holds approved, or past it, and `before` did
+    not: those approved between the two commits, not those whose state only moved on. Read from
+    the files the two differ in, or every file where there is no `before`."""
+    if before:
+        names = git(p.root, "diff", "--name-only", "-z", "--no-renames", before, after, "--", ".",
+                    check=False).stdout.split("\0")
+    else:
+        where = B.prefix(p.root)
+        names = git(p.root, "ls-tree", "-r", "-z", "--name-only", "--full-tree", after,
+                    *([where] if where else []), check=False).stdout.split("\0")
+    out = set()
+    for name in names:
+        if not name.endswith(".md"):
+            continue
+        now = _front_at(p, after, name)
+        if not now or now.get("artifact_type") != "change-contract" \
+                or now.get("hotfix") is not True or now.get("status") not in APPROVED_ON:
+            continue
+        was = _front_at(p, before, name) if before else None
+        if was and was.get("status") in APPROVED_ON:
+            continue
+        out.add(str(now.get("id") or name))
+    return sorted(out)
+
+
+def _review_of(p: Project, sha: str) -> str:
+    """The review the signature `sha` of a join says it had; one pass where it says none."""
+    said = git(p.root, "log", "-1", f"--format=%(trailers:key={REVIEW_TRAILER},valueonly)", sha,
+               check=False).stdout.strip().splitlines()
+    mark = said[-1].strip() if said else ""
+    return mark if mark in REVIEWS.values() else REVIEWS["one-pass"]
+
+
+def _hotfixes_to_review(p: Project) -> list[tuple[str, str]]:
+    """The hotfixes a join's full review reads outside its diff, each with the join that approved
+    it: those the joins landed on the main line since the last one signed `Revisione: completa`
+    approved -- a lightning join's, signed with one pass, or an older join with no `Revisione:`
+    --, not those whose state a join only moved on. Up the whole main line, until that first
+    full one: the first join with the full review lists every hotfix of the history."""
+    log = git(p.root, "log", "--first-parent", "--merges", "--format=%H%x00%P%x00%s%x1e", p.base,
+              check=False).stdout
+    out: list[tuple[str, str]] = []
+    for record in log.split("\x1e"):
+        parts = record.strip("\n").split("\x00")
+        if len(parts) != 3:
+            continue
+        sha, parents, subject = parts[0], parts[1].split(), parts[2]
+        landed = B.landing(subject)
+        if landed is None or len(parents) < 2:
+            continue
+        if _review_of(p, parents[1]) == REVIEWS["full"]:
+            break
+        name = re.search(rf"{re.escape(B.JOIN)}\d+", landed)
+        out += [(c, name.group(0) if name else sha[:12])
+                for c in _approved_hotfixes(p, parents[0], sha)]
+    return out
+
+
+def _default_review(p: Project, branch: str) -> str:
+    """The review a `--finish` with no `--review` writes: the mark of the join's last signature,
+    unless the join approved a hotfix after it -- a hotfix written on a join already reviewed
+    and signed --; one pass with no signature before. A `--finish` by hand, in doubt, has the
+    hotfixes it approved read again by the next full review: the skill always gives `--review`."""
+    root = _join_root(p)
+    log = git(p.root, "log", f"--format=%H%x00%(trailers:key={B.JOIN_TRAILER},valueonly)%x1e",
+              f"{root}..{branch}" if root else branch, check=False).stdout
+    signed = [parts[0] for parts in (r.strip("\n").split("\x00") for r in log.split("\x1e"))
+              if len(parts) == 2 and parts[1].strip()]
+    last = signed[0] if signed else None
+    if last is None or _approved_hotfixes(p, last, branch):
+        return REVIEWS["one-pass"]
+    return _review_of(p, last)
 
 
 def _joiner(p: Project, args) -> tuple[dict, str]:
@@ -1514,7 +1615,8 @@ def _join_start(p: Project, who: str, args) -> int:
                  "policy, annotations, and what only those who decide write -- a release, a "
                  "change verified, the freeze of the evaluation plan, an approval, a mandate "
                  "withdrawn or the forecast of an approved one, and from 4.11.0 a mandate no "
-                 "thread held written implemented once its code is merged.")
+                 "thread held written implemented once its code is merged; from 4.12.0 a "
+                 "hotfix, in a lightning join with one pass of review (`contribute`).")
     if held:
         branch = held.get("branch", "")
         if _join_landed(p, branch):
@@ -1589,6 +1691,13 @@ def _join_start(p: Project, who: str, args) -> int:
             "`affects`, the finest section it touches.")
         for node in r["unanchored"]:
             say(f"  - {T.describe(node, r['tree'])}")
+    hot = _hotfixes_to_review(p)
+    if hot:
+        say(f"Hotfixes to review in full at this join, outside its diff ({len(hot)}): approved "
+            f"by a join with one pass since the last `{REVIEW_TRAILER}: {REVIEWS['full']}`, read "
+            "by the full review with the diff (`contribute`, the join).")
+        for change, by in hot:
+            say(f"  - {change}, approved by {by}")
     _before_merging(p, r, todo_now, sorted(done | set(todo_now)))
     again = (f"--who \"{who}\" " + (" ".join(n[len(p.prefix):] for n in sorted(set(wanted)))
                                      or "--no-threads"))
@@ -1651,7 +1760,7 @@ def _what_is_left(branch: str, tree: Path, project: dict) -> str:
             "and `join --merge` on the yes of whoever decides.")
 
 
-def _join_finish(p: Project, who: str) -> int:
+def _join_finish(p: Project, who: str, review: str | None = None) -> int:
     held = p.held(B.CLAIM_REF).get(JOIN_CLAIM)
     if not held:
         v.refuse("no join is open: `join` opens one.")
@@ -1665,7 +1774,11 @@ def _join_finish(p: Project, who: str) -> int:
     if git(p.root, "merge-base", "--is-ancestor", remote_branch, branch, check=False).returncode:
         v.refuse(f"{branch} here is behind or apart from {p.remote}'s, which another clone may "
                  "have finished: bring it to the remote's commit first.")
-    if not _signed_tip(p, branch):
+    # Signed again too where the review given is not the one the last signature says: what lands
+    # carries the review it had.
+    mark = REVIEWS[review] if review else None
+    if not _signed_tip(p, branch) or (mark and _review_of(p, branch) != mark):
+        mark = mark or _default_review(p, branch)
         where = B.prefix(p.root)
         folder = (tree / where / E_THREADS) if where else tree / E_THREADS
         rewritten = []
@@ -1678,7 +1791,7 @@ def _join_finish(p: Project, who: str) -> int:
         body = (f"Join {branch} finished: {', '.join(n for n, _ in joined) or 'no thread'}\n\n"
                 + ("Rewritten from the effects:\n" + "\n".join(rewritten) + "\n\n" if rewritten else "")
                 + "".join(f"{B.JOINED}{n} {sha}\n" for n, sha in joined) + "\n"
-                + f"{B.JOIN_TRAILER}: {who}\n")
+                + f"{B.JOIN_TRAILER}: {who}\n{REVIEW_TRAILER}: {mark}\n")
         git(tree, "commit", "-q", "--allow-empty", "-m", body)
     # What the branches' checks say of the join's own branch -- who approved, what was withdrawn
     # and when, a forecast moved --: warnings nothing else shows before it lands.
@@ -1711,7 +1824,8 @@ def _join_finish(p: Project, who: str) -> int:
         v.refuse(f"the join is finished here and the push "
                  f"{'may not have gone' if outcome == 'unknown' else 'did not go'} through "
                  f"({said}). Never --force: `join --finish` again pushes what is committed.")
-    say(f"{branch} finished and pushed. `join --merge --who {who}` lands it on {p.main}.")
+    say(f"{branch} finished and pushed, `{REVIEW_TRAILER}: {_review_of(p, branch)}`. "
+        f"`join --merge --who {who}` lands it on {p.main}.")
     return 0
 
 
@@ -2145,7 +2259,12 @@ def cmd_meetings(p: Project, args) -> int:
 
 def cmd_join(p: Project, args) -> int:
     _, who = _joiner(p, args)
-    for flag, step in (("finish", _join_finish), ("merge", _join_merge), ("close", _join_close),
+    review = getattr(args, "review", None)
+    if review and not args.finish:
+        v.refuse("`--review` says which review a join had, and only `--finish` writes it.")
+    if args.finish:
+        return _join_finish(p, who, review)
+    for flag, step in (("merge", _join_merge), ("close", _join_close),
                        ("abandon", _join_abandon)):
         if getattr(args, flag):
             return step(p, who)
@@ -3031,6 +3150,9 @@ def main() -> int:
     step.add_argument("--merge", action="store_true", help="merge the join into the main line, push, close")
     step.add_argument("--close", action="store_true", help="release what a join landed")
     step.add_argument("--abandon", action="store_true", help="drop a join that did not land")
+    j.add_argument("--review", choices=tuple(REVIEWS),
+                   help="with --finish: the review the join had, `full`, or `one-pass` in a "
+                        "lightning join for a hotfix; written as `Revisione:` beside its signature")
     rv = sub.add_parser("revoke", help="take a delegation back, or give one's own up")
     rv.add_argument("--to", required=True, help="the person holding it")
     rv.add_argument("--who", required=True, help="an admin, or the delegate")

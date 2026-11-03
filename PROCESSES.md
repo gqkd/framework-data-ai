@@ -664,6 +664,14 @@ The rollback that `RB` and `RLM` already provide for does not need a new `CHG`. 
 unplanned hotfix, use a minimal emergency `CHG` where that is possible; otherwise record the
 action honestly and write a `CHG` afterwards to stabilise it, without pretending an
 authorization that was never given.
+From 4.12.0 pinned, or no version that reads, that `CHG` carries `hotfix: true`, and its cycle
+is `cycle`'s *A hotfix*: its own `ICG`, a `DEC` where it moves the architecture (`CHG005`), in
+the additive mode a lightning join with one pass of review -- its `CHG` read again, and its
+delivery when it comes, by the next join with the whole review --, and, written afterwards,
+`no-chg: hotfix <reference>` in the merge request of the code and the `SIG`, the `ICG` and the
+`CHG` -- in the additive mode at the first join --, saying it was authorized after. It shortens
+the papers, not the environments: the code goes through the project's road to production,
+pre-production included.
 
 ### Skill
 

@@ -159,14 +159,43 @@ works" but what is observed, measured or asserted.
 A `CHG` starts at `status: draft` and becomes `approved` when the user approves it. Only an
 approved one authorizes anything. In the additive mode a change stays in draft on the thread:
 an admin, a deputy or a delegate approves it at a join (`references/additive.md`), and its brief
-comes in the round after. It carries `affects` in its front matter, the documents it is expected
-to touch -- at the finest section, as `references/additive.md` says, and from 4.12.0 pinned, or
+comes in the round after -- a hotfix's excepted, below. It carries `affects` in its front
+matter, the documents it is expected to touch -- at the finest section, as
+`references/additive.md` says, and from 4.12.0 pinned, or
 no version that reads, written always and never left empty --, which the join reads as its
 forecast;
 from 4.11.0 pinned the change is a thread by itself, and the code prefixes of its
 block in the contribution policy say which other mandates wait for it; below 4.11.0 its
 `affects` and its whole block put it in a thread. One that touches much is worth proposing to
 split.
+
+**A hotfix.** From 4.12.0 pinned, or no version that reads, a fix that cannot wait is a cycle of
+its own, which shortens the papers and not the environments: its code follows the project's road to
+production, pre-production included, and the processes of that road are the project's, written by
+its documentation session -- an emergency protocol among them --, never this framework's. Its `ICG`
+gives the true classification; its `CHG` is short, the three sections, `hotfix: true` and its
+`affects`. Routed `none` or `product`, it goes as below; routed `architecture` or `both`, it wants
+a minimal `DEC` in its `derives_from`, written with it -- in the additive mode in the same join
+--, and `CHG005` says one missing. In
+the additive mode whoever decides says "facciamo una hotfix" and `contribute` carries the lightning
+join (*The hotfix*): a join with no thread, the `SIG` where it is not there yet, the `ICG` and the
+`CHG` deriving from the signal, the change's block with its
+code prefixes in the contribution policy where the project has one, one pass of review before the
+approval, and the brief written right after it in the same join, with the rules of Step 6 and one
+pass too -- the exception to the round after, since a hotfix cannot wait a round and has no thread
+--; the next join with the whole review reads the `CHG` again, and its delivery when it comes,
+and the brief keeps its one pass, its work done once the code is written and its rules the
+`CHG`'s. Outside the mode it is approved as any
+change, and its brief written at once. `hotfix: true` is written by whoever decides -- in the
+additive mode on a join's branch, written or taken off on a thread or a parking line being a
+`BR006` --. An objection
+on a hotfix already in production, `approved` or `implemented`, is settled by a new `CHG` that
+derives from it, never by a withdrawal, which would say it is never to be carried out;
+`rolled-back` only where its code is taken out. One whose code will not reach production is
+withdrawn, at a join in the additive mode, `withdrawn_by` the `DEC` that says so. When
+nobody who decides can be reached, the code goes with `no-chg: hotfix <reference>` in its merge
+request, and afterwards -- in the additive mode at the first join -- whoever decides writes the
+`SIG`, the `ICG` and a `CHG` with `hotfix: true` that says it was authorized after.
 
 **When it reaches `implemented`** -- which it does when the work is merged, without waiting for any
 cleaning --, and the project declares an exchange, its resources belong to whoever created them:

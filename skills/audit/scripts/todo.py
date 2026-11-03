@@ -115,6 +115,18 @@ CLOSED_CHANGE = {"implemented", "verified", "rolled-back", "withdrawn"}
 # The first version whose to-do keeps a mandate apart (`MANDATES APART`, above): a project whose
 # main line pins an earlier one is computed as before, whatever plugin reads it.
 APART_SINCE = "4.11.0"
+# The first version whose to-do keeps a hotfix out of the threads: an approved change with
+# `hotfix: true` has its brief from the lightning join that approved it and its code under way, so
+# nobody takes it; whoever decides writes it `implemented` at the first join after its code is
+# merged, and until then it holds the mandates that share its code prefixes, as a mandate a thread
+# holds does. One whose code will not reach production whoever decides withdraws, at a join: it is
+# then no node, and holds nothing.
+HOTFIX_SINCE = "4.12.0"
+# A line of front matter that writes a change `approved`: the last commit of the main line whose
+# diff adds or removes one, on a hotfix still approved, is the one that approved it. Read by
+# `git log -G`, whose regular expression is POSIX: nothing here that reads otherwise in the basic
+# and the extended syntax.
+APPROVED_LINE = "^status:.*approved"
 
 
 def git(root: Path, *args: str) -> str:
@@ -612,6 +624,7 @@ def compute(root: Path, remote: str, main: str) -> dict:
     except v.yaml.YAMLError:
         pinned = {}
     apart = v.rules_hold(pinned if isinstance(pinned, dict) else {}, APART_SINCE)
+    hotfix_on = v.rules_hold(pinned if isinstance(pinned, dict) else {}, HOTFIX_SINCE)
     nodes, drafts = nodes_of(main_tree, policy, apart)
 
     # Threads open: a work branch with claims, or a parking branch. The others are abandoned,
@@ -698,13 +711,29 @@ def compute(root: Path, remote: str, main: str) -> dict:
             return "after-thread", sorted(name for name, t in trees.items()
                                           if any(t.closed(p) for p in open_))
         return "waiting", []
-    states = {id(n): state(n) for n in nodes}
-    todo = [n for n in nodes if states[id(n)][0] == "todo"]
-    after_join = [n for n in nodes if states[id(n)][0] == "after-join"]
-    after_thread = [{"node": n, "threads": states[id(n)][1]} for n in nodes
+    # The hotfixes approved, out of the threads (`HOTFIX_SINCE`): listed apart, with the known
+    # issues each repairs, until a join writes them `implemented`.
+    hotfixes = [n for n in nodes if hotfix_on and n.kind == "mandate"
+                and (main_tree.changes.get(n.key) is not None)
+                and main_tree.changes[n.key].meta.get("hotfix") is True]
+    others = [n for n in nodes if not any(n is h for h in hotfixes)]
+    # The days since each was approved, so that one stuck -- its code never merged -- is seen:
+    # one `git log` on its file, none where there is no hotfix. A shallow clone says none: the
+    # commit at its edge adds every file whole, and would read as the approval of each.
+    hotfix_days: dict[str, int | None] = {h.key: None for h in hotfixes}
+    if hotfixes and git(root, "rev-parse", "--is-shallow-repository").strip() != "true":
+        for h in hotfixes:
+            rel = main_tree.changes[h.key].rel.replace("\\", "/")
+            stamp = git(root, "log", "-1", "--format=%cI", "-G", APPROVED_LINE, base, "--",
+                        rel).strip()
+            hotfix_days[h.key] = (now - datetime.fromisoformat(stamp)).days if stamp else None
+    states = {id(n): state(n) for n in others}
+    todo = [n for n in others if states[id(n)][0] == "todo"]
+    after_join = [n for n in others if states[id(n)][0] == "after-join"]
+    after_thread = [{"node": n, "threads": states[id(n)][1]} for n in others
                     if states[id(n)][0] == "after-thread"]
     waiting: dict[str, int] = {}
-    for n in nodes:
+    for n in others:
         if states[id(n)][0] == "waiting":
             waiting[n.home] = waiting.get(n.home, 0) + 1
     # Out of the threads until somebody anchors them: where a mandate is kept apart, every entry
@@ -723,7 +752,9 @@ def compute(root: Path, remote: str, main: str) -> dict:
         holders = sorted({claimed[i] for n in t["nodes"] for i in n.ids if i in claimed}
                          | {claimed[m.key] for n in t["nodes"] if n.kind == "mandate"
                             for m in held_mandates
-                            if m is not n and meet(n.anchors, m.anchors)})
+                            if m is not n and meet(n.anchors, m.anchors)}
+                         | {f"hotfix {bare(h.key)}" for n in t["nodes"] if n.kind == "mandate"
+                            for h in hotfixes if meet(n.anchors, h.anchors)})
         if holders:
             after_thread += [{"node": n, "threads": holders} for n in t["nodes"]
                              if not any(i in claimed for i in n.ids)]
@@ -735,6 +766,7 @@ def compute(root: Path, remote: str, main: str) -> dict:
             "threads": free, "open": open_threads, "after_thread": after_thread,
             "after_join": after_join, "waiting": waiting, "drafts": drafts,
             "unanchored": unanchored, "abandoned": abandoned, "effects": effects,
+            "hotfixes": hotfixes, "hotfix_days": hotfix_days,
             "ready": ready, "join": join, "unread": unread, "tree": main_tree,
             "repaired": repaired_by(nodes),
             # A repaired issue a thread claimed before -- while its change waited, before the
@@ -769,6 +801,11 @@ def _unread(repo, joins: dict, tree: Tree, base: str, now: datetime, out: list) 
         hit = v.unread_join(repo, joins, rel, attested)
         if hit:
             out.append({"path": rel, "merged": hit[1], "days": (now - hit[1]).days})
+
+
+def _approved_ago(days: int | None, lead: str = " --") -> str:
+    """How long ago a hotfix was approved, where the main line's history says it."""
+    return "" if days is None else f"{lead} approved {days} day{'' if days == 1 else 's'} ago"
 
 
 def describe(n: Node, tree: Tree) -> str:
@@ -818,6 +855,18 @@ def markdown(r: dict) -> str:
         for item in r["after_thread"]:
             out.append(f"- {describe(item['node'], tree)} -- after {', '.join(item['threads'])}")
         out.append("")
+    if r.get("hotfixes"):
+        out.append("## Hotfixes: no thread to take; `implemented` at the first join after the "
+                   "merge of their code, by whoever decides")
+        days = r.get("hotfix_days", {})
+        for n in r["hotfixes"]:
+            out.append(f"- {describe(n, tree)}" + _approved_ago(days.get(n.key))
+                       + ("" if n.declared else " -- no code paths in the contribution policy: "
+                          "nothing says which files it changes, and nothing waits for it"))
+        out.append("  One whose code will not reach production whoever decides withdraws at a "
+                   "join, `withdrawn_by` the `DEC` that says so: the mandates it holds stop "
+                   "waiting, and the known issues it repairs are threads to take again.")
+        out.append("")
     if r["after_join"]:
         out.append("## After the join")
         for n in r["after_join"]:
@@ -825,7 +874,8 @@ def markdown(r: dict) -> str:
         out.append("")
     if r.get("repaired"):
         out.append("## Known issues an approved mandate to do repairs: closed, `closed_by` the "
-                   "change, by the thread of a mandate listed alone for one")
+                   "change, by the thread of a mandate listed alone for one -- for a hotfix, by "
+                   "whoever decides at the join that writes it `implemented`")
         held = r.get("repaired_held", {})
         out += [f"- {k}: {', '.join(cs)}" + (f" -- claimed by {held[k]}, which releases it: "
                                              "its mandate closes it" if k in held else "")
@@ -878,6 +928,11 @@ def summary(r: dict) -> str:
         lines.append(f"- to take: {t['name']} ({', '.join(i for n in t['nodes'] for i in n.ids)})")
     if len(r["threads"]) > 10:
         lines.append(f"- and {len(r['threads']) - 10} more threads to take")
+    for n in r.get("hotfixes", []):
+        ago = _approved_ago(r.get("hotfix_days", {}).get(n.key), ",")
+        lines.append(f"- hotfix: {bare(n.key)}{ago}, `implemented` at the first join after its "
+                     "code is merged"
+                     + (f"; repairs {', '.join(n.repairs)}" if n.repairs else ""))
     for path, targets in sorted(r["effects"].items()):
         lines.append(f"- effects waiting on {path}: {len(targets)}")
     if r["unread"] is None:
@@ -904,6 +959,8 @@ def as_json(r: dict) -> dict:
             "after_thread": [{"ids": i["node"].ids, "threads": i["threads"]} for i in r["after_thread"]],
             "after_join": [n.ids for n in r["after_join"]], "waiting": r["waiting"],
             "drafts": r["drafts"], "unanchored": [n.ids for n in r["unanchored"]],
+            "hotfixes": [{**n.as_dict(tree), "days": r.get("hotfix_days", {}).get(n.key)}
+                         for n in r.get("hotfixes", [])],
             "repaired": r.get("repaired", {}), "repaired_held": r.get("repaired_held", {}),
             "abandoned": r["abandoned"], "effects": r["effects"],
             "unread": None if r["unread"] is None else

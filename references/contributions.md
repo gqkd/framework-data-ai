@@ -128,6 +128,15 @@ The reviewer must differ from the authenticated contribution author, case-insens
 Changed reason/head/base invalidates the review. Exception tests remain mandatory; a code
 exception cannot pass with an empty test binding. Ordinary human merge review is still due.
 
+A hotfix nobody who decides could authorize in time goes with `no-chg: hotfix <reference>`,
+from 4.12.0 pinned or no version that reads; afterwards -- in the additive mode at the first
+join -- whoever decides writes the `SIG`, the `ICG` and a `CHG` with `hotfix: true` that says
+it was authorized after (`cycle`, *A hotfix*; `contribute`, *The hotfix*). Where the policy of
+the code has no `exception_reviewers`, `no-chg` never passes (`AUT006`): the hotfix is approved
+before its code goes, as any change -- in the additive mode through a lightning join, the join
+open abandoned first, or on that join once its whole review is done, closed at once. Either
+way its code follows the project's road to production, pre-production included.
+
 ## GitHub adoption and limits of the supplied assets
 
 `ci/pull-request.yml` remains a low-permission **legacy** asset, now passing base/head

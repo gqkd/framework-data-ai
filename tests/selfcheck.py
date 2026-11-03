@@ -6576,6 +6576,101 @@ def _previous_version(before: str | None = None) -> str | None:
     return None
 
 
+@check("CHG005 says a hotfix routed past the product with no decision, and the field on what is not a change, from the version that brought it")
+def _hotfix_routing():
+    # A hotfix is classified like any change; its lightning join is for one routed `none` or
+    # `product`, and one routed `architecture` or `both` wants a `DEC`. Where `impacts` say
+    # `architecture` too, `CHG002` says it from `approved` on, and `CHG005` leaves it those
+    # states. The pins are the rule's own version and the one before it, read from the registry's
+    # history, and no pin at all, which has the rules of the version that reads it.
+    since = _load(VALIDATE, "validate_for_hotfix").HOTFIX_SINCE
+    before = _previous_version(since)
+    fm = lambda **kw: "---\n" + "\n".join(f"{k}: {v}" for k, v in kw.items()) + "\n---\n\n"
+    sections = ("<!-- section: what-changes -->\n## A\n"
+                "<!-- section: what-must-not-change -->\n## B\n"
+                "<!-- section: how-we-know-it-worked -->\n## C\n")
+
+    def icg(routing: str, impacts: str) -> str:
+        return fm(schema="framework/impact-classification/v1",
+                  artifact_type="impact-classification", lifecycle="immutable",
+                  status="accepted", id="ICG-001", products="[p]", owners="[o]",
+                  created="2026-01-01", routing=f"\n  SIG-001: {routing}",
+                  impacts=f"\n  SIG-001: [{impacts}]") \
+            + ("# ICG-001\n\n<!-- section: intake -->\n## I\n"
+               "<!-- section: classification -->\n## C\n"
+               "<!-- section: open-questions -->\n## O\n")
+
+    def chg(status: str, derives: str, hotfix: str = "true") -> str:
+        return fm(schema="framework/change-contract/v1", artifact_type="change-contract",
+                  lifecycle="immutable", status=status, id="CHG-001", products="[p]",
+                  owners="[o]", created="2026-01-01", icg="ICG-001", derives_from=derives,
+                  hotfix=hotfix) + "# CHG-001\n\n" + sections
+
+    dec = lambda extra="": fm(
+        schema="framework/decision-record/v1", artifact_type="decision-record", id="DEC-001",
+        lifecycle="immutable", status="accepted", scope="architecture", products="[p]",
+        owners="[o]", created="2026-01-01", **({"hotfix": "true"} if extra else {})) + "# DEC-001\n"
+
+    def codes(files: dict, pin: str | None) -> set | None:
+        with tempfile.TemporaryDirectory() as tmp:
+            files = dict(files, **{"OPEN.md": fm(
+                schema="framework/open-register/v1", artifact_type="open-register",
+                lifecycle="living", status="active", owners="[o]", created="2026-01-01",
+                last_review="2026-01-01 09:00") + "# Open\n"})
+            if pin:
+                files["framework.yaml"] = f"framework_version: {pin}\n"
+            for rel, text in files.items():
+                f = Path(tmp) / rel
+                f.parent.mkdir(parents=True, exist_ok=True)
+                f.write_text(text)
+            r = subprocess.run([sys.executable, str(VALIDATE), "--root", tmp, "--json",
+                                "--stale-days", "36500"], capture_output=True, text=True)
+            if r.returncode not in (0, 1) or not r.stdout.strip():
+                return None
+            # The schema's finding on the field alone: the unqualified signal is another's.
+            return {f["code"] for f in json.loads(r.stdout)["findings"]
+                    if f["code"] in ("CHG002", "CHG005")
+                    or (f["code"] == "FM002" and "hotfix" in f["message"])}
+
+    at = lambda routing, impacts, change, d=None: {
+        "products/p/cycles/ICG-001.md": icg(routing, impacts),
+        "products/p/changes/CHG-001.md": change, "decisions/DEC-001.md": d or dec()}
+    cases = [
+        ("a draft hotfix routed to the architecture, no DEC", since,
+         at("architecture", "architecture", chg("draft", "[SIG-001]")), {"CHG005"}),
+        ("the same with its DEC", since,
+         at("architecture", "architecture", chg("draft", "[SIG-001, DEC-001]")), set()),
+        ("approved, and impacts say architecture: CHG002's", since,
+         at("architecture", "architecture", chg("approved", "[SIG-001]")), {"CHG002"}),
+        ("approved, routed both, impacts with no architecture", since,
+         at("both", "data", chg("approved", "[SIG-001]")), {"CHG005"}),
+        ("routed product", since, at("product", "data", chg("draft", "[SIG-001]")), set()),
+        ("hotfix: false", since,
+         at("architecture", "architecture", chg("draft", "[SIG-001]", "false")), set()),
+        ("withdrawn, its code never carried out", since,
+         at("architecture", "architecture", chg("withdrawn", "[SIG-001]")), set()),
+        ("hotfix on a decision", since,
+         at("product", "data", chg("draft", "[SIG-001]"), dec("hotfix")), {"CHG005"}),
+        ("a quoted yes, which is no boolean", since,
+         at("product", "data", chg("draft", "[SIG-001]", '"true"')), {"FM002"}),
+        ("no pin: the rules of the version that reads it", None,
+         at("architecture", "architecture", chg("draft", "[SIG-001]")), {"CHG005"}),
+        ("pinned before the rule", before,
+         at("architecture", "architecture", chg("draft", "[SIG-001]")), set()),
+        ("pinned before the rule, on a decision", before,
+         at("product", "data", chg("draft", "[SIG-001]"), dec("hotfix")), set()),
+    ]
+    problems = [] if before else ["no version before the hotfix's in the registry's history"]
+    for what, pin, files, want in cases:
+        got = codes(files, pin)
+        if got is None:
+            problems.append(f"{what}: the validator did not complete")
+        elif got != want:
+            problems.append(f"{what} (pin {pin}): expected {sorted(want) or 'nothing'}, got "
+                            f"{sorted(got) or 'nothing'}")
+    return problems
+
+
 @check("a last_review later than the commit that carries it is an error, compared at the minute in the commit's offset")
 def _review_not_ahead():
     # THE CASE THIS IS FOR. Four living documents attested with instants after their own
@@ -11730,6 +11825,328 @@ def _approved_mandates_end_to_end():
                             "the entries on `scope` and `scope-api` together")
         if any("has no affects" in w for t in after.get("threads", []) for w in t["why"]):
             problems.append("after: a change still has no affects in the to-do's reasons")
+    return problems
+
+
+@check("a hotfix: join --finish writes the review a join had, join lists the hotfixes a join with one pass approved until a full one lands, and from the version that brought it the to-do keeps a hotfix out of the threads, holding mandates on its code, and open refuses it")
+def _hotfix_joins():
+    # The lightning join signs with `Revisione: una passata`, and the next join with the whole
+    # review reads its hotfix: `join` lists the changes with `hotfix: true` that the joins
+    # landed since the last `Revisione: completa` approved -- not those whose state a join only
+    # moved on --, a join with no `Revisione:` counting as one pass. Landings are made by hand
+    # here, as `join --merge` makes them, the join's tip second parent of a merge named after
+    # it; the marks `--finish` writes are run for real. The to-do's pins are its constant and the
+    # version before it.
+    problems = []
+    todo_mod = _load(TODO, "todo_for_hotfix")
+    since = todo_mod.HOTFIX_SINCE
+    before = _previous_version(since)
+    if not before:
+        return ["no version before the hotfix's in the registry's history"]
+
+    def chg(i, status="approved", hotfix=True, derives=""):
+        meta = dict(schema="framework/change-contract/v1", artifact_type="change-contract",
+                    lifecycle="immutable", status=status, id=i, products="[q]", owners="[o]",
+                    created="2026-06-01", approvers="[Owner]")
+        if hotfix:
+            meta["hotfix"] = "true"
+        if derives:
+            meta["derives_from"] = derives
+        return _fm(**meta) + f"# {i} title\n"
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        origin = tmp / "origin.git"
+        subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(origin)], check=True,
+                       env={**os.environ, **_WORK_ENV})
+        repo = _Repo(tmp / "docs")
+        repo.write("framework.yaml", f"framework_version: {since}\n")
+        repo.write(".framework/work.yaml", "mode: additive\npeople: [Owner, Junior]\n"
+                   "admins: [Owner]\n")
+        api = "repository:product:q:api"
+        repo.write(".framework/contribution-policy.json", json.dumps({"mandates": {
+            "products/q/changes/CHG-001-x.md": {"paths": {api: ["src/billing"]}},
+            "products/q/changes/CHG-002-x.md": {"paths": {api: ["src/billing/invoices"]}},
+            "products/q/changes/CHG-003-x.md": {"paths": {api: ["src/other"]}}}}))
+        repo.write("products/q/OPEN.md", _register({"KI-001": {"status": "open"}}))
+        repo.write("products/q/changes/CHG-001-x.md", chg("CHG-001", derives="[KI-001]"))
+        repo.write("products/q/changes/CHG-002-x.md", chg("CHG-002", hotfix=False))
+        repo.write("products/q/changes/CHG-003-x.md", chg("CHG-003", hotfix=False))
+        repo.commit("base", "2026-06-01T09:00:00+02:00")
+        repo.git("remote", "add", "origin", str(origin))
+        repo.git("push", "-q", "origin", "main")
+        a = repo.path
+
+        def todo() -> dict:
+            r = subprocess.run([sys.executable, str(TODO), "--root", str(a), "--json"],
+                               capture_output=True, text=True, env={**os.environ, **_WORK_ENV})
+            try:
+                return json.loads(r.stdout)
+            except ValueError:
+                problems.append(f"todo.py gave no JSON (exit {r.returncode}): {r.stderr[-300:]}")
+                return {}
+
+        def threads(got: dict) -> list[list[str]]:
+            return sorted(sorted(i for n in t["nodes"] for i in n["ids"])
+                          for t in got.get("threads", []))
+
+        # From the version that brought it: no thread, listed apart with what it repairs, and
+        # the mandate on its code after it; `open` says why it is refused.
+        got = todo()
+        waits = {tuple(i["ids"]): i["threads"] for i in got.get("after_thread", [])}
+        if threads(got) != [["CHG-003"]] \
+                or [h.get("ids") for h in got.get("hotfixes", [])] != [["CHG-001"]] \
+                or got["hotfixes"][0].get("repairs") != ["KI-001"] \
+                or waits.get(("CHG-002",)) != ["hotfix CHG-001"]:
+            problems.append(f"pinned {since}: threads {threads(got)}, hotfixes "
+                            f"{got.get('hotfixes')}, after a thread {waits}")
+        rc, out = _work(a, "open", "--thread", "q-chg-001", "--who", "Owner")
+        if rc != 2 or "is the hotfix CHG-001, which is no thread to take" not in out:
+            problems.append(f"open of a hotfix: exit {rc}, {out[-300:]!r}")
+        said = subprocess.run([sys.executable, str(TODO), "--root", str(a)], capture_output=True,
+                              text=True, env={**os.environ, **_WORK_ENV}).stdout
+        if "## Hotfixes: no thread to take" not in said or "repairs KI-001" not in said:
+            problems.append(f"the to-do in markdown does not list the hotfix: {said[-600:]!r}")
+        line = next((x for x in said.splitlines() if x.startswith("- mandate: CHG-001")), "")
+        if line.count("repairs KI-001") != 1 or "no code paths" in line:
+            problems.append(f"the hotfix's line, with its code paths: {line!r}")
+        # One with no block in the policy says that nothing waits for it: the page alone, of a
+        # hotfix built here.
+        lone = todo_mod.Node(["CHG-009"], "mandate", "q", {"q"}, set(), False, set(), False)
+        page = todo_mod.markdown({
+            "additive": True, "base": "origin/main", "join": "not needed", "ready": [],
+            "unanchored": [], "open": {}, "threads": [], "after_thread": [], "hotfixes": [lone],
+            "after_join": [], "drafts": [], "waiting": {}, "effects": {}, "unread": [],
+            "abandoned": [], "tree": types.SimpleNamespace(titles={})})
+        if ("- mandate: CHG-009 -- no code paths in the contribution policy: nothing says which "
+                "files it changes, and nothing waits for it") not in page.splitlines():
+            problems.append(f"a hotfix with no code paths, in markdown: {page!r}")
+
+        # The join's marks, for real: with no signature before, one pass; `--review full` signs
+        # again; nothing after it, nothing signed; a commit after it, the same mark again; a
+        # hotfix approved after it, one pass.
+        rc, out = _work(a, "join", "--who", "Owner", "--no-threads", "--review", "full")
+        if rc != 2 or "only `--finish` writes it" not in out:
+            problems.append(f"--review without --finish: exit {rc}, {out[-200:]!r}")
+        rc, out = _work(a, "join", "--who", "Owner", "--no-threads")
+        tree = tmp / "docs--ricongiungimento-1"
+        if rc or not tree.is_dir():
+            return problems + [f"join --no-threads (exit {rc}): {out[-400:]!r}"]
+
+        def marks() -> list[str]:
+            return _g(a, "log", "work/ricongiungimento-1",
+                      "--format=%(trailers:key=Revisione,valueonly)%x1e").stdout.split("\x1e")
+
+        def signed() -> list[str]:
+            return [m.strip() for m in marks() if m.strip()]
+        steps = [((), None, ["una passata"]),
+                 (("--review", "full"), None, ["completa", "una passata"]),
+                 ((), None, ["completa", "una passata"]),
+                 ((), "a note.md", ["completa", "completa", "una passata"]),
+                 ((), "products/q/changes/CHG-004-x.md",
+                  ["una passata", "completa", "completa", "una passata"])]
+        for extra, add, want in steps:
+            if add:
+                (tree / add).parent.mkdir(parents=True, exist_ok=True)
+                (tree / add).write_text(chg("CHG-004") if add.endswith(".md") and "CHG" in add
+                                        else "a note\n")
+                _commit_all(tree, f"add {add}")
+            rc, out = _work(a, "join", "--who", "Owner", "--finish", *extra)
+            if signed() != want:
+                problems.append(f"--finish {' '.join(extra) or 'with no --review'} after "
+                                f"{add or 'nothing new'}: signed {signed()}, {want} expected "
+                                f"(exit {rc}): {out[-300:]!r}")
+        _work(a, "join", "--who", "Owner", "--abandon")
+
+        # The list, from landings made by hand on the main line.
+        def land(n: int, files: dict, mark: str | None) -> None:
+            branch = f"work/ricongiungimento-{n}"
+            repo.git("checkout", "-q", "-b", branch, "main")
+            for rel, text in files.items():
+                repo.write(rel, text)
+            repo.commit(f"texts of {n}", f"2026-06-{min(n, 28):02d}T09:00:00+02:00")
+            body = (f"Join {branch} finished: no thread\n\nRicongiungimento-di: Owner\n"
+                    + (f"Revisione: {mark}\n" if mark else ""))
+            repo.git("commit", "-q", "--allow-empty", "-m", body)
+            repo.git("checkout", "-q", "main")
+            repo.git("merge", "--no-ff", "-q", "-m", f"Merge {branch} into main", branch)
+            repo.git("push", "-q", "origin", "main")
+
+        def listed() -> list[str]:
+            rc, out = _work(a, "join", "--who", "Owner", "--no-threads")
+            _work(a, "join", "--who", "Owner", "--abandon")
+            return re.findall(r"  - (CHG-\d+), approved by (ricongiungimento-\d+)", out)
+        land(7, {"products/q/changes/CHG-010-x.md": chg("CHG-010")}, "una passata")
+        # An older join, with no `Revisione:`: one pass; CHG-010 only moved on here.
+        land(8, {"products/q/changes/CHG-011-x.md": chg("CHG-011"),
+                 "products/q/changes/CHG-010-x.md": chg("CHG-010", "implemented"),
+                 "products/q/changes/CHG-012-x.md": chg("CHG-012", hotfix=False)}, None)
+        got = listed()
+        if sorted(got) != [("CHG-010", "ricongiungimento-7"), ("CHG-011", "ricongiungimento-8")]:
+            problems.append(f"after a join with one pass and an older one: {got}")
+        # Numbers apart from those `listed` opens and abandons, whose branches stay here.
+        land(20, {"products/q/changes/CHG-013-x.md": chg("CHG-013", "draft")}, "completa")
+        got = listed()
+        if got:
+            problems.append(f"after a join with the whole review, still listed: {got}")
+        land(30, {"products/q/changes/CHG-014-x.md": chg("CHG-014"),
+                  "products/q/changes/CHG-011-x.md": chg("CHG-011", "verified")}, "una passata")
+        got = listed()
+        if got != [("CHG-014", "ricongiungimento-30")]:
+            problems.append(f"after a full join and a lightning one: {got}")
+
+        # Pinned before: the hotfix is a thread like any mandate, and nothing waits for it.
+        repo.write("framework.yaml", f"framework_version: {before}\n")
+        repo.commit("pinned before", "2026-06-29T09:00:00+02:00")
+        repo.git("push", "-q", "origin", "main")
+        got = todo()
+        if ["CHG-001"] not in threads(got) or got.get("hotfixes") \
+                or any(i["ids"] == ["CHG-002"] for i in got.get("after_thread", [])):
+            problems.append(f"pinned {before}: threads {threads(got)}, hotfixes "
+                            f"{got.get('hotfixes')}, after a thread {got.get('after_thread')}")
+    return problems
+
+
+@check("a hotfix is whoever decides': BR006 says hotfix: true written or taken off on a thread or a parking line, from the version that brought it, and not on a join's branch; a hotfix withdrawn holds nothing; the to-do says the days since each hotfix was approved")
+def _hotfix_is_whoever_decides():
+    # A contributor's change marked a hotfix and approved at an ordinary join would be no thread
+    # to take, with no brief and no code under way, holding the mandates on its code for code
+    # nobody writes: the field is written on a join's branch, and elsewhere `BR006` says it. One
+    # whose code will not reach production is withdrawn, and then holds nothing; the days since
+    # its approval say one that is stuck. The pins are the rule's own version and the one before.
+    problems = []
+    since = _load(VALIDATE, "validate_for_hotfix_field").HOTFIX_SINCE
+    before = _previous_version(since)
+    if not before:
+        return ["no version before the hotfix's in the registry's history"]
+
+    def chg(i, status="approved", hotfix=False, **extra):
+        meta = dict(schema="framework/change-contract/v1", artifact_type="change-contract",
+                    lifecycle="immutable", status=status, id=i, products="[q]", owners="[o]",
+                    created="2026-06-01", approvers="[Owner]")
+        if hotfix:
+            meta["hotfix"] = "true"
+        meta.update(extra)
+        return _fm(**meta) + f"# {i} title\n"
+
+    def marks(repo: "_Repo") -> list[str] | None:
+        # None where the validator gave nothing to read, so that no case passes on a refusal.
+        out = repo.validate("--base", "main")[1]
+        return None if out is None else sorted(
+            f["path"].split("/")[-1][:7] for f in out.get("findings", [])
+            if f["code"] == "BR006" and "hotfix: true" in f["message"])
+
+    team = "mode: additive\npeople: [Owner, Junior]\nadmins: [Owner]\n"
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        # Written on a new change, taken off one the main line holds approved: said on a thread
+        # and on a parking line from the rule's version, never on a join's branch, nor outside the
+        # additive mode. A thread that leaves the main line's hotfix as it is, where every thread
+        # of a project with a hotfix stands, is said nothing.
+        touched = {"products/q/changes/CHG-001.md": chg("CHG-001"),
+                   "products/q/changes/CHG-003.md": chg("CHG-003", "draft", hotfix=True)}
+        untouched = {"products/q/changes/CHG-004.md": chg("CHG-004", "draft")}
+        for pin, additive in ((since, True), (before, True), (since, False)):
+            repo = _Repo(tmp / f"field-{pin}-{'additive' if additive else 'plain'}")
+            repo.write("framework.yaml", f"framework_version: {pin}\n")
+            if additive:
+                repo.write(".framework/work.yaml", team)
+            repo.write("products/q/changes/CHG-001.md", chg("CHG-001", hotfix=True))
+            repo.commit("base", "2026-06-01T09:00:00+02:00")
+            for branch, files in (("work/q-chg-003", touched), ("work/parcheggio-q", touched),
+                                  ("work/ricongiungimento-1", touched),
+                                  ("work/q-chg-004", untouched)):
+                repo.git("checkout", "-q", "-b", branch, "main")
+                for rel, text in files.items():
+                    repo.write(rel, text)
+                repo.commit("the marks", "2026-06-02T09:00:00+02:00")
+                got = marks(repo)
+                want = (["CHG-001", "CHG-003"] if pin == since and additive and files is touched
+                        and "ricongiungimento" not in branch else [])
+                if got != want:
+                    problems.append(f"pinned {pin}, {'additive' if additive else 'not additive'}, "
+                                    f"{branch}: BR006 on the hotfix field {got}, expected "
+                                    f"{want or 'none'}")
+                repo.git("checkout", "-q", "main")
+
+        # The days since the approval: the commit that wrote `status: approved`, not a later one
+        # that moved its forecast.
+        origin = tmp / "origin.git"
+        subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(origin)], check=True,
+                       env={**os.environ, **_WORK_ENV})
+        repo = _Repo(tmp / "docs")
+        repo.write("framework.yaml", f"framework_version: {since}\n")
+        repo.write(".framework/work.yaml", team)
+        api = "repository:product:q:api"
+        repo.write(".framework/contribution-policy.json", json.dumps({"mandates": {
+            "products/q/changes/CHG-001-x.md": {"paths": {api: ["src/billing"]}},
+            "products/q/changes/CHG-002-x.md": {"paths": {api: ["src/billing/invoices"]}}}}))
+        repo.write("products/q/OPEN.md", _register({
+            "KI-001": {"status": "open", "affects": "[products/q/OPEN.md#KI-001]"}}))
+        hotfix = lambda status, **extra: chg("CHG-001", status, hotfix=True,
+                                             derives_from="[KI-001]", **extra)
+        repo.write("products/q/changes/CHG-001-x.md", hotfix("draft"))
+        repo.write("products/q/changes/CHG-002-x.md", chg("CHG-002"))
+        repo.commit("base", "2026-06-01T09:00:00+02:00")
+        # Approved on a join's branch landed with `--no-ff`, as `join --merge` lands it, three
+        # days later: the merge is no commit `-G` reads, and the day is the approval's.
+        approved_at = "2026-06-05T09:00:00+02:00"
+        repo.git("checkout", "-q", "-b", "work/ricongiungimento-1", "main")
+        repo.write("products/q/changes/CHG-001-x.md", hotfix("approved"))
+        repo.commit("the lightning join approves CHG-001", approved_at)
+        repo.git("checkout", "-q", "main")
+        landed = {"GIT_AUTHOR_DATE": "2026-06-08T09:00:00+02:00",
+                  "GIT_COMMITTER_DATE": "2026-06-08T09:00:00+02:00"}
+        repo.git("merge", "--no-ff", "-q", "-m", "Merge work/ricongiungimento-1 into main",
+                 "work/ricongiungimento-1", env=landed)
+        repo.write("products/q/changes/CHG-001-x.md",
+                   hotfix("approved", affects="[products/q/OPEN.md#KI-001]"))
+        repo.commit("its forecast", "2026-06-10T09:00:00+02:00")
+        repo.git("remote", "add", "origin", str(origin))
+        repo.git("push", "-q", "origin", "main")
+        a = repo.path
+
+        def run(*extra: str) -> str:
+            return subprocess.run([sys.executable, str(TODO), "--root", str(a), *extra],
+                                  capture_output=True, text=True,
+                                  env={**os.environ, **_WORK_ENV}).stdout
+
+        days = lambda: (datetime.now().astimezone() - datetime.fromisoformat(approved_at)).days
+        low = days()
+        page, summary, raw = run(), run("--summary"), run("--json")
+        high = days()
+        try:
+            got = json.loads(raw)
+        except ValueError:
+            return problems + [f"todo.py gave no JSON: {raw[-300:]!r}"]
+        said = [h.get("days") for h in got.get("hotfixes", [])]
+        if len(said) != 1 or not isinstance(said[0], int) or not low <= said[0] <= high:
+            problems.append(f"the days of the hotfix in JSON: {said}, expected {low}")
+        else:
+            d = said[0]
+            line = next((x for x in page.splitlines() if x.startswith("- mandate: CHG-001")), "")
+            if f"-- approved {d} days ago" not in line or "withdraws at a join" not in page:
+                problems.append(f"the hotfix in markdown: {line!r}")
+            if f"- hotfix: CHG-001, approved {d} days ago, `implemented`" not in summary:
+                problems.append(f"the hotfix in the summary: {summary[-400:]!r}")
+
+        # Withdrawn, its code never to reach production: no hotfix, the mandate on its code a
+        # thread to take, the known issue it repaired one too.
+        repo.write("decisions/DEC-001.md", _decision("DEC-001", "OD-900"))
+        repo.write("products/q/changes/CHG-001-x.md",
+                   hotfix("withdrawn", affects="[products/q/OPEN.md#KI-001]",
+                          withdrawn_by="DEC-001"))
+        repo.commit("a join withdraws the hotfix", "2026-06-12T09:00:00+02:00")
+        repo.git("push", "-q", "origin", "main")
+        try:
+            got = json.loads(run("--json"))
+        except ValueError:
+            return problems + ["todo.py gave no JSON after the withdrawal"]
+        taken = sorted(i for t in got.get("threads", []) for n in t["nodes"] for i in n["ids"])
+        if got.get("hotfixes") or got.get("after_thread") or "CHG-002" not in taken \
+                or not any(i.endswith("KI-001") for i in taken):
+            problems.append(f"a hotfix withdrawn: hotfixes {got.get('hotfixes')}, after a thread "
+                            f"{got.get('after_thread')}, threads to take {taken}")
     return problems
 
 

@@ -187,7 +187,9 @@ the parking-lot line, the `SIG` appended to `LOG`, and the commit a script makes
 output. On the branch of a thread or of a parking line, where this project pins 4.12.0 or
 later, or no version that reads, ask it for one pass: the substance it hands back is yours to
 fix or to bring to the join, whose review is whole and comes before anybody decides. A brief
-keeps up to three passes: it reaches no join.
+keeps up to three passes: it reaches no join. A hotfix's brief, written in its lightning join,
+has one, and keeps it: the next join with the whole review reads the `CHG` again, and its
+delivery when it comes (the framework's `cycle`, *A hotfix*).
 
 If the reviser is not available, or cannot launch the critic, run the critic yourself, with
 the absolute path of `FRAMEWORK_PATH`, or a general-purpose agent told to follow

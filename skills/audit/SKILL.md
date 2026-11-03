@@ -522,7 +522,8 @@ whose new number is taken or not reserved for it, and a number a merged thread c
 renumbered there -- whoever decides abandons the join (`join --abandon`) and opens it again
 without that thread, which `renumber` refusing it says. `BR006` is a mandate withdrawn, or its
 forecast moved, when or where it may not be: say which of its cases it is, and leave the move to
-who decides, at a join.
+who decides, at a join; from 4.12.0 pinned, or no version that reads, also `hotfix: true` written
+or taken off on a thread or a parking line, which whoever decides writes, on a join's branch.
 From 4.12.0 pinned, or no version that reads, it is also a mandate brought back out of `withdrawn`:
 it stays withdrawn, and what it would have done comes back as a new `CHG`, deriving from it or from
 the decision. `ci/branches.yml` runs the same comparison on every pull request, and opens an issue

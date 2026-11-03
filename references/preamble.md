@@ -228,7 +228,11 @@ proposed for a later join (`contribute`, the join). An act left has its cascade 
 by the revert of the commit that holds it alone, which gives back the text the review read and
 is not reviewed again; a revert that conflicts is a correction. A brief keeps up to three
 passes wherever it is written: it reaches no join, and a code session follows it to the
-letter. Where the project pins less, every review is up to three passes, as before.
+letter. A hotfix is the one exception the other way, and `cycle` says it: one pass on its
+lightning join, before anybody decides, and one on its brief, written in that join. The next
+join with the whole review reads its `CHG` again, and its delivery when it comes; the brief
+keeps its one pass, its work done once the code is written and its rules the `CHG`'s. Where
+the project pins less, every review is up to three passes, as before.
 
 If the reviser is not in this session, or says it could not launch the critic, run the
 critic yourself, with this framework's path: fix the objections on the proposal, run the

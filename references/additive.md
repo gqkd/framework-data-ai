@@ -27,7 +27,9 @@ thread's branch goes what belongs to that thread's work; what does not, a parkin
 the way included, goes on a parking branch. The branch of a join is where living documents are
 rewritten, and where what only those who decide write goes: a release, a change `verified`, the
 freeze of the evaluation plan, an approval, a mandate withdrawn, the forecast of an approved
-one, and from 4.11.0 a mandate no thread held written `implemented` once its code is merged.
+one, and from 4.11.0 a mandate no thread held written `implemented` once its code is merged;
+from 4.12.0, a hotfix, in a lightning join (`contribute`, *The hotfix*), and written
+`implemented` at the first join after its code is merged, since no thread takes it.
 An admin opens one with `work.py join --no-threads` when no thread is ready.
 
 | Written directly on the thread's branch | Written as a pending effect |
@@ -77,8 +79,12 @@ reads. A `CHG` approved never shares a thread with a decision or an entry, nor w
 `CHG`: what two mandates change at the same time is code, so the to-do reads the code prefixes
 of their blocks in the contribution policy, and not their `affects` or the `documents` of the
 block. Two whose prefixes meet are two threads, and whoever opens one makes the other wait until
-the join lands it -- the narrower the code prefixes of a block, the fewer wait. Two people
-opening two of them in the same minute both pass that check, on two claims: the `open` whose
+the join lands it -- the narrower the code prefixes of a block, the fewer wait; from 4.12.0 an
+approved hotfix, which no thread takes, makes those whose prefixes meet its own wait the same
+way, until a join writes it `implemented`, or withdraws it where its code will not reach
+production (`contribute`, *The hotfix*); the field is whoever decides', and a thread or a parking
+line that writes it or takes it off is a `BR006`. Two people
+opening two such mandates in the same minute both pass that check, on two claims: the `open` whose
 push lands second says it, unless its fetch or its computing of the to-do after the push fails;
 the one that landed first may be told by nothing; who goes first is theirs to agree. A `KI` an
 approved `CHG` derives from is not waited for -- the change is what repairs it --, unless an
@@ -89,13 +95,15 @@ a `KI` and is to do, the issue is no node of its own, even where another change 
 and the to-do lists it with every mandate to do that repairs it; while every change that
 repairs it waits, the issue is a node, which anybody may take, so that nothing a change waits
 for can wait on it in turn. The thread of the change closes it on its branch -- `status: decided`, `closed_by` the
-change -- when the to-do lists that mandate alone for it, so that of several listed together
+change -- when the to-do lists that mandate alone for it -- a hotfix's, whoever decides at the
+join that writes the hotfix `implemented` --, so that of several listed together
 none closes it while another is still listed; one its mandates land without closing is a node
 again. A mandate's thread does not claim it, nor has it in its forecast at the join, and its own
 `depends_on` and `decide_with` are not followed while it is in their hands. One a thread claimed
 before -- while its change waited, before the change was approved, or before the adoption -- is
 named with that thread, which releases its claim (`work.py release <KI> --who "<name>"`): the
-mandate's thread closes it, once the code is merged, and two branches never write its row. These closings, and a mandate written
+mandate's thread closes it, once the code is merged -- a hotfix's, whoever decides, as above --,
+and two branches never write its row. These closings, and a mandate written
 `implemented`, rest on who writes them, on whatever branch: no check reads them. The change
 still waits for the decisions and the changes it derives from, and for what its increments
 require. So a mandate whose code is merged, and whose closing is pushed on its branch, is
