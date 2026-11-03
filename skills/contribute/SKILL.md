@@ -156,14 +156,14 @@ an entry the main line has closed, as `audit` says; `BR006` a mandate withdrawn 
 moved off a join -- take it out and propose it, a withdrawal as a `DEC` `proposed`, a forecast
 on a parking line --, or, from 4.12.0 pinned, one brought back out of `withdrawn`, which stays
 withdrawn: a new `CHG` carries what it would have done; `EFF001` is an effects file that does
-not read, `EFF002` a choices file, `AFF001` an anchor that does not exist. Where the project
-asks for `require_all`, from 4.12.0 pinned, or no version that reads, the only `AN003` on a
-thread is on `EXC005` or `EXC006`, which can say an exposure on this machine the join never sees:
-the annotation is the join's to write, so the way out is the repair of what each finding names, on
-this machine -- a copy of credentials into the session's scratchpad, a value out of the list, the
-exchange moved out of a git repository with its folders. The `exchange:` line of
-`.framework/sessions.yaml` is every machine's: a change to it is brought to the join, not made on
-the thread.
+not read, `EFF002` a choices file, `AFF001` an anchor that does not exist. Where the project asks
+for `require_all`, from 4.12.0 pinned, or no version that reads, the only `AN003` on a thread is on
+`EXC005` or `EXC006`, which can say an exposure on this machine the join never sees: the annotation
+is the join's to write, so the way out is the repair of what each finding names, on this machine --
+a copy of credentials deleted on the yes of the person whose machine it is, as `audit` says, a
+value out of the list, the exchange moved out of a git repository with its folders. The `exchange:`
+line of `.framework/sessions.yaml` is every machine's: a change to it is brought to the join, not
+made on the thread.
 Then the review the preamble asks for, on the diff of the
 branch against `origin/main`, effects included, with `_filoni/<slug>/revisione.md` as its log:
 one pass, where the project pins 4.12.0 or later, or no version that reads, and the substance it

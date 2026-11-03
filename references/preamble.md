@@ -263,13 +263,15 @@ it before handing back. If it reports something that was already there, say so a
 it: it is not yours to silence.
 
 **When the project declares `exchange:` in `.framework/sessions.yaml`, the session closes
-with a declaration**, written before the two blocks below, which stay the last thing said:
-what it committed and where, what it leaves uncommitted (the file, and the section or the
-lines it wrote), and what it leaves outside the repositories, pointing at `risorse.md`. It
-goes in the `sessioni/` of the element the session worked on, or of the exchange when it
-worked on no single element. Several sessions share one working tree, and this is how the
-one that commits knows whose each line is. `references/contributions.md`, *The exchange
-between sessions*, has the names and the shape.
+with a declaration** -- where the project pins 4.12.0 or later, or no version that reads, only
+when it leaves something uncommitted or a review that was due did not run, since one with
+nothing uncommitted is one nobody would ever remove --, written before the two blocks below,
+which stay the last thing said: what it committed and where, what it leaves uncommitted (the
+file, and the section or the lines it wrote), and what it leaves outside the repositories,
+pointing at `risorse.md`. It goes in the `sessioni/` of the element the session worked on, or
+of the exchange when it worked on no single element. Several sessions share one working tree,
+and this is how the one that commits knows whose each line is. `references/contributions.md`,
+*The exchange between sessions*, has the names and the shape.
 
 ## The last two blocks, and they come after everything else
 

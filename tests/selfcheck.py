@@ -247,6 +247,11 @@ def _catalog_matches_code():
         if not (CHECKS["checks"][c].get("retired_in") and
                 CHECKS["checks"][c].get("retired_because")):
             problems.append(f"{c}: retired without `retired_in` and `retired_because`")
+    # Since 4.12.0 a code may retire by the version pinned, kept at its level below it: it says
+    # why as a retired one does.
+    for c, spec in sorted(CHECKS["checks"].items()):
+        if c not in retired and spec.get("retired_in") and not spec.get("retired_because"):
+            problems.append(f"{c}: retires in {spec['retired_in']} with no `retired_because`")
     # A catalogued check that nothing emits is a promise the validator does not keep,
     # unless it is switched off and says why, or retired.
     for c in sorted(catalogued - emitted - off - retired):
@@ -8137,10 +8142,108 @@ def _exchange_integrate():
     return problems
 
 
+@check("EXC004 retires by the version pinned: from its retired_in, or no version that reads, nothing reports it, an annotation on it is an AN001, a pin on it stops the run and exchange.py lists no resources; below, all as before")
+def _exc004_retires_by_the_pin():
+    # What a contributor's session leaves on a machine is that person's (4.12.0): the catalog
+    # keeps `EXC004` at its level with a `retired_in`, and the version the project pins says
+    # which of the two it is. The version is the catalog's, the one before it is read from the
+    # registry's history: no literal for the day the framework moves.
+    problems = []
+    since = str(CHECKS["checks"]["EXC004"].get("retired_in") or "")
+    if CHECKS["checks"]["EXC004"].get("level") != "warn" or not since \
+            or not CHECKS["checks"]["EXC004"].get("retired_because"):
+        return ["EXC004 is not kept at `warn` with a `retired_in` and a `retired_because`: below "
+                "the version that retires it, it reports as it did"]
+    before = _previous_version(before=since)
+    if before is None:
+        return ["no version before EXC004's retired_in in the last sixty commits: the case "
+                "cannot be built"]
+    row = "| ramo locale | chg-001 in /src/app | git -C /src/app branch -D chg-001 |\n"
+    # On the pair `EXC004` reports below: there it is accepted, where it retires an `AN001`.
+    annotation = ("expected:\n  - code: EXC004\n"
+                  "    path: ../_scambio/integrati/CHG-001/risorse.md\n"
+                  "    reason: a branch its person keeps.\n"
+                  "    clears_when: its row is removed.\n")
+    with tempfile.TemporaryDirectory() as tmp:
+        repo, ex, _ = _exchange_docs(Path(tmp))
+        _put(ex, {"integrati/CHG-001/risorse.md": _RESOURCE_HEAD + row,
+                  "integrati/CHG-001/INTEGRATO": "x: y\n"})
+
+        def listed() -> list:
+            r = subprocess.run([sys.executable, str(EXCHANGE), "--root", str(repo.path),
+                                "--json"], capture_output=True, text=True)
+            try:
+                return json.loads(r.stdout).get("resources_to_remove", [])
+            except ValueError:
+                return [f"exit {r.returncode}: {r.stderr[-200:]}"]
+
+        for pin, retired in ((f"framework_version: {before}\n", False),
+                             (f"framework_version: {since}\n", True),
+                             ("scan:\n  skip_dirs: [x]\n", True)):
+            repo.write("framework.yaml", pin)
+            repo.write(".framework/expected-findings.yaml", "expected: []\n")
+            reported = repo.findings("EXC004")
+            if bool(reported) == retired:
+                problems.append(f"{pin.strip()!r}: EXC004 {'reported' if reported else 'silent'}"
+                                f", expected {'silent' if retired else 'reported'}")
+            if bool(listed()) == retired:
+                problems.append(f"{pin.strip()!r}: exchange.py lists {listed()} as resources to "
+                                "remove")
+            # An annotation on it: where it retires, an AN001 that says so, the exchange read;
+            # below, the finding it names is accepted, as before.
+            repo.write(".framework/expected-findings.yaml", annotation)
+            rc, out, err = repo.validate()
+            found = (out or {}).get("findings", [])
+            an = [f for f in found if f["code"] == "AN001" and "[EXC004]" in f["message"]]
+            mine = [f for f in found if f["code"] == "EXC004"]
+            if retired and not any("retired in" in f["message"] for f in an):
+                problems.append(f"{pin.strip()!r}: an annotation on EXC004 gave {an}, expected "
+                                "an AN001 saying it is retired")
+            if not retired and (an or not mine or not all(f.get("accepted") for f in mine)):
+                problems.append(f"{pin.strip()!r}: an annotation on the EXC004 reported gave "
+                                f"{an} and {mine}: below the version that retires it, it is "
+                                f"accepted (exit {rc}, {err[-200:]!r})")
+            # A pin on it in framework.yaml: stopped where it retires, applied below.
+            repo.write(".framework/expected-findings.yaml", "expected: []\n")
+            repo.write("framework.yaml", pin + "checks:\n  EXC004: info\n")
+            rc, out, err = repo.validate()
+            if retired and (rc != 2 or "retired in" not in err):
+                problems.append(f"{pin.strip()!r} pinning EXC004 ran (exit {rc}): a pin on a "
+                                "retired code is stopped")
+            if not retired and (out is None or not any(
+                    f["code"] == "EXC004" and f["level"] == "info" for f in out["findings"])):
+                problems.append(f"{pin.strip()!r} pinning EXC004 at info: {rc}, {err[-200:]!r}")
+
+    # `migrate.py` files the pin under GONE against the version of arrival, the registry's of
+    # the framework it is run from: a framework at `since` retires it, one before does not.
+    migrate = _load(ROOT / "skills" / "audit" / "scripts" / "migrate.py", "migrate_for_exc004")
+    with tempfile.TemporaryDirectory() as tmp:
+        project, framework = Path(tmp) / "docs", Path(tmp) / "framework"
+        project.mkdir()
+        (project / "framework.yaml").write_text(f"framework_version: {before}\n"
+                                                "checks:\n  EXC004: off\n  XP003: off\n")
+        (framework / "skills" / "audit").mkdir(parents=True)
+        (framework / "schemas").mkdir()
+        shutil.copy(ROOT / "skills" / "audit" / "checks.yaml",
+                    framework / "skills" / "audit" / "checks.yaml")
+        for arrival, gone in ((since, ["EXC004"]), (before, [])):
+            (framework / migrate.REGISTRY_REL).write_text(f'version: "{arrival}"\n')
+            got = [p["code"] for p in migrate.retired_pins(project, framework)]
+            if got != gone:
+                problems.append(f"retired_pins against a framework at {arrival}: {got}, "
+                                f"expected {gone}")
+    return problems
+
+
 @check("EXC004: a resource listed by an element is still there after the element is done")
 def _exc004():
+    # Below the version that retires it (4.12.0), not at the registry's, which reaches it.
+    before = _previous_version(before=str(CHECKS["checks"]["EXC004"].get("retired_in") or ""))
+    if before is None:
+        return ["no version before EXC004's retired_in in the last sixty commits"]
     with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as away:
         repo, ex, _ = _exchange_docs(Path(tmp))
+        repo.write("framework.yaml", f"framework_version: {before}\n")
         there = Path(away) / "app-chg"
         there.mkdir()
         rows = (_RESOURCE_HEAD
@@ -8278,8 +8381,13 @@ def _exc_outside_require_all():
               "    path: ../_scambio/integrati/CHG-009/risorse.md\n"
               "    reason: a resource on a machine nobody here can reach.\n"
               "    clears_when: its row is removed.\n")
+    # The main line below the version that retires `EXC004` (4.12.0), so that all seven report.
+    below = _previous_version(before=str(CHECKS["checks"]["EXC004"].get("retired_in") or ""))
+    if below is None:
+        return ["no version before EXC004's retired_in in the last sixty commits"]
     with tempfile.TemporaryDirectory() as tmp:
         repo, ex, _ = _exchange_docs(Path(tmp))
+        repo.write("framework.yaml", f"framework_version: {below}\n")
         repo.write(".framework/expected-findings.yaml", strict)
         _put(ex, {"integrati/CHG-001/risorse.md": _RESOURCE_HEAD
                   + "| ramo locale | chg-001 in /src/app | git -C /src/app branch -D chg-001 |\n",
@@ -8711,8 +8819,13 @@ def _exchange_keeps_values_out():
     # `EXC005`, and every other place that prints a row -- `EXC004`, `EXC007`, the listing and
     # its JSON -- must not become the second copy of the secret.
     problems = []
+    # Below the version that retires `EXC004` (4.12.0), which prints the rows here.
+    below = _previous_version(before=str(CHECKS["checks"]["EXC004"].get("retired_in") or ""))
+    if below is None:
+        return ["no version before EXC004's retired_in in the last sixty commits"]
     with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as scratch:
         repo, ex, _ = _exchange_docs(Path(tmp))
+        repo.write("framework.yaml", f"framework_version: {below}\n")
         copy = Path(scratch) / ".env.misure"
         copy.write_text("x")
         _put(ex, {f"in-arrivo/{i}/risorse.md": _RESOURCE_HEAD
@@ -12846,8 +12959,14 @@ def _exchange_lists_what_waits():
         return subprocess.run([sys.executable, str(EXCHANGE), "--root", str(root), *extra],
                               capture_output=True, text=True)
 
+    # The resources are listed below the version that retires `EXC004` (4.12.0), not at the
+    # registry's, which reaches it.
+    before = _previous_version(before=str(CHECKS["checks"]["EXC004"].get("retired_in") or ""))
+    if before is None:
+        return ["no version before EXC004's retired_in in the last sixty commits"]
     with tempfile.TemporaryDirectory() as tmp:
         repo, ex, _ = _exchange_docs(Path(tmp))
+        repo.write("framework.yaml", f"framework_version: {before}\n")
         r = run(repo.path)
         if r.returncode != 0 or "is not on this machine" not in r.stdout:
             problems.append(f"an exchange not yet created: exit {r.returncode}, {r.stdout!r}")
@@ -12996,9 +13115,18 @@ def _adopt_writes_the_framework_sections():
     problems = []
     template = (ROOT / migrate.TEMPLATE_REL).read_text(encoding="utf-8")
     marked = {s["id"]: s for s in migrate.sections(template) if s["id"]}
-    if set(marked) != {"review", "exchange", "additive"}:
+    if set(marked) != {"review", "exchange", "additive", "credentials"}:
         problems.append(f"the template marks {sorted(marked)} as the framework's, expected "
-                        "the review, the exchange and the additive mode")
+                        "the review, the exchange, the additive mode and the copies of "
+                        "credentials")
+    # The copies of credentials are a rule of every project, with an exchange or not (since
+    # 4.12.0): written everywhere, and no longer said by the exchange section alone.
+    if marked.get("credentials", {}).get("requires") != []:
+        problems.append("the section on copies of credentials requires something: --adopt "
+                        "would leave it out of some projects")
+    if "stays in your scratchpad" in marked.get("exchange", {}).get("text", ""):
+        problems.append("the exchange section still says where a copy of credentials lives: "
+                        "the section of its own says it")
     if marked.get("additive", {}).get("requires") != ["additive"]:
         problems.append("the section on threads and joins does not require the additive mode: "
                         "--adopt would write it into every project")
@@ -13049,9 +13177,10 @@ def _adopt_writes_the_framework_sections():
             listed = {e["id"]: e["action"] for e in json.loads(r.stdout)["agents"]["sections"]}
         except (ValueError, KeyError, TypeError):
             listed = None
-        if listed != {"review": "add", "exchange": "skipped", "additive": "skipped"}:
-            problems.append(f"the report lists {listed}, expected review add, exchange and "
-                            f"additive skipped: {(r.stdout + r.stderr)[-300:]}")
+        if listed != {"review": "add", "exchange": "skipped", "additive": "skipped",
+                      "credentials": "add"}:
+            problems.append(f"the report lists {listed}, expected review and credentials add, "
+                            f"exchange and additive skipped: {(r.stdout + r.stderr)[-300:]}")
         if r.returncode != 1:
             problems.append(f"a project on this version with a section to write exits "
                             f"{r.returncode}: 0 says there is nothing to do")
@@ -13074,7 +13203,7 @@ def _adopt_writes_the_framework_sections():
         _write_sections(migrate, root, plan)
         text = (root / "AGENTS.md").read_text(encoding="utf-8")
         have = [s["heading"] for s in migrate.sections(text)]
-        if have != ["Non negotiable rules", "Sessions and the exchange",
+        if have != ["Non negotiable rules", "Copies of credentials", "Sessions and the exchange",
                     "Review before presenting, and before committing", "Mandatory updates",
                     "Commands"]:
             problems.append(f"after writing, the sections are {have}")

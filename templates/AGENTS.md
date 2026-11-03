@@ -105,6 +105,16 @@ from static observations and hypotheses. Deferred sources still require actual r
 their captured hashes. Partial graphs cannot exclude impact; reading reports do not attest
 comprehension, human review or production verification.
 
+<!-- framework-section: credentials -->
+## Copies of credentials
+
+A copy of credentials a session needs -- a `.env`, a key, a token file -- stays in that
+session's scratchpad, never under the folder that holds the repositories, where one `git add -A`
+in the wrong directory publishes it. The session deletes it when it closes and says so in its
+final answer; it keeps it only when its person asks, and then says where it is, with the command
+that removes it. Wherever it is written down, it is named by its path and the names of its keys,
+never by what they hold.
+
 <!-- framework-section: exchange requires=exchange -->
 ## Sessions and the exchange
 
@@ -114,15 +124,17 @@ comprehension, human review or production verification.
 > Code sessions, which read no `sessions.yaml`, reach only `../_scambio` beside the
 > repositories: another name serves the documentation sessions alone.
 
-This project hands material between sessions through `EXCHANGE_PATH`, outside every
-repository: one folder per element in `in-arrivo/`, named by its identifier, with the fixed
-names of the framework's `references/contributions.md`, *The exchange between sessions*. A
-brief is read from there and a delivery written there, never copied out of a scratchpad.
-Whatever you create outside the repositories goes in the element's `risorse.md` the moment
-it exists, with the command that removes it; a copy of credentials stays in your scratchpad,
-listed with the names of its keys and never their values. Every session closes with its
-declaration in `sessioni/`: what it committed, what it leaves uncommitted, what it leaves
-outside the repositories.
+This project hands material between sessions through `EXCHANGE_PATH`, outside every repository:
+one folder per element in `in-arrivo/`, named by its identifier, with the fixed names of the
+framework's `references/contributions.md`, *The exchange between sessions*. A brief is read from
+there and a delivery written there, never copied out of a scratchpad. Whatever you create
+outside the repositories goes in the element's `risorse.md` the moment it exists, with the
+command that removes it -- a copy of credentials as *Copies of credentials* says, deleted when
+you close --; removing the rest is for the person you work for, when they want, and your final
+answer tells them what is left, with those commands. A session that leaves something
+uncommitted, or a review that was due and did not run, closes with its declaration in
+`sessioni/`: what it committed, what it leaves uncommitted, what it leaves outside the
+repositories; with everything committed and every review that was due run, it writes none.
 
 <!-- framework-section: additive requires=additive -->
 ## Threads and joins

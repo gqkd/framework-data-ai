@@ -254,7 +254,11 @@ LEVELS = {"error", "warn", "info", "off"}
 # version and the reason, and the number is never given to another failure: an annotation
 # joins on the code, and a code that changed meaning under an annotation would make a reason
 # written about one thing cover another. Only the catalog may say it; a project that pins a
-# retired code is told so and stopped, because the line switches nothing on.
+# retired code is told so and stopped, because the line switches nothing on. Since 4.12.0 the
+# catalog may also keep a code at its level with a `retired_in`: it retires by the version the
+# project pins (`rules_hold`), and below that version it reports as it did -- `load_config`
+# reads it so, and everything that reads the level after it, `Report` and the annotations,
+# follows.
 RETIRED = "retired"
 
 
@@ -661,6 +665,9 @@ def load_config(project: dict) -> tuple[dict, int]:
     for code, spec in (base.get("checks") or {}).items():
         spec = dict(spec or {})
         spec["level"] = normalize_level(spec.get("level", "warn"), code, catalog=True)
+        if spec["level"] != RETIRED and spec.get("retired_in") \
+                and rules_hold(project, str(spec["retired_in"])):
+            spec["level"] = RETIRED      # retired by the version pinned, as `RETIRED` says
         checks[code] = spec
 
     stale_days = int(project.get("stale_days", base.get("stale_days", 90)))

@@ -16,8 +16,10 @@ the order they are worth reading:
        integrated and not moved, or waiting behind a state that says they are done;
     2. the deliveries waiting for integration, the oldest first, with how many days;
     3. the elements with a brief and nothing delivered yet: at a code session;
-    4. the resources of elements done still there, with the command that removes each one,
-       which is the removal the documentation session proposes and runs only on approval;
+    4. below 4.12.0 pinned, the resources of elements done still there, with the command that
+       removes each one, which is the removal the documentation session proposes and runs only
+       on approval; from 4.12.0 pinned, or no version that reads, they belong to whoever
+       created them, `EXC004` is retired, and this section is not listed;
     5. the closing declarations in `sessioni/` that no element holds, with their age;
     6. the findings `validate.py` reports on the same place, `EXC001`-`EXC007`, with the ones the
        project has annotated in `.framework/expected-findings.yaml` apart, as it prints them.
@@ -335,8 +337,10 @@ def main() -> int:
     waiting = sorted((e for e in incoming if e not in closed and e.delivered),
                      key=lambda e: (e.oldest or today, e.ident))
     working = [e for e in incoming if e not in closed and not e.delivered]
-    resources = [(e, r) for e in ex.elements if X.closed(states, e.ident)
-                 for r in e.resources if r.present]
+    # The documentation's to propose only where `EXC004` still reports, below 4.12.0 pinned.
+    resources = [] if report.level("EXC004") == v.RETIRED else [
+        (e, r) for e in ex.elements if X.closed(states, e.ident)
+        for r in e.resources if r.present]
 
     def row(e) -> dict:
         return {"id": e.ident, "state": X.state(states, e.ident), "delivered": e.delivered,

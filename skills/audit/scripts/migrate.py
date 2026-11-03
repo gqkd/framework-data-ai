@@ -835,6 +835,11 @@ def retired_pins(root: Path, framework: Path) -> list[dict]:
     seeing any migration. This tool's job is to say what changes, not to refuse: the pin is
     filed under GONE, because the move is what makes it meaningless, and `--adopt` removes
     the line with the number so that nothing is left for the validator to stop on.
+
+    Retired against the version of arrival, the registry's of `framework`: a code the catalog
+    retires by the version pinned (`retired_in`, its level kept, since 4.12.0) is retired for a
+    project adopting that version, though the validator, run while the project still declares
+    the one before, reads it as it was.
     """
     cfg = root / "framework.yaml"
     if not cfg.exists():
@@ -848,10 +853,15 @@ def retired_pins(root: Path, framework: Path) -> list[dict]:
         return []
     catalog = yaml.safe_load((framework / "skills/audit/checks.yaml")
                              .read_text(encoding="utf-8")).get("checks") or {}
+    try:
+        arrival = semver(registry_version((framework / REGISTRY_REL).read_text(encoding="utf-8")))
+    except OSError:
+        arrival = None
     out = []
     for code, override in pins.items():
         spec = catalog.get(code) or {}
-        if spec.get("level") != "retired":
+        gone = semver(str(spec.get("retired_in") or ""))
+        if spec.get("level") != "retired" and not (arrival and gone and arrival >= gone):
             continue
         level = override.get("level") if isinstance(override, dict) else override
         out.append({"code": code, "path": "framework.yaml", "level": "retired",

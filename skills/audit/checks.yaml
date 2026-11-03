@@ -1166,13 +1166,14 @@ checks:
       week. The report states how many warnings carry an annotation whether or not this is on,
       so the default hides nothing and turning it on is a decision rather than a discovery.
 
-      Five warnings of the exchange are outside it: `EXC001`-`EXC004` and `EXC007`, its upkeep,
-      the state and the shape of a working folder that differs on every machine and that CI
-      never sees. A ruling on them would go into a file every machine shares, which in the
-      additive mode only an admin writes, at a join. Not what exposes something -- `EXC005`, a
-      credential, and `EXC006`, which says among other names an exchange inside a git
-      repository --, nor `EXC008`, which reads the value committed, the same everywhere. Since
-      4.12.0, whatever version the project pins, `FW001` and `FW003` are outside it too: which
+      Five warnings of the exchange are outside it: `EXC001`-`EXC004` and `EXC007` -- `EXC004`
+      below 4.12.0 pinned, where it is not retired --, its upkeep, the state and the shape of a
+      working folder that differs on every machine and that CI never sees. A ruling on them
+      would go into a file every machine shares, which in the additive mode only an admin
+      writes, at a join. Not what exposes something -- `EXC005`, a credential, and `EXC006`,
+      which says among other names an exchange inside a git repository --, nor `EXC008`, which
+      reads the value committed, the same everywhere. Since 4.12.0, whatever version the
+      project pins, `FW001` and `FW003` are outside it too: which
       validator and which commit of the framework a machine runs, a newer one being the normal
       state between a plugin updated and an adoption, which CI, checking out the framework the
       project pins, does not see -- it does where it checks out another --; `FW004`, a version
@@ -1615,6 +1616,7 @@ checks:
       an integration nobody can retrace.
   EXC004:
     level: warn
+    retired_in: "4.12.0"
     title: a resource listed by an element is still there after the element is done
     prevents: >
       Six worktrees of mandates already merged, 2.3 GB, with no rule saying to remove them.
@@ -1623,15 +1625,25 @@ checks:
       approval. A row still present after that is the proposal not made or not answered. A
       worktree or a copy of credentials is present when its path exists; the other kinds are
       names in tools this does not run, and are present while their row is.
+    retired_because: >
+      What a contributor's session leaves on a machine is that person's, on that machine, and
+      not the documentation's: from 4.12.0 the code session reminds its person, in its final
+      answer, of what is left, with the commands of the list, and the documentation session
+      reads no `risorse.md`, proposes no removal and waits for nothing, an `EXC005` apart.
+      Retired by the version the project pins, not by the catalog alone: where the project pins
+      4.12.0 or later, or no version that reads, nothing reports it, an annotation on it is an
+      `AN001` where the exchange is read, and a `framework.yaml` that pins it is stopped; below,
+      it reports as it did. THE CODE IS NOT REUSED. The copies of credentials stay watched by
+      `EXC005` and `EXC007`, which do not depend on who cleans.
   EXC005:
     level: warn
     title: a copy of credentials is under the projects folder, or the list carries a value
     prevents: >
-      A secret left where every repository and every session can reach it. A copy of a `.env`
-      or of a key lives in the scratchpad of the session that needed it and goes with it; the
-      list names its path and the keys it holds, never what they hold. Under the folder that
-      contains the documentation and its neighbours, one `git add -A` in the wrong directory
-      publishes it.
+      A secret left where every repository and every session can reach it. A copy of a `.env` or
+      of a key lives in the scratchpad of the session that needed it, which deletes it when it
+      closes; the list names its path and the keys it holds, never what they hold. Under the
+      folder that contains the documentation and its neighbours, one `git add -A` in the wrong
+      directory publishes it.
   EXC006:
     level: warn
     title: a name in the exchange that the framework does not read
@@ -1645,7 +1657,7 @@ checks:
     title: a resource row or a closing declaration that cannot be read
     prevents: >
       A list that cannot be acted on. A resource without its type, its path or name, or the
-      command that removes it cannot be proposed for removal; a copy of credentials without
+      command that removes it leaves whoever removes it guessing; a copy of credentials without
       the names of its keys cannot be rotated when it turns up somewhere; a closing
       declaration without one of its three parts -- committed, not committed, outside the
       repositories -- leaves the next session reading transcripts to learn whose a line is.

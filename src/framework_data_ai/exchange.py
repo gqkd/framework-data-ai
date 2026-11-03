@@ -185,8 +185,8 @@ def resources(path: Path, rel: str, report: FindingSink) -> list[Resource]:
             continue                     # the header
         if len(cells) < 3 or not all(cells[:3]):
             report.add("EXC007", rel, f"line {n}: a resource needs three cells, its type, its "
-                       "path or name, and the command that removes it. Without the command the "
-                       "session that closes the work cannot propose the removal.")
+                       "path or name, and the command that removes it. Without the command, "
+                       "whoever removes it has to work out what to run.")
             continue
         kind, where, command = cells[0].casefold(), cells[1], cells[2]
         if kind not in RESOURCE_TYPES:
@@ -363,6 +363,8 @@ def check(ex: Exchange, known: set[str], states: dict, projects: Path, in_histor
                        "state that says it is done.")
         if el.stage == INTEGRATED:
             _integrated(ex, el, in_history, report)
+        # Retired where the project pins 4.12.0 or later, or no version that reads: the catalog's
+        # `retired_in`, which `Report` follows, drops it there.
         if closed(states, el.ident):
             for r in el.resources:
                 if r.present:
@@ -384,8 +386,8 @@ def check(ex: Exchange, known: set[str], states: dict, projects: Path, in_histor
             if r.present and on_disk is not None and on_disk.resolve().is_relative_to(projects):
                 report.add("EXC005", rel_res, f"line {r.line}: a copy of credentials under "
                            f"{projects}, where every repository and the exchange live. It "
-                           "belongs in the scratchpad of the session that needs it, and goes "
-                           "with the session.")
+                           "belongs in the scratchpad of the session that needs it, which "
+                           "deletes it when it closes.")
 
 
 def _integrated(ex: Exchange, el: Element, in_history, report: FindingSink) -> None:

@@ -173,7 +173,8 @@ it is optional, and is what turns on the rest -- the rule below with its fixed n
 `risorse.md` and the closing declaration, the brief `cycle` writes there and the delivery
 `contribute` takes from there, the section of `AGENTS.md` that says the rule, `exchange.py`
 and the checks of the validator: a project that declares no exchange has the place and none
-of its discipline.
+of its discipline, but for the rule on copies of credentials where it pins 4.12.0 or later, or
+no version that reads (*Copies of credentials*, below).
 
 ### The place
 
@@ -220,7 +221,7 @@ _scambio/
     contribution-policy.json
     documentazione.md     in the additive mode: what the documentation should say, for a thread
     risorse.md            what the work created outside the repositories
-    sessioni/2026-10-14-ab12cd34.md   a closing declaration per session
+    sessioni/2026-10-14-ab12cd34.md   a closing declaration per session that writes one
   integrati/CHG-021/      the same folder, moved, with INTEGRATO
   sessioni/               declarations of sessions that worked on no single element
 ```
@@ -272,9 +273,10 @@ python3 "${CLAUDE_PLUGIN_ROOT:?}/skills/audit/scripts/exchange.py" --root <docum
 lists, in the order they are worth reading: the elements the documents already call done
 whose folder is still in `in-arrivo/`; the deliveries waiting for integration, the oldest
 first, with the days since the oldest delivered file; the elements with a brief and nothing
-delivered yet; the resources of elements done still there, with their commands; the
-declarations in `sessioni/`; and the findings below. It reads modification times off the
-disk, so a copy that does not preserve them resets the count. It moves and writes nothing;
+delivered yet; below 4.12.0 pinned, the resources of elements done still there, with their
+commands; the declarations in `sessioni/`; and the findings below. It reads modification
+times off the disk, so a copy that does not preserve them resets the count. It moves and
+writes nothing;
 `integrate <ID>` moves one folder and writes its `INTEGRATO`.
 
 ### What a mandate creates outside the repositories
@@ -295,36 +297,56 @@ The types are `worktree`, `ramo locale`, `stack isolato`, `volume`, `immagine`,
 whatever directory the next session starts in. The list is what is still there: a resource
 removed is a row deleted.
 
-When the element is done, a change at `implemented`, the documentation session lists its
-resources with their commands and proposes the removal: after, never before -- moving a
-change to `implemented` does not wait for a cleaning. It runs a command only on the
-person's approval, and deletes the row when it has. A resource still there afterwards is a
-warning, never an error, `require_all` included. A worktree or a copy of credentials is
-there when its path exists; the other kinds are names in tools the validator does not run,
-and are there while their row is.
+Removing the resources belongs to whoever created them, on their machine: the session that
+created them says in its final answer what is left, with the commands of the list, and the
+person removes them when they want, deleting each row, or never. A copy of credentials is the
+one exception: the session deletes it when it closes (*Copies of credentials*). The
+documentation session does not read `risorse.md`, proposes no removal, asks and waits for
+nothing: a change reaches `implemented` at the merge, and `EXC004` is retired. An `EXC005` is
+apart, at every version pinned: an exposure on the machine of the person in front of it, which
+it tells that person and proposes to delete, running the deletion only on their yes
+(`skills/audit/SKILL.md`). A worktree or a copy of credentials is there when its path exists;
+the other kinds are names in tools the validator does not run, and are there while their row is.
 
-**A delivery from another machine.** The table lists what is on the machine of the exchange
-it sits in. A delivery carried by hand from another machine -- the code written by somebody
-other than who has the thread -- brings rows of that machine, which nobody here can remove
-and the validator here would count as still there. The session that brings it in takes them
-out of the table and writes them in a note above it that says whose machine they are on,
-with their commands, and gives the commands to that person. The brief travelled the other
-way first, carried to that machine with the absolute paths of this one -- the exchange, the
-`CHG`, the framework --, which whoever carries it says. No line of the note starts with
-`|`, which the validator reads as a row wherever it stands, indented or not; and the note,
-like the table, never carries the value of a credential.
+**A delivery from another machine.** The code written by somebody other than who has the
+thread is delivered on that person's machine and carried back by hand. The brief travelled the
+other way first, carried to that machine with the absolute paths of this one -- the exchange,
+the `CHG`, the framework --, which whoever carries it says. The `risorse.md` that comes with it
+stays as it came: its resources are that person's, nobody here proposes or runs anything from
+it but the deletion an `EXC005` asks for (above), and only `EXC005` and `EXC007` read its rows,
+as they read every list. Its rows go in a note only where the last paragraph of this part holds.
 
 **Copies of credentials.** A copy of a `.env` or of a key lives only in the scratchpad of the
 session that needs it, is in the list with its path and the names of the keys it holds,
-never their values, and is deleted when the session closes. Never under the folder that
-holds the repositories: one `git add -A` in the wrong directory publishes it.
+never their values, and is deleted by that session when it closes, which its final answer
+says; it is kept only when its person asks, and then that answer says where it is, with the
+command that removes it, and its row stays in the list. Not a resource left for the person to
+remove when they want: a secret, which nobody should have to remember. Never under the folder
+that holds the repositories: one `git add -A` in the wrong directory publishes it. The rule
+holds with no exchange too: the template of `AGENTS.md` says it in a section of its own, *Copies
+of credentials*, which `--adopt` writes in every project, and every brief among its guardrails.
+Nothing looks for copies nobody listed: the machine is the person's.
+
+**Below 4.12.0 pinned** all of this is as it was. When the element is done -- a change at
+`implemented`, which does not wait for a cleaning -- the documentation session lists its
+resources with their commands, as `exchange.py` does, and proposes the removal, runs a command
+only on the person's approval and deletes the row when it has; a resource still there
+afterwards is an `EXC004`, a warning, never an error, `require_all` included. The rows of a
+delivery from another machine, which nobody here can remove and `EXC004` would count as still
+there, leave the table: the session that brings it in writes them in a note above it that says
+whose machine they are on, with their commands, and gives the commands to that person. No line
+of the note starts with `|`, which the validator reads as a row wherever it stands, indented or
+not; and the note, like the table, never carries the value of a credential. The rule on copies
+of credentials is said only where an exchange is declared, in its section of `AGENTS.md` and in
+the *Delivery* of a brief.
 
 ### The closing declaration
 
-Every session, documentation or code, closes with a short declaration, written in
-`sessioni/<date>-<session>.md` of the element's folder, or of the exchange when the session
-worked on no single element. `<session>` is the session's identifier as its tool names it;
-the first eight characters are enough. Three sections, with these headings:
+A session, documentation or code, closes with a short declaration -- or with none, in the case
+the end of this part says --, written in `sessioni/<date>-<session>.md` of the element's
+folder, or of the exchange when the session worked on no single element. `<session>` is the
+session's identifier as its tool names it; the first eight characters are enough. Three
+sections, with these headings:
 
 ```markdown
 ## Committato
@@ -334,13 +356,17 @@ the first eight characters are enough. Three sections, with these headings:
 - `products/p/OPEN.md`: OD-128, the two lines of the default in force
 
 ## Fuori dai repository
-- see `risorse.md`: the worktree and the copy of the `.env`
+- see `risorse.md`: the worktree and the isolated stack
 ```
 
 A section with nothing to say says `niente`. The second is what lets another session, in the
 same working tree, commit the work of all of them without guessing whose a line is. A
 declaration in the exchange's own `sessioni/` is removed by the session that commits what it
-lists as not committed; one in an element's folder travels with the folder.
+lists as not committed; one in an element's folder travels with the folder. Where the project
+pins 4.12.0 or later, or no version that reads, a session that committed everything, with no
+review that was due left undone, writes none, since a declaration that says `niente` under
+*Non committato* is one nobody would ever remove; a review that was due and did not run is
+still said in one.
 
 ### What the validator reports on it
 
@@ -353,7 +379,7 @@ copy of credentials. It does not look for copies nobody listed.
 | `EXC001` | a folder names an identifier the documentation does not declare |
 | `EXC002` | an element done in the documents still has its folder in `in-arrivo/` |
 | `EXC003` | a folder in `integrati/` whose `INTEGRATO` is missing, unreadable, names a commit the documentation's history does not hold, or leaves a delivered name without a destination |
-| `EXC004` | a resource still there after its element is done |
+| `EXC004` | below 4.12.0 pinned, a resource still there after its element is done; retired from 4.12.0 pinned, or no version that reads |
 | `EXC005` | a copy of credentials under the folder that holds the repositories, or a value in the list |
 | `EXC006` | a name the framework does not read: a loose file, a name not fixed, the exchange inside a git repository |
 | `EXC007` | a resource row without a known type, an absolute path where one is due, or a command; a copy of credentials without its keys; a declaration misnamed or without one of its sections |
@@ -367,13 +393,14 @@ nothing was delivered.
 It is earlier than what the digest counts as closed, a change at `verified`, and on purpose:
 what a mandate created outside the repositories serves the work up to the merge. A change
 that two documents declare is done only when both say so. All seven are warnings, and five do
-not count for `require_all`: `EXC001`-`EXC004` and `EXC007` are the upkeep of a folder that
-differs from one machine to the next. `EXC005` and `EXC006` do, because each can say that
-something is exposed: a credential, an exchange inside a git repository -- and from 4.12.0
-pinned, or no version that reads, they are the only warnings `require_all` counts on a thread's
-or a parking branch, since the join, run on another machine, never sees them; there the way out
-is the repair. Since 4.12.0 `FW001` and `FW003` do not count either: they say which validator,
-and which commit of the framework, a machine runs.
+not count for `require_all`: `EXC001`-`EXC004` -- `EXC004` where it is not retired -- and
+`EXC007` are the upkeep of a folder that differs from one machine to the next. `EXC005` and
+`EXC006` do, because each can say that something is exposed: a credential, an exchange inside
+a git repository -- and from 4.12.0 pinned, or no version that reads, they are the only
+warnings `require_all` counts on a thread's or a parking branch, since the join, run on
+another machine, never sees them; there the way out is the repair. Since 4.12.0 `FW001` and
+`FW003` do not count either: they say which validator, and which commit of the framework, a
+machine runs.
 
 The rule has to reach sessions that run no skill, which only the project's `AGENTS.md` does.
 The template's section *Sessions and the exchange* says it, and `migrate.py --adopt` writes

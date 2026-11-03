@@ -191,9 +191,10 @@ others: it reaches the join committed on the branch. So the usual way is that wh
 thread with a change runs its code session too, on the same machine -- a recommendation, not a
 role, and whoever writes only code does not enter `people` for it. When somebody else writes
 the code, the brief is carried to that person's machine, with the absolute paths of this one;
-the delivery is carried back by hand to the thread's machine, and the rows of its `risorse.md`,
-which describe the machine it came from, leave the table for a note
-(`references/contributions.md`, *A delivery from another machine*).
+the delivery is carried back by hand to the thread's machine, and its `risorse.md`, which
+describes the machine it came from, goes as `references/contributions.md` says (*What a mandate
+creates outside the repositories*): as it came, from 4.12.0 pinned, or no version that reads;
+its rows in a note above the table, below.
 
 The reviewer's log of a thread is `_filoni/<slug>/revisione.md` on its branch, appended to and
 never rewritten, and that of a join `_filoni/ricongiungimento-<n>/revisione.md`: both stay in the

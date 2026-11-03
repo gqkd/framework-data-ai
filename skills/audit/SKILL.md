@@ -534,7 +534,7 @@ When `.framework/sessions.yaml` declares `exchange:`, sessions hand each other m
 place outside the repositories: a folder per element in `in-arrivo/` until the documentation
 session has integrated it, in `integrati/` afterwards with an `INTEGRATO` saying which
 commit took it in and where each part went, a `risorse.md` per element listing what the work
-created outside the repositories, and a closing declaration per session.
+created outside the repositories, and a closing declaration per session that writes one.
 `references/contributions.md`, *The exchange between sessions*, describes each; this is what
 to do with it.
 
@@ -542,11 +542,11 @@ to do with it.
 python3 "${CLAUDE_PLUGIN_ROOT:?}/skills/audit/scripts/exchange.py" --root <project>
 ```
 
-lists what waits, elements done and still in `in-arrivo/` first, then the deliveries by age,
-the briefs with nothing delivered yet, the resources of elements done with their commands,
-and the declarations not attached to an element. The validator reports the same place as
-`EXC001`-`EXC007`, all warnings, and only where the place exists: a CI runner has the
-repository and not what sits beside it, so a clean CI run says nothing about the exchange.
+lists what waits, elements done and still in `in-arrivo/` first, then the deliveries by age, the
+briefs with nothing delivered yet, below 4.12.0 pinned the resources of elements done with their
+commands, and the declarations not attached to an element. The validator reports the same place as
+`EXC001`-`EXC007`, all warnings, and only where the place exists: a CI runner has the repository and
+not what sits beside it, so a clean CI run says nothing about the exchange.
 
 What each finding asks of you, and none of it is a fix you apply in silence:
 
@@ -560,16 +560,19 @@ What each finding asks of you, and none of it is a fix you apply in silence:
   merged: the thread's, or, for a mandate no thread held, one of the join's branch before
   `--finish` --; if it was not, that is the work, and the state that says done is the thing
   to raise.
-- **`EXC004`, a resource still there.** Propose the removal with the command in the row, one
-  row at a time, asking whether the row is this machine's. Run it only on the person's
-  approval, then delete the row. A row of a delivery carried by hand from another machine,
-  which the session that brought it in should have moved to the note above the table, goes
-  there now, with its command for whoever is on that machine, and is not run here
-  (`references/contributions.md`, *A delivery from another machine*). A worktree with
-  uncommitted work in it is the person's to look at before anything is removed.
-- **`EXC005`, credentials where they should not be.** Say where the copy is and which keys it
+- **`EXC004`, a resource still there**, below 4.12.0 pinned: from 4.12.0, or no version that
+  reads, it is retired, and the resources belong to whoever created them: nothing to propose.
+  Propose the removal with the command in the row, one row at a time, asking whether
+  the row is this machine's. Run it only on the person's approval, then delete the row. A row
+  of a delivery carried by hand from another machine, which the session that brought it in
+  should have moved to the note above the table, goes there now, with its command for whoever
+  is on that machine, and is not run here (`references/contributions.md`, *What a mandate
+  creates outside the repositories*). A worktree with uncommitted work in it is the person's to
+  look at before anything is removed.
+- **`EXC005`, credentials where they should not be.** At every version pinned, since it is an
+  exposure on the machine of the person in front of you: say where the copy is and which keys it
   holds, from the list. Never open the file to find out, never print a value, and propose the
-  deletion rather than performing it.
+  deletion, running it only on that person's yes.
 - **`EXC001`, `EXC003`, `EXC006`, `EXC007`, the shape.** The repair is a rename, a move into
   the element's folder, a line in `INTEGRATO` or in `risorse.md`. Propose it; the material is
   somebody's delivery, and its name is the only thing joining it to its element.

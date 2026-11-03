@@ -168,20 +168,20 @@ block in the contribution policy say which other mandates wait for it; below 4.1
 `affects` and its whole block put it in a thread. One that touches much is worth proposing to
 split.
 
-**When it reaches `implemented`** -- which it does when the work is merged, without waiting
-for any cleaning --, and the project declares an exchange, read the `risorse.md` in its
-folder and propose removing what is still there, one row at a time with the command the row
-gives, asking whether the row is this machine's. Run a command only on the person's approval,
-and delete the row when you have. A row of a delivery carried by hand from another machine,
-which the session that brought it in should have moved to the note above the table, goes there
-now, with its command for whoever is on that machine, and is not run here
-(`references/contributions.md`, *A delivery from another machine*). Then, once the delivery is
-integrated -- `verifica.md` written into the change's §Verification, which `integrate` refuses
-to call placed while that section is empty -- and committed, move the folder from `in-arrivo/`
-to `integrati/` with its `INTEGRATO`: `exchange.py --root <documentation> integrate <CHG>` does
-both.
-`exchange.py` lists both; `EXC002` and `EXC004` are what the validator says when either is
-left undone, warnings that `require_all` does not turn into errors.
+**When it reaches `implemented`** -- which it does when the work is merged, without waiting for any
+cleaning --, and the project declares an exchange, its resources belong to whoever created them:
+where the project pins 4.12.0 or later, or no version that reads, do not read its `risorse.md`,
+propose nothing and ask nothing. Below, read it and propose removing what is still there, one row at
+a time with the command the row gives, asking whether the row is this machine's; run a command only
+on the person's approval, and delete the row when you have; a row of a delivery carried by hand from
+another machine goes to the note above the table, with its command for whoever is on that machine,
+and is not run here (`references/contributions.md`, *What a mandate creates outside the
+repositories*). Then, once the delivery is integrated -- `verifica.md` written into the change's
+§Verification, which `integrate` refuses to call placed while that section is empty -- and
+committed, move the folder from `in-arrivo/` to `integrati/` with its `INTEGRATO`:
+`exchange.py --root <documentation> integrate <CHG>` does both. `exchange.py` lists what is left;
+`EXC002`, and `EXC004` where it reports, are what the validator says when it is left undone,
+warnings that `require_all` does not turn into errors.
 
 **The increment it realises.** When the roadmap declares `increments:`, ask which increment
 the change belongs to, proposing the one whose decisions or issues it derives from, and
@@ -256,6 +256,11 @@ compose.
 Mandate            CHG-NNN §what-changes
 Guardrails         CHG-NNN §what-must-not-change
                    products/<p>/OPEN.md and platform/OPEN.md, the decisions it may not take
+                   a copy of credentials only in your scratchpad, never under the folder of
+                   the repositories, named by its path and its keys, never their values,
+                   deleted when you close unless your person asks to keep it, and your
+                   final answer says which: deleted, or kept, where, with the command
+                   that removes it
 Context            AGENTS.md authoritative sources, resolved for this product
                    ARC#current, the relevant DC, GLOSSARY
 Done when          CHG-NNN §how-we-know-it-worked
@@ -295,14 +300,24 @@ Delivery           <absolute path>/in-arrivo/CHG-NNN/, under the fixed names: ve
                    documentazione.md, in the additive mode: what the documentation should
                    say after this change, which the thread turns into effects
                    risorse.md: one row per resource, the moment it exists -- type, path or
-                   name, the command that removes it; a copy of credentials only in your
-                   scratchpad, with the names of its keys and never their values
-                   sessioni/<date>-<session>.md when you close: committed, not committed,
-                   outside the repositories
+                   name, the command that removes it, a copy of credentials with the names
+                   of its keys; you delete that copy when you close, removing the rest is
+                   for your person, when they want, and your final answer says what is
+                   left, with those commands
+                   sessioni/<date>-<session>.md when you close with something uncommitted,
+                   or a review that was due and did not run: committed, not committed,
+                   outside the repositories; none when everything is committed and every
+                   review that was due ran
 ```
 
 `references/contributions.md`, *The exchange between sessions*, is where each of those is
-described, and the place to read before writing the block for the first time.
+described, and the place to read before writing the block for the first time. Where the project
+pins a version below 4.12.0, the brief is as it was in three places: no line on copies of
+credentials among the guardrails; `risorse.md` ends at "the command that removes it; a copy of
+credentials only in your scratchpad, with the names of its keys and never their values", with
+nothing on who removes the resources, which the documentation session proposes (Step 4); and
+the declaration is written at every close, "sessioni/<date>-<session>.md when you close:
+committed, not committed, outside the repositories".
 
 Write `<framework>` and the path of the `CHG` as absolute paths when you produce the brief:
 the code session works from another repository, and may not have the plugin enabled.

@@ -541,8 +541,10 @@ the material between the approved `CHG` and the merged change waits: the brief g
 folder, and what the work created outside the repositories is listed beside them with the command
 that removes each piece. At `implemented` the documentation session integrates the delivery, moves
 the folder to `integrati/` with an `INTEGRATO` that says where each part went -- `exchange.py
-integrate` does both --, and proposes the removals. `references/contributions.md`, *The exchange
-between sessions*, describes it, and `EXC001`-`EXC007` report what was left behind.
+integrate` does both --; the removals it proposes only below 4.12.0 pinned, since from 4.12.0
+what the work created belongs to whoever created it, whose code session says what is left.
+`references/contributions.md`, *The exchange between sessions*, describes it, and
+`EXC001`-`EXC007` report what was left behind, `EXC004` below 4.12.0.
 
 ### What `audit` checks, and what it does not
 
