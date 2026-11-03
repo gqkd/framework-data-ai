@@ -178,8 +178,10 @@ of any push (`contribute`), before the join, a row of substance still a question
 no living document. The check that holds is the join's, whose review
 reads them beside the delivery. A `contribution-policy.json`
 delivered goes to the same folder, not into `.framework/`: an admin carries it there at a join.
-The delivery is copied and not moved, so the folder goes to `integrati/` as usual, and its
-`INTEGRATO` names `documentazione.md: _filoni/<slug>/consegne/<CHG>/` in `parts`.
+The delivery is copied and not moved, so the folder goes to `integrati/`: once the copy is
+committed, and a `verifica.md` delivered written into the change's §Verification, which the
+thread writes, `exchange.py --root <thread worktree> integrate <CHG>` moves it and writes its
+`INTEGRATO`, which names `documentazione.md: _filoni/<slug>/consegne/<CHG>/` in `parts`.
 
 The exchange is one machine's, and the thread's branch is what carries the delivery to the
 others: it reaches the join committed on the branch. So the usual way is that whoever takes a
@@ -195,9 +197,11 @@ never rewritten, and that of a join `_filoni/ricongiungimento-<n>/revisione.md`:
 history when `--finish` removes the folder. Where the project pins 4.12.0 or later, or no
 version that reads, the review on a thread or on a parking line is one pass -- the slips fixed,
 the substance left to the contributor or to the join --, and the join's is whole, up to three
-passes, on everything the threads and parking branches bring and on the substance their logs
-left open, with the corrections of whoever decides read again; a brief keeps up to three
-passes wherever it is written (`references/preamble.md`, the review).
+passes, before anybody decides: on everything the threads and parking branches bring and on the
+substance their logs left open, with the outcome of the join's rehearsal -- the acts of decision
+applied without a commit and checked -- and the corrections of whoever decides read again, an
+element still found wanting left in draft or proposed for a later join; a brief keeps up to
+three passes wherever it is written (`references/preamble.md`, the review).
 
 ## The rereading
 
@@ -239,7 +243,7 @@ mandate written `implemented` or a `KI` it repairs closed, on whatever branch.
 
 | What | Admin | Deputy or delegate | Contributor |
 |---|---|---|---|
-| Decide an open decision (a `DEC` accepted, the entry closed), supersede a `DEC`, accept a risk | yes | yes | prepares it as a `DEC` in `proposed`, its measures and alternatives in the body, on a parking branch, deriving from the entry: `join` shows it, and the admin accepts it -- writing on the join's branch its cascade, the entry moved and the documents it obliges -- or leaves it proposed, where the to-do lists it until a later join accepts it or another decision supersedes it |
+| Decide an open decision (a `DEC` accepted, the entry closed), supersede a `DEC`, accept a risk | yes | yes | prepares it as a `DEC` in `proposed`, its measures and alternatives in the body, on a parking branch, deriving from the entry: `join` shows it, and the admin accepts it on the join's branch with its cascade, the entry moved and the documents it obliges -- from 4.12.0 pinned, or no version that reads, the cascade written with the texts, before the review, and the acceptance after it -- or leaves it proposed, where the to-do lists it until a later join accepts it or another decision supersedes it |
 | Split an open decision, change its question, dependencies or `affects`; the order and stages of `RMP` | applies the effect at the join; from 4.12.0 pinned, or no version that reads, the `delivery_stages` are no effect: written at the join, on the answer to its question | the same | proposes it as an effect; from 4.12.0 pinned, or no version that reads, not the `delivery_stages`, which the join asks whoever decides about |
 | Open a new `OD` or `KI`, parking lines, new information | yes | yes | yes: they become true at the join |
 | Classify an impact (`ICG`) | confirms | confirms | writes the draft |

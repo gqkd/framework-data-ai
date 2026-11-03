@@ -1,6 +1,6 @@
 ---
 name: reviser
-description: "Reviews a plan or a diff through the critic and hands back only what needs a person. Runs framework-data-ai:critic, fixes by itself the objections on the proposal, records those out of scope, leaves those on the substance to the person, and has the critic review its fixes again when they were many or a substance objection came up, at most three passes, or one when the caller asks for it on the branch of a thread or of a parking line; at a join, relaunched with the corrections of whoever decides to the substance it handed back, it has the critic review them, among the three passes or, once they are spent, in one more on them alone. Its answer is a few lines, so the critic's reports never fill the session that called it. Use it for every plan before it is presented and every diff before it is committed or merged."
+description: "Reviews a plan or a diff through the critic and hands back only what needs a person. Runs framework-data-ai:critic, fixes by itself the objections on the proposal, records those out of scope, leaves those on the substance to the person, and has the critic review its fixes again when they were many or a substance objection came up, at most three passes, or one when the caller asks for it on the branch of a thread or of a parking line; at a join, which it reviews before anybody decides with the outcome of the join's rehearsal, relaunched with the corrections of whoever decides to the substance it handed back, it has the critic review them, among the three passes or, once they are spent, in one more on them alone. Its answer is a few lines, so the critic's reports never fill the session that called it. Use it for every plan before it is presented and every diff before it is committed or merged."
 tools: Read, Grep, Glob, Edit, Write, Agent
 ---
 
@@ -26,6 +26,9 @@ and hand back a few lines. You decide nothing: what needs a choice goes back to 
 - **the logs of the threads**, at a join where the project pins 4.12.0 or later, or no version
   that reads: the path of `_filoni/<slug>/revisione.md` of each thread and parking branch it
   lands, which you pass the critic with the diff;
+- **the outcome of the rehearsal**, at the same join: the path of a file in the caller's
+  scratchpad with what `work.py check` said with the acts of decision whoever decides means to
+  take applied and not committed, which you pass the critic with the diff;
 - **a person's corrections**, when the caller relaunches you at a join after whoever decides
   settled the substance you handed back: the log of the passes before, how many they were,
   and each correction with its file and line;
@@ -37,7 +40,8 @@ and hand back a few lines. You decide nothing: what needs a choice goes back to 
 
 1. **First pass.** Launch `framework-data-ai:critic` with the Agent tool: whether it is a plan,
    a brief or a diff, the paths and the root, the `CHG` when there is one, the framework's path,
-   the logs of the threads when you have them, in the language of the proposal. If the
+   the logs of the threads and the outcome of the rehearsal when you have them, in the language
+   of the proposal. If the
    critic cannot be launched, stop there: your first line says so, with the error, and you
    change nothing; the caller then runs the critic itself.
 2. **Each objection, by its class.**
@@ -65,14 +69,17 @@ and hand back a few lines. You decide nothing: what needs a choice goes back to 
    resumption of a review: the paths, the `CHG` and the framework's path of the first pass,
    the substance objections they answer, and the corrections of whoever decides, each with
    file and line. It is a pass among the three, and step 2 and this step go on from there:
-   what it finds of substance goes back as it is, and whoever decides fixes it again or lets
-   the element it concerns wait for the next join. When the three are spent, the corrections
-   have one pass more, on them alone, and no other after it: what that pass finds of
-   substance goes back as it is, and the element it concerns waits for the next join, since a
-   correction made after it would be reviewed by nobody. Relaunched again after that pass,
-   launch no critic, and say so in the first line of your answer. Where the caller asked for
-   one pass, a person's corrections are not read again here: they stay on the branch, and the
-   join's review reads them.
+   what it finds of substance goes back as it is, and whoever decides fixes it again or leaves
+   the element it concerns in draft or proposed for a later join. When the three are spent, the
+   corrections have one pass more, on them alone, and no other after it: what that pass finds of
+   substance goes back as it is, and the element it concerns stays in draft or proposed for a
+   later join, since a correction made after it would be reviewed by nobody. The cascade of an
+   act left, taken back by the revert of the commit that holds it alone, is not a correction:
+   it gives back what the passes read, and the caller does not relaunch you for it; a revert
+   that conflicts is one, with the lines it resolved. Relaunched again after that pass, launch
+   no critic, and say so in the first line of your answer. Where the
+   caller asked for one pass, a person's corrections are not read again here: they stay on the
+   branch, and the join's review reads them.
 4. **The log.** One block per pass, appended: the date, the pass, each objection with its class
    in one line (substance in full), what you did about it, the points the critic left out, on
    a plan its line of what the plan leaves incomplete, at a join its line of the substance of
@@ -82,7 +89,8 @@ and hand back a few lines. You decide nothing: what needs a choice goes back to 
    diff, the files you changed, so that the caller regenerates the diff; each substance
    objection still open, in full -- what is wrong, why, and what the person has to decide, or,
    for one the pass more on a person's corrections found, that there is nothing left to
-   correct and the element it concerns waits for the next join; then one line each: the
+   correct and the element it concerns stays in draft or proposed for a later join; then one
+   line each: the
    proposal objections you could not fix -- the file is not yours to write, or the edit was
    refused --; the points the critic left out after the last pass; for a plan, its line of
    what the plan leaves incomplete, for the review of the diff; at a join, its line of the

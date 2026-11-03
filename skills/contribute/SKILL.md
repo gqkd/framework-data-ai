@@ -103,10 +103,11 @@ what is placement, form or the classification of an `ICG` takes its default, not
 `_filoni/<slug>/scelte.md` (`references/additive.md`, *The choices of form*), and only
 substance is asked. The skills that
 write -- `requirement`, `resolve`, `cycle`, `release` -- run on the branch as usual and say their
-own exceptions; this skill does not repeat them. Reserve
-every new identifier before writing it, from this branch: `work.py --root <thread worktree>
-reserve`, as `audit` describes. From here on `<thread worktree>` is the root: run on the main
-checkout, the checks below compare the main line with itself and find nothing.
+own exceptions; this skill does not repeat them. Each new identifier is reserved by the skill
+that writes it, before writing it, from this branch -- `work.py --root <thread worktree> reserve`,
+as the preamble says: not a step anybody has to remember. From here on `<thread worktree>` is
+the root: run on the main checkout, the checks below compare the main line with itself and find
+nothing.
 
 **What a code session delivered.** When `in-arrivo/<CHG>/documentazione.md` is in the declared
 exchange, copy it to `_filoni/<slug>/consegne/<CHG>/documentazione.md` and commit it, then draw the
@@ -116,18 +117,34 @@ without asking, and said in your last answer, target by target, after the push: 
 the code corrects one by a commit on the branch, pushed by the steps of *Before each push*,
 before the join, whose review reads the effects beside the delivery in any case; a line of
 substance stays a question.
-A `contribution-policy.json` delivered goes to the same folder. Then the delivery
-moves to `integrati/` as `references/contributions.md` describes, with `documentazione.md` named in
-`parts` at its place on the branch.
+A `contribution-policy.json` delivered goes to the same folder. A `verifica.md` delivered is
+written into the change's §Verification, with what it cites in `evidenze/` and the link of
+`mr-link.txt`: the thread writes it, and `integrate` refuses while that section is empty. Once
+what the delivery brought is committed, close it with
+`python3 "$F/exchange.py" --root <thread worktree> integrate <CHG>`: it moves the folder to
+`integrati/` and writes its `INTEGRATO`, with `documentazione.md` at its place on the branch;
+an `mr.md` is placed by hand, as `references/contributions.md` describes.
 
 ## Before each push
 
 ```bash
-python3 "$F/work.py" --root <thread worktree> list
-python3 "$F/validate.py" --root <thread worktree> --base origin/main
+python3 "$F/work.py" --root <thread worktree> list     # fetches; `sync --no-push` if main moved
+python3 "$F/work.py" --root <thread worktree> check    # offline: the views, the validator
 ```
 
-On a thread nothing else runs the checks of the branches: there is no pull request. `BR005` is a
+The fetch first -- `list`, or `sync --no-push` when the main line has moved, since `sync`
+without it publishes the branch --: a main line seen hours ago lets through what the real one
+would not. Then `check`, which fetches nothing: it regenerates the views, runs the validator
+with `--base` on the branch, details only what the main line does not have -- but for a copy of
+credentials beside the repositories, an `EXC005` it details each time, since it reads the main
+line from a temporary folder --, says when the last fetch was, and gives the branch's row of
+`list` as the remote had it at the last fetch or push. Its exit 1 is an error of the validator,
+or a view it did not write, having no generator's line: that one a person maintains, and is
+put to them, as `audit` says of `--emit-index`. Commit the views it regenerated with the work
+before the review and the push: `sync`
+refuses a tree with changes. `check` alone, which runs under the sandbox too, is for the round
+repeated between two pushes. On a thread nothing else runs the checks of the branches: there is
+no pull request. `BR005` is a
 living document changed in a way that is not additive -- move the change into an effect --;
 `BR001` and `BR003` are numbers, and `BR002` a decision on an entry the main line has closed,
 as `audit` says; `BR006` a mandate withdrawn or its forecast moved off a join -- take it out
@@ -176,80 +193,146 @@ whoever takes it again finds the work done so far.
 ## The join
 
 For an admin, a deputy or a delegate; `join` refuses anybody else. One join at a time, on a
-branch of its own, by these steps:
+branch of its own. You run it, commands included: the person says "let's run the join" and
+answers only what is theirs -- the approvals, a conflict, the choices of form, the list to
+anchor, which mandates no thread holds have their code merged, the stages of a roadmap -- and
+gives the yes that lands it. Without the sandbox you run every command below, `--merge` only
+after that yes. With it, the commands that reach the remote or write beside the repository --
+`join` and its `--finish`, `--merge`, `--close` and `--abandon`, `sync`, `reserve` -- are the
+person's: give each as a line ready to paste and wait for them to say it ran
+(`references/workstation.md`); once the join is open, have the work go on in a session started
+in its worktree, as for a thread, since the views and an adoption are written there. Where the
+project pins a version before 4.12.0, the acts of step 5 are written at step 2 with the texts,
+step 3 is skipped, and the review reads them committed.
 
-1. `python3 "$F/work.py" --root <documentation> join --who "<name>"`, with the names of the
-   threads to land, or none for all those ready. It shows, thread by thread, what the roles keep
-   to those who decide -- a classification accepted, the evaluation plan frozen, a change
-   `verified`, a known issue closed without a change, the contribution policy -- the effects
-   written outside the forecast, what it brought with no anchor, the choices of form it took by
-   default, from its `scelte.md`, and what the checks of the branches find on each, with the
-   to-do's whole list to anchor first, then merges the threads one by one, in the same run.
-   Read what it showed to the person before anything
-   else: it is to be judged, not filtered. A thread that should not land is dropped by `join
-   --abandon` and a new `join` naming the threads to keep. A conflict it leaves is two texts of which one holds: show both, and ask
-   whoever decides that matter. `--no-threads` opens a join with no thread, for what is written
-   only on a join's branch: `.framework/work.yaml`, an adoption, the contribution policy,
-   annotations, and what only those who decide write -- a release, a change `verified`, the
-   freeze of the evaluation plan, an approval, a mandate withdrawn or the forecast of an approved
-   one, and from 4.11.0 a mandate no thread held written `implemented` once its code is merged
-   (step 2).
-2. In the join's worktree, anchor every entry the to-do lists with no anchors -- its `affects`,
-   the finest section it touches: from 4.11.0 pinned that list is an exception, long the first
-   time, short after: what a join anchors leaves it, and what reaches the main line with no
-   `affects`, or stops waiting, enters it for the next. Ask the person which approved mandates
-   no thread holds have their code merged -- one that waited for another on the same code, one
-   nobody opened -- and write those `implemented` here, with each `KI` the to-do lists that
-   mandate alone for. Then rewrite the living documents from the effects of the threads merged,
-   each target once, and nothing an effect does not say but the cascade of a decision accepted
-   here; those a thread drew from a delivery without asking, from 4.12.0 pinned, or no version
-   that reads, are read beside its `_filoni/<slug>/consegne/<CHG>/documentazione.md`. Two
-   effects on one target from two threads that contradict each other are put to the person,
-   with both. On the same branch, the person approves the changes in draft they choose
-   -- those of the threads and those the to-do lists to approve -- with their name in
-   `approvers`, accepts or leaves the decisions a contributor proposed, which `join` showed and
-   the to-do lists -- accepting one, the person writes here its cascade: the entry moved, the
-   documents it obliges --, confirms or changes the choices of form the threads took by default,
-   which `join` showed -- a change is written here, as an edit of what the thread wrote --,
-   carries a delivered contribution policy into `.framework/`, sorts the parking lot, writes the
-   anchors of the entries that have none and of every change a thread brought with no
-   `affects`, which `join` showed, and writes what only
-   those who decide write: a release, a change `verified`, the freeze of the evaluation plan.
-   Where the project pins 4.12.0 or later, or no version that reads, and a thread or a parking
-   branch brings a new increment or an effect on an `RMP.md` -- the targets of its `effetti.md`
-   say it --, read back to the person the stages of that roadmap in the compact view of `cycle`
-   (Step 5b) -- the stages in their sequence, the increments of each, the new ones with no
-   stage -- ask whether the sequence still holds and where each new increment goes, and write
-   the `delivery_stages` here. A roadmap with no `delivery_stages` yet has nothing to read
-   back: ask whether to set its stages up; on a yes, do it here as `cycle` says for the first
-   time (Step 5b) -- proposed from its body, the lines quoted, what the digest will show the
-   day after, written on the person's confirmation --; on a no, ask again only when a later
-   join brings another change to that roadmap. A join whose threads and parking branches leave
-   the roadmaps as they were asks nothing.
-3. `python3 "$F/validate.py" --root <join worktree> --emit-index`, then the validator again.
-4. The review the preamble asks for, on the diff of the living documents -- from 4.12.0 pinned,
-   or no version that reads, whole, on the diff of the join's branch against `origin/main`:
+1. **The threads landed.** `python3 "$F/work.py" --root <documentation> join --who "<name>"`,
+   with the names of the threads to land, or none for all those ready. It shows, thread by
+   thread, what the roles keep to those who decide -- a classification accepted, the evaluation
+   plan frozen, a change `verified`, a known issue closed without a change, the contribution
+   policy -- the effects written outside the forecast, what it brought with no anchor, the
+   choices of form it took by default, from its `scelte.md`, and what the checks of the
+   branches find on each, with the to-do's whole list to anchor first, then merges the threads
+   one by one, in the same run. Read what it showed to the person before anything else: it is
+   to be judged, not filtered. A thread that should not land is dropped by `join --abandon` and
+   a new `join` naming the threads to keep. A conflict it leaves is two texts of which one
+   holds: show both, and ask whoever decides that matter. `--no-threads` opens a join with no
+   thread, for what is written only on a join's branch: `.framework/work.yaml`, an adoption,
+   the contribution policy, annotations, and what only those who decide write -- a release, a
+   change `verified`, the freeze of the evaluation plan, an approval, a mandate withdrawn or the
+   forecast of an approved one, and from 4.11.0 a mandate no thread held written `implemented`
+   once its code is merged (step 5).
+2. **The texts**, in the join's worktree, and no act of decision. Anchor every entry the to-do
+   lists with no anchors -- its `affects`, the finest section it touches: from 4.11.0 pinned
+   that list is an exception, long the first time, short after: what a join anchors leaves it,
+   and what reaches the main line with no `affects`, or stops waiting, enters it for the next
+   --, and every change a thread brought with no `affects`, which `join` showed. Rewrite the
+   living documents from the effects of the threads merged, each target once, and nothing an
+   effect does not say but the cascade of a decision whoever decides means to accept -- the
+   entry moved, the documents it obliges --; those a thread drew from a delivery without
+   asking, from 4.12.0 pinned, or no version that reads, are read beside its
+   `_filoni/<slug>/consegne/<CHG>/documentazione.md`. Two effects on one target from two
+   threads that contradict each other are put to the person, with both. Confirm or change, with
+   the person, the choices of form the threads took by default, which `join` showed -- a change
+   is written here, as an edit of what the thread wrote --; carry a delivered contribution
+   policy into `.framework/`; sort the parking lot; write the text of a release, and the `EVR`
+   the freeze of the evaluation plan writes. Ask the person
+   which approved mandates no thread holds have their code merged -- one that waited for
+   another on the same code, one nobody opened --: the delivery of each is a text, written
+   here -- `documentazione.md`, and a `contribution-policy.json` delivered, carried to
+   `_filoni/ricongiungimento-<n>/consegne/<CHG>/`, what it says written in the living
+   documents, a `verifica.md` written into the change's §Verification, the policy carried
+   into `.framework/` as above; its folder in the exchange is closed once the join has landed
+   (step 6) --; a delivery that is on
+   the machine of whoever wrote the code comes as `references/contributions.md` says (*A
+   delivery from another machine*), and one that has not arrived holds nothing back: the
+   mandate lands, and its delivery comes at a later join. Where the project pins 4.12.0 or
+   later, or no version that reads, and a thread or a parking branch brings a new increment or
+   an effect on an `RMP.md` -- the targets of its `effetti.md` say it --, read back to the
+   person the stages of that roadmap in the compact view of `cycle` (Step 5b) -- the stages in
+   their sequence, the increments of each, the new ones with no stage -- ask whether the
+   sequence still holds and where each new increment goes, and write the `delivery_stages`
+   here. A roadmap with no `delivery_stages` yet has nothing to read back: ask whether to set
+   its stages up; on a yes, do it here as `cycle` says for the first time (Step 5b) -- proposed
+   from its body, the lines quoted, what the digest will show the day after, written on the
+   person's confirmation --; on a no, ask again only when a later join brings another change to
+   that roadmap. A join whose threads and parking branches leave the roadmaps as they were asks
+   nothing. The cascade of each act of step 5 that obliges texts -- a decision to accept, a
+   mandate whose delivery is carried -- is committed on its own, before the rest, its title
+   `join: the cascade of <ID>`, so that leaving that act is the revert of that commit, which
+   gives back the text the review read (step 4). Then
+   `python3 "$F/work.py" --root <join worktree> check`, which regenerates the views -- its exit
+   1 read as in *Before each push* --, and commit the rest with them: the rehearsal starts from
+   tracked files with no change, and the reading of what a join brought counts only what lies
+   between the merge base and HEAD.
+3. **The rehearsal.** Note the untracked files the worktree already has (`git status
+   --porcelain --untracked-files=all`). Apply, without committing them, the acts of decision the
+   person said they mean to take (step 5); run `check`, and keep what it says in a file in your
+   scratchpad, outside the worktree. Then take away the acts and what `check` wrote, the files
+   `git status` shows now and did not before: those tracked or in the index with `git restore
+   --source=HEAD --staged --worktree -- <files>`, which takes away a file HEAD does not have
+   too, the untracked ones deleted. What speaks only from a state -- `CHG002` and `CHG003`,
+   from `approved` up -- speaks before the review.
+4. **The review** the preamble asks for, before anybody decides -- from 4.12.0 pinned, or no
+   version that reads, whole, on the diff of the join's branch against `origin/main`:
    everything the threads bring and what the join writes, the living documents rewritten
-   included, and a join that brings only states reviewed too; with it, the log of each thread
-   and parking branch merged, `_filoni/<slug>/revisione.md` in the join's worktree, whose
-   substance left open is reviewed again against that diff, and each delivery a thread drew
-   effects from without asking, `_filoni/<slug>/consegne/<CHG>/documentazione.md`, beside which
-   those effects and what the join rewrote from them are read; what whoever decides corrects of
-   the substance it hands back goes to the reviser again, relaunched with those corrections,
-   as `agents/reviser.md` says --; its log goes to
-   `_filoni/ricongiungimento-<n>/revisione.md`, committed before the next step.
-5. `join --finish --who "<name>"` removes `_filoni/` and signs the branch; `join --merge --who
-   "<name>"` lands it on the main line, by a merge of its own, and releases what it landed. A
-   commit after the signature -- a `sync` because the main line moved, a correction -- is signed
-   again by `--finish`, and `--merge` refuses a branch whose last commit is unsigned. When the
-   push of the main line did not go, `--merge` says so: once the person has pushed it, `join
-   --close` releases what the join landed; when the remote refused it, `--merge` run again once
-   the remote takes it pushes the same merge and releases. `join --abandon` drops a join that
-   did not land.
+   included, and a join that brings only states reviewed too --, with the outcome of the
+   rehearsal, the log of each thread and parking branch merged, `_filoni/<slug>/revisione.md`
+   in the join's worktree, whose substance left open is reviewed again against that diff, and
+   each delivery a thread drew effects from without asking,
+   `_filoni/<slug>/consegne/<CHG>/documentazione.md`, beside which those effects and what the
+   join rewrote from them are read. A substance objection is settled by whoever decides: the
+   text corrected, or the act it concerns left for a later join -- the element in draft or
+   proposed, or, for an act of step 5 on an element past them, as it stands --, with what step 2
+   wrote for it taken back: `git revert --no-edit` of its cascade's commit, which gives back
+   text the review has read and is not reviewed again -- write in the log the commit it
+   reverted. A revert that conflicts is resolved, and the lines it resolves are a correction;
+   with no pass left it is not resolved but dropped, `git revert --abort`: the act is taken as
+   the review read it, or, where the review holds an objection on it, the join is abandoned
+   (`join --abandon`) and opened again. The corrections go to the reviser again, relaunched
+   with them, as `agents/reviser.md` says. The reviser's log goes to
+   `_filoni/ricongiungimento-<n>/revisione.md`; commit the corrections, the reviser's and those
+   of whoever decides, with the log, since the reviser runs no git -- in a join with no thread
+   the log is all `_filoni/` holds, and `--finish` removes only what is tracked.
+5. **The acts of decision**, committed with the views `check` regenerates: the changes in draft
+   the person chooses approved, with their name in `approvers` -- those of the threads and those
+   the to-do lists to approve --; the decisions a contributor proposed accepted, which `join`
+   showed and the to-do lists, or left; a classification accepted; a change `verified`, or
+   withdrawn, naming in `withdrawn_by` the accepted `DEC` or the `CHG` that replaces or absorbs
+   it; the freeze of the evaluation plan; and from 4.11.0
+   the mandates no thread held, whose code is merged, written `implemented`, with each `KI` the
+   to-do lists that mandate alone for closed. States and names only: the texts they oblige were
+   written at step 2 and the review read them, so this commit is not reviewed again. An act the
+   person no longer takes here has its cascade taken back as at step 4, by the revert of its
+   commit, before this one.
+6. **The check, and the landing.** `check` once more; then `join --finish --who "<name>"`,
+   which removes `_filoni/` and signs the branch. Read the `BR` findings it prints back to the
+   person, in plain words, and ask "procedo?". The person's yes in the chat is the gesture that
+   lands the join, with their name, and you never give it in their place: then `join --merge
+   --who "<name>"` merges it into the main line, by a merge of its own, and releases what it
+   landed. A commit after the signature -- a `sync` because the main line moved, a correction --
+   is signed again by `--finish`, and `--merge` refuses a branch whose last commit is unsigned.
+   Once it has landed, close the delivery of each mandate carried at step 2 and written
+   `implemented` at step 5: `python3 "$F/exchange.py" --root <main checkout> integrate <CHG>
+   --commit <the commit of its cascade at step 2>`, which the main line now holds and which
+   still holds the
+   `_filoni/` that `--finish` removed. One whose act was not taken keeps its folder in
+   `in-arrivo/`. A join abandoned has moved nothing out of `in-arrivo/`.
 
-`--merge` is the one time anything writes the main line, and it is the person's gesture, with
-their name. A join takes longer the more threads it lands: for each it reads the branch and runs
-the validator. Changing `.framework/work.yaml`, giving or taking back a delegation, adopting a
+When it goes wrong:
+- **the main line moved before `--merge`**, which refuses: `sync` in the join's worktree, `check`,
+  `--finish` again, the `BR` read back and "procedo?", and after the yes `--merge` again;
+- **the main line moved while `--merge` pushed**: first `git -C <main checkout> reset --keep
+  HEAD~1`, as `--merge` says -- with the sandbox it writes outside the session's worktree, and is
+  the person's --, then as above;
+- **the remote refused the push** -- a hook, a protection rule --: the person looks, then
+  `--merge` again, which pushes the same merge and releases;
+- **the push of the main line did not go**, and the person pushed it: `join --close` releases
+  what the join landed;
+- **a join that will not land**: `join --abandon` drops it.
+
+`--merge` is the one time anything writes the main line, and the person's yes is its gesture. A
+join takes longer the more threads it lands: for each it reads the branch and runs the
+validator. Changing `.framework/work.yaml`, giving or taking back a delegation, adopting a
 framework version and annotating an expected finding are for an admin alone.
 
 **Delegation.** An admin who will be away gives a delegation:
@@ -269,7 +352,8 @@ fast-forward, or by a merge whose message does not name its branch, is read as t
 outside a join, and one with commits after its signature has those read the same way. **Do not rewrite a living
 document on a thread**: write the effect. **Do not take a decision as a contributor**, nor approve a
 change on a thread's branch. **Never force a push**, and never delete a claim or a reservation by
-hand. **Do not run `attest.py`**, as the preamble says, even where the rereading is optional.
+hand. **Do not run `attest.py` to attest**, as the preamble says, even where the rereading is
+optional: `--commit` alone, which writes no stamp, you run once the person has attested.
 
 ## Handing back
 

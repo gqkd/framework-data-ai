@@ -6485,6 +6485,13 @@ def _brief(product: str, review: str, scope: str | None = None, body: str = "It 
     return text + f"# Brief\n\n<!-- section: what -->\n## What it does\n\n{body}\n"
 
 
+# The git identity and configuration of the commits a case's command makes, kept from the
+# person's: defined here, before the first case that runs such a command at load.
+_WORK_ENV = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.com",
+             "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.com",
+             "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
+
+
 class _Repo:
     """A git repository with dated commits, for the checks that read the history behind a line."""
 
@@ -7428,6 +7435,86 @@ def _attest_command():
     return problems
 
 
+@check("attest.py --commit commits the attestations alone with their sentences, and leaves out a file that changes more")
+def _attest_commits():
+    # The third step of the procedure, which an agent used to write by hand with a long message:
+    # the files whose only change from HEAD is the attestation block, committed on their own,
+    # each with its sentence in the message. A file that changes more is a change, not a
+    # reading, and stays out, named; what is staged of another file stays staged.
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = _Repo(Path(tmp) / "r")
+        docs = ("products/p/PBR.md", "products/q/PBR.md", "products/s/PBR.md")
+        for d in docs:
+            repo.write(d, _brief(d.split("/")[1], "2026-06-01 09:00"))
+        repo.write("notes.txt", "a\n")
+        repo.commit("first", "2026-06-01T09:00:00+02:00")
+
+        def attest(*args: str):
+            # The commit `--commit` makes keeps the person's git configuration out, as `_Repo`.
+            return subprocess.run([sys.executable, str(ATTEST), "--root", str(repo.path), *args],
+                                  capture_output=True, text=True,
+                                  env={**os.environ, **_WORK_ENV})
+
+        r = attest("--commit")
+        if r.returncode != 2 or "no file differs" not in r.stderr:
+            problems.append(f"--commit with nothing attested did not refuse (exit {r.returncode})")
+        attest(docs[0], "--scope", "the whole file, first")
+        attest(docs[1], "--scope", "§what only; not the rest")
+        # The third changes its text: a change, which a reading does not cover.
+        repo.write(docs[2], _brief("s", "2026-06-01 09:00", body="It does another thing."))
+        repo.write("notes.txt", "b\n")
+        repo.git("add", "notes.txt")
+        r = attest("--commit")
+        log = repo.git("log", "-1", "--format=%B")
+        files = set(repo.git("show", "--name-only", "--format=", "HEAD").split())
+        status = repo.git("status", "--porcelain")
+        if r.returncode != 0:
+            problems.append(f"--commit exited {r.returncode}: {r.stderr.strip()[:160]}")
+        if files != set(docs[:2]):
+            problems.append(f"the commit carries {sorted(files)}, expected the two attested "
+                            "documents and nothing else")
+        if "Attest the readings of 2 documents" not in log \
+                or f"{docs[0]}: the whole file, first" not in log \
+                or f"{docs[1]}: §what only; not the rest" not in log:
+            problems.append(f"the message does not name each document with its sentence: "
+                            f"{log[:200]!r}")
+        if docs[2] not in r.stdout or "more than their attestation" not in r.stdout:
+            problems.append("the file that changes more was not named as left out")
+        if "M  notes.txt" not in status or docs[2] not in status:
+            problems.append(f"after --commit `git status` reads {status!r}: what was staged of "
+                            "another file stays staged, and the changed document stays changed")
+        if repo.attestation_codes():
+            problems.append(f"the attestations committed by --commit report "
+                            f"{sorted(repo.attestation_codes())}")
+        # With a document: attest it, then commit it.
+        repo.git("reset", "-q", "--hard")
+        r = attest(docs[2], "--scope", "the whole file, third", "--commit")
+        if r.returncode != 0 or "Attest the reading of products/s/PBR.md" not in repo.git(
+                "log", "-1", "--format=%B"):
+            problems.append(f"a document with --scope and --commit was not attested and committed "
+                            f"(exit {r.returncode}): {r.stderr.strip()[:120]}")
+        r = attest("--commit", "--scope", "a sentence")
+        if r.returncode != 2:
+            problems.append(f"--scope without a document was accepted (exit {r.returncode})")
+        # A documentation in a subfolder of its repository: git names the changed files from
+        # the top, and `--commit` still finds the attestation and commits it.
+        sub = _Repo(Path(tmp) / "sub")
+        sub.write("docs/framework.yaml", (sub.path / "framework.yaml").read_text())
+        sub.write("docs/products/p/PBR.md", _brief("p", "2026-06-01 09:00"))
+        sub.commit("first", "2026-06-01T09:00:00+02:00")
+        for args in (("products/p/PBR.md", "--scope", "the whole file, in a subfolder"),
+                     ("--commit",)):
+            r = subprocess.run([sys.executable, str(ATTEST), "--root", str(sub.path / "docs"),
+                                *args], capture_output=True, text=True,
+                               env={**os.environ, **_WORK_ENV})
+        if r.returncode != 0 or "docs/products/p/PBR.md" not in sub.git(
+                "show", "--name-only", "--format=", "HEAD"):
+            problems.append(f"--commit on a documentation in a subfolder did not commit its "
+                            f"attestation (exit {r.returncode}): {r.stderr.strip()[:160]}")
+    return problems
+
+
 @check("a retired code is never emitted, stays documented, and an annotation or a pin on it is told so")
 def _retired_codes():
     # A code that changed meaning under an annotation would make a reason written about one
@@ -7916,6 +8003,137 @@ def _exc003():
         got = _exc(repo, "EXC003")
         if "integrati/CHG-001/INTEGRATO" in got or "integrati/CHG-002/INTEGRATO" not in got:
             problems.append(f"two integration blocks, or an unreadable INTEGRATO, read wrong: {got}")
+    return problems
+
+
+@check("exchange.py integrate moves the folder, writes INTEGRATO with the commit and each part's place, leaves mr.md to a person, and refuses what it must")
+def _exchange_integrate():
+    # The closing of one element, done by hand before: the folder from in-arrivo/ to integrati/,
+    # INTEGRATO with the commit that integrated it, the day and the place of each part. What it
+    # writes is what EXC003 reads, so the check is the validator: quiet, but on `mr.md`, which a
+    # person places. Each refusal leaves the folder where it was.
+    problems = []
+
+    def run(repo: _Repo, *extra: str):
+        return subprocess.run([sys.executable, str(EXCHANGE), "--root", str(repo.path),
+                               "integrate", *extra], capture_output=True, text=True)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        repo, ex, _ = _exchange_docs(Path(tmp))
+        repo.write("_filoni/t/consegne/CHG-002/documentazione.md", "what the docs should say\n")
+        # CHG-002 as the template leaves it, its verification section holding the template's
+        # sentence alone; CHG-003 with no section at all.
+        change = repo.path / "products/p/changes/CHG-002.md"
+        bare = change.read_text(encoding="utf-8")
+        repo.write("products/p/changes/CHG-002.md", bare + "\n## Verification\n\n*Filled in at "
+                   "closure.* Outcome of the point 3 criteria, the `EVR` of reference, the "
+                   "`RLM`\nof the release that contains it.\n\n<!-- to do -->\n")
+        empty = repo.commit("the delivery, the verification not yet", "2026-10-02T08:00:00+02:00")
+        _put(ex, {"in-arrivo/CHG-002/verifica.md": "v", "in-arrivo/CHG-002/evidenze/log.txt": "l",
+                  "in-arrivo/CHG-002/documentazione.md": "d", "in-arrivo/CHG-002/mr.md": "m",
+                  "in-arrivo/CHG-002/brief.md": "b",
+                  "in-arrivo/CHG-003/verifica.md": "v",
+                  "in-arrivo/CHG-001/documentazione.md": "d",
+                  "in-arrivo/OD-001/appunti.txt": "a"})
+        # Refused: a stray name; a delivered file the documentation does not hold; changes not
+        # committed. Nothing moves.
+        for ident, want in (("OD-001", "names an element folder does not"),
+                            ("CHG-001", "does not hold")):
+            r = run(repo, ident)
+            if r.returncode != 2 or want not in r.stderr \
+                    or not (ex / "in-arrivo" / ident).is_dir():
+                problems.append(f"integrate {ident}: exit {r.returncode}, expected a refusal "
+                                f"saying {want!r} and the folder left: {r.stderr.strip()[:120]}")
+        # Refused: a verification delivered, and the change's section empty at the commit --
+        # the template's sentence and a comment are not a verification --, or with no section.
+        for ident in ("CHG-002", "CHG-003"):
+            r = run(repo, ident, *(("--commit", empty) if ident == "CHG-003" else ()))
+            if r.returncode != 2 or "no verification written" not in r.stderr \
+                    or not (ex / "in-arrivo" / ident).is_dir():
+                problems.append(f"integrate {ident} with §Verification empty at the commit: "
+                                f"exit {r.returncode}, expected 2 and the folder left: "
+                                f"{r.stderr.strip()[:160]}")
+        repo.write("products/p/changes/CHG-002.md", bare + "\n## Verification\n\nThe three "
+                   "criteria hold: `verifica.md`, and the log in `evidenze/`.\n")
+        third = repo.path / "products/p/changes/CHG-003.md"
+        repo.write("products/p/changes/CHG-003.md", third.read_text(encoding="utf-8")
+                   + "\n## Verification\n\nThe criteria hold.\n")
+        sha = repo.commit("the delivery integrated", "2026-10-02T09:00:00+02:00")
+        repo.write("OPEN.md", (repo.path / "OPEN.md").read_text() + "\nx\n")
+        r = run(repo, "CHG-002")
+        if r.returncode != 2 or "not committed" not in r.stderr:
+            problems.append(f"integrate with changes not committed: exit {r.returncode}")
+        repo.git("checkout", "-q", "--", "OPEN.md")
+        r = run(repo, "CHG-002")
+        mark = ex / "integrati" / "CHG-002" / "INTEGRATO"
+        text = mark.read_text(encoding="utf-8") if mark.is_file() else ""
+        if r.returncode != 0 or (ex / "in-arrivo" / "CHG-002").exists():
+            problems.append(f"integrate CHG-002 exited {r.returncode} or left the folder in "
+                            f"in-arrivo/: {r.stderr.strip()[:160]}")
+        for line in (f'commit: "{sha[:12]}"', "verifica.md: CHG-002 §Verification",
+                     "evidenze/: CHG-002 §Verification, cited",
+                     "documentazione.md: _filoni/t/consegne/CHG-002/"):
+            if line not in text:
+                problems.append(f"INTEGRATO does not say {line!r}: {text!r}")
+        if "mr.md" in text or "brief.md" in text or "mr.md: not placed" not in r.stdout:
+            problems.append("mr.md was placed, brief.md was made a part, or mr.md was not said "
+                            "to be left to a person")
+        got = [f for f in repo.findings("EXC003") if "CHG-002" in f["path"]]
+        if len(got) != 1 or "`mr.md`" not in got[0]["message"]:
+            problems.append(f"EXC003 on the integration: {[f['message'][:60] for f in got]}, "
+                            "expected the one on `mr.md`")
+        # Named by `--commit`, the commit is taken as given: changes not committed do not stop it.
+        repo.write("OPEN.md", (repo.path / "OPEN.md").read_text() + "\nx\n")
+        r = run(repo, "CHG-003", "--commit", sha)
+        repo.git("checkout", "-q", "--", "OPEN.md")
+        third = ex / "integrati" / "CHG-003" / "INTEGRATO"
+        if r.returncode != 0 or not third.is_file() \
+                or f'commit: "{sha[:12]}"' not in third.read_text(encoding="utf-8") \
+                or any("CHG-003" in f["path"] for f in repo.findings("EXC003")):
+            problems.append(f"integrate CHG-003 --commit, a verification alone, with changes not "
+                            f"committed: exit {r.returncode}, a wrong commit, or EXC003 on it: "
+                            f"{r.stderr.strip()[:160]}")
+        # A second delivery: joined by hand.
+        _put(ex, {"in-arrivo/CHG-003/verifica.md": "v2"})
+        r = run(repo, "CHG-003")
+        if r.returncode != 2 or "already holds" not in r.stderr:
+            problems.append(f"a second integration of CHG-003 was not refused (exit "
+                            f"{r.returncode})")
+        # What it cannot know is left to a person: what a verification cites for an entry,
+        # which has no verification section, and a policy outside the additive mode, which goes
+        # to `.framework/` beside one that may already be there. A change withdrawn integrates
+        # nothing: each part is said dropped.
+        repo.write(".framework/contribution-policy.json", "{}\n")
+        repo.write("products/p/changes/CHG-004.md", _fm(
+            schema="framework/change-contract/v1", artifact_type="change-contract",
+            lifecycle="immutable", status="withdrawn", id="CHG-004", products="[p]",
+            owners="[o]", created="2026-10-01") + "# CHG-004\n\n" + _EXCHANGE_SECTIONS)
+        repo.commit("a policy, a change withdrawn", "2026-10-03T09:00:00+02:00")
+        _put(ex, {"in-arrivo/OD-002/verifica.md": "v",
+                  "in-arrivo/CHG-005/contribution-policy.json": "{}",
+                  "in-arrivo/CHG-004/verifica.md": "v", "in-arrivo/CHG-004/evidenze/x.txt": "x"})
+        for ident, said, written in (
+                ("OD-002", ["verifica.md: not placed"], ["parts: {}"]),
+                ("CHG-005", ["contribution-policy.json: not placed"], ["parts: {}"]),
+                ("CHG-004", [], ["verifica.md: dropped: CHG-004 was withdrawn",
+                                 "evidenze/: dropped: CHG-004 was withdrawn"])):
+            r = run(repo, ident)
+            mark = ex / "integrati" / ident / "INTEGRATO"
+            text = mark.read_text(encoding="utf-8") if mark.is_file() else ""
+            if r.returncode != 0 or any(x not in r.stdout for x in said) \
+                    or any(x not in text for x in written):
+                problems.append(f"integrate {ident}: exit {r.returncode}, said {r.stdout[-160:]!r},"
+                                f" wrote {text!r}")
+        # A policy delivered, where the mode is read: a `work.yaml` that does not read is a
+        # refusal, exit 2, and the folder stays.
+        _put(ex, {"in-arrivo/CHG-001/contribution-policy.json": "{}"})
+        repo.write(".framework/work.yaml", "people: x\n")
+        r = run(repo, "CHG-001")
+        if r.returncode != 2 or "work.yaml" not in r.stderr \
+                or not (ex / "in-arrivo" / "CHG-001").is_dir():
+            problems.append(f"a policy delivered with a work.yaml that does not read: exit "
+                            f"{r.returncode}, expected 2 and the folder left: "
+                            f"{r.stderr.strip()[:160]}")
     return problems
 
 
@@ -8632,11 +8850,6 @@ def _branch_checks():
     return problems
 
 
-_WORK_ENV = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.com",
-             "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.com",
-             "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
-
-
 def _g(where: Path, *args: str, ok: bool = True) -> subprocess.CompletedProcess:
     r = subprocess.run(["git", "-C", str(where), *args], capture_output=True, text=True,
                        env={**os.environ, **_WORK_ENV})
@@ -8680,6 +8893,134 @@ def _work(root: Path, *args: str, env: dict | None = None) -> tuple[int, str]:
 def _commit_all(where: Path, msg: str) -> None:
     _g(where, "add", "-A")
     _g(where, "commit", "-qm", msg)
+
+
+@check("work.py check runs offline: the views, the validator with --base, the detail of what is not on the main line, the branch's row, and the age of the last fetch")
+def _work_check():
+    # The round the work repeats most, run by the agent between two pushes even under the
+    # sandbox: it fetches nothing, says when the last fetch was, and asks for one when it is
+    # old. A warning the main line already has is counted, not detailed.
+    problems = []
+    living = lambda: _fm(schema="framework/operational-stack/v1",
+                         artifact_type="operational-stack", lifecycle="living", status="active",
+                         owners="[o]", created="2026-06-01") + "# Stack\n\nx\n"
+    with tempfile.TemporaryDirectory() as tmp:
+        origin, a, _ = _work_origin(Path(tmp))
+        # On the main line: a living document with no reading, an `LC001` of its own; and an
+        # exchange with a loose file, an `EXC006` on both sides, which is not the branch's.
+        (a / "STACK.md").write_text(living(), encoding="utf-8")
+        (a / ".framework" / "sessions.yaml").write_text("exchange: ../_scambio\n",
+                                                       encoding="utf-8")
+        (a.parent / "_scambio").mkdir()
+        (a.parent / "_scambio" / "appunti.txt").write_text("a\n", encoding="utf-8")
+        # A decision, whose index nobody regenerated: a view out of date on the main line.
+        (a / "decisions").mkdir(exist_ok=True)
+        (a / "decisions" / "DEC-001-a.md").write_text(_fm(
+            schema="framework/decision-record/v1", artifact_type="decision-record",
+            id="DEC-001", lifecycle="immutable", status="accepted", scope="architecture",
+            products="[all]", owners="[o]", created="2026-06-01") + "# DEC-001\n",
+            encoding="utf-8")
+        _commit_all(a, "a stack")
+        _g(a, "push", "-q", "origin", "main")
+        rc, out = _work(a, "open", "--who", "Owner", "--branch", "od-001", "OD-001")
+        tree = a.parent / "docs--od-001"
+        if rc or not tree.is_dir():
+            return [f"the branch to check could not be opened (exit {rc}): {out[-200:]}"]
+        (tree / "platform" / "STACK.md").write_text(living(), encoding="utf-8")
+        _commit_all(tree, "another stack")
+        # No remote to reach: what `check` does, it does offline.
+        _g(a, "remote", "set-url", "origin", str(Path(tmp) / "nowhere.git"))
+        rc, out = _work(tree, "check")
+        if rc != 0 or "(last fetch " not in out:
+            problems.append(f"check exited {rc} without a remote, or did not say the last "
+                            f"fetch: {out[-300:]}")
+        if "EXC006" in out:
+            problems.append("an exchange finding the main line has too was detailed as the "
+                            f"branch's: the base did not read the same exchange: {out[-300:]}")
+        if "platform/STACK.md" not in out or re.search(r"LC001 STACK\.md", out):
+            problems.append("check did not detail the warning the branch brings, or detailed "
+                            f"the one the main line has: {out[-400:]}")
+        if "work/od-001:" not in out or "claims: OD-001" not in out:
+            problems.append(f"check did not give the branch's row of list: {out[-300:]}")
+        if "Fetch before pushing" in out:
+            problems.append("a fetch made a minute ago was called old")
+        common = Path(_g(a, "rev-parse", "--path-format=absolute",
+                         "--git-common-dir").stdout.strip())
+        old = (datetime.now() - timedelta(days=3)).timestamp()
+        for head in [common / "FETCH_HEAD", *(common / "worktrees").glob("*/FETCH_HEAD")]:
+            if head.is_file():
+                os.utime(head, (old, old))
+        rc, out = _work(tree, "check", "--json")
+        try:
+            data = json.loads(out)
+        except ValueError:
+            data = None
+        new = [f["path"] for f in (data or {}).get("new", []) if f["code"] == "LC001"]
+        if data is None or not data.get("fetch_old") or new != ["platform/STACK.md"]:
+            problems.append(f"check --json: fetch_old or the new findings read wrong: {out[-300:]}")
+        rc, out = _work(tree, "check")
+        if "Fetch before pushing" not in out:
+            problems.append("a fetch three days old was not called old")
+        # No `FETCH_HEAD` at all, as after a plain clone: the age is unknown, not "never".
+        for head in [common / "FETCH_HEAD", *(common / "worktrees").glob("*/FETCH_HEAD")]:
+            if head.is_file():
+                head.unlink()
+        rc, out = _work(tree, "check")
+        if "its age is unknown" not in out or "a main line of unknown age" not in out:
+            problems.append(f"with no FETCH_HEAD check did not say the age is unknown and ask "
+                            f"for a fetch: {out[:300]}")
+        # On the main checkout it writes no view: the main line's are the lander's. The stack
+        # was committed there with no view regenerated, and the tree stays as it was.
+        rc, out = _work(a, "check")
+        dirty = _g(a, "status", "--porcelain").stdout.strip()
+        if "none written" not in out or "decisions/INDEX.md" not in out or dirty:
+            problems.append(f"check on the main checkout wrote the views, or did not say it "
+                            f"wrote none and which is out of date: {dirty!r} {out[:300]}")
+        # A view a person maintains, without the generator's line: left as it is, and exit 1
+        # with no error found, the refusal alone.
+        (tree / "decisions" / "INDEX.md").write_text("# Decisions, by hand\n", encoding="utf-8")
+        _commit_all(tree, "an index by hand")
+        rc, out = _work(tree, "check", "--json")
+        try:
+            data = json.loads(out)
+        except ValueError:
+            data = {}
+        if rc != 1 or data.get("hand_maintained") != ["decisions/INDEX.md"] \
+                or (data.get("counts") or {}).get("error") \
+                or (tree / "decisions" / "INDEX.md").read_text(encoding="utf-8") \
+                != "# Decisions, by hand\n":
+            problems.append(f"check over a view kept by hand exited {rc}, expected 1 with the "
+                            f"view named, no error, and the view left as it was: {out[-400:]}")
+        rc, out = _work(tree, "check")
+        if "decisions/INDEX.md: not written" not in out:
+            problems.append(f"check did not name the view kept by hand: {out[-300:]}")
+    return problems
+
+
+@check("join says what is left in the order the pin reads: from 4.12.0 the review before anybody decides, before it the order it had")
+def _join_what_is_left():
+    # The closing message of `join` is the list a person follows. From the version that reviews
+    # before anybody decides, the rehearsal and the review come before the acts of decision;
+    # pinned before it, the approvals stay among the texts and the review comes after them.
+    problems = []
+    x = _load(WORK, "work_for_what_is_left")
+    since = x.REVIEW_BEFORE_DECIDING_SINCE
+    major, minor, _ = (int(n) for n in since.split("."))
+    before = f"{major}.{minor - 1}.0"
+    for pin, late in ((since, True), (before, False), ("x", True)):
+        said = x._what_is_left("work/ricongiungimento-1", Path("/docs--ricongiungimento-1"),
+                               {"framework_version": pin})
+        review = said.find("The review, before anybody decides")
+        acts = said.find("The acts of decision")
+        approve = said.find("approve the changes to approve")
+        reviser = said.find("have the reviser read the diff")
+        if late and not 0 <= said.find("The rehearsal") < review < acts:
+            problems.append(f"pinned at {pin}: the rehearsal, the review and the acts of decision "
+                            f"are not said in this order: {said!r}")
+        if not late and not (0 <= approve < reviser and review < 0):
+            problems.append(f"pinned at {pin}: the order of the versions before is not kept: "
+                            f"{said!r}")
+    return problems
 
 
 @check("work.py: one claim per element and one holder per number, refused to whoever pushes second")

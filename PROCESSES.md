@@ -535,13 +535,13 @@ explicit adoption work. Keep the ordinary documentary audit alongside the strict
 ### Where the material waits
 
 Every project has a place outside the repositories, `_scambio` beside them. One that declares
-`exchange:` in `.framework/sessions.yaml`, normally `../_scambio`, makes the place it names
-where the material between the approved `CHG` and the merged change waits: the brief goes out
-to `in-arrivo/CHG-NNN/`, the verification, the merge request and the evidence come back into
-the same folder, and what the work created outside the repositories is listed beside them
-with the command that removes each piece. At `implemented` the documentation session
-integrates the delivery, moves the folder to `integrati/` with an `INTEGRATO` that says where
-each part went, and proposes the removals. `references/contributions.md`, *The exchange
+`exchange:` in `.framework/sessions.yaml`, normally `../_scambio`, makes the place it names where
+the material between the approved `CHG` and the merged change waits: the brief goes out to
+`in-arrivo/CHG-NNN/`, the verification, the merge request and the evidence come back into the same
+folder, and what the work created outside the repositories is listed beside them with the command
+that removes each piece. At `implemented` the documentation session integrates the delivery, moves
+the folder to `integrati/` with an `INTEGRATO` that says where each part went -- `exchange.py
+integrate` does both --, and proposes the removals. `references/contributions.md`, *The exchange
 between sessions*, describes it, and `EXC001`-`EXC007` report what was left behind.
 
 ### What `audit` checks, and what it does not

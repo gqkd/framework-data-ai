@@ -6,6 +6,7 @@ what, release a claim, and bring a branch up to date with the main line.
     python3 work.py --root . reserve DEC --who "Name" [--count 2]
     python3 work.py --root . reserve RSK --product atlas --who "Name"   # or platform, repository
     python3 work.py --root . list [--json]
+    python3 work.py --root . check [--json]                            # offline: views, validator
     python3 work.py --root . release OD-042 --who "Name"
     python3 work.py --root . sync [--continue] [--no-push]
     python3 work.py --root . delegate --to "Name" --who "Admin"
@@ -58,10 +59,10 @@ a person's. Before merging it refuses a main line that created an identifier thi
 too -- the main line, or the branch's own commits pushed from another clone: once both are in one
 tree, YAML folds two rows of `entries:` into one without a word.
 
-WHAT IT NEVER DOES. It never pushes the main line -- but for `join --merge`, the one gesture
-by which an admin, a deputy or a delegate lands a join, with their name --, never forces a push,
-never deletes a reservation, never decides which of two texts holds, and never deduces who is
-working from `git config`: `--who` is the person's name, as they give it.
+WHAT IT NEVER DOES. It never pushes the main line -- but for `join --merge`, which lands a join
+on the yes of an admin, a deputy or a delegate, the gesture, given with their name --, never
+forces a push, never deletes a reservation, never decides which of two texts holds, and never
+deduces who is working from `git config`: `--who` is the person's name, as they give it.
 
 Only in a project that declares `.framework/work.yaml`. Exit 0 when done, 1 when something is
 for the person (claimed by somebody else, a conflict left, a collision), 2 when nothing was
@@ -669,11 +670,24 @@ def cmd_reserve(p: Project, args) -> int:
 
 def cmd_list(p: Project, args) -> int:
     p.fetch()
+    data = _list_data(p, args.stale_days)
+    if args.json:
+        print(json.dumps(data, indent=2, ensure_ascii=False))
+        return 0
+    _say_list(p, data)
+    return 0
+
+
+def _list_data(p: Project, stale_days: int, only: str | None = None) -> dict:
+    """What `list` shows, read from the references the last fetch left: no network. With
+    `only`, that branch's row alone, which is what `check` prints, and nothing else is read."""
     claims = p.held(B.CLAIM_REF)
     reserved = p.held(B.RESERVED_REF)
     now = datetime.now().astimezone()
     rows = []
     for ref, branch in sorted(remote_work_branches(p).items(), key=lambda kv: kv[1]):
+        if only is not None and branch != only:
+            continue
         last = git(p.root, "log", "-1", "--format=%an%x00%aI", ref).stdout.strip().split("\x00")
         behind, ahead = git(p.root, "rev-list", "--left-right", "--count",
                             f"{p.base}...{ref}").stdout.split()
@@ -682,12 +696,14 @@ def cmd_list(p: Project, args) -> int:
         when = datetime.fromisoformat(last[1]) if len(last) > 1 else None
         rows.append({
             "branch": branch, "last_author": last[0], "last_commit": last[1] if when else None,
-            "stale": bool(when and now - when > timedelta(days=args.stale_days)),
+            "stale": bool(when and now - when > timedelta(days=stale_days)),
             "ahead": int(ahead), "behind": int(behind),
             "claims": sorted(t for t, c in claims.items() if c.get("branch") == branch),
             "reserved": sorted(t for t, c in reserved.items() if c.get("branch") == branch),
             "touches": {k: w for k, w in sorted(touched.items())},
         })
+    if only is not None:
+        return {"base": p.base, "branches": rows}
     branches = {r["branch"] for r in rows}
     orphans = {t: c for t, c in sorted(claims.items()) if c.get("branch") not in branches}
     delegations = {c.get("to", t): c for t, c in sorted(p.held(B.DELEGATION_REF).items())}
@@ -703,34 +719,205 @@ def cmd_list(p: Project, args) -> int:
             elif name[len(p.prefix):].startswith(B.JOIN) and name != joining:
                 landed[name] = (f"{name} is the branch of a join closed or abandoned: remove it "
                                 f"here: {_remove_hint(p, name, force=True)}.")
-    if args.json:
-        print(json.dumps({"base": p.base, "branches": rows, "claims_without_branch": orphans,
-                          "delegations": delegations, "landed": landed}, indent=2,
-                         ensure_ascii=False))
-        return 0
+    return {"base": p.base, "branches": rows, "claims_without_branch": orphans,
+            "delegations": delegations, "landed": landed}
+
+
+def _say_list(p: Project, data: dict) -> None:
+    rows, orphans = data["branches"], data["claims_without_branch"]
+    delegations, landed = data["delegations"], data["landed"]
     for name, c in delegations.items():
         say(f"delegation: {name} decides as an admin, given by {c.get('who', '?')} on "
             f"{c.get('when', '?')}.")
     if not rows:
         say(f"No work branch on {p.remote} under {p.prefix}.")
     for r in rows:
-        flag = "  STALE" if r["stale"] else ""
-        say(f"{r['branch']}: {r['ahead']} ahead, {r['behind']} behind {p.base}; last commit by "
-            f"{r['last_author']} {r['last_commit'] or ''}{flag}")
-        if r["claims"]:
-            say(f"  claims: {', '.join(r['claims'])}")
-        if r["reserved"]:
-            say(f"  reserved: {', '.join(r['reserved'])}")
-        joining = r["branch"][len(p.prefix):].startswith(B.JOIN)
-        for ident, what in r["touches"].items():
-            mark = "" if ident in r["claims"] or joining else "  (not claimed)"
-            say(f"  changes {ident}: {'; '.join(what)}{mark}")
+        _say_row(p, r)
     for tag, c in orphans.items():
         say(f"claim without a branch: {tag} by {c.get('who', '?')} for {c.get('branch', '?')} "
             f"since {c.get('when', '?')}. Landed or abandoned: `release` it once its person agrees.")
     for note in landed.values():
         say(note)
-    return 0
+
+
+def _say_row(p: Project, r: dict) -> None:
+    flag = "  STALE" if r["stale"] else ""
+    say(f"{r['branch']}: {r['ahead']} ahead, {r['behind']} behind {p.base}; last commit by "
+        f"{r['last_author']} {r['last_commit'] or ''}{flag}")
+    if r["claims"]:
+        say(f"  claims: {', '.join(r['claims'])}")
+    if r["reserved"]:
+        say(f"  reserved: {', '.join(r['reserved'])}")
+    joining = r["branch"][len(p.prefix):].startswith(B.JOIN)
+    for ident, what in r["touches"].items():
+        mark = "" if ident in r["claims"] or joining else "  (not claimed)"
+        say(f"  changes {ident}: {'; '.join(what)}{mark}")
+
+
+# Where a join is reviewed before anybody decides, and its acts of decision come after the
+# review, as states and names: the order `join` says what is left in.
+REVIEW_BEFORE_DECIDING_SINCE = "4.12.0"
+
+# When the last fetch is old enough for `check` to say so: the main line of a documentation
+# several people write moves in hours, and a branch compared with a main line of yesterday is
+# compared with somebody else's past.
+FETCH_OLD = timedelta(hours=12)
+
+
+def last_fetch(root: Path) -> datetime | None:
+    """The newest `FETCH_HEAD` of the repository and of its worktrees: every `git fetch`
+    rewrites the one of the worktree it runs in, even when it brings nothing, so the newest
+    of them is when this clone last asked the remote. None when there is none: a clone writes
+    no `FETCH_HEAD`, so a clone never fetched since has a main line of unknown age, and is not
+    said never to have asked the remote."""
+    common = git(root, "rev-parse", "--path-format=absolute", "--git-common-dir",
+                 check=False).stdout.strip()
+    if not common:
+        return None
+    base = Path(common)
+    heads = [base / "FETCH_HEAD", *sorted((base / "worktrees").glob("*/FETCH_HEAD"))]
+    times = [h.stat().st_mtime for h in heads if h.is_file()]
+    return datetime.fromtimestamp(max(times)).astimezone() if times else None
+
+
+def _ago(when: datetime, now: datetime) -> str:
+    minutes = int((now - when).total_seconds() // 60)
+    if minutes < 60:
+        return "just now" if minutes < 2 else f"{minutes} minutes ago"
+    hours = minutes // 60
+    if hours >= 48:
+        return f"{hours // 24} days ago"
+    return f"{hours} hour{'s' if hours > 1 else ''} ago"
+
+
+def _lend_exchange(root: Path, there: Path, inside: Path) -> None:
+    """This machine's exchange, where the base's `sessions.yaml` looks for it from a temporary
+    worktree: a symbolic link, made only inside that temporary folder, so that `EXC001`-`EXC007`
+    read the same place on both sides and only what the branch changes about them is new -- but
+    a copy of credentials under the folder that holds the repositories, which `EXC005` looks for
+    from where each side is, and the base, in the temporary folder, does not see: that one is
+    detailed each time. A link that cannot be made is said, on the error stream: every exchange
+    finding then counts as new."""
+    try:
+        _, real = v.load_exchange(root)
+        _, seen = v.load_exchange(there)
+    except SystemExit:                   # an `exchange` that is not a place: the branch says it
+        return
+    if real is None or seen is None or not real.is_dir() or seen.exists():
+        return
+    try:
+        seen.resolve().relative_to(inside.resolve())
+        seen.parent.mkdir(parents=True, exist_ok=True)
+        seen.symlink_to(real, target_is_directory=True)
+    except (ValueError, OSError) as e:
+        print(f"check: {real} could not be lent to the run on the main line ({e}), so every "
+              "exchange finding counts as new.", file=sys.stderr)
+
+
+def _findings_at(p: Project, ref: str) -> list[dict] | None:
+    """What the validator says of `ref` on its own, in a worktree detached there: the base the
+    branch's findings are told apart from. None when it cannot be read. Without
+    `GITHUB_HEAD_REF`, which the validator reads for the branch where HEAD is detached: the
+    base is no branch of the mode."""
+    with tempfile.TemporaryDirectory(prefix="check-") as tmp:
+        tree = Path(tmp) / "tree"
+        if git(p.root, "worktree", "add", "-q", "--detach", str(tree), ref,
+               check=False).returncode:
+            return None
+        try:
+            where = B.prefix(p.root)
+            base_root = tree / where if where else tree
+            _lend_exchange(p.root, base_root, Path(tmp))
+            r = subprocess.run([sys.executable, str(Path(v.__file__)), "--root",
+                                str(base_root), "--json"],
+                               capture_output=True, text=True,
+                               env={k: x for k, x in os.environ.items()
+                                    if k != "GITHUB_HEAD_REF"})
+            try:
+                return json.loads(r.stdout).get("findings", [])
+            except ValueError:
+                return None
+        finally:
+            git(p.root, "worktree", "remove", "--force", str(tree), check=False)
+
+
+def cmd_check(p: Project, args) -> int:
+    """The round the work repeats most: the views regenerated, the validator with `--base` on
+    this branch, and this branch's row of `list` -- all offline. It fetches nothing: it says
+    when the last fetch was, and asks for one when it is old. A few lines, and the detail only
+    of what is new against the main line as the last fetch brought it. The row is the branch
+    as the remote had it at the last fetch or push, as `list` reads it: what is committed and
+    not pushed is not in it. Exit 1 when the validator finds an error or refuses to write a
+    view a person maintains -- one without the generator's line, which it leaves as it is --,
+    as the validator does. Outside a work branch -- the main checkout -- it writes no view:
+    the main line's are written by whoever lands on it, so it says which are out of date."""
+    now = datetime.now().astimezone()
+    fetched = last_fetch(p.root)
+    has_base = not git(p.root, "rev-parse", "--verify", "-q", p.base, check=False).returncode
+    branch = git(p.root, "symbolic-ref", "--short", "-q", "HEAD", check=False).stdout.strip()
+    working = branch.startswith(p.prefix)
+    r = subprocess.run([sys.executable, str(Path(v.__file__)), "--root", str(p.root),
+                        "--emit-index", "--json"] + ([] if working else ["--check"])
+                       + (["--base", p.base] if has_base else []),
+                       capture_output=True, text=True)
+    try:
+        report = json.loads(r.stdout)
+    except ValueError:
+        v.refuse(f"the validator gave no report (exit {r.returncode}): "
+                 f"{(r.stderr or '').strip()[-300:]}")
+    found = report.get("findings", [])
+    before = _findings_at(p, p.base) if has_base else None
+    seen = {(f.get("code"), f.get("path")) for f in before or []}
+    new = [f for f in found if (f.get("code"), f.get("path")) not in seen]
+    counts = {lvl: sum(1 for f in found if f.get("level") == lvl)
+              for lvl in ("error", "warn", "info")}
+    row = None
+    if has_base and working:
+        row = next(iter(_list_data(p, 7, only=branch)["branches"]), None)
+    stale = fetched is None or now - fetched > FETCH_OLD
+    refused = report.get("hand_maintained", [])
+    failed = 1 if counts["error"] or refused else 0
+    if args.json:
+        print(json.dumps({"base": p.base, "last_fetch": fetched.isoformat() if fetched else None,
+                          "fetch_old": stale, "generated": report.get("generated", []),
+                          "out_of_date": report.get("out_of_date", []),
+                          "hand_maintained": refused, "counts": counts, "new": new,
+                          "compared": before is not None, "branch": row}, indent=2,
+                         ensure_ascii=False))
+        return failed
+    said = (f"as the last fetch left it (last fetch {_ago(fetched, now)})" if fetched
+            else "as this clone has it (no fetch since the clone, or none recorded: its age is "
+                 "unknown)")
+    say(f"check: {branch or 'HEAD'} against {p.base} {said}."
+        + ((" Fetch before pushing -- `work.py list`, or `sync --no-push` when the main line "
+            "has moved: a main line " + ("this old" if fetched else "of unknown age")
+            + " lets through what the real one would not.") if stale else ""))
+    generated, behind = report.get("generated", []), report.get("out_of_date", [])
+    if not working:
+        say(f"views: none written, {branch or 'HEAD'} not being a work branch: the main line's "
+            "are written by whoever lands on it"
+            + (f"; out of date here: {', '.join(behind)}" if behind else "; as they derive"))
+    else:
+        say(f"views: {len(generated)} regenerated: {', '.join(generated)}" if generated
+            else "views: as they derive")
+    for rel in refused:
+        say(f"  {rel}: not written -- it does not carry the generator's line, so a person "
+            "maintains it: theirs to move elsewhere what it holds that front matter cannot "
+            "express, or to delete it if it is derived")
+    base_note = ("" if before is not None else
+                 f"; {p.base} could not be read, so every finding counts as new" if has_base
+                 else f"; no {p.base} in this clone, so every finding counts as new")
+    say(f"validator: {counts['error']} errors, {counts['warn']} warnings, {counts['info']} info; "
+        f"{len(new)} not on {p.base}{base_note}.")
+    order = {"error": 0, "warn": 1, "info": 2}
+    for f in sorted(new, key=lambda f: (order.get(f.get("level"), 3), f.get("code", ""),
+                                        f.get("path", "")))[:20]:
+        say(f"  {f.get('level')} {f.get('code')} {f.get('path')}: {str(f.get('message'))[:200]}")
+    if len(new) > 20:
+        say(f"  and {len(new) - 20} more: `validate.py --root {p.root} --base {p.base}`")
+    if row is not None:
+        _say_row(p, row)
+    return failed
 
 
 def cmd_release(p: Project, args) -> int:
@@ -1218,14 +1405,34 @@ def _join_start(p: Project, who: str, args) -> int:
         _regenerate(root)
         git(tree, "commit", "-q", "-m", msg)
         say(f"Merged {name} at {sha[:12]}.")
-    say(f"\nJoin: {branch}, in {tree}. Now rewrite the living documents from the effects in "
-        f"`{E_THREADS}/*/effetti.md`, confirm or change the choices in "
-        f"`{E_THREADS}/*/{E.CHOICES}`, anchor what is listed to anchor, ask whoever decides "
-        "about the stages of a roadmap a branch brings a new increment or an effect to, approve "
-        "the changes to approve, accept or leave the decisions proposed, regenerate the views "
-        "(`validate.py --emit-index`), have the reviser read the diff, commit, and "
-        "`join --finish`.")
+    say(_what_is_left(branch, tree, v.load_project(tree / where if where else tree)))
     return 0
+
+
+def _what_is_left(branch: str, tree: Path, project: dict) -> str:
+    """What `join` says is left once the threads are merged, in the order the project's pin
+    reads: from `REVIEW_BEFORE_DECIDING_SINCE` the review before anybody decides and the acts
+    of decision after it; before, the approvals among the texts and the review after them."""
+    if not v.rules_hold(project, REVIEW_BEFORE_DECIDING_SINCE):
+        return (f"\nJoin: {branch}, in {tree}. Now rewrite the living documents from the effects "
+                f"in `{E_THREADS}/*/effetti.md`, confirm or change the choices in "
+                f"`{E_THREADS}/*/{E.CHOICES}`, anchor what is listed to anchor, approve the "
+                "changes to approve, accept or leave the decisions proposed, regenerate the views "
+                "(`work.py check`), commit, have the reviser read the diff, commit its "
+                "corrections with its log, and `join --finish`.")
+    return (f"\nJoin: {branch}, in {tree}. What is left, in this order (`contribute`, the join). "
+            f"The texts: rewrite the living documents from the effects in "
+            f"`{E_THREADS}/*/effetti.md`, with the cascade of each act to take in a commit of "
+            "its own, `join: the cascade of <ID>`, confirm or "
+            f"change the choices in `{E_THREADS}/*/{E.CHOICES}`, anchor what is listed to "
+            "anchor, ask whoever decides about the stages of a roadmap a branch brings a new "
+            "increment or an effect to, `work.py check`, and commit. The rehearsal: the acts of "
+            "decision applied without a commit, `check`, and what they and `check` wrote taken "
+            "away. The review, before anybody decides, with what the rehearsal said, its "
+            "corrections committed with its log, and an act left taken back by `git revert` of "
+            "its cascade's commit. The acts of decision -- the changes approved, "
+            "the decisions accepted -- committed with the views. `check`, then `join --finish`, "
+            "and `join --merge` on the yes of whoever decides.")
 
 
 def _join_finish(p: Project, who: str) -> int:
@@ -1944,8 +2151,8 @@ def cmd_sync(p: Project, args) -> int:
     owed = sorted({f["path"] for f in found if f["code"] == "LC006" and merge[:12] in f["message"]})
     if owed:
         say("The merge produced a version of these living documents that neither side had, "
-            "and a merge records no reading: reread each, attest it with attest.py, and commit "
-            f"the attestations on their own: {', '.join(owed)}.")
+            "and a merge records no reading: reread each, have it attested with attest.py, and "
+            f"commit the attestations on their own with `attest.py --commit`: {', '.join(owed)}.")
     if not args.no_push:
         outcome, said = p.push([f"refs/heads/{branch}:refs/heads/{branch}"],
                                {f"refs/heads/{branch}": merge})
@@ -2210,6 +2417,10 @@ def main() -> int:
     ls.add_argument("--json", action="store_true")
     ls.add_argument("--stale-days", type=int, default=7)
 
+    ck = sub.add_parser("check", help="offline: the views regenerated, the validator with --base, "
+                                      "what is new against the main line, this branch's row")
+    ck.add_argument("--json", action="store_true")
+
     rl = sub.add_parser("release", help="remove claims, never reservations")
     rl.add_argument("ids", nargs="+")
     rl.add_argument("--who", required=True)
@@ -2244,7 +2455,7 @@ def main() -> int:
 
     args = ap.parse_args()
     p = Project(args)
-    return {"open": cmd_open, "reserve": cmd_reserve, "list": cmd_list,
+    return {"open": cmd_open, "reserve": cmd_reserve, "list": cmd_list, "check": cmd_check,
             "release": cmd_release, "sync": cmd_sync, "delegate": cmd_delegate,
             "revoke": cmd_revoke, "join": cmd_join, "doctor": cmd_doctor}[args.command](p, args)
 

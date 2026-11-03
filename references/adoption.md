@@ -112,7 +112,8 @@ next. The check that recognises each step is named beside it.
 1. **Correct the attestations that cannot be true.** `LC007` names every living document
    whose `last_review` is later than the commit that carries it. Reattest each one with
    `skills/audit/scripts/attest.py`, run by a person after the content is committed: it
-   writes the current instant with its offset and the coverage note, and does not commit.
+   writes the current instant with its offset and the coverage note, and does not commit;
+   `attest.py --commit`, after the last one, commits the attestations on their own.
    This is the one step that comes **before** adopting the version, against the general
    rule that the field is written afterwards: an `error` cannot be annotated and blocks
    `--adopt`, and the field is not new -- its value was false.

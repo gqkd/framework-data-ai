@@ -3,12 +3,20 @@
 
     python3 attest.py --root path/to/project products/atlas/PBR.md --scope "the whole file"
     python3 attest.py --root . OPEN.md --scope "the two entries of §3 changed today; not §1, §2 or §4"
+    python3 attest.py --root . --commit
 
 THE PROCEDURE IT BELONGS TO, IN THREE STEPS. Commit the content. Run this, once per document
 you have reread, with one sentence per document saying what the reading covered. Commit the
 attestations on their own: a commit that changes only `last_review` and `review_scope` is a
 reading and not a change, and `LC006` steps over it. Several documents attested in one commit
 are fine; what separates them is the sentence, not the minute.
+
+`--commit` IS THE THIRD STEP, since 4.12.0. Alone, it commits the files whose only change from
+`HEAD` is their attestation block, and nothing else -- a file that changes more is left out and
+named, what is staged of other files stays staged --, with a message made of their paths and
+their sentences, so that nobody writes it by hand. With a document and `--scope`, it attests
+that one first. It writes no stamp of its own, and it checks nothing of who wrote the ones it
+commits: that they are a person's holds because it is run once the person has attested.
 
 WHAT IT WRITES, AND WHY THE INSTANT IS THE CLOCK'S. `last_review` becomes the moment this
 runs, at the minute, with its offset (`2026-09-25 10:15 +02:00`): an instant and not a wall
@@ -34,7 +42,10 @@ AN AGENT DOES NOT RUN THIS. The rule in `references/preamble.md` is that an agen
 `last_review` and never writes it, and this command is the way a person writes it. The
 instant it produces is "already in the repository" only in the sense that a clock is: the
 fact it records is that a named person finished reading, which no run can supply. A run that
-has read a document lists it, offers the sentence for `review_scope`, and stops.
+has read a document lists it, offers the sentence for `review_scope`, and stops. `--commit`
+alone is the exception, and the reason it exists: it writes no stamp, so the session that used
+to write that commit by hand runs it, once the person has attested -- the script does not tell
+their stamp from anybody else's.
 
 Requires the same environment as `validate.py`, whose helpers it uses.
 """
@@ -129,18 +140,112 @@ def content_commit(repo: v.Repository, rel: str) -> tuple[str, datetime, str] | 
                            kind, "last changed its text")
 
 
+def refuse_in_a_merge(root: Path) -> None:
+    """NOT IN THE MIDDLE OF A MERGE. The stamp would be written into the merge commit, which
+    records no reading: `LC006` counts what a merge produced as a change at the merge's own
+    instant, so the reading would be reported as not done. Finish the merge, then attest."""
+    merging = v._git(["rev-parse", "--verify", "-q", "MERGE_HEAD"], root)
+    if merging is not None and merging.returncode == 0:
+        v.refuse("a merge is in progress. Commit it first -- `work.py sync --continue`, or "
+                 "`git commit` -- then reread and attest: a stamp written into a merge commit "
+                 "is not a reading, because a merge records none.")
+
+
+def attestations_only(root: Path, repo: v.Repository) -> tuple[list[tuple[str, str]], list[str]]:
+    """The tracked files whose only change from `HEAD` is the attestation block, each with its
+    `review_scope` sentence; and the changed files that change more, which are not committed.
+
+    The working tree is what `git commit --only` takes, so it is what is read: a file whose
+    text differs from `HEAD` anywhere outside the block is a change and not a reading, as
+    `LC006` would count it, and stays out.
+
+    `--relative`, OR A DOCUMENTATION IN A SUBFOLDER COMMITS NOTHING: git names the changed
+    files from the top of the repository, and the paths read here, and given to the commit, are
+    the project's, as `Repository.blob` takes them. A file that is not text is a change too."""
+    changed = v._git(["diff", "--name-only", "-z", "--relative", "HEAD"], root)
+    if changed is None or changed.returncode != 0:
+        v.refuse("git could not say which files differ from HEAD. Nothing is committed.")
+    readings: list[tuple[str, str]] = []
+    others: list[str] = []
+    for rel in sorted(r for r in changed.stdout.split("\0") if r):
+        path = root / rel
+        head = repo.blob("HEAD", rel)
+        try:
+            text = path.read_text(encoding="utf-8") if path.is_file() else None
+        except (OSError, UnicodeDecodeError):
+            text = None
+        if head is None or text is None:
+            others.append(rel)
+            continue
+        meta, _, err = v.parse_front_matter(text)
+        same = v.split_attestation(text)[0] == v.split_attestation(head)[0]
+        scope = " ".join(str((meta or {}).get("review_scope") or "").split())
+        if err or meta is None or meta.get("lifecycle") != "living" or not same or not scope:
+            others.append(rel)
+            continue
+        readings.append((rel, scope))
+    return readings, others
+
+
+def commit_attestations(root: Path, repo: v.Repository) -> None:
+    """Commit the attestations written and not committed, on their own, with a message made of
+    their paths and sentences. Exit 2 when there is none: an empty commit records no reading."""
+    readings, others = attestations_only(root, repo)
+    if not readings:
+        v.refuse("no file differs from HEAD only in `last_review` and `review_scope`: there is no "
+                 "attestation to commit. Attest first, one document at a time, then `--commit`."
+                 + (f" Changed, and more than their attestation: {', '.join(others)}."
+                    if others else ""))
+    title = (f"Attest the reading of {readings[0][0]}" if len(readings) == 1
+             else f"Attest the readings of {len(readings)} documents")
+    body = "\n".join(f"- {rel}: {scope}" for rel, scope in readings)
+    message = (f"{title}\n\n{body}\n\nOnly `last_review` and `review_scope` change: a reading, "
+               "not a change.\n")
+    r = v._git(["commit", "-q", "--only", "-m", message, "--", *(rel for rel, _ in readings)],
+               root)
+    if r is None or r.returncode != 0:
+        v.refuse("git refused the commit: "
+                 + ((r.stderr or r.stdout).strip() if r is not None else "git did not run")
+                 + ". Nothing is committed.")
+    sha = v._git(["rev-parse", "--short=12", "HEAD"], root)
+    print(f"Committed {sha.stdout.strip() if sha is not None else 'the attestations'}: {title}.")
+    for rel, scope in readings:
+        print(f"  {rel}: {scope}")
+    if others:
+        print("Not committed, because they change more than their attestation: "
+              + ", ".join(others) + ".")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Attest a reading of a living document")
     ap.add_argument("--root", default=".", type=Path,
                     help="the project being attested, not the framework")
-    ap.add_argument("document", type=Path, help="the living document you have just reread")
-    ap.add_argument("--scope", required=True,
+    ap.add_argument("document", type=Path, nargs="?",
+                    help="the living document you have just reread")
+    ap.add_argument("--scope",
                     help="one sentence: what the reading covered, and what it did not")
+    ap.add_argument("--commit", action="store_true",
+                    help="commit, on their own, the attestations written and not committed, "
+                         "with a message made of their paths and sentences")
     args = ap.parse_args()
 
     root = args.root.resolve()
     if not root.is_dir():
         v.refuse(f"{root}: no such directory. `--root` is the project being attested.")
+    if args.document is None:
+        if not args.commit:
+            ap.error("a document with --scope, or --commit")
+        if args.scope is not None:
+            ap.error("--scope goes with the document it attests")
+        repo = v.Repository.open(root)       # exits 2 on a shallow or unreadable history
+        if repo is None:
+            v.refuse(f"{root} is not inside a git repository: there is nothing to commit to.")
+        refuse_in_a_merge(root)
+        commit_attestations(root, repo)
+        repo.close()
+        return 0
+    if args.scope is None:
+        ap.error("--scope is required with a document")
     doc = args.document if args.document.is_absolute() else root / args.document
     doc = doc.resolve()
     try:
@@ -161,14 +266,7 @@ def main() -> int:
                  "to the commit that will carry it, and there is no history for that commit "
                  "to enter.")
 
-    # NOT IN THE MIDDLE OF A MERGE. The stamp would be written into the merge commit, which
-    # records no reading: `LC006` counts what a merge produced as a change at the merge's own
-    # instant, so the reading would be reported as not done. Finish the merge, then attest.
-    merging = v._git(["rev-parse", "--verify", "-q", "MERGE_HEAD"], root)
-    if merging is not None and merging.returncode == 0:
-        v.refuse("a merge is in progress. Commit it first -- `work.py sync --continue`, or "
-                 "`git commit` -- then reread and attest: a stamp written into a merge commit "
-                 "is not a reading, because a merge records none.")
+    refuse_in_a_merge(root)
 
     text = doc.read_text(encoding="utf-8")
     meta, _, err = v.parse_front_matter(text)
@@ -211,9 +309,15 @@ def main() -> int:
         print(f"\n{rel}: attests the text as of commit {sha[:12]} "
               f"({when:%Y-%m-%d %H:%M} {v._offset(when)}), which {what}. The commit is not "
               "written into the document: the attestation commit and its parent carry it.")
-    print("Nothing is committed. Commit the attestations on their own -- a commit that changes "
-          "only `last_review` and `review_scope` is a reading, not a change. No derived view "
-          "needs regenerating: none of them carries `last_review`.")
+    if args.commit:
+        repo = v.Repository.open(root)
+        commit_attestations(root, repo)
+        repo.close()
+        return 0
+    print("Nothing is committed. Commit the attestations on their own -- `--commit` does it, "
+          "after the last one: a commit that changes only `last_review` and `review_scope` is a "
+          "reading, not a change. No derived view needs regenerating: none of them carries "
+          "`last_review`.")
     return 0
 
 

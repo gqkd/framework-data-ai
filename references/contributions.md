@@ -233,8 +233,12 @@ names are free. Material that fits none of the fixed names goes in `evidenze/`.
 
 ### From in-arrivo to integrati
 
-When the documentation session has integrated a delivery, it moves the folder to
-`integrati/` and writes `INTEGRATO` there:
+When the documentation session has integrated a delivery, and committed it, it moves the
+folder to `integrati/` and writes `INTEGRATO` there -- since 4.12.0 `exchange.py integrate <ID>`
+does both, with the default place of each part, and leaves to a person what it cannot know:
+`mr.md`, what a verification cites for an entry, a policy carried outside the additive mode. A
+verification it says placed in the change's §Verification is one that section holds at the
+commit: while it is empty, or holds only the template's sentence, `integrate` refuses:
 
 ```yaml
 commit: 4f1c2a9e7b30          # the commit of the documentation that integrated it
@@ -249,12 +253,13 @@ parts:                        # every delivered name in the folder, and where it
 `brief.md`, `risorse.md` and `sessioni/` are not parts: they were written about the work, not
 delivered as its result, and a folder with nothing delivered moves with `parts: {}`. The
 commit is the one on the branch the documentation is read from -- in the additive mode, the
-thread's branch, which the clone's work branches hold until the join: after a squash or a
-rebase, write the new one. A second delivery for an element already integrated, or a new brief for
-it, waits in `in-arrivo/` like the first, so the same identifier can be in both stages;
-integrated, its files join the folder in `integrati/` and `INTEGRATO` becomes a list with one
-block per integration. A file it replaces was integrated by the earlier block's commit,
-which still holds what mattered of it.
+thread's branch, or the join's for a mandate no thread held, which the clone's work branches
+hold until the join and the main line after it: after a squash or a rebase, write the new
+one. A second delivery for an element already integrated, or a new brief for it, waits in
+`in-arrivo/` like the first, so the same identifier can be in both stages; integrated, its
+files join the folder in `integrati/` and `INTEGRATO` becomes a list with one block per
+integration. A file it replaces was integrated by the earlier block's commit, which still
+holds what mattered of it.
 
 A delivery is a proposal, never an input of the strict profile: a `contribution-policy.json`
 in the exchange governs nothing until the documentation session has reviewed it and
@@ -269,7 +274,8 @@ whose folder is still in `in-arrivo/`; the deliveries waiting for integration, t
 first, with the days since the oldest delivered file; the elements with a brief and nothing
 delivered yet; the resources of elements done still there, with their commands; the
 declarations in `sessioni/`; and the findings below. It reads modification times off the
-disk, so a copy that does not preserve them resets the count. It moves and writes nothing.
+disk, so a copy that does not preserve them resets the count. It moves and writes nothing;
+`integrate <ID>` moves one folder and writes its `INTEGRATO`.
 
 ### What a mandate creates outside the repositories
 

@@ -82,7 +82,7 @@ here.
 5. **Respect the artifact class.**
    - `immutable` → do not modify it; create a new one with `supersedes`. Only `status` moves in place, and on a `CHG` `verified_by`, `withdrawn_by` and `affects`
    - `append-only` → do not rewrite lines; add a linked event
-   - `living` → modify it in place; propose `last_review` and the `review_scope` sentence to a person, who attests with `attest.py`; never auto-attest a review and never run that command
+   - `living` → modify it in place; propose `last_review` and the `review_scope` sentence to a person, who attests with `attest.py`; never auto-attest a review and never run that command to attest -- `attest.py --commit` alone, which writes no stamp and commits what the person attested, you run once they have
 6. **If a fact is not documented, say so.** Absence is information. Prefer "it is not
    documented where this data lives" to an invented answer.
 
@@ -174,8 +174,8 @@ objection answered or left with why, and none on the substance presented as sett
 the parking-lot line, the `SIG` appended to `LOG`, and the commit a script makes of its own
 output. On the branch of a thread or of a parking line, where this project pins 4.12.0 or
 later, or no version that reads, ask it for one pass: the substance it hands back is yours to
-fix or to bring to the join, whose review is whole. A brief keeps up to three passes: it
-reaches no join.
+fix or to bring to the join, whose review is whole and comes before anybody decides. A brief
+keeps up to three passes: it reaches no join.
 
 If the reviser is not available, or cannot launch the critic, run the critic yourself, with
 the absolute path of `FRAMEWORK_PATH`, or a general-purpose agent told to follow

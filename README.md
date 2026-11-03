@@ -106,7 +106,7 @@ the repository, and the brief assembles, it does not compose
 | `PROCESSES.md` | The operating processes: who does what, what each one leaves written, and which of them the tooling actually carries today. One diagram per process |
 | `templates/` | One template per artifact, each with its anti-patterns at the bottom |
 | `schemas/` | The artifact catalog and what each type is allowed to be. `artifact-types.yaml` is the source; `generate.py` projects it into the JSON Schemas, into `FRAMEWORK.md §7` and into `templates/README.md` |
-| `skills/` | The skills themselves. `audit/` also carries the gate: `scripts/validate.py`, `scripts/migrate.py`, `scripts/attest.py` (how a person attests a reading), `scripts/exchange.py` (what waits in the exchange between sessions), `scripts/work.py` (documentation written on branches: claims, reservations, delegations, bringing a branch up to date, threads and joins, and `doctor`, what a machine has), `scripts/todo.py` (in the additive mode, what there is to do and the threads computed from the main line) and `checks.yaml` |
+| `skills/` | The skills themselves. `audit/` also carries the gate: `scripts/validate.py`, `scripts/migrate.py`, `scripts/attest.py` (how a person attests a reading; with `--commit`, which the session runs once they have, the attestations committed on their own), `scripts/exchange.py` (what waits in the exchange between sessions, and `integrate`, which closes one element), `scripts/work.py` (documentation written on branches: claims, reservations, delegations, bringing a branch up to date, threads and joins, `check`, the offline round of views and validator, and `doctor`, what a machine has), `scripts/todo.py` (in the additive mode, what there is to do and the threads computed from the main line) and `checks.yaml` |
 | `agents/` | The subagents the plugin ships, invoked as `framework-data-ai:critic` and `framework-data-ai:reviser`. `critic.md` is an external reviewer, read only, that reviews every plan before it is presented and every diff before it is committed or merged, each objection classed as on the proposal, on the substance or out of scope. `reviser.md` stands between a session and the critic: it fixes the objections on the proposal in the files it may write, has its fixes reviewed again when they were many, an objection needed a person or the critic said it left some out, at most three passes -- one on the branch of a thread or of a parking line, from 4.12.0 pinned or with no version that reads, where the join reviews again, and at the join one more on the corrections of whoever decides once the three are spent --, and hands back in a few lines what a person has to settle |
 | `hooks/` | What the plugin brings into every session where it is installed as a plugin, not through the symlink. `guard.py` is the write guard: in the working folder, Write, Edit and NotebookEdit reach only the session's repository and its worktrees, the exchange, Claude Code's own folders and the `allowed_dirs` option. `session_start.py` puts the to-do, in a few lines, in a session that starts in a project in the additive mode. See `references/workstation.md` |
 | `references/` | Shared by the skills: the common preamble, the routing table, the operating-mode and evidence rules, the contribution trust boundary, the adoption procedure, what a workstation needs, and the rule of the additive mode |
@@ -354,11 +354,12 @@ writes for the threads is `affects` and, for a mandate from 4.11.0, the code pre
 block. A thread is taken whole with `work.py open --thread`, and what belongs to no thread goes
 on a parking branch with `work.py open --branch`. The join is run by an admin, a deputy or a
 delegate: `work.py join` merges the ready threads into a branch of its own, the living
-documents are rewritten there from the effects and the changes approved, and `join --merge`
-lands it on the main line by a merge of its own, the one push of the main line the tooling
-makes. The `contribute` skill carries all of it; [`references/additive.md`](references/additive.md)
-is the rule, with what may still reach the main line outside a join and the table of who
-decides what.
+documents are rewritten there from the effects, the whole is reviewed before anybody decides,
+the changes are approved after the review, and `join --merge` lands it on the main line by a
+merge of its own, the one push of the main line the tooling makes, on the person's yes. The
+`contribute` skill carries all of it, commands included;
+[`references/additive.md`](references/additive.md) is the rule, with what may still reach the
+main line outside a join and the table of who decides what.
 
 ## The gate
 

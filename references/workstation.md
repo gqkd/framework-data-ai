@@ -136,7 +136,9 @@ not let through, with this configuration and no network allowed: `work.py open` 
 which create a worktree beside the repository, in the parent folder; a push and a fetch -- `work.py
 list`, `reserve`, `sync`, `release`, `delegate`, `revoke` and the steps of `join` that reach the
 remote --, which need the network or, for a remote on disk, a folder outside the repository. Those
-are the person's to run, and the `contribute` skill says so rather than retrying them. **None of
+are the person's to run, and the `contribute` skill says so rather than retrying them. `work.py
+check` reaches no remote: it writes in the worktree, in `$TMPDIR` and in the shared `.git`, so by
+the same documentation it passes, and the agent runs it. **None of
 this has been tried yet on a machine with the sandbox active**: it is what the documentation
 says, and the trial on worktrees, git and the network comes before the sandbox is required, in
 a later version.

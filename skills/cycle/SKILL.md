@@ -176,7 +176,10 @@ and delete the row when you have. A row of a delivery carried by hand from anoth
 which the session that brought it in should have moved to the note above the table, goes there
 now, with its command for whoever is on that machine, and is not run here
 (`references/contributions.md`, *A delivery from another machine*). Then, once the delivery is
-integrated, move the folder from `in-arrivo/` to `integrati/` with its `INTEGRATO`.
+integrated -- `verifica.md` written into the change's §Verification, which `integrate` refuses
+to call placed while that section is empty -- and committed, move the folder from `in-arrivo/`
+to `integrati/` with its `INTEGRATO`: `exchange.py --root <documentation> integrate <CHG>` does
+both.
 `exchange.py` lists both; `EXC002` and `EXC004` are what the validator says when either is
 left undone, warnings that `require_all` does not turn into errors.
 

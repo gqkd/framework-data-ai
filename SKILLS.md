@@ -178,7 +178,8 @@ their being switched back on.
 first; the
 class rules; never invent a field that attests something; propose `last_review` and the
 `review_scope` sentence to a person, never write them because a run read the document, and
-never run `attest.py`, which is how the person writes them.
+never run `attest.py` to attest, which is how the person writes them -- `--commit` alone, which
+writes no stamp and commits what they attested, the session runs once they have.
 
 **`references/additive.md`** — in a project in the additive mode, read through the preamble:
 what a thread writes directly and what as a pending effect, the format of an effect, what a code

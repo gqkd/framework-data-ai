@@ -88,7 +88,7 @@ A correction is the most delicate operation, because the class of the document d
 
 | Class of the document | Allowed operation |
 |---|---|
-| **living** | edit in place. `last_review` and `review_scope` are proposed and not written: they attest a reading, and the proposal carries the sentence for `review_scope` (what the reading covered, what it did not). The person writes both with `skills/audit/scripts/attest.py`, which stamps the instant it runs at, with its offset |
+| **living** | edit in place. `last_review` and `review_scope` are proposed and not written: they attest a reading, and the proposal carries the sentence for `review_scope` (what the reading covered, what it did not). The person writes both with `skills/audit/scripts/attest.py`, which stamps the instant it runs at, with its offset; `attest.py --commit`, which writes no stamp, commits them on their own, and the session runs it once the person has attested |
 | **immutable** | **never edit.** Create a new document with `supersedes`, and move the old one to `status: superseded`. Only `status` moves in place, and on a `CHG` `verified_by`, `withdrawn_by` and `affects` |
 | **append-only** | **never rewrite a line.** Add a linked event (`ANA-NNN` on `SIG-NNN`) |
 
@@ -177,7 +177,9 @@ annoying.
 `review_scope`, and `skills/audit/scripts/attest.py`, which is how a person writes them. The
 instant that command stamps is "already in the repository" only in the sense that a clock
 is; the fact it records is that a named person finished reading, and no run supplies that
-fact. A run proposes the sentence for `review_scope` and stops. It does not run the command.
+fact. A run proposes the sentence for `review_scope` and stops. It does not run the command to
+attest; `attest.py --commit` alone, which writes no stamp and commits what the person attested,
+it runs once they have.
 
 **Propose and wait** in every other case, and in particular: the cascade touches more than
 one file · an immutable is involved · you detected a conflict · the classification was

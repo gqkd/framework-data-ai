@@ -93,6 +93,12 @@ living document is not edited in place, and a cascade into one is not carried ou
 pass -- both become pending effects on the thread's branch --, the main line is never written,
 and who may decide what is in its table.
 
+**A new identifier is reserved by the skill that writes it.** Where `.framework/work.yaml`
+exists, reserve each new identifier before writing it, from the branch that will write it --
+`work.py reserve`, with the name of the person you work for, as `audit` describes --: it is a
+step of the writing, not one anybody has to remember. With the sandbox, which `reserve` does
+not pass, say the command (`references/workstation.md`).
+
 **Do not implement a signal.** A `LOG` line, a piece of feedback or an `RMP` increment is
 not an authorization to build. What gets implemented is a `CHG` with `status: approved`.
 
@@ -110,9 +116,12 @@ validator green and the only one that makes the whole framework useless: the fie
 fact about the file, it is somebody's claim that they read the document and found it still
 true. A run can say which documents it read and offer, for each, the sentence that belongs in
 `review_scope`; a person attests, with `skills/audit/scripts/attest.py`, which writes the
-instant it runs at and the sentence, and commits nothing. **You do not run that command
-either**, and the rule in `routing-table.md §5` about values the repository already contains
-does not reach it: the clock is in the repository, the reading is not. The rule used to read
+instant it runs at and the sentence. **You do not run that command to attest either** --
+`--commit` alone, which writes no stamp and commits on their own the attestations a person
+wrote, is yours to run once they have, in place of writing that commit by hand --, and the
+rule in `routing-table.md §5`
+about values the repository already contains does not reach it: the clock is in the
+repository, the reading is not. The rule used to read
 "never without having read the document", and an agent that had read was authorised -- which
 is how six living documents in one repository came to attest the same minute, one of them
 carrying a notice at the top saying it still had to be reread in full.
@@ -204,10 +213,15 @@ branch of a thread or of a parking line: it fixes the slips and does not relaunc
 substance goes to the contributor, who fixes it or brings it to the join, written in the
 thread's log. A plan there is the rows of substance of the proposal table and the brief: a
 choice of form is noted in `scelte.md`, not shown. The join has the review whole, up to three
-passes, on everything the threads bring, with the logs of the threads and parking branches it
-lands, whose substance left open the critic reads again; what whoever decides corrects of the
-substance it hands back, the reviser reads again, relaunched with those corrections, among the three passes or, once they
-are spent, in one more on them alone (`contribute`, the join). A brief keeps up to three
+passes, before anybody decides: on everything the threads bring and the texts the join writes,
+with the logs of the threads and parking branches it lands, whose substance left open the
+critic reads again, and the outcome of its rehearsal, the acts of decision applied without a
+commit and checked; what whoever decides corrects of the substance it hands back, the reviser
+reads again, relaunched with those corrections, among the three passes or, once they are spent,
+in one more on them alone, and what that one still finds leaves the element in draft or
+proposed for a later join (`contribute`, the join). An act left has its cascade taken back
+by the revert of the commit that holds it alone, which gives back the text the review read and
+is not reviewed again; a revert that conflicts is a correction. A brief keeps up to three
 passes wherever it is written: it reaches no join, and a code session follows it to the
 letter. Where the project pins less, every review is up to three passes, as before.
 
