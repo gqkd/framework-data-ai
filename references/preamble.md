@@ -96,8 +96,13 @@ and who may decide what is in its table.
 **A new identifier is reserved by the skill that writes it.** Where `.framework/work.yaml`
 exists, reserve each new identifier before writing it, from the branch that will write it --
 `work.py reserve`, with the name of the person you work for, as `audit` describes --: it is a
-step of the writing, not one anybody has to remember. With the sandbox, which `reserve` does
-not pass, say the command (`references/workstation.md`).
+step of the writing, not one anybody has to remember. A number the branch created and found
+taken -- `BR001`, `BR003`, `sync` refusing it -- is renumbered by the skill of whoever holds the
+branch, `work.py renumber`, without asking, since a number is form, and said in its answer;
+never a thread's number at a join, where it is for whoever decides, as `contribute` says.
+With the sandbox, `reserve` and `renumber` leave it where the settings let them out
+(`references/workstation.md`): run each alone, with the absolute path; where the sandbox stops
+one anyway, give the command to paste.
 
 **Do not implement a signal.** A `LOG` line, a piece of feedback or an `RMP` increment is
 not an authorization to build. What gets implemented is a `CHG` with `status: approved`.

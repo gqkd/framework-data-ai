@@ -5,6 +5,7 @@ what, release a claim, and bring a branch up to date with the main line.
     python3 work.py --root . open --who "Name" --branch od-042 OD-042 [OD-017 ...]
     python3 work.py --root . reserve DEC --who "Name" [--count 2]
     python3 work.py --root . reserve RSK --product atlas --who "Name"   # or platform, repository
+    python3 work.py --root . renumber DEC-012 --who "Name"            # a number the branch made
     python3 work.py --root . list [--json]
     python3 work.py --root . check [--json]                            # offline: views, validator
     python3 work.py --root . release OD-042 --who "Name"
@@ -15,6 +16,7 @@ what, release a claim, and bring a branch up to date with the main line.
     python3 work.py --root . join --who "Admin" [THREAD ...] [--no-threads]
     python3 work.py --root . join --finish --who "Admin"
     python3 work.py --root . join --merge --who "Admin"               # or --close, --abandon
+    python3 work.py --root . meetings --out <scratchpad>              # at a join, offline
     python3 work.py --root . doctor [--who "Name"]                    # read only: this machine
 
 ONE PIECE OF WORK, ONE BRANCH, ONE PULL REQUEST, for everybody who writes the documentation,
@@ -84,8 +86,9 @@ import subprocess
 import sys
 import tempfile
 import time
+import types
 from datetime import datetime, timedelta
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import validate as v  # noqa: E402  (the validator's helpers, not its main)
@@ -622,6 +625,16 @@ def cmd_reserve(p: Project, args) -> int:
     p.fetch()
     if local:
         p.scope_of(args.product)
+    got = _reserve_numbers(p, who, branch, prefix, args.product if local else None, args.count)
+    say(f"Reserved: {', '.join(shown for _, shown in got)}. They are yours on {branch}; a "
+        "number reserved and not used stays burned, and is never reserved again.")
+    return 0
+
+
+def _reserve_numbers(p: Project, who: str, branch: str, prefix: str, product: str | None,
+                     count: int) -> list[tuple[str, str]]:
+    """The next `count` numbers of `prefix` reserved for `branch`, after a fetch: each as the
+    identifier and as it is said, `atlas:RSK-012` for a family numbered per product."""
     form = re.compile(rf"^(?:.*/)?{re.escape(prefix)}-(\d{{3,}})$")
     seen: list[str] = []
     # One number for the whole repository, even for a family numbered per product: unique
@@ -631,19 +644,20 @@ def cmd_reserve(p: Project, args) -> int:
     seen += [m.group(1) for m in (form.match(t) for t in p.held(B.RESERVED_REF)) if m]
     n = max((int(s) for s in seen), default=0) + 1
     width = max([3] + [len(s) for s in seen])
-    got, tries = [], 0
-    while len(got) < args.count:
+    got: list[tuple[str, str]] = []
+    tries = 0
+    while len(got) < count:
         tries += 1
-        if tries > args.count + 50:
+        if tries > count + 50:
             v.refuse(f"fifty numbers of {prefix} in a row were taken while trying. Something "
                      "else is reserving in a loop; nothing more was reserved.")
         ident = f"{prefix}-{n:0{width}d}"
-        tag = f"{args.product}/{ident}" if local else ident
+        tag = f"{product}/{ident}" if product else ident
         ref = f"{B.RESERVED_REF}{tag}"
         git(p.root, "tag", "-a", f"id/{tag}", "-m", message(who, branch, f"reserve {tag}"), p.base)
         mine = git(p.root, "rev-parse", ref).stdout.strip()
         outcome, said = p.push([f"{ref}:{ref}"], {ref: mine})
-        so_far = f"Reserved so far: {', '.join(got) or 'none'}."
+        so_far = f"Reserved so far: {', '.join(shown for _, shown in got) or 'none'}."
         if outcome == "unknown":
             v.refuse(f"the push of {tag} may or may not have landed: the remote did not answer "
                      f"({said}). The local tag is kept; `list` says whether it is there. {so_far}")
@@ -657,14 +671,204 @@ def cmd_reserve(p: Project, args) -> int:
             held = p.held(B.RESERVED_REF).get(tag)
             if held is None:
                 v.refuse(f"the remote refused {ref} and does not hold it: a hook, a protection or "
-                         f"a permission, not another reservation. Reserved so far: "
-                         f"{', '.join(got) or 'none'}.")
+                         f"a permission, not another reservation. {so_far}")
             n += 1                       # somebody took it a moment ago: the next one
             continue
-        got.append(ident if not local else f"{args.product}:{ident}")
+        got.append((ident, f"{product}:{ident}" if product else ident))
         n += 1
-    say(f"Reserved: {', '.join(got)}. They are yours on {branch}; a number reserved and not "
-        "used stays burned, and is never reserved again.")
+    return got
+
+
+# Files a renumbering does not rewrite, though the branch changed them: the review's log is
+# appended to and never rewritten, and a delivered policy is an admin's to carry at a join.
+NOT_RENUMBERED = ("revisione.md", "contribution-policy.json")
+# What a number a merged thread created calls for, found wrong at a join: `join` leaves out
+# before merging a thread whose new number is taken or not its own, so this is what is left.
+AT_JOIN = ("A number a thread this join merged created is never renumbered at the join: whoever "
+           "decides abandons it (`join --abandon`) and opens it again without that thread, "
+           "which waits for a later join while the skill of whoever holds it renumbers it on "
+           "its branch.")
+
+
+def cmd_renumber(p: Project, args) -> int:
+    """`renumber <ID>`, SINCE 4.12.0: an identifier this branch created, given the next number
+    reserved for it. Run by the skill of whoever holds the branch, as soon as the validator
+    with `--base` or `sync` sees the number taken -- created on the main line too, or written
+    with no reservation --, and never for a thread at a join: `join` leaves out, before merging
+    it, a thread that creates a number the join already created or one with no reservation of
+    its own, and the thread goes back to whoever holds it; one found after the merge is for
+    whoever decides (`AT_JOIN`). On a join's branch it renumbers only what the join itself
+    created.
+
+    It reserves the number first (the network), then renames the files whose name carries the
+    old one and rewrites it in the files this branch changed since it parted from the main
+    line -- the only ones that can name a number the branch created --, `_filoni/` included:
+    `effetti.md`, `scelte.md`, `consegne/`. For a family numbered per product, a file of another
+    product keeps a bare mention, which is that product's own number, and is named; a file the
+    scan does not read belongs to the product its path says, as the validator reads it. It
+    regenerates the views and commits, and pushes nothing but the reservation's tag: the branch
+    goes by the steps of any push. What it cannot change it says: the review's log,
+    `revisione.md`, which is appended to; a delivered `contribution-policy.json`; the messages
+    of commits; other branches; a claim on the old number; the exchange, which is one machine's.
+
+    It refuses, before reserving anything: a tree with changes or with files git does not
+    track; a number the branch shares with the main line; on a join's branch, a number a
+    thread it merged created; commits pushed to the same branch from another clone that may
+    name the number, which `sync` brings in first; and a number that is not taken -- the main
+    line does not declare it, nor the same branch pushed from another clone, and its
+    reservation, fetched now, is this branch's."""
+    who = p.who(args.who)
+    branch = p.branch()
+    if not branch.startswith(p.prefix):
+        v.refuse(f"on {branch}, not on a work branch: a number is renumbered on the branch that "
+                 "created it, and the main line is written only by `join --merge`.")
+    if git(p.root, "status", "--porcelain", "--untracked-files=no").stdout.strip():
+        v.refuse("the working tree has uncommitted changes. Commit them first: the renumbering "
+                 "is a commit of its own.")
+    loose = [x for x in git(p.root, "ls-files", "--others", "--exclude-standard",
+                            "-z").stdout.split("\0") if x]
+    if loose:
+        v.refuse(f"files git does not track are in the documentation ({', '.join(loose[:5])}"
+                 + (", ..." if len(loose) > 5 else "") + "). Commit them or move them out "
+                 "first: the renumbering reads the tree, and would neither rewrite them nor "
+                 "commit what it computed from them.")
+    key, _ = p.element(args.ident)
+    scope, old = key
+    prefix = old.split("-", 1)[0]
+    p.fetch()
+    head = p.view(None)
+    if key not in head.ids():
+        v.refuse(f"{args.ident} is not declared on {branch}: nothing to renumber.")
+    try:
+        start = B.shared(p.root, "HEAD", p.base, p.registry, p.scan)
+    except B.BranchError as e:
+        v.refuse(f"the common history of {branch} and {p.base} could not be read: {e}")
+    if key in start:
+        v.refuse(f"{args.ident} was not created on {branch}: the history it shares with "
+                 f"{p.base} declares it. A number is renumbered on the branch that created it.")
+    product = scope.removeprefix("product:") if prefix in p.local else None
+    if branch[len(p.prefix):].startswith(B.JOIN):
+        for name, sha in _joined(p, "HEAD"):
+            if key in p.view(sha).ids():
+                v.refuse(f"{args.ident} comes from {name}, which this join merged. {AT_JOIN}")
+    own = f"refs/remotes/{p.remote}/{branch}"
+    on_own = False
+    if git(p.root, "rev-parse", "--verify", "-q", own, check=False).returncode == 0 and \
+            git(p.root, "merge-base", "--is-ancestor", own, "HEAD", check=False).returncode:
+        try:
+            with_own = B.shared(p.root, "HEAD", own, p.registry, p.scan)
+        except B.BranchError as e:
+            v.refuse(f"the common history of {branch} and {own} could not be read: {e}")
+        if key in with_own:
+            v.refuse(f"{p.remote}/{branch} has commits this clone does not, pushed from "
+                     f"elsewhere, and {args.ident} was there before the two parted: they may "
+                     f"name it, and would come in with the old number. `sync` brings them in "
+                     "first; then renumber.")
+        on_own = key in p.view(own).ids()
+    tag_old = f"{product}/{old}" if product else old
+    reserved = p.held(B.RESERVED_REF).get(tag_old)
+    # A lightweight tag is no reservation, as `BR003` reads it: its message is a commit's.
+    if not (key in p.view(p.base).ids() or on_own or reserved is None
+            or reserved.get("branch") != branch
+            or git(p.root, "cat-file", "-t", reserved["object"],
+                   check=False).stdout.strip() != "tag"):
+        v.refuse(f"{args.ident} is not taken: {p.base} does not declare it, nor {p.remote}/"
+                 f"{branch}, and its reservation, fetched now, is this branch's. A `BR003` seen "
+                 "before this fetch read the reservations this clone had then: run `check` again.")
+    (new, shown), = _reserve_numbers(p, who, branch, prefix, product, 1)
+
+    base = git(p.root, "merge-base", "HEAD", p.base).stdout.strip()
+    listing = git(p.root, "diff", "--name-only", "-z", "--relative", "--no-renames", base,
+                  "HEAD").stdout
+    changed = [c for c in listing.split("\0") if c and (p.root / c).is_file()]
+    index = v.ReferenceIndex(list(head.arts), p.registry)
+    owner = {a.rel.replace("\\", "/"): index.owner(a) for a in head.arts}
+    token = re.compile(rf"(?:\b([a-z0-9][a-z0-9-]*):)?\b{re.escape(old)}\b")
+
+    def mine(rel: str) -> bool:
+        # Whether a bare mention in `rel` names this number: for a family numbered per product,
+        # only in a file of the same product, or in what a thread keeps beside the documents. A
+        # file the scan does not read is placed by its path, as the validator places one.
+        if product is None or rel.split("/", 1)[0] == E_THREADS:
+            return True
+        held = owner.get(rel) or index.owner(types.SimpleNamespace(rel=rel, type=None))
+        return held == scope
+
+    def swap(text: str, rel: str) -> str:
+        def one(m: re.Match) -> str:
+            named = m.group(1)
+            if product is not None and (named != product if named else not mine(rel)):
+                return m.group(0)
+            return (f"{named}:" if named else "") + new
+        return token.sub(one, text)
+
+    def stopped(e: BaseException, finish: str = "") -> None:
+        # The tree was clean when it began, so going back is one command; the number is burned.
+        why = f" ({e})" if isinstance(e, OSError) else ""
+        v.refuse(f"the renumbering stopped before its commit{why}: what it renamed and rewrote "
+                 f"so far is in the tree, not committed, and {shown} is reserved, burned whether "
+                 "used or not. The tree was clean when it began: `git reset --hard` brings it "
+                 "back, and `renumber` run again takes a new number" + finish + ".")
+
+    renamed, rewritten, left, elsewhere, unread = [], [], [], [], []
+    try:
+        for rel in changed:
+            if PurePosixPath(rel).name in NOT_RENUMBERED:
+                if token.search((p.root / rel).read_text(encoding="utf-8", errors="replace")):
+                    left.append(rel)
+                continue
+            target = swap(rel, rel)
+            if target != rel:
+                (p.root / target).parent.mkdir(parents=True, exist_ok=True)
+                git(p.root, "mv", "--", rel, target)
+                renamed.append(f"{rel} -> {target}")
+            path = p.root / target
+            try:
+                text = path.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                unread.append(target)
+                continue
+            after = swap(text, rel)
+            if after != text:
+                path.write_text(after, encoding="utf-8")
+                git(p.root, "add", "--", target)
+                rewritten.append(target)
+            if product is not None and not mine(rel) and \
+                    any(m.group(1) is None for m in token.finditer(after)):
+                elsewhere.append(target)
+    except (SystemExit, OSError) as e:
+        stopped(e)
+    if not renamed and not rewritten:
+        v.refuse(f"no file this branch changed names {args.ident}: nothing was renamed or "
+                 f"rewritten, and {shown} stays reserved, unused.")
+    try:
+        views = _regenerate(p.root)
+    except (SystemExit, OSError) as e:
+        stopped(e, "; or, the cause gone, `check` regenerates the views, and `git add` and "
+                   "`git commit` finish this one")
+    try:
+        git(p.root, "commit", "-q", "-m",
+            message(who, branch, f"Renumber {args.ident} as {shown}"))
+    except (SystemExit, OSError) as e:
+        stopped(e, "; or, the cause gone, `git commit` finishes this one")
+    say(f"{args.ident} is {shown} on {branch}, committed: {len(rewritten)} files rewritten"
+        + (f", {len(renamed)} renamed" if renamed else "")
+        + (f", the views regenerated ({', '.join(views)})" if views else "") + ".")
+    for line in renamed:
+        say(f"  renamed {line}")
+    for rel in elsewhere:
+        say(f"  {rel}: a bare {old} left, the number of its own product")
+    claimed = p.held(B.CLAIM_REF).get(f"{product}/{old}" if product else old)
+    not_changed = [f"{rel}, appended to or an admin's to carry" for rel in left]
+    not_changed += [f"{rel}, not text it can read" for rel in unread]
+    not_changed += ["the messages of commits that name it", "other branches",
+                    f"the exchange, where a folder named {old} is one machine's"]
+    if claimed:
+        not_changed.append(f"the claim on {args.ident}, of {claimed.get('branch', '?')}")
+    say(f"Not changed, naming {args.ident} still: " + "; ".join(not_changed) + ".")
+    tag_new = f"{product}/{new}" if product else new
+    say(f"The branch was not pushed -- only the reservation's tag, `id/{tag_new}`, was --: push "
+        "it by the steps of any push.")
     return 0
 
 
@@ -915,6 +1119,12 @@ def cmd_check(p: Project, args) -> int:
         say(f"  {f.get('level')} {f.get('code')} {f.get('path')}: {str(f.get('message'))[:200]}")
     if len(new) > 20:
         say(f"  and {len(new) - 20} more: `validate.py --root {p.root} --base {p.base}`")
+    # The messages are cut above, and the way out of these two comes past the cut.
+    if any(f.get("code") in ("BR001", "BR003") for f in new):
+        at_join = working and branch[len(p.prefix):].startswith(B.JOIN)
+        say("A `BR001` or `BR003` is a number this branch created, taken or not reserved for it: "
+            "`work.py renumber <ID>` gives it the next one, reserved"
+            + (f", when the join itself wrote it. {AT_JOIN}" if at_join else "."))
     if row is not None:
         _say_row(p, row)
     return failed
@@ -1385,9 +1595,15 @@ def _join_start(p: Project, who: str, args) -> int:
     for name in todo_now:
         sha = git(p.root, "rev-parse", f"refs/remotes/{p.remote}/{name}").stdout.strip()
         both = _collisions(p, branch, sha)
-        if both:
-            say(f"Not merged: {name} and this join both created {', '.join(both)}. Renumber on "
-                f"{name}, and run `join {again}` again.")
+        unheld = [] if both else _unreserved(p, name, sha)
+        if both or unheld:
+            rest = " ".join(n[len(p.prefix):] for n in sorted(set(wanted)) if n != name)
+            why = (f"{name} and this join both created {', '.join(both)}" if both else
+                   f"{name} created {', '.join(unheld)} with no reservation of its own -- "
+                   "written with none, or reserved for another branch --, which `BR003` asks")
+            say(f"Not merged: {why}. {name} waits for a later join: the skill of whoever holds "
+                f"it renumbers it on its branch (`work.py renumber`). To go on without it: "
+                f"`join --who \"{who}\" {rest or '--no-threads'}`.")
             return 1
         msg = f"Join {branch}: merge {name}\n\n{B.JOINED}{name} {sha}\n"
         r = git(tree, "-c", "merge.conflictStyle=diff3", "-c", "rerere.enabled=false", "merge",
@@ -1482,6 +1698,9 @@ def _join_finish(p: Project, who: str) -> int:
     if own:
         say(f"{len(own)} findings of the branches on {branch}: read them before `join --merge`; "
             "a correction is committed and `join --finish` run again.")
+    if any(f.get("code") in ("BR001", "BR003") for f in own):
+        say("A `BR001` or `BR003` on a number the join itself wrote is renumbered here, "
+            f"`work.py renumber <ID>`. {AT_JOIN}")
     # Signed again only when something came after the last signature -- a `sync` because the
     # main line moved, a correction --, so that what lands is signed whole; finished already and
     # not pushed, pushed again.
@@ -1662,6 +1881,265 @@ def _join_abandon(p: Project, who: str) -> int:
     git(p.root, "tag", "-d", f"claim/{JOIN_CLAIM}", check=False)
     say(f"{branch} abandoned by {who}: nothing landed, the threads keep their branches and "
         f"claims. Here: {_remove_hint(p, branch, force=True)}.")
+    return 0
+
+
+# The two commands the recommended sandbox lets out, as `references/workstation.md` writes them:
+# a reservation pushes a tag `id/<ID>` and nothing else, and `renumber` reserves first.
+SANDBOX_EXCLUDED = ("python3 *work.py* reserve *", "python3 *work.py* renumber *")
+CASCADE = "join: the cascade of "      # the subject of a cascade's commit of its own (step 2)
+
+
+def _line_commit(p: Project, ref: str, path: str, first: int, last: int) -> tuple[str, str]:
+    """The last commit that wrote one of the lines `first` to `last` of `path` as `ref` holds
+    it, and its day. `path` is read from `p.root`, as git reads a path after `--`."""
+    r = git(p.root, "blame", "--porcelain", "-L", f"{first},{last}", ref, "--", path,
+            check=False)
+    if r.returncode or not r.stdout:
+        return "?", "?"
+    times: dict[str, int] = {}
+    sha = ""
+    for row in r.stdout.splitlines():
+        head = re.match(r"^([0-9a-f]{40,64}) \d+ \d+", row)
+        if head:
+            sha = head.group(1)
+        elif sha and row.startswith("author-time "):
+            when = row[len("author-time "):].strip()
+            if when.isdigit():
+                times[sha] = int(when)
+    if not times:
+        return "?", "?"
+    sha = max(times, key=lambda s: times[s])
+    return sha[:12], datetime.fromtimestamp(times[sha]).date().isoformat()
+
+
+def _last_commit(p: Project, sha: str, bases: list[str], rel: str) -> str:
+    """The last commit of a thread at `sha`, since it left the main line at `bases`, that
+    changed `rel`, and its day."""
+    r = git(p.root, "log", "-1", "--format=%H%x00%as", sha, "--not", *bases, "--", rel,
+            check=False).stdout.strip()
+    got, _, day = r.partition("\x00")
+    return f"{got[:12]}, {day}" if got else "?, ?"
+
+
+def _touched_anchors(p: Project, sha: str) -> set[str]:
+    """What one commit changed, as the anchors an effect can name: `<path>#<key>` for each key
+    of a map an anchor can name (`E.ANCHOR_MAPS`) whose row it added, removed or changed;
+    `<path>#<marker>` for each marked section whose lines it changed, every enclosing one too;
+    and `<path>` whole for a change outside any marked section, in the front matter outside
+    those maps, or to a file it deleted or whose front matter does not read."""
+    out: set[str] = set()
+    where = B.prefix(p.root)
+    maps = {m for names in E.ANCHOR_MAPS.values() for m in names}
+    listing = git(p.root, "diff", "--name-only", "-z", "--relative", "--no-renames", f"{sha}^",
+                  sha, check=False).stdout
+    for path in filter(None, listing.split("\0")):
+        new = git(p.root, "show", f"{sha}:{where}{path}", check=False)
+        if new.returncode:
+            out.add(path)                  # deleted: the whole document
+            continue
+        old = git(p.root, "show", f"{sha}^:{where}{path}", check=False)
+        meta, body, error = v.parse_front_matter(new.stdout)
+        was = v.parse_front_matter(old.stdout)[0] if old.returncode == 0 else {}
+        if meta is None and error != "no front matter":
+            out.add(path)
+            continue
+        meta, was = meta or {}, was or {}
+        for m in maps:
+            now, then = v.as_map(meta.get(m)), v.as_map(was.get(m))
+            out |= {f"{path}#{k}" for k in set(now) | set(then) if now.get(k) != then.get(k)}
+        if {k: x for k, x in meta.items() if k not in maps} != \
+                {k: x for k, x in was.items() if k not in maps}:
+            out.add(path)
+        try:
+            first = v.body_first_line(new.stdout, body)
+        except ValueError:
+            out.add(path)
+            continue
+        spans = [s for s in v.locate_sections(body, first_line=first) if s.marker]
+        hunks = git(p.root, "diff", "-U0", "--no-renames", f"{sha}^", sha, "--", path,
+                    check=False).stdout
+        for row in hunks.splitlines():
+            h = re.match(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@", row)
+            if not h:
+                continue
+            start, count = int(h.group(1)), int(h.group(2) or "1")
+            for n in (range(start, start + count) if count else [max(start, 1)]):
+                if n < first:
+                    continue               # the front matter, read above by its maps
+                inside = [s for s in spans if s.start_line <= n <= s.end_line]
+                out |= {f"{path}#{s.marker}" for s in inside}
+                if not inside:
+                    out.add(path)
+    return out
+
+
+def cmd_meetings(p: Project, args) -> int:
+    """`meetings --out <dir>`, SINCE 4.12.0: at a join, one card for each place where two of
+    the threads it merged meet, for the skill to read at step 2, where two texts that differ
+    are put to whoever decides, and to hand to the review at step 4 (`contribute`, the join).
+    Offline, and it writes nothing in the repository: the cards in `--out`, outside it -- the
+    session's scratchpad --, and, while it reads them, the trees of the threads in `$TMPDIR`.
+
+    A meeting is: effects of two threads or more on one target, or on two of which one is
+    inside the other (`todo.meet`), those the forecasts already held included; an effect and
+    the cascade of a decision written at this join on the same section, read from the cascade's
+    commit of its own, `join: the cascade of <ID>`; an entry or a document whose state two
+    threads changed; and elements two threads created deriving from the same one. Two acts of
+    the join that meet, with no thread's effect among them, are not a meeting. Each card
+    gives each text with its thread, who holds it, the commit and the day it was written -- for
+    an effect the last commit on any of its lines, for a state or a creation the thread's last
+    on its file --, and the effect's `Da:` and `Perché:`. It decides nothing."""
+    branch = p.branch()
+    if not branch[len(p.prefix):].startswith(B.JOIN):
+        v.refuse(f"on {branch}, not a join's branch: the meetings are those of the threads a "
+                 "join merged. Run it in the join's worktree.")
+    # Outside every checkout of the repository: this worktree, the main one, the others, and
+    # the `.git` they share.
+    top = Path(git(p.root, "rev-parse", "--show-toplevel").stdout.strip()).resolve()
+    common = Path(git(p.root, "rev-parse", "--path-format=absolute",
+                      "--git-common-dir").stdout.strip()).resolve()
+    trees = [Path(l[len("worktree "):]).resolve() for l in
+             git(p.root, "worktree", "list", "--porcelain").stdout.splitlines()
+             if l.startswith("worktree ")]
+    out = args.out.resolve()
+    inside = next((t for t in (top, common, *trees) if out == t or t in out.parents), None)
+    if inside is not None:
+        v.refuse(f"{out} is inside the repository ({inside}): the cards are the session's, never "
+                 "the documentation's. Give the session's scratchpad.")
+    where = B.prefix(p.root)
+    merged = _joined(p, "HEAD")
+    holders = {c.get("branch"): c.get("who") for c in p.held(B.CLAIM_REF).values()}
+    head = p.view(None)
+    flat = T.Tree(list(head.arts), p.registry).keys
+
+    # The texts, each as (who writes it, the target, the lines of its card). An effect runs
+    # from its heading to the next one, and its commit is the last that wrote any of its lines.
+    texts: list[tuple[str, str, list[str]]] = []
+    for name, sha in merged:
+        rel = f"{E_THREADS}/{name[len(p.prefix):]}/{E.EFFECTS}"
+        shown = git(p.root, "show", f"{sha}:{where}{rel}", check=False)
+        if shown.returncode:
+            continue
+        rows = shown.stdout.splitlines()
+        heads = [n for n, row in enumerate(rows, 1) if E.HEADING.match(row)]
+        for eff in E.read(shown.stdout)[0]:
+            end = next((h - 1 for h in heads if h > eff.line), len(rows))
+            while end > eff.line and not rows[end - 1].strip():
+                end -= 1
+            commit, day = _line_commit(p, sha, rel, eff.line, end)
+            texts.append((name, eff.target, [
+                f"## {name} -- held by {holders.get(name) or 'nobody now'}, {commit}, {day}", "",
+                f"Effect on `{eff.target}`, {rel} line {eff.line}.",
+                f"Da: {', '.join(eff.sources) or '-'}", f"Perché: {eff.why or '-'}",
+                "Diventa vero:", "", *(f"> {x}" for x in (eff.becomes or "-").splitlines()),
+                ""]))
+    log = git(p.root, "log", "--no-merges", "--format=%H%x00%s%x00%as", f"{p.base}..HEAD",
+              check=False).stdout
+    for record in log.splitlines():
+        sha, _, rest = record.partition("\x00")
+        subject, _, day = rest.partition("\x00")
+        if not subject.startswith(CASCADE):
+            continue
+        ident = subject[len(CASCADE):].strip()
+        for anchor in sorted(_touched_anchors(p, sha)):
+            path = anchor.split("#", 1)[0]
+            texts.append((f"the cascade of {ident}", anchor, [
+                f"## The cascade of {ident}, written at this join -- {sha[:12]}, {day}", "",
+                f"Changes `{anchor}`: `git show {sha[:12]} -- {path}`.", ""]))
+
+    # One card per set of texts that meet, from two writers or more.
+    parent = list(range(len(texts)))
+
+    def find(i: int) -> int:
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    for i, (wi, ti, _) in enumerate(texts):
+        for j in range(i + 1, len(texts)):
+            wj, tj, _ = texts[j]
+            if wi != wj and T.meet({ti}, {tj}, flat=flat):
+                parent[find(i)] = find(j)
+    groups: dict[int, list[int]] = {}
+    for i in range(len(texts)):
+        groups.setdefault(find(i), []).append(i)
+    cards: list[tuple[str, list[str]]] = []
+    threads = {name for name, _ in merged}
+    for members in groups.values():
+        # Two writers, a thread among them: two acts of the join that meet, and nothing of a
+        # thread, are the join's own text, not a meeting.
+        writers = {texts[i][0] for i in members}
+        if len(writers) < 2 or not writers & threads:
+            continue
+        targets = sorted({texts[i][1] for i in members})
+        cards.append((f"texts on {', '.join(f'`{t}`' for t in targets)}",
+                      [line for i in members for line in texts[i][2]]))
+
+    # States two threads changed, and elements two threads created from the same one: each
+    # thread read against where it left the main line, every common ancestor of the two, and
+    # not against the main line as it is now, which may have moved since.
+    states: dict[str, list[str]] = {}
+    sources: dict[str, list[tuple[str, str, str]]] = {}
+    for name, sha in merged:
+        held_by = holders.get(name) or "nobody now"
+        try:
+            bases, starts = B.base_views(p.root, sha, p.base, p.registry, p.scan)
+        except B.BranchError as e:
+            v.refuse(f"where {name} left {p.base} could not be read: {e}")
+        view = p.view(sha)
+        register = {str(k): a.rel.replace("\\", "/") for a in view.arts
+                    if a.type == "open-register" for k in v.as_map(a.meta.get("entries"))}
+        for k, row in view.entries.items():
+            then = {str(s.entries[k].get("status")) for s in starts if k in s.entries}
+            if not then:
+                for d in v.as_list(row.get("derives_from")):
+                    sources.setdefault(str(d), []).append(
+                        (name, k, _last_commit(p, sha, bases, register.get(k, "."))))
+            elif str(row.get("status")) not in then:
+                states.setdefault(k, []).append(
+                    f"- {name} ({held_by}), {_last_commit(p, sha, bases, register.get(k, '.'))}: "
+                    f"{' or '.join(sorted(then))} -> {row.get('status')}")
+        before = [{a.rel.replace("\\", "/"): a for a in s.arts} for s in starts]
+        for a in view.arts:
+            rel = a.rel.replace("\\", "/")
+            olds = [b[rel] for b in before if rel in b]
+            if not olds:
+                if a.id:
+                    when = _last_commit(p, sha, bases, rel)
+                    for d in v.as_list(a.meta.get("derives_from")):
+                        sources.setdefault(str(d), []).append((name, str(a.id), when))
+                continue
+            then = {str(o.meta.get("status")) for o in olds}
+            if str(a.meta.get("status")) not in then:
+                states.setdefault(str(a.id) if a.id else rel, []).append(
+                    f"- {name} ({held_by}), {_last_commit(p, sha, bases, rel)}: "
+                    f"{' or '.join(sorted(then))} -> {a.meta.get('status')}")
+    for key, lines in sorted(states.items()):
+        if len(lines) > 1:
+            cards.append((f"the state of {key}, changed by two threads", ["", *lines, ""]))
+    for d, made in sorted(sources.items()):
+        if len({n for n, _, _ in made}) > 1:
+            cards.append((f"elements deriving from {d}, created by two threads",
+                          ["", *(f"- {n} ({holders.get(n) or 'nobody now'}), {when}: {i}"
+                                 for n, i, when in made), ""]))
+
+    out.mkdir(parents=True, exist_ok=True)
+    for old in out.glob("incontro-*.md"):
+        old.unlink()
+    for n, (title, lines) in enumerate(cards, 1):
+        (out / f"incontro-{n}.md").write_text(
+            "\n".join([f"# Meeting {n} of {branch}: {title}", "",
+                       "Two texts that are the same become one, said; two that differ are put "
+                       "to whoever decides, with where each comes from. Nothing here decides.",
+                       "", *lines]).rstrip() + "\n", encoding="utf-8")
+    if not cards:
+        say(f"No meeting among the {len(merged)} threads merged on {branch}: no card written.")
+        return 0
+    say(f"{len(cards)} meetings among the threads merged on {branch}, cards in {out}:")
+    for n, (title, _) in enumerate(cards, 1):
+        say(f"  incontro-{n}.md: {title}")
     return 0
 
 
@@ -1905,6 +2383,27 @@ def _collisions(p: Project, mine: str, theirs: str) -> list[str]:
     return sorted(i if s == "*" else f"{s.removeprefix('product:')}:{i}" for s, i in both)
 
 
+def _unreserved(p: Project, name: str, sha: str) -> list[str]:
+    """The numbers thread `name` (at `sha`) created since it parted from the main line with no
+    reservation made for it, as `scope:ID` where the scope matters: the `BR003` the thread's
+    own branch shows, stricter than the join's branch, where a reservation made for any thread
+    the join merged passes. Read from the reservations the last fetch brought; a lightweight
+    tag is none, as `BR003` reads it."""
+    try:
+        start = B.shared(p.root, sha, p.base, p.registry, p.scan)
+    except B.BranchError as e:
+        v.refuse(f"the common history of {name} and {p.base} could not be read: {e}")
+    held = p.held(B.RESERVED_REF)
+    out = []
+    for scope, ident in sorted(p.numbered(p.view(sha).ids() - start)):
+        tag = ident if scope == "*" else f"{scope.removeprefix('product:')}/{ident}"
+        made = held.get(tag) or {}
+        if made.get("branch") != name or git(p.root, "cat-file", "-t", made["object"],
+                                             check=False).stdout.strip() != "tag":
+            out.append(ident if scope == "*" else f"{scope.removeprefix('product:')}:{ident}")
+    return out
+
+
 def _settle(p: Project, root: Path, top: Path, where: str, additive: bool,
             branch_ours: bool) -> list[str]:
     """Resolve what is mechanical in the merge in progress in `top`, and stage it: the files
@@ -2062,8 +2561,9 @@ def cmd_sync(p: Project, args) -> int:
         if both:
             say(f"Not merged: this branch and {into} both created {', '.join(both)}. Once both "
                 "are in one tree, two rows of `entries:` become one without a word and two files "
-                "carry one name. Renumber the ones this branch created -- reserve new numbers "
-                "first -- commit, and run `sync` again.")
+                "carry one name. Renumber the ones this branch created -- `work.py renumber <ID>` "
+                "for each, which reserves the new number and commits -- and run `sync` again."
+                + (f" {AT_JOIN}" if branch[len(p.prefix):].startswith(B.JOIN) else ""))
             return 1
         # What this merge brings in, recorded where only this worktree reads it: `--continue`
         # finishes this merge and no other, and another session's fetch moving `origin/main`
@@ -2091,7 +2591,9 @@ def cmd_sync(p: Project, args) -> int:
         both = _collisions(p, "HEAD", "MERGE_HEAD")
         if both:
             v.refuse(f"this branch and {into} both created {', '.join(both)}: abort the merge "
-                     "(`git merge --abort`), renumber, and run `sync` again.")
+                     "(`git merge --abort`), renumber (`work.py renumber <ID>`), and run `sync` "
+                     "again." + (f" {AT_JOIN}" if branch[len(p.prefix):].startswith(B.JOIN)
+                                 else ""))
         unmerged = git(top, "ls-files", "-u").stdout.strip()
         if unmerged:
             v.refuse("files are still unmerged: resolve them and `git add` each, then run "
@@ -2254,6 +2756,7 @@ def cmd_doctor(p: Project, args) -> int:
     # The settings files: the sandbox and the bypass mode, recommended and not required.
     config = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude")
     found: dict[str, tuple[object, Path]] = {}
+    excluded: dict[str, Path] = {}       # a list, which every settings file adds to
     for f in (config / "settings.json", top / ".claude" / "settings.json",
               top / ".claude" / "settings.local.json"):      # later ones win, as in Claude Code
         try:
@@ -2268,6 +2771,12 @@ def cmd_doctor(p: Project, args) -> int:
                                    ("bypass", perms, "disableBypassPermissionsMode")):
             if isinstance(holder, dict) and field in holder:
                 found[key] = (holder[field], f)
+        if isinstance(box, dict) and isinstance(box.get("excludedCommands"), list):
+            for e in box["excludedCommands"]:
+                # Held where a thread's worktree sees it too, when a file other than the local
+                # one holds it: the local one is not in a thread's worktree.
+                if str(e) not in excluded or excluded[str(e)].name == "settings.local.json":
+                    excluded[str(e)] = f
 
     def where(key: str) -> str:
         if key not in found:
@@ -2286,6 +2795,23 @@ def cmd_doctor(p: Project, args) -> int:
          + ("stops" if found.get("unavailable", (None,))[0] is True else "runs Bash with none")
          + f"{where('unavailable')}: `sandbox.failIfUnavailable: true` is recommended",
          needed=False)
+    out_of_box = [e for e in SANDBOX_EXCLUDED if e in excluded]
+    both = " and ".join(f"`{e}`" for e in SANDBOX_EXCLUDED)
+    whole = len(out_of_box) == len(SANDBOX_EXCLUDED)
+    local_only = bool(out_of_box) and all(excluded[e].name == "settings.local.json"
+                                          for e in out_of_box)
+    held_in = ", ".join(sorted({str(excluded[e]) for e in out_of_box}))
+    if whole:
+        said = (f"the reservation leaves the sandbox: {both} are in `sandbox.excludedCommands` "
+                f"({held_in}" + (", which a thread's worktree does not have" if local_only
+                                  else "") + ")")
+    else:
+        said = (("the reservation stays in the sandbox, where `reserve` and `renumber` are then "
+                 "lines to paste" if found.get("sandbox", (None,))[0] is True else
+                 "with no sandbox declared, `reserve` and `renumber` run as any command")
+                + f": {both} in `sandbox.excludedCommands` are recommended"
+                + (f", and only `{out_of_box[0]}` is there ({held_in})" if out_of_box else ""))
+    line(whole, said, needed=False)
     line(found.get("bypass", (None,))[0] == "disable", "the mode that skips the permissions is "
          + ("disabled" if found.get("bypass", (None,))[0] == "disable" else "not disabled")
          + f"{where('bypass')}: `permissions.disableBypassPermissionsMode: disable` is recommended",
@@ -2405,6 +2931,18 @@ def main() -> int:
                                     "whole")
     o.add_argument("--no-worktree", action="store_true")
 
+    mt = sub.add_parser("meetings", help="at a join, offline: one card for each place two of "
+                                         "the threads merged meet, written in --out")
+    mt.add_argument("--out", type=Path, required=True,
+                    help="where the cards go, outside the repository: the session's scratchpad")
+
+    rn = sub.add_parser("renumber", help="give an identifier this branch created the next "
+                                         "number, reserved, and rewrite it where the branch "
+                                         "names it")
+    rn.add_argument("ident", help="as `DEC-012`, or `atlas:RSK-012` for a family numbered per "
+                                  "product")
+    rn.add_argument("--who", required=True)
+
     r = sub.add_parser("reserve", help="reserve the next numbers of an identifier family")
     r.add_argument("prefix")
     r.add_argument("--who", required=True)
@@ -2455,7 +2993,9 @@ def main() -> int:
 
     args = ap.parse_args()
     p = Project(args)
-    return {"open": cmd_open, "reserve": cmd_reserve, "list": cmd_list, "check": cmd_check,
+    return {"open": cmd_open, "reserve": cmd_reserve, "renumber": cmd_renumber,
+            "meetings": cmd_meetings,
+            "list": cmd_list, "check": cmd_check,
             "release": cmd_release, "sync": cmd_sync, "delegate": cmd_delegate,
             "revoke": cmd_revoke, "join": cmd_join, "doctor": cmd_doctor}[args.command](p, args)
 

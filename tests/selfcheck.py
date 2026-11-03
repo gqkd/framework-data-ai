@@ -9577,6 +9577,85 @@ def _work_sync_shared_branch():
     return problems
 
 
+@check("work.py renumber gives a number the branch created the next one, reserved, renames and rewrites it where the branch names it, and sync merges after it")
+def _work_renumber():
+    # The skill of whoever holds the branch runs it as soon as a number turns out to be taken:
+    # no step by hand. Only what the branch changed can name a number it created.
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        _, a, _ = _work_origin(Path(tmp))
+        _work(a, "open", "--who", "Owner", "--branch", "od-001", "OD-001")
+        tree = a.parent / "docs--od-001"
+        (tree / "decisions").mkdir(exist_ok=True)
+        (tree / "decisions" / "DEC-020-here.md").write_text(_decision("DEC-020", "OD-001"))
+        register = tree / "OPEN.md"
+        register.write_text(register.read_text() + "\nDEC-020 answers OD-001; DEC-0201 is "
+                            "another number.\n")
+        # What a thread keeps beside the documents: the choices rewritten, the review's log,
+        # which is appended to, left and named.
+        kept = tree / "_filoni" / "od-001"
+        kept.mkdir(parents=True)
+        (kept / "scelte.md").write_text(
+            "| Scelta | Preso | Alternative | Perché |\n|---|---|---|---|\n"
+            "| il numero | DEC-020 | nessuna | w |\n", encoding="utf-8")
+        (kept / "revisione.md").write_text("# Revisione\n\nDEC-020: nothing to object.\n")
+        _commit_all(tree, "DEC-020 here")
+        m = Path(tmp) / "m"
+        subprocess.run(["git", "clone", "-q", str(Path(tmp) / "origin.git"), str(m)], check=True,
+                       env={**os.environ, **_WORK_ENV})
+        (m / "decisions").mkdir()
+        (m / "decisions" / "DEC-020.md").write_text(_decision("DEC-020", "OD-002"))
+        _commit_all(m, "main creates DEC-020")
+        _g(m, "push", "-q", "origin", "main")
+        rc, out = _work(tree, "sync")
+        if rc != 1 or "both created DEC-020" not in out:
+            return [f"the collision to renumber was not met (exit {rc}): {out[-200:]}"]
+        rc, out = _work(tree, "renumber", "--who", "Owner", "OD-001")
+        if rc != 2 or "was not created" not in out:
+            problems.append(f"renumber of a number the main line declares was not refused "
+                            f"(exit {rc}): {out[-200:]}")
+        loose = tree / "loose.md"
+        loose.write_text("DEC-020, not committed.\n")
+        rc, out = _work(tree, "renumber", "--who", "Owner", "DEC-020")
+        if rc != 2 or "files git does not track" not in out:
+            problems.append(f"renumber with a file git does not track was not refused before "
+                            f"reserving (exit {rc}): {out[-200:]}")
+        loose.unlink()
+        rc, out = _work(tree, "renumber", "--who", "Owner", "DEC-020")
+        moved = tree / "decisions" / "DEC-021-here.md"
+        text = register.read_text()
+        if rc != 0 or not moved.is_file() or (tree / "decisions" / "DEC-020-here.md").exists() \
+                or "id: DEC-021" not in moved.read_text():
+            problems.append(f"renumber exited {rc}, or did not rename the decision and its id: "
+                            f"{out[-300:]}")
+        if "DEC-021 answers OD-001" not in text or "DEC-0201" not in text:
+            problems.append(f"the register's mention was not rewritten, or a longer number was: "
+                            f"{text[-120:]!r}")
+        if not _g(a, "ls-remote", "origin", "refs/tags/id/DEC-021").stdout.strip():
+            problems.append("DEC-021 was not reserved on the remote before it was written")
+        subject = _g(tree, "log", "-1", "--format=%s").stdout.strip()
+        if subject != "Renumber DEC-020 as DEC-021" or _g(tree, "status", "--porcelain").stdout:
+            problems.append(f"the renumbering is not a commit of its own, all of it: {subject!r}")
+        choices = (kept / "scelte.md").read_text(encoding="utf-8")
+        log = (kept / "revisione.md").read_text(encoding="utf-8")
+        if "DEC-021" not in choices or "DEC-020" in choices or "DEC-020" not in log \
+                or "_filoni/od-001/revisione.md" not in out:
+            problems.append(f"renumber did not rewrite `scelte.md`, or rewrote `revisione.md` or "
+                            f"did not name it: {choices!r} {log!r} {out[-300:]}")
+        if "The branch was not pushed" not in out or "id/DEC-021" not in out:
+            problems.append(f"renumber did not say that it pushed only the reservation: "
+                            f"{out[-200:]}")
+        # DEC-021 is reserved for this branch and the main line does not have it: not taken.
+        rc, out = _work(tree, "renumber", "--who", "Owner", "DEC-021")
+        if rc != 2 or "is not taken" not in out:
+            problems.append(f"renumber of a number that is not taken was not refused "
+                            f"(exit {rc}): {out[-200:]}")
+        rc, out = _work(tree, "sync")
+        if rc != 0:
+            problems.append(f"sync after the renumbering exited {rc}: {out[-200:]}")
+    return problems
+
+
 @check("work.py says which refusal it met, and the CI script tells a new error from a standing one")
 def _work_refusals_and_ci_comparison():
     problems = []
@@ -11640,6 +11719,45 @@ def _join_lands_threads():
             problems.append(f"before merging, the join asked to anchor a new entry parked or "
                             f"closed on the thread ({quiet_kis}, two expected), or did not show "
                             f"the line of `scelte.md` that does not read: {out[:1200]!r}")
+        # The meetings, the cards the skill reads at step 2 and hands to the review: the two
+        # threads on products/a/OPEN.md#KI-002, each with who holds it, the commit, the day and
+        # its `Perché:`; a cascade written at this join in a commit of its own, on a document an
+        # effect is on. Written outside the repository only, and nothing in it moved.
+        cards = Path(tmp) / "cards"
+        stamp = r", [0-9a-f]{12}, \d{4}-\d\d-\d\d\n"
+        rc, out = _work(join, "meetings", "--out", str(join / "cards"))
+        if rc != 2 or "inside the repository" not in out:
+            problems.append(f"meetings wrote its cards inside the repository (exit {rc}): "
+                            f"{out[-200:]}")
+        register = join / "products" / "a" / "OPEN.md"
+        register.write_text(register.read_text() + "\nWritten by the cascade.\n")
+        _g(join, "commit", "-qam", "join: the cascade of DEC-900")
+        rc, out = _work(join, "meetings", "--out", str(cards))
+        said = "\n".join(c.read_text() for c in sorted(cards.glob("incontro-*.md")))
+        if rc or "1 meetings" not in out or "`products/a/OPEN.md#KI-002`" not in said \
+                or not re.search(r"## work/a-od-001 -- held by Owner" + stamp, said) \
+                or not re.search(r"## work/a-ki-002 -- held by Junior" + stamp, said) \
+                or "Perché: w" not in said \
+                or "## The cascade of DEC-900" not in said \
+                or _g(join, "status", "--porcelain").stdout.strip():
+            problems.append(f"meetings did not write the card of the two threads and the "
+                            f"cascade on one document (exit {rc}): {out[-300:]} {said[:600]!r}")
+        _g(join, "reset", "-q", "--hard", "HEAD~1")
+        # A cascade that moves one row of `entries:` is on that entry, not on the whole register.
+        text = register.read_text()
+        if "\n  KI-002:\n" in text:
+            register.write_text(text.replace("\n  KI-002:\n", "\n  KI-002:\n    note: moved\n", 1))
+            _g(join, "commit", "-qam", "join: the cascade of DEC-901")
+            rc, out = _work(join, "meetings", "--out", str(cards))
+            said = "\n".join(c.read_text() for c in sorted(cards.glob("incontro-*.md")))
+            if rc or "Changes `products/a/OPEN.md#KI-002`" not in said \
+                    or "Changes `products/a/OPEN.md`:" in said:
+                problems.append(f"a cascade on the row of KI-002 was not read as on that entry "
+                                f"alone (exit {rc}): {out[-300:]} {said[:600]!r}")
+            _g(join, "reset", "-q", "--hard", "HEAD~1")
+        else:
+            problems.append(f"the register on the join's branch has no row KI-002 for a cascade "
+                            f"to move: {text[:300]!r}")
         # A thread that moves after the join merged it is kept, with its claims.
         ki = a.parent / "docs--a-ki-002"
         (ki / "after.md").write_text("x\n")
@@ -11771,6 +11889,93 @@ def _join_lands_threads():
         if got != ["products/parcheggio-auto/product.yaml", "products/parcheggio/product.yaml"]:
             problems.append(f"XP009 at {got}: on `parcheggio` and `parcheggio-auto`, not on "
                             "`parcheggiometro`")
+    return problems
+
+
+@check("join leaves out a thread whose new number has no reservation of its own, and a merged thread's number is never renumbered at the join")
+def _join_unreserved_thread():
+    # `join` refuses before merging, as it refuses a number both created, a thread that
+    # wrote a number nobody reserved for it -- `BR003` once merged, which nothing on the join's
+    # branch could correct. The join goes on without it; a thread merged keeps its numbers, and
+    # `renumber` on the join's branch sends that case to whoever decides.
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        origin = tmp / "origin.git"
+        subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(origin)], check=True,
+                       env={**os.environ, **_WORK_ENV})
+        seed = _Repo(tmp / "seed")
+        seed.write(".framework/work.yaml",
+                   "mode: additive\npeople: [Owner, Junior]\nadmins: [Owner]\n")
+        seed.write(".framework/sessions.yaml", "exchange: ../_scambio\n")
+        seed.write("products/a/OPEN.md", _register({
+            "KI-002": {"status": "open", "affects": "[products/a/OPEN.md#KI-002]"},
+            "KI-005": {"status": "open", "affects": "[products/a/OPEN.md#KI-005]"}}))
+        seed.commit("base", "2026-06-01T09:00:00+02:00")
+        seed.git("remote", "add", "origin", str(origin))
+        seed.git("push", "-q", "origin", "main")
+        a = tmp / "projects" / "docs"
+        a.parent.mkdir()
+        subprocess.run(["git", "clone", "-q", str(origin), str(a)], check=True,
+                       env={**os.environ, **_WORK_ENV})
+        reserved = ""
+        for thread, entry in (("a-ki-002", "KI-002"), ("a-ki-005", "KI-005")):
+            rc, out = _work(a, "open", "--who", "Junior", "--thread", thread)
+            tree = a.parent / f"docs--{thread}"
+            if rc or not tree.is_dir():
+                problems.append(f"{thread} not opened (exit {rc}): {out[-200:]!r}")
+                return problems
+            if entry == "KI-002":
+                new = "KI-009"           # written by hand, with no reservation
+            else:
+                rc, out = _work(tree, "reserve", "KI", "--who", "Junior")
+                m = re.search(r"Reserved: (KI-\d+)", out)
+                if not m:
+                    problems.append(f"no KI reserved on {thread}: {out[-200:]!r}")
+                    return problems
+                new = reserved = m.group(1)
+            reg = tree / "products" / "a" / "OPEN.md"
+            text = reg.read_text().replace(f"  {entry}:\n    status: open",
+                                           f"  {entry}:\n    status: decided")
+            text = text.replace("---\n\n# Open", f"  {new}:\n    status: open\n    affects: "
+                                f"[products/a/OPEN.md#{new}]\n---\n\n# Open", 1)
+            reg.write_text(text + f"### {new} · new\n\n")
+            _commit_all(tree, f"{entry} closed")
+            _g(tree, "push", "-q", "origin", f"work/{thread}")
+
+        # On the thread, `check` says it, and past the cut of its messages the way out.
+        rc, out = _work(a.parent / "docs--a-ki-002", "check")
+        if rc != 1 or "BR003 products/a/OPEN.md" not in out \
+                or "`work.py renumber <ID>` gives it the next one, reserved." not in out:
+            problems.append(f"check on a thread with a number nobody reserved (exit {rc}): "
+                            f"{out[-500:]!r}")
+        rc, out = _work(a, "join", "--who", "Owner")
+        merged = _g(a, "log", "--merges", "--format=%B", "origin/main..work/ricongiungimento-1",
+                    ok=False).stdout
+        if rc != 1 or "Not merged: work/a-ki-002 created KI-009 with no reservation of its " \
+                "own" not in out or "waits for a later join" not in out \
+                or "`join --who \"Owner\" a-ki-005`" not in out \
+                or "joined: work/a-ki-002" in merged:
+            problems.append(f"a thread with a number nobody reserved for it was not left out "
+                            f"before merging (exit {rc}): {out[-500:]!r}")
+        rc, out = _work(a, "join", "--who", "Owner", "a-ki-005")
+        merged = _g(a, "log", "--merges", "--format=%B", "origin/main..work/ricongiungimento-1",
+                    ok=False).stdout
+        if rc or "joined: work/a-ki-005" not in merged or "joined: work/a-ki-002" in merged:
+            problems.append(f"the join did not go on without the thread left out (exit {rc}): "
+                            f"{out[-400:]!r}")
+        join = a.parent / "docs--ricongiungimento-1"
+        if not join.is_dir():
+            problems.append("no worktree for the join")
+            return problems
+        rc, out = _work(join, "renumber", reserved, "--who", "Owner")
+        if rc != 2 or f"{reserved} comes from work/a-ki-005, which this join merged" not in out \
+                or "never renumbered at the join" not in out or "`join --abandon`" not in out:
+            problems.append(f"renumber on the join's branch, of a number a merged thread "
+                            f"created: exit {rc}: {out[-400:]!r}")
+        if _g(a, "ls-remote", "--tags", "--refs", "origin", "refs/tags/id/KI-*",
+              ok=False).stdout.count("refs/tags/id/KI-") != 1:
+            problems.append("renumber refused at the join reserved a number all the same")
     return problems
 
 
@@ -12209,6 +12414,12 @@ def _doctor_reads_a_machine():
     migrate = _load(ROOT / "skills" / "audit" / "scripts" / "migrate.py", "migrate_for_doctor")
     work = _load(WORK, "work_for_doctor")
     pin = REGISTRY["version"]
+    # The entries `doctor` looks for are those the recommended block writes, and no others.
+    block = (ROOT / "references" / "workstation.md").read_text(encoding="utf-8")
+    listed = re.search(r'"excludedCommands": (\[[^\]]*\])', block)
+    if not listed or json.loads(listed.group(1)) != list(work.SANDBOX_EXCLUDED):
+        problems.append(f"work.SANDBOX_EXCLUDED is not the `excludedCommands` of the block in "
+                        f"references/workstation.md: {listed.group(1) if listed else 'none'}")
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
         repo = _Repo(tmp / "projects" / "docs")
@@ -12241,7 +12452,8 @@ def _doctor_reads_a_machine():
         env = {"PATH": f"{bin_}{os.pathsep}{os.environ.get('PATH', '')}",
                "CLAUDE_CONFIG_DIR": str(config)}
         good = {"sandbox": {"enabled": True, "allowUnsandboxedCommands": False,
-                            "failIfUnavailable": True},
+                            "failIfUnavailable": True,
+                            "excludedCommands": list(work.SANDBOX_EXCLUDED)},
                 "permissions": {"disableBypassPermissionsMode": "disable"}}
         claude(f"framework-data-ai {pin}\\n\\nComponent inventory\\n  Hooks (2)\\n")
         settings(config / "settings.json", good)
@@ -12252,7 +12464,7 @@ def _doctor_reads_a_machine():
         rc, out = run("--who", "Owner")
         compared = ("branches.yml is the one of" in out) if sha else ("cannot be compared" in out)
         if rc or "todo" in out or not compared or "the Bash sandbox is declared" not in out \
-                or "brings 2 hook(s)" not in out:
+                or "brings 2 hook(s)" not in out or "the reservation leaves the sandbox" not in out:
             problems.append(f"a machine with everything: exit {rc}, {out[-600:]!r}")
         # One fault at a time, each with the exit code it owes: 0 for a note, 1 for a todo.
         local = repo.path / ".claude" / "settings.local.json"
@@ -12261,6 +12473,11 @@ def _doctor_reads_a_machine():
             ("no sandbox, user settings overridden by the project's local ones",
              lambda: settings(local, {"sandbox": {"enabled": False}}), lambda: settings(local, None),
              0, "the Bash sandbox is not declared"),
+            ("the reservation not let out of the sandbox, one entry of two",
+             lambda: settings(config / "settings.json", {**good, "sandbox": {
+                 **good["sandbox"], "excludedCommands": [work.SANDBOX_EXCLUDED[0]]}}),
+             lambda: settings(config / "settings.json", good), 0,
+             f"are recommended, and only `{work.SANDBOX_EXCLUDED[0]}` is there"),
             ("a plugin newer than the pin", lambda: claude("framework-data-ai 99.0.0\\n  Hooks (2)\\n"),
              None, 0, "note  the plugin installed is 99.0.0"),
             ("a plugin older than the pin, no hooks", lambda: claude("framework-data-ai 0.0.1\\n  Hooks (0)\\n"),

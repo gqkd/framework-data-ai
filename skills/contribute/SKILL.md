@@ -146,18 +146,23 @@ refuses a tree with changes. `check` alone, which runs under the sandbox too, is
 repeated between two pushes. On a thread nothing else runs the checks of the branches: there is
 no pull request. `BR005` is a
 living document changed in a way that is not additive -- move the change into an effect --;
-`BR001` and `BR003` are numbers, and `BR002` a decision on an entry the main line has closed,
-as `audit` says; `BR006` a mandate withdrawn or its forecast moved off a join -- take it out
-and propose it, a withdrawal as a `DEC` `proposed`, a forecast on a parking line --, or, from
-4.12.0 pinned, one brought back out of `withdrawn`, which stays withdrawn: a new `CHG` carries
-what it would have done; `EFF001` is an effects file that does not read, `EFF002` a choices
-file, `AFF001` an anchor that does not exist. Where the project asks for `require_all`, from
-4.12.0 pinned, or no version that reads, the only `AN003` on a thread is on `EXC005` or `EXC006`,
-which can say an exposure on this machine the join never sees: the annotation is the join's to
-write, so the way out is the repair of what each finding names, on this machine -- a copy of
-credentials into the session's scratchpad, a value out of the list, the exchange moved out of a
-git repository with its folders. The `exchange:` line of `.framework/sessions.yaml` is every
-machine's: a change to it is brought to the join, not made on the thread.
+`BR001` and `BR003` are numbers -- renumbered by you, without asking, since a number is form:
+`python3 <F>/work.py --root <thread worktree> renumber <ID> --who "<name>"`, with `<F>` the
+absolute path `$F` holds written out and the call alone, as the sandbox's settings let it out
+(`references/workstation.md`), said in your last answer; `sync` refusing a number both sides
+created is the same --, and `BR002` a decision on
+an entry the main line has closed, as `audit` says; `BR006` a mandate withdrawn or its forecast
+moved off a join -- take it out and propose it, a withdrawal as a `DEC` `proposed`, a forecast
+on a parking line --, or, from 4.12.0 pinned, one brought back out of `withdrawn`, which stays
+withdrawn: a new `CHG` carries what it would have done; `EFF001` is an effects file that does
+not read, `EFF002` a choices file, `AFF001` an anchor that does not exist. Where the project
+asks for `require_all`, from 4.12.0 pinned, or no version that reads, the only `AN003` on a
+thread is on `EXC005` or `EXC006`, which can say an exposure on this machine the join never sees:
+the annotation is the join's to write, so the way out is the repair of what each finding names, on
+this machine -- a copy of credentials into the session's scratchpad, a value out of the list, the
+exchange moved out of a git repository with its folders. The `exchange:` line of
+`.framework/sessions.yaml` is every machine's: a change to it is brought to the join, not made on
+the thread.
 Then the review the preamble asks for, on the diff of the
 branch against `origin/main`, effects included, with `_filoni/<slug>/revisione.md` as its log:
 one pass, where the project pins 4.12.0 or later, or no version that reads, and the substance it
@@ -198,9 +203,11 @@ answers only what is theirs -- the approvals, a conflict, the choices of form, t
 anchor, which mandates no thread holds have their code merged, the stages of a roadmap -- and
 gives the yes that lands it. Without the sandbox you run every command below, `--merge` only
 after that yes. With it, the commands that reach the remote or write beside the repository --
-`join` and its `--finish`, `--merge`, `--close` and `--abandon`, `sync`, `reserve` -- are the
-person's: give each as a line ready to paste and wait for them to say it ran
-(`references/workstation.md`); once the join is open, have the work go on in a session started
+`join` and its `--finish`, `--merge`, `--close` and `--abandon`, `sync` -- are the person's:
+give each as a line ready to paste and wait for them to say it ran
+(`references/workstation.md`); `reserve` and `renumber` stay yours, each run alone with the
+absolute path, where the settings let them out of the sandbox, and a line to paste where it
+stops one anyway; once the join is open, have the work go on in a session started
 in its worktree, as for a thread, since the views and an adoption are written there. Where the
 project pins a version before 4.12.0, the acts of step 5 are written at step 2 with the texts,
 step 3 is skipped, and the review reads them committed.
@@ -214,7 +221,17 @@ step 3 is skipped, and the review reads them committed.
    branches find on each, with the to-do's whole list to anchor first, then merges the threads
    one by one, in the same run. Read what it showed to the person before anything else: it is
    to be judged, not filtered. A thread that should not land is dropped by `join --abandon` and
-   a new `join` naming the threads to keep. A conflict it leaves is two texts of which one
+   a new `join` naming the threads to keep. A thread that creates a number the join already
+   created, or one with no reservation of its own -- written with none, or reserved for another
+   branch --, stops `join` before it is merged: run `join` again, naming the threads still to
+   merge without it, and say that it waits for a later join. The skill of whoever holds it
+   renumbers it at their next session, where `BR003` shows it once the reservations are
+   fetched -- reserved for another branch, or for none --; nobody else writes on that branch.
+   If the thread holds the reservation instead, the copy to renumber is the one the join wrote
+   itself, which `--finish` shows as `BR003`. A number a merged thread created is never
+   renumbered at the join: one found wrong after the merge -- `BR001` or `BR003` at `--finish`,
+   `sync` refusing it -- is for whoever decides, who abandons the join (`join --abandon`) and
+   opens it again without that thread. A conflict it leaves is two texts of which one
    holds: show both, and ask whoever decides that matter. `--no-threads` opens a join with no
    thread, for what is written only on a join's branch: `.framework/work.yaml`, an adoption,
    the contribution policy, annotations, and what only those who decide write -- a release, a
@@ -230,8 +247,15 @@ step 3 is skipped, and the review reads them committed.
    effect does not say but the cascade of a decision whoever decides means to accept -- the
    entry moved, the documents it obliges --; those a thread drew from a delivery without
    asking, from 4.12.0 pinned, or no version that reads, are read beside its
-   `_filoni/<slug>/consegne/<CHG>/documentazione.md`. Two effects on one target from two
-   threads that contradict each other are put to the person, with both. Confirm or change, with
+   `_filoni/<slug>/consegne/<CHG>/documentazione.md`. Where two threads meet, the cards say it:
+   `python3 "$F/work.py" --root <join worktree> meetings --out <your scratchpad>/incontri`, once
+   the threads are merged and again once the cascades are committed, writes one for each place
+   two threads, or a thread and a cascade, meet -- one target, or one section inside another;
+   an entry whose state two threads changed; two elements two threads created from the same
+   one --, each text with its thread, who holds it, the commit, the day, `Da:` and `Perché:`.
+   Two texts that say the same become one, and you say so; two that differ are put to the
+   person, each with where it comes from, asking which holds; the cards go to the review
+   (step 4). Confirm or change, with
    the person, the choices of form the threads took by default, which `join` showed -- a change
    is written here, as an edit of what the thread wrote --; carry a delivered contribution
    policy into `.framework/`; sort the parking lot; write the text of a release, and the `EVR`
@@ -276,8 +300,9 @@ step 3 is skipped, and the review reads them committed.
    version that reads, whole, on the diff of the join's branch against `origin/main`:
    everything the threads bring and what the join writes, the living documents rewritten
    included, and a join that brings only states reviewed too --, with the outcome of the
-   rehearsal, the log of each thread and parking branch merged, `_filoni/<slug>/revisione.md`
-   in the join's worktree, whose substance left open is reviewed again against that diff, and
+   rehearsal, the folder of the meeting cards, the log of each thread and parking branch
+   merged, `_filoni/<slug>/revisione.md` in the join's worktree, whose substance left open is
+   reviewed again against that diff, and
    each delivery a thread drew effects from without asking,
    `_filoni/<slug>/consegne/<CHG>/documentazione.md`, beside which those effects and what the
    join rewrote from them are read. A substance objection is settled by whoever decides: the

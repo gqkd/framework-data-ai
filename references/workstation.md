@@ -115,7 +115,8 @@ project:
     "enabled": true,
     "allowUnsandboxedCommands": false,
     "failIfUnavailable": true,
-    "filesystem": { "allowWrite": ["/absolute/path/to/<parent>/_scambio"] }
+    "filesystem": { "allowWrite": ["/absolute/path/to/<parent>/_scambio"] },
+    "excludedCommands": ["python3 *work.py* reserve *", "python3 *work.py* renumber *"]
   },
   "permissions": { "disableBypassPermissionsMode": "disable" }
 }
@@ -127,21 +128,39 @@ none, which is what happens on Linux and WSL2 without `bubblewrap` and `socat`;
 `disableBypassPermissionsMode` takes away the mode that answers every question yes. `/sandbox`
 in a session shows whether it is active and what it is missing.
 
-What it lets Bash write, by Claude Code's documentation: the folder the session started in and
-what is below it, `$TMPDIR`, the directories added with `--add-dir` or
-`permissions.additionalDirectories`, those in `allowWrite`, and the shared `.git` of the
-repository a worktree belongs to, but for its `hooks/` and `config`: by that, a commit in a
-thread's worktree succeeds, where the plan of this version had assumed it would not. What it does
-not let through, with this configuration and no network allowed: `work.py open` and `join`,
-which create a worktree beside the repository, in the parent folder; a push and a fetch -- `work.py
-list`, `reserve`, `sync`, `release`, `delegate`, `revoke` and the steps of `join` that reach the
-remote --, which need the network or, for a remote on disk, a folder outside the repository. Those
-are the person's to run, and the `contribute` skill says so rather than retrying them. `work.py
-check` reaches no remote: it writes in the worktree, in `$TMPDIR` and in the shared `.git`, so by
-the same documentation it passes, and the agent runs it. **None of
-this has been tried yet on a machine with the sandbox active**: it is what the documentation
-says, and the trial on worktrees, git and the network comes before the sandbox is required, in
-a later version.
+`excludedCommands`, from 4.12.0, lets two commands out of the sandbox: the reservation of a
+number and the renumbering, which reserves one first, so that writing an identifier needs no
+line pasted by the person. By Claude Code's documentation an entry is matched on the text of
+the call, with the syntax of a `Bash(...)` rule, where a `*` stands for any text -- the plugin's
+path included, whatever it is on the machine --; the call has to be that command alone, since a
+`cd`, a redirect or a `$(...)` keeps the whole of it inside, so the agent runs it with the
+absolute path written out, not through a shell variable, and nothing around it. A command let
+out has the person's whole access, and asks for permission as any other: `reserve` fetches and
+pushes one tag, `id/<ID>`; `renumber` does the same, then writes and commits in the worktree it
+runs in. The match is on the text alone, so any `python3` call whose text holds `work.py` and
+then ` reserve ` or ` renumber ` is let out as well: what guards those calls is that prompt,
+which is to be answered on the command it shows. Every other command stays inside, and its
+pushes and fetches are the person's. Where the entries are missing, or the sandbox stops a
+command anyway, the skill gives the line to paste, as before. `work.py doctor` says whether the
+settings files hold both.
+
+What it lets Bash write, by Claude Code's documentation: the folder the session started in and what
+is below it, `$TMPDIR`, the directories added with `--add-dir` or
+`permissions.additionalDirectories`, those in `allowWrite`, and the shared `.git` of the repository
+a worktree belongs to, but for its `hooks/` and `config`: by that, a commit in a thread's worktree
+succeeds, where the plan of this version had assumed it would not. What it does not let through,
+with this configuration and no network allowed: `work.py open` and `join`, which create a worktree
+beside the repository, in the parent folder; a push and a fetch -- `work.py list`, `sync`,
+`release`, `delegate`, `revoke` and the steps of `join` that reach the remote --, which need the
+network or, for a remote on disk, a folder outside the repository. Those are the person's to run,
+and the `contribute` skill says so rather than retrying them; `reserve` and `renumber` are let out,
+above. `work.py check` reaches no remote: it writes in the worktree, in `$TMPDIR` and in the shared
+`.git`, so by the same documentation it passes, and the agent runs it. `work.py meetings` reaches no
+remote either; it writes in `$TMPDIR` while it reads the threads, and its cards in the folder
+`--out` names: given one the sandbox lets Bash write -- `$TMPDIR` or a folder below it --, it
+passes too. **None of this has been tried yet on a machine with the sandbox active**, the two
+commands let out included: it is what the documentation says, and the trial on worktrees, git and
+the network comes before the sandbox is required, in a later version.
 
 ## Where an agent writes, and why
 

@@ -4567,6 +4567,26 @@ def check_branch(root: Path, base: str, arts: list[Artifact], registry: dict, sc
         scope, ident = key
         return ident if scope == "*" else f"{ident} ({scope.removeprefix('product:')})"
 
+    def written(key: tuple[str, str]) -> str:
+        # As `work.py renumber` takes it: bare, or `<product>:<ID>` for a family per product.
+        scope, ident = key
+        return ident if scope == "*" else f"{scope.removeprefix('product:')}:{ident}"
+
+    # Whose branch this is, for the reservations and the threads: the branch checked out, or in
+    # a pull request job, where the checkout is detached, the head the host names.
+    current = _git(["rev-parse", "--abbrev-ref", "HEAD"], root)
+    branch = current.stdout.strip() if current is not None and current.returncode == 0 else ""
+    if branch in ("", "HEAD"):
+        branch = os.environ.get("GITHUB_HEAD_REF", "")
+    prefix = str((work or {}).get("branch_prefix") or "work/")
+    on_join = (work is not None and branch.startswith(prefix)
+               and branch[len(prefix):].startswith(_branches.JOIN))
+    # On a join's branch, what `work.py renumber` refuses there, and what is done instead.
+    at_join = (" On a join's branch only a number the join itself wrote is renumbered: one a "
+               "thread it merged created is for whoever decides, who abandons the join "
+               "(`work.py join --abandon`) and opens it again without that thread."
+               if on_join else "")
+
     mine = {k for k in head.ids() - start if id_form.fullmatch(k[1])}
     for key in sorted(mine & main.ids()):
         report.add("BR001", where(key),
@@ -4574,8 +4594,9 @@ def check_branch(root: Path, base: str, arts: list[Artifact], registry: dict, sc
                    f"the main line, and {base} declares it as well, in "
                    f"{', '.join(main.declared[key])}. Two things now carry one name. Renumber "
                    "the one this branch created before it lands -- it is cited only in this "
-                   "branch's files -- and reserve the new number with `work.py reserve`, "
-                   "which is how two branches stop computing the same next number.")
+                   f"branch's files --: `work.py renumber {written(key)}` reserves the next "
+                   "number, renames and rewrites it where the branch names it, and commits."
+                   + at_join)
 
     for rel, dec in sorted(head.decisions.items()):
         if rel in main.decisions or dec.meta.get("status") == "superseded":
@@ -4604,20 +4625,12 @@ def check_branch(root: Path, base: str, arts: list[Artifact], registry: dict, sc
 
     check_approvers(root, bases, before, head, report)
 
-    # Whose branch this is, for the reservations and the threads: the branch checked out, or in
-    # a pull request job, where the checkout is detached, the head the host names.
-    current = _git(["rev-parse", "--abbrev-ref", "HEAD"], root)
-    branch = current.stdout.strip() if current is not None and current.returncode == 0 else ""
-    if branch in ("", "HEAD"):
-        branch = os.environ.get("GITHUB_HEAD_REF", "")
     check_additive(root, bases, before, head, branch, report)
     check_mandate_moves(root, tip, bases, before, head, branch, report, project)
 
     if work is None:
         return
     # On the branch of a join, the threads it merged: their numbers were reserved for them.
-    prefix = str(work.get("branch_prefix") or "work/")
-    on_join = branch.startswith(prefix) and branch[len(prefix):].startswith(_branches.JOIN)
     log = _git(["log", "--merges", "--format=%B", f"{tip}..HEAD"], root) if on_join else None
     joined = {line[len(_branches.JOINED):].split()[0]
               for line in (log.stdout if log is not None and log.returncode == 0 else "").splitlines()
@@ -4636,7 +4649,10 @@ def check_branch(root: Path, base: str, arts: list[Artifact], registry: dict, sc
                        f"project declares {_branches.WORK}, so every new number is reserved "
                        "before it is written, and git refuses a second tag with the same name, "
                        "which is what keeps two branches off one number. If it was reserved, "
-                       "fetch the reservations: `git fetch origin '+refs/tags/id/*:refs/tags/id/*'`.")
+                       "fetch the reservations: "
+                       "`git fetch origin '+refs/tags/id/*:refs/tags/id/*'`; if it was not, "
+                       f"`work.py renumber {written(key)}` gives it the next number, reserved."
+                       + at_join)
             continue
         held = _git(["for-each-ref", "--format=%(contents)", ref], root)
         owner = _branches.message_fields(held.stdout if held is not None else "").get("branch")
@@ -4648,7 +4664,8 @@ def check_branch(root: Path, base: str, arts: list[Artifact], registry: dict, sc
                        f"made for {owner or 'no branch it names'}. The number is somebody "
                        "else's, or nobody's: the likeliest way two branches meet on one number "
                        "is the second writing the next free one while the first holds it. "
-                       "Reserve a number of your own, from this branch, and renumber.")
+                       f"`work.py renumber {written(key)}` reserves one of this branch's own "
+                       "and renumbers." + at_join)
 
 
 # Where a change has gone once it is no longer only approved: carried out, verified, taken out

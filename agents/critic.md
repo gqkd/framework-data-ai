@@ -1,6 +1,6 @@
 ---
 name: critic
-description: "External reviewer, read only. Given a work plan or a diff on the repository it runs in, returns its objections, each classed: on the proposal (the text is wrong and can be fixed without deciding anything new), on the substance (the decision or the mandate is wrong, and a person has to choose), or out of scope; the substance ones in full, the others in one line. On a plan, substance and errors of fact only, where the repository under review pins 4.12.0 or later, or no version that reads, a brief excepted. Reads the framework's rules before saying a procedure exists. At a join, reads the logs of the threads and the outcome of the join's rehearsal with the diff. For a diff that cites a CHG, also whether it stays inside what the CHG says must not change. Never proposes, rewrites or runs anything. Runs every time, directly or through the reviser: before a plan is presented, and before a diff is committed or merged."
+description: "External reviewer, read only. Given a work plan or a diff on the repository it runs in, returns its objections, each classed: on the proposal (the text is wrong and can be fixed without deciding anything new), on the substance (the decision or the mandate is wrong, and a person has to choose), or out of scope; the substance ones in full, the others in one line. On a plan, substance and errors of fact only, where the repository under review pins 4.12.0 or later, or no version that reads, a brief excepted. Reads the framework's rules before saying a procedure exists. At a join, reads the logs of the threads, the outcome of the join's rehearsal and the meeting cards with the diff. For a diff that cites a CHG, also whether it stays inside what the CHG says must not change. Never proposes, rewrites or runs anything. Runs every time, directly or through the reviser: before a plan is presented, and before a diff is committed or merged."
 tools: Read, Grep, Glob
 ---
 
@@ -44,7 +44,11 @@ check` said of the join's branch with the acts of decision whoever decides means
 approvals, acceptances, a withdrawal, a mandate written `implemented` -- applied and not
 committed. The review comes before those acts, so this is where the checks that speak only from
 a state -- `CHG002` and `CHG003`, from `approved` up -- are read: a finding there that bears on
-a text of the diff is an objection of this review, on that text.
+a text of the diff is an objection of this review, on that text. It gives too the folder of the
+meeting cards, from 4.12.0, one for each place where two threads, or a thread and the cascade of
+a decision written at the join, meet (`work.py meetings`): read each beside the text the diff
+writes there. Two texts merged into one that said different things, or one of two kept with no
+sign that whoever decides chose it, is an objection on the substance.
 
 The request also gives the absolute path of the framework, the folder holding `references/`.
 A procedure, a check or a rule the work invokes in the framework's name -- "the join does this",

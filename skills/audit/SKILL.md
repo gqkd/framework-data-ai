@@ -449,8 +449,11 @@ without claims, other than a parking branch, is an abandoned thread, which no jo
 When `.framework/work.yaml` exists, the documentation is written one piece of work per branch,
 and each branch lands through a pull request. `skills/audit/scripts/work.py` carries the
 mechanics, and none of it is yours to run without the person's word but `reserve`, which the
-skill writing a new identifier runs itself, before writing it, and `check` in the worktree of a
-work branch, which writes there only the views and reaches nothing:
+skill writing a new identifier runs itself, before writing it; `check` in the worktree of a
+work branch, which writes there only the views and reaches nothing; from 4.12.0 `renumber`,
+which the skill of whoever holds a branch runs as soon as a number the branch created is found
+taken, since a number is form; and `meetings`, at a join, which writes its cards in the
+session's scratchpad and nothing in the repository:
 
 ```bash
 W="${CLAUDE_PLUGIN_ROOT:?}/skills/audit/scripts/work.py"
@@ -458,9 +461,15 @@ python3 "$W" --root <project> open --who "<name>" --branch od-042 OD-042   # cla
 python3 "$W" --root <project> reserve DEC --who "<name>"                   # before writing a number
 python3 "$W" --root <project> list                                         # who works on what
 python3 "$W" --root <worktree> check                                       # offline round
+python3 "$W" --root <worktree> renumber DEC-012 --who "<name>"             # a number taken
+python3 "$W" --root <join worktree> meetings --out <scratchpad>/incontri  # where threads meet
 python3 "$W" --root <project> sync                                         # bring the branch up to date
 python3 "$W" --root <project> release OD-042 --who "<name>"                # when the work is over
 ```
+
+With the sandbox, `reserve` and `renumber` are run with `$W` written out, the absolute path of
+`work.py` on this machine, and each call alone, with no assignment before it: that is the text
+the settings let out (`references/workstation.md`).
 
 `--who` is the person's name as they give it; never read it from `git config`. A claim
 refused is an answer, not an obstacle: say who holds it and since when, and let the person
@@ -478,7 +487,9 @@ a session with no work open opens one for it. Bring a branch up to date with `sy
 never with a plain `git merge` or the "Update branch" button of a pull request: those merge
 without refusing a number both sides created. `sync` also brings in, first, commits someone
 pushed to the same work branch from another clone, and refuses there too a number both created:
-after a fast-forward the main line comes in the same run, after a merge on the next one.
+after a fast-forward the main line comes in the same run, after a merge on the next one. A
+number refused is renumbered on this branch, `renumber`, and `sync` run again; on a join's
+branch only a number the join wrote, as below for `BR001`.
 
 `sync` resolves only what is mechanical and stops on content. A file it leaves in conflict is
 two texts of which one holds, and when the text is a decision's, which one holds is for
@@ -499,15 +510,23 @@ python3 "${CLAUDE_PLUGIN_ROOT:?}/skills/audit/scripts/work.py" --root <project> 
 python3 "${CLAUDE_PLUGIN_ROOT:?}/skills/audit/scripts/validate.py" --root <project> --base origin/main
 ```
 
-`BR001` is a number this branch created that the main line has too: renumber this branch's,
-with a new reservation. `BR002` is a decision deciding an entry the main line has already
-closed: put the two decisions side by side for the person, and do not choose. `BR003` is a
-number written without a reservation. `BR006` is a mandate withdrawn, or its forecast moved,
-when or where it may not be: say which of its cases it is, and leave the move to who decides,
-at a join. From 4.12.0 pinned, or no version that reads, it is also a mandate brought back out
-of `withdrawn`: it stays withdrawn, and what it would have done comes back as a new `CHG`,
-deriving from it or from the decision. `ci/branches.yml` runs the same comparison on every pull
-request, and opens an issue for what reaches the main line without one.
+`BR001` is a number this branch created that the main line has too: renumber this branch's, with a
+new reservation -- `work.py renumber <ID>`, which reserves the next number, renames the files that
+carry the old one, rewrites it in what the branch changed, `_filoni/` included, regenerates the
+views and commits, pushing the reservation's tag and not the branch, and says what it could not
+change; run it without asking and say it in your answer. `BR002` is a decision deciding an entry
+the main line has already closed: put the two decisions side by side for the person, and do not
+choose. `BR003` is a number written without a reservation: renumbered the same way. On a join's
+branch only the join's own numbers are renumbered: `join` leaves out, before merging, a thread
+whose new number is taken or not reserved for it, and a number a merged thread created is never
+renumbered there -- whoever decides abandons the join (`join --abandon`) and opens it again
+without that thread, which `renumber` refusing it says. `BR006` is a mandate withdrawn, or its
+forecast moved, when or where it may not be: say which of its cases it is, and leave the move to
+who decides, at a join.
+From 4.12.0 pinned, or no version that reads, it is also a mandate brought back out of `withdrawn`:
+it stays withdrawn, and what it would have done comes back as a new `CHG`, deriving from it or from
+the decision. `ci/branches.yml` runs the same comparison on every pull request, and opens an issue
+for what reaches the main line without one.
 
 ## The exchange between sessions
 

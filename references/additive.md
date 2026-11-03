@@ -126,7 +126,10 @@ of `GLOSSARY`, `risks`, `stack`, `increments` and `delivery_stages` of `RMP`), o
 `<!-- section: ... -->` marker that labels a heading; no anchor where the effect is on the whole
 document. An effect stands within its thread's forecast when its anchor is forecast or is inside
 one forecast by name; one on a section is within a forecast on its whole document, and not the
-reverse. The join names the other threads whose forecast meets it, either way. `Da` names
+reverse. The join names the other threads whose forecast meets it, either way; from 4.12.0
+`work.py meetings` writes, outside the repository, one card for each place two threads meet,
+within their forecasts or not, for whoever runs the join to put two texts that differ to
+whoever decides, and for its review (`contribute`, the join). `Da` names
 the identifiers it comes from, `Diventa vero` what the document should say, `Perché` where that
 is written. The labels are Italian, as the fixed names of the exchange are, and `EFF001` reports
 a file that does not read. The file is edited freely while the thread is open; `_filoni/` is not
