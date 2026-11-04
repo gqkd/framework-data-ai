@@ -527,7 +527,9 @@ or taken off on a thread or a parking line, which whoever decides writes, on a j
 From 4.12.0 pinned, or no version that reads, it is also a mandate brought back out of `withdrawn`:
 it stays withdrawn, and what it would have done comes back as a new `CHG`, deriving from it or from
 the decision. `ci/branches.yml` runs the same comparison on every pull request, and opens an issue
-for what reaches the main line without one.
+for what reaches the main line without one; `ci/refs.yml`, copied beside it from 4.12.0, opens
+another, after the fact, for a reservation deleted or moved, a delegation moved and a work branch
+pushed with force.
 
 ## The exchange between sessions
 

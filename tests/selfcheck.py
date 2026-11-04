@@ -7838,7 +7838,7 @@ def _ci_assets_keep_the_framework_beside():
     # fixtures numbered DEC-001, its prose without front matter -- and every pull request job
     # went red; inside `.framework/` the checkout emptied the project's folder of that name.
     problems = []
-    for name in ("pull-request.yml", "branches.yml"):
+    for name in ("pull-request.yml", "branches.yml", "refs.yml"):
         wf = yaml.safe_load((ROOT / "ci" / name).read_text(encoding="utf-8"))
         for job, spec in (wf.get("jobs") or {}).items():
             project = framework = None
@@ -7864,7 +7864,9 @@ def _ci_assets_keep_the_framework_beside():
                      if not re.match(r"\s*[A-Za-z_]\w*=\S*validate\.py\s*$", line)
                      and ("validate.py" in line
                           or any(re.search(rf"\$\{{?{n}\b", line) for n in names))]
-            if not calls:
+            # The job that reads what was changed by hand on the tags and the work branches
+            # validates no tree: it reads the event and the main line's `work.yaml`.
+            if not calls and (name, job) != ("refs.yml", "refs"):
                 problems.append(f"ci/{name}, job {job}: no validator call found, so the check "
                                 "below proves nothing")
             for call in calls:
@@ -10152,6 +10154,117 @@ def _additive_roles():
                                     f"say it: {listed[-200:]!r}")
         if _g(a, "ls-remote", "origin", "refs/tags/delega/junior").stdout.strip():
             problems.append("a revoked delegation is still on the remote")
+    return problems
+
+
+@check("the CI sees after the fact, in a workflow of its own beside branches.yml, a reservation deleted or moved, a delegation moved and a work branch pushed with force, and nothing a work.py command does")
+def _ci_sees_tags_and_branches_changed_by_hand():
+    # No hook on a machine stops a tag deleted or forced, or a branch forced: the `refs` job of
+    # `ci/refs.yml` says it after the fact, in an issue of its own. Its events and filters are
+    # read from the file; its decision, the Python it runs, is run here on the events GitHub
+    # would send, with the main line's `work.yaml` of either mode.
+    problems = []
+    wf = yaml.safe_load((ROOT / "ci" / "refs.yml").read_text(encoding="utf-8"))
+    on = wf.get("on", wf.get(True)) or {}
+    push = on.get("push") or {}
+    if "delete" not in on:
+        problems.append("ci/refs.yml does not listen to `delete`: a reservation deleted is unseen")
+    if push.get("branches-ignore") != ["main"] or "branches" in push:
+        problems.append(f"push listens to the branches {push.get('branches')}, ignoring "
+                        f"{push.get('branches-ignore')}: every branch but the main line, since a "
+                        "work branch is named by the project's prefix")
+    if sorted(push.get("tags") or []) != ["delega/**", "id/**"]:
+        problems.append(f"push listens to the tags {push.get('tags')}: the reservations and the "
+                        "delegations, and not the claims, which are taken and let go legitimately")
+    if set(on) - {"push", "delete"} or set(wf.get("jobs") or {}) != {"refs"}:
+        problems.append(f"ci/refs.yml listens to {sorted(map(str, on))} with the jobs "
+                        f"{sorted(wf.get('jobs') or {})}: only `push` and `delete`, and `refs`")
+    # `ci/branches.yml` listens to the pull requests and the main line alone. A run of it on the
+    # push of a pull request's branch would carry a second `pull-request` check, skipped by its
+    # condition, and GitHub reports a job skipped that way as a success that does not prevent a
+    # merge, even as a required check: a protection could open on the skip.
+    gate = yaml.safe_load((ROOT / "ci" / "branches.yml").read_text(encoding="utf-8"))
+    gate_on = gate.get("on", gate.get(True)) or {}
+    if set(gate_on) != {"pull_request", "push"} or gate_on.get("push") != {"branches": ["main"]}:
+        problems.append(f"ci/branches.yml listens to {gate_on}: only `pull_request` and the push "
+                        "of main, or a skipped `pull-request` check could meet a required one")
+    jobs = dict(gate.get("jobs") or {})
+    if "refs" in jobs:
+        problems.append("ci/branches.yml still has a `refs` job: it lives in ci/refs.yml")
+    jobs.update(wf.get("jobs") or {})
+    refs = jobs.get("refs") or {}
+    cond = str(refs.get("if"))
+    for part in ("'delete'", "ref_type == 'tag'", "'id/'", "'refs/tags/id/'",
+                 "!github.event.created", "!github.event.deleted", "github.event.forced",
+                 "startsWith(github.ref, 'refs/tags/')", "refs/heads/main"):
+        if part not in cond:
+            problems.append(f"the refs job's condition lacks {part}: {cond!r}")
+    steps = refs.get("steps") or []
+    run = next((st["run"] for st in steps
+                if str(st.get("name", "")).startswith("what was changed by hand")), "")
+    if "<<'REFS'\n" not in run:
+        return problems + ["the refs job has no step that decides what was changed by hand"]
+
+    def titles(job_steps):
+        text = "\n".join(str(st.get("run", "")) for st in job_steps or []
+                         if "gh issue" in str(st.get("run", "")))
+        return set(re.findall(r'^\s*title="([^"]+)"', text, re.M))
+    ours, theirs = titles(steps), titles((jobs.get("main") or {}).get("steps"))
+    if not ours or ours & theirs:
+        problems.append(f"the refs job opens no issue of its own: its titles {sorted(ours)}, "
+                        f"the main line's {sorted(theirs)}")
+    script = run[run.index("<<'REFS'\n") + 9:run.index("\nREFS\n")]
+    a, b = "1" * 40, "2" * 40
+    nothing = "0" * 40
+    additive = "mode: additive\npeople: [A]\nadmins: [A]\n"
+    branches = "people: [A]\nbranch_prefix: doc/\n"
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        (tmp / "s.py").write_text(script, encoding="utf-8")
+
+        def job(work: str, event: str, ref: str, ref_type: str = "", before: str = a,
+                created: bool = False, deleted: bool = False, forced: bool = False) -> str:
+            (tmp / "work.yaml").write_text(work, encoding="utf-8")
+            env = dict(os.environ, EVENT=event, REF=ref, REF_TYPE=ref_type, BEFORE=before,
+                       AFTER=b, CREATED=str(created).lower(), DELETED=str(deleted).lower(),
+                       FORCED=str(forced).lower())
+            r = subprocess.run([sys.executable, str(tmp / "s.py"), str(tmp / "work.yaml")],
+                               capture_output=True, text=True, env=env)
+            return r.stdout + r.stderr
+        for work, args, want, why in (
+                (additive, ("delete", "id/KI-003", "tag"), "reservation `id/KI-003` was deleted",
+                 "a reservation deleted"),
+                (branches, ("delete", "refs/tags/id/a/KI-003", "tag"),
+                 "reservation `id/a/KI-003` was deleted",
+                 "a reservation of a product's family deleted, the ref in full, branches mode"),
+                (additive, ("delete", "claim/KI-003", "tag"), "", "a claim let go"),
+                (additive, ("delete", "delega/del", "tag"), "", "a delegation revoked"),
+                (additive, ("delete", "work/x", "branch"), "", "a branch deleted"),
+                (additive, ("push", "refs/tags/id/KI-003"), "reservation `id/KI-003` was moved",
+                 "a reservation moved"),
+                (additive, ("push", "refs/tags/id/KI-003", "", nothing, True), "",
+                 "a reservation created"),
+                (additive, ("push", "refs/tags/id/KI-003", "", a, False, True), "",
+                 "a reservation deleted by a push, which `delete` says"),
+                (additive, ("push", "refs/tags/delega/del"), "delegation `delega/del` was moved",
+                 "a delegation moved"),
+                (branches, ("push", "refs/tags/delega/del"), "",
+                 "a delegation tag outside the additive mode"),
+                (additive, ("push", "refs/heads/work/x", "", a, False, False, True),
+                 "work branch `work/x` was pushed with force", "a work branch forced"),
+                (additive, ("push", "refs/heads/work/x"), "", "a work branch pushed"),
+                (additive, ("push", "refs/heads/work/x", "", nothing, True, False, True), "",
+                 "a work branch created with a lease"),
+                (branches, ("push", "refs/heads/doc/x", "", a, False, False, True),
+                 "work branch `doc/x` was pushed with force", "the prefix the main line declares"),
+                (branches, ("push", "refs/heads/work/x", "", a, False, False, True), "",
+                 "a branch outside the declared prefix"),
+                (additive, ("push", "refs/heads/main", "", a, False, False, True), "",
+                 "the main line, which the main-line job reads")):
+            out = job(work, *args)
+            if (want and want not in out) or (not want and out.strip()):
+                problems.append(f"{why}: the refs job says {out.strip()!r}, expected "
+                                f"{want or 'nothing'!r}")
     return problems
 
 
@@ -13547,6 +13660,18 @@ def _doctor_reads_a_machine():
         filled = shipped.replace("OWNER/framework-data-ai", "acme/framework-data-ai").replace(
             "COMMIT_OR_TAG", f"v{pin}")
         repo.write(".github/workflows/branches.yml", filled or "on: push\n")
+        # The workflow of the tags and the work branches, from the version that ships one: where
+        # the pin's has none, `doctor` says nothing of it. `commit_declaring` reads the committed
+        # history, so while the registry declares 4.11.0 only that silence is exercised here: the
+        # comparison of a copy, and the cases below on it, run from the first selfcheck after the
+        # commit that declares 4.12.0.
+        refs = subprocess.run(["git", "-C", str(ROOT), "show", f"{sha}:ci/refs.yml"],
+                              capture_output=True, text=True) if sha else None
+        refs_filled = (refs.stdout.replace("OWNER/framework-data-ai", "acme/framework-data-ai")
+                       .replace("COMMIT_OR_TAG", f"v{pin}")
+                       if refs is not None and not refs.returncode else "")
+        if refs_filled:
+            repo.write(".github/workflows/refs.yml", refs_filled)
         repo.commit("base", "2026-06-01T09:00:00+02:00")
         bin_, config = tmp / "bin", tmp / "config"
         bin_.mkdir()
@@ -13578,6 +13703,8 @@ def _doctor_reads_a_machine():
 
         rc, out = run("--who", "Owner")
         compared = ("branches.yml is the one of" in out) if sha else ("cannot be compared" in out)
+        compared = compared and (("refs.yml is the one of" in out) if refs_filled
+                                 else "refs.yml" not in out)
         if rc or "todo" in out or not compared or "the Bash sandbox is declared" not in out \
                 or "brings 2 hook(s)" not in out or "the reservation leaves the sandbox" not in out:
             problems.append(f"a machine with everything: exit {rc}, {out[-600:]!r}")
@@ -13642,6 +13769,16 @@ def _doctor_reads_a_machine():
             cases.append(("branches.yml changed", lambda: repo.write(
                 ".github/workflows/branches.yml", filled.replace("fetch-depth: 0", "fetch-depth: 1", 1)),
                 lambda: repo.write(".github/workflows/branches.yml", filled), 1, "branches.yml differs"))
+        if refs_filled:
+            flow = repo.path / ".github" / "workflows" / "refs.yml"
+            cases.append(("refs.yml missing", flow.unlink,
+                          lambda: repo.write(".github/workflows/refs.yml", refs_filled), 1,
+                          "no .github/workflows/refs.yml"))
+            cases.append(("refs.yml changed", lambda: repo.write(
+                ".github/workflows/refs.yml", refs_filled.replace("fetch-depth: 0",
+                                                                  "fetch-depth: 1", 1)),
+                lambda: repo.write(".github/workflows/refs.yml", refs_filled), 1,
+                "refs.yml differs"))
         for name, before, after, want, says in cases:
             claude(f"framework-data-ai {pin}\\n\\nComponent inventory\\n  Hooks (2)\\n")
             if before:

@@ -443,7 +443,9 @@ fast-forward, or by a merge whose message does not name its branch, is read as t
 outside a join, and one with commits after its signature has those read the same way. **Do not rewrite a living
 document on a thread**: write the effect. **Do not take a decision as a contributor**, nor approve a
 change on a thread's branch. **Never force a push**, and never delete a claim or a reservation by
-hand. **Do not run `attest.py` to attest**, as the preamble says, even where the rereading is
+hand: no hook stops either, and the project's `ci/refs.yml`, copied from 4.12.0, opens an issue
+for a reservation deleted or moved, a delegation moved and a work branch pushed with force.
+**Do not run `attest.py` to attest**, as the preamble says, even where the rereading is
 optional: `--commit` alone, which writes no stamp, you run once the person has attested.
 
 ## Handing back

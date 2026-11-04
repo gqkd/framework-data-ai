@@ -219,14 +219,16 @@ working in one is for the agent to know and for this rule to hold, not for the g
   reads, offline, what the files of the machine say of everything below but the last point: the
   plugin against the pin and its hooks, the settings, the folders and the exchange, the
   versions of Python, PyYAML, jsonschema and git -- without the first three it stops at once,
-  saying which is missing --, the name, and the copy of `ci/branches.yml`. A `todo` line is what
-  the framework needs, and makes it exit 1; a `note` is what it recommends, or only tells. It
-  does not see the settings an organisation manages, nor a plugin loaded with `--plugin-dir`.
+  saying which is missing --, the name, and the copies of `ci/branches.yml` and, where this
+  checkout shows that the pin ships one, of `ci/refs.yml`: of the second, where the pin's commit
+  cannot be read, it says nothing. A `todo` line is what the framework needs, and makes it
+  exit 1; a `note` is what it recommends, or only tells. It does not see the settings an
+  organisation manages, nor a plugin loaded with `--plugin-dir`.
 - `claude plugin details framework-data-ai` shows the version installed and where it is read
   from; it should be the version the project pins or a later one. `doctor`, for the plugin, and
   the hook at the start of a session read the pin as the to-do does: in the additive mode on the
-  main line, `origin/main` or `main` where there is none. The copy of `ci/branches.yml` `doctor`
-  compares with this checkout's pin, which a join moves with it.
+  main line, `origin/main` or `main` where there is none. The copies of the workflows `doctor`
+  compares with this checkout's pin, which a join moves with them.
 - `python3 -c "import yaml, jsonschema"` from the environment the scripts use.
 - `git worktree list` in the documentation repository.
 - From a session in the documentation repository, ask the agent to write a file in the

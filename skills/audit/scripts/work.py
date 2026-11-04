@@ -31,10 +31,13 @@ product -- annotated, pushed to the remote. Git refuses to replace a tag without
 pushes that create one tag at the same moment are decided by the remote, so whoever pushes
 second is told who pushed first. What it does not stop is somebody forcing a push or deleting
 a tag by hand: this is the protection of people who use it, and the checks are what see the
-rest. The tag object is unique -- who, when, for which branch -- so after a push whose answer
-was lost, the remote holding that object is the proof the push went through. The branch is
-created in the same atomic push as the claims, with a lease that requires it not to exist yet --
-but for a thread taken again, whose branch exists and whose claims alone are pushed. Reservations
+rest -- `BR003` a reservation gone for a number new on the branch it validates, and
+`ci/refs.yml`, a workflow of 4.12.0 copied beside `ci/branches.yml`, a reservation deleted or
+moved, a delegation moved and a work branch pushed with force, in an issue, after the fact.
+The tag object is unique -- who, when, for which branch -- so after a push whose answer was lost,
+the remote holding that object is the proof the push went through. The branch is created in
+the same atomic push as the claims, with a lease that requires it not to exist yet -- but for a
+thread taken again, whose branch exists and whose claims alone are pushed. Reservations
 are never deleted, and a number reserved and not used stays burned; claims are removed by
 `release`, when a person says so, and by `join --close`, by role, for what a join landed.
 
@@ -3052,13 +3055,13 @@ def cmd_doctor(p: Project, args) -> int:
             ", beside branches.yml: copy one or the other" if branches.is_file() else
             ", and it has no `main` job: a project with work.yaml copies ci/branches.yml in its "
             "place"))
+    import migrate as M                  # the framework's history, read as `migrate.py` reads it
+    sha, why = M.commit_declaring(own, framework) if own else (None, "the project pins no version")
     if not branches.is_file():
         line(False, "no .github/workflows/branches.yml: nothing sees what reaches the main line "
              "outside a pull request or a join")
     else:
         copy = branches.read_text(encoding="utf-8")
-        import migrate as M                  # the framework's history, read as `migrate.py` reads it
-        sha, why = M.commit_declaring(own, framework) if own else (None, "the project pins no version")
         shown = git(framework, "show", f"{sha}:ci/branches.yml", check=False) if sha else None
         if shown is None or shown.returncode:
             line(False, f"branches.yml cannot be compared with the one of {own or 'the pin'}: "
@@ -3070,6 +3073,23 @@ def cmd_doctor(p: Project, args) -> int:
             line(same, f"branches.yml is the one of {own}, its placeholders filled" if same else
                  f"branches.yml differs from the one of {own}: copy ci/branches.yml again and "
                  "fill its placeholders")
+    # The workflow of the tags and the work branches, beside it, where this checkout shows that
+    # the pinned version has one -- from 4.12.0 --, compared the same way. Where it has none, or
+    # the pin's commit cannot be read here -- which the line above says, when branches.yml is
+    # there --, nothing is said of it.
+    shipped = git(framework, "show", f"{sha}:ci/refs.yml", check=False) if sha else None
+    if shipped is not None and not shipped.returncode:
+        refs = flows / "refs.yml"
+        if not refs.is_file():
+            line(False, "no .github/workflows/refs.yml: nothing sees a reservation deleted or "
+                 "moved, a delegation moved or a work branch pushed with force")
+        elif any(name in refs.read_text(encoding="utf-8") for name in PLACEHOLDERS):
+            line(False, "refs.yml still has OWNER/framework-data-ai or COMMIT_OR_TAG: fill them")
+        else:
+            same = _filled_copy(shipped.stdout, refs.read_text(encoding="utf-8"))
+            line(same, f"refs.yml is the one of {own}, its placeholders filled" if same else
+                 f"refs.yml differs from the one of {own}: copy ci/refs.yml again and fill its "
+                 "placeholders")
     return 1 if todo else 0
 
 
