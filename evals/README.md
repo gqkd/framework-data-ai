@@ -17,10 +17,11 @@ them a trap that `requirement` must not take, and five traps toward `business`, 
 `release` and `none`; `contribute` arrived in 4.9.0 with five of its own and two traps, toward
 `cycle` and `resolve`, whose sentences sit closest to its own. All seven run in
 `contribute/team`, a project in the additive mode, the traps by the `fixture` they name: the
-risk they measure exists only in such a project. It has no behaviour cases yet: they need a remote,
-which a fixture can carry inside it as `digest/` does, and the exchange beside the repository,
-which the behaviour runner, copying the fixture alone, does not give; they are left to 4.11.0. The measured cases of `cycle` and
-`resolve` that ask what to do or decide next are at risk from it, and no mark protects them. None of them has been run, and the tables further down were measured on
+risk they measure exists only in such a project. The behaviour cases of `contribute` came in
+4.12.0, with the remote and the exchange the fixture carries beside the repository, which the
+behaviour runner copies with it (*Behaviour*, below). The measured cases of `cycle` and
+`resolve` that ask what to do or decide next are at risk from `contribute`, and no mark protects
+them. None of the twenty-five marked has been run, and the tables further down were measured on
 the 118 without them: the mark keeps those twenty-five out of the denominators the self check
 compares, so a score is never read against a set it was not measured on. The run that scores
 them removes the mark and adds its own table. One measured case is at risk from the second
@@ -292,14 +293,34 @@ fires, one skill at a time, against the repositories in `fixtures/`:
 
 ```bash
 python evals/fixtures/make.py          # build the repositories first
-python evals/behaviour/run.py release  # or audit, cycle, requirement, resolve, start, digest
+python evals/behaviour/run.py release  # or audit, cycle, requirement, resolve, start, digest,
+                                       # contribute
 ```
 
-All six above have a run; `digest` has a case and no run yet. Every one of them found something, and in four cases the defect was in
+Six of them have a run, and every one of those found something; in four cases the defect was in
 this repository rather than in the skill: a gate rule that blocked on metrics the plan
 declares non-blocking, a fixture claiming a coverage it did not have, a measurement that
 could not reach the validator the skill is told to run first, and a truncated transcript
-read as a result.
+read as a result. `digest` has a case and no run yet, and `contribute` has seven,
+written for the behaviour of 4.12.0 and run first on the tree of the commit that declares it,
+since the fixture pins the version it is built by. A case may name in `beside` what the build put
+next to its fixture -- `contribute/team` has its remote at `../remote.git` and the exchange at
+`../_scambio` --, copied next to the copy; for such a case the runner also prints what the run
+changed on git and beside the project: the branches, the claim, reservation and delegation tags,
+the worktrees, the remote's refs and the files of the exchange, and, before the copy is deleted,
+the files each branch the run made or moved changes against the main line before the run, since the
+work of a thread is on its branch and not in the copy. Such a run gets `--add-dir` on the folder of
+the copy, where a thread's worktree goes, so that it writes there as a person would. The cases of
+`contribute` are measured with the Bash sandbox off, and their file says so, `without_sandbox`:
+under it the skill hands its commands on git and beside the project to the person as lines to
+paste, as its text says, and a run would stop at the first of them. The header of every case says
+what the settings `claude -p` reads declare of the sandbox, and where they declare it on, a case
+so marked is not run, in either arm, and the runner says why; what the skill does under the
+sandbox is measured by the version that tries it.
+`--plugin-dir <checkout>` loads the skills, agents and hooks of that checkout in every run, in
+place of the plugin installed, and the case's header names it; the fixtures and the validator
+stay those of the tree the runner is in, so a version not yet released is run from its own tree,
+with `--plugin-dir` on that tree.
 
 `audit` and `resolve` were re-run twice on **2026-08-18**: once against 1.1.0 and the
 register split one per product, and again after 2.0.0 replaced `deadline` with `trigger`

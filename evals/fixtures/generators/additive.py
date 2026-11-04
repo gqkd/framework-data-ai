@@ -10,11 +10,18 @@ to do what it refuses. This is `audit/clean-repo`, the smallest correct project,
 the roles, open entries with the anchors the threads are computed from, and the history the
 to-do reads the main line from.
 
-A git repository with one commit and no remote. The to-do reads the main line and the remote
-branches the clone has, without the network, so it computes threads here; `work.py`, which
-fetches, does not get far. That is the limit of a fixture for triggering, which asks only which
-skill answers: the behaviour of `contribute`, which needs the exchange beside the repository,
-has no fixture yet. Its review stamps are audit.py's, which move with the calendar.
+A git repository with one commit on main, and beside it, as on a machine, its remote, a bare
+repository at `../remote.git`, and the exchange at `../_scambio`: `<dest>/../remote.git` and
+`<dest>/../_scambio`, which this generator removes and writes again. On the remote, besides
+main, luca's parking branch, pushed with one commit and so ready for a join; in the exchange,
+what a code session delivered for the approved CHG-001, `documentazione.md` alone. The
+triggering runner copies the repository alone, with what its clone holds of the remote: there
+the to-do reads, offline, `origin/main` and the parking branch ready, and advises a join, which
+the hook at the start of a session puts in the context of every run where the plugin is
+installed as a plugin, and not by the symlink alone -- as it did not while the fixture had no
+remote --; `work.py`, which fetches, does not get far. The behaviour runner copies the three,
+`beside` in `evals/behaviour/contribute/cases.yaml`, and a run takes threads, pushes and
+integrates in its own copy. Its review stamps are audit.py's, which move with the calendar.
 """
 import os
 import re
@@ -141,4 +148,53 @@ env = {**os.environ, "GIT_AUTHOR_NAME": "maria", "GIT_AUTHOR_EMAIL": "maria@exam
 for args in (["init", "-q", "-b", "main"], ["add", "-A"],
              ["commit", "-q", "-m", "the project, in the additive mode"]):
     subprocess.run(["git", "-C", str(D), *args], check=True, env=env)
-print(f"fixture written to {D}")
+
+# Beside the project, as on a machine: its remote, a bare repository at `../remote.git`, and the
+# exchange at `../_scambio`, which `.framework/sessions.yaml` declares. Relative paths, which git
+# and the exchange resolve from the top of the tree they run in: the same place from the project
+# and from every worktree `work.py` makes beside it, and, in a copy of the three, the copy's own.
+# Written beside `D` and not inside it, so each is removed here: whoever builds `D` removes `D`.
+REMOTE, EXCHANGE = D.parent / "remote.git", D.parent / "_scambio"
+for p in (REMOTE, EXCHANGE):
+    shutil.rmtree(p, ignore_errors=True)
+subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(REMOTE)], check=True, env=env)
+for args in (["remote", "add", "origin", "../remote.git"], ["push", "-q", "-u", "origin", "main"]):
+    subprocess.run(["git", "-C", str(D), *args], check=True, env=env)
+
+# A parking branch of luca's, pushed with one commit, so ready: the next join lands it whole.
+# What `open --branch` makes, a branch named after the parking prefix with no claims, made here
+# by git with the dates fixed, since `open` stamps the hour it runs.
+later = (datetime.strptime(when[:16], "%Y-%m-%dT%H:%M") + timedelta(hours=1)).strftime(
+    "%Y-%m-%dT%H:%M:00+02:00")
+luca = {**env, "GIT_AUTHOR_NAME": "luca", "GIT_AUTHOR_EMAIL": "luca@example.com",
+        "GIT_COMMITTER_NAME": "luca", "GIT_COMMITTER_EMAIL": "luca@example.com",
+        "GIT_AUTHOR_DATE": later, "GIT_COMMITTER_DATE": later}
+PARKING = "work/parcheggio-retry-policy"
+root_register = D / "OPEN.md"
+text = root_register.read_text(encoding="utf-8")
+if text.count("# §3 · Parking lot\n\n- Nothing qualified yet.\n") != 1:
+    sys.exit(f"{root_register}: no parking lot to add a line to; audit.py moved")
+subprocess.run(["git", "-C", str(D), "switch", "-q", "-c", PARKING], check=True, env=luca)
+root_register.write_text(text.replace(
+    "# §3 · Parking lot\n\n- Nothing qualified yet.\n",
+    "# §3 · Parking lot\n\n- Nothing qualified yet.\n"
+    "- Should every nightly job retry the same way, or each its own?\n"), encoding="utf-8")
+for args in (["commit", "-q", "-am", "a parking line: one retry policy for the nightly jobs?"],
+             ["push", "-q", "origin", PARKING], ["switch", "-q", "main"]):
+    subprocess.run(["git", "-C", str(D), *args], check=True, env=luca)
+
+# What a code session delivered for the approved CHG-001: `documentazione.md`, what the
+# documentation should say, in the folder of the change, waiting for the thread that holds it.
+delivery = EXCHANGE / "in-arrivo" / "CHG-001" / "documentazione.md"
+delivery.parent.mkdir(parents=True)
+delivery.write_text("""\
+# CHG-001 · What the documentation should say
+
+The scoring job of atlas now runs in the warehouse, as SQL, and no longer in pandas.
+
+- products/atlas/ARC.md, the target: the scores are a view, `gold.scores`, refreshed at 05:30
+  and read by the publication at 06:00, inside the daily SLA.
+- products/atlas/ARC.md, the target: the pandas job and its container are gone; nothing else
+  reads them.
+""", encoding="utf-8")
+print(f"fixture written to {D}, with {REMOTE.name} and {EXCHANGE.name} beside it")

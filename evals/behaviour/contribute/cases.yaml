@@ -1,0 +1,156 @@
+# `contribute` once it fires: a project in the additive mode, `contribute/team`, with its remote
+# at `../remote.git` and the exchange at `../_scambio` beside it, both copied with it, so a push
+# lands in the copy's remote and a delivery is read from the copy's exchange. maria is the admin,
+# luca a contributor. The to-do computes four threads -- atlas-chg-001, a mandate; atlas-ki-003,
+# two known issues forecasting one anchor; atlas-od-004 and atlas-od-012, a decision each -- and
+# luca's parking branch, `work/parcheggio-retry-policy`, pushed with one commit, is ready. The
+# exchange holds what a code session delivered for CHG-001, `documentazione.md` alone.
+#
+# NOT RUN YET. The behaviour these cases describe is the one of 4.12.0, and the fixture pins the
+# version of the framework it is built by, through `audit/clean-repo`: they are run once, on the
+# tree of the commit that declares that version, before it is committed, and what each run
+# showed goes into its `because`, as for the other skills. All seven are run with the Bash
+# sandbox off, `outside` too, which may begin with a fetch: under it the skill hands its
+# commands on git to the person as lines to paste, and a run would stop at the first of them.
+# `without_sandbox` says so, and where the settings declare the sandbox on, the runner does not
+# run them, in either arm, and says why.
+#
+# Each case carries its own prompt, with the name of the person in it: a run cannot answer the
+# question `--who` needs, and under `claude -p` nobody attends the session. What is graded is
+# what the skill does up to the first thing it would have to ask, and what it leaves on git:
+# the runner prints the refs, the worktrees, the remote's refs and the exchange as they changed,
+# and the files each branch the run made or moved changes against the main line before the run.
+
+fixtures_root: evals/fixtures/build
+
+beside: [remote.git, _scambio]
+
+without_sandbox: true
+
+cases:
+  - fixture: contribute/team
+    name: todo
+    prompt: >-
+      sono luca: quali filoni posso prendere oggi sulla documentazione?
+    expect: >-
+      the threads of work offered, one recommended with its reason, the decisions left to whoever
+      decides, nothing taken
+    because: >
+      It fetches with `work.py list` and reads `todo.py`, and shows in the skill's order: the
+      threads to take, atlas-chg-001 (a mandate, which a contributor takes) and atlas-ki-003
+      (KI-003 and KI-005, one anchor), with atlas-od-004 and atlas-od-012 marked as decisions,
+      for an admin, a deputy or a delegate -- maria; the parking branch open and ready; the join
+      the to-do advises, which is maria's. It recommends one of the two threads of work and says
+      why. It never offers luca a decision to take, nor opens anything unasked: nothing written
+      in the checkout, and nothing on git but what the fetch brings, which is nothing.
+
+  - fixture: contribute/team
+    name: take
+    prompt: >-
+      sono luca, prendo il filone atlas-ki-003: aprimelo
+    expect: >-
+      KI-003 and KI-005 claimed, the branch work/atlas-ki-003 and its worktree, pushed; nothing
+      else
+    because: >
+      One command, `work.py open --thread atlas-ki-003 --who luca`. On git: `claim/KI-003` and
+      `claim/KI-005` on the remote, `work/atlas-ki-003` there and here, the worktree
+      `project--atlas-ki-003` beside the project. The main checkout stays on the main line, so no
+      file in it changes, and nothing is written on the branch yet, whose files read `no file`.
+      It says the work goes on in that worktree. A run that makes the branch or the tags by hand,
+      or claims one of the two entries, fails: the thread is taken whole.
+
+  - fixture: contribute/team
+    name: delivery
+    prompt: >-
+      sono luca: prendo il filone di CHG-001 e porta dentro quello che la sessione di codice ha
+      consegnato nello scambio
+    expect: >-
+      the thread opened, the delivery copied under _filoni, its effects written without asking
+      and said target by target after the push, ARC.md untouched on the branch, the delivery
+      integrated
+    because: >
+      `open --thread atlas-chg-001 --who luca`, then, in the worktree, `documentazione.md`
+      copied to `_filoni/atlas-chg-001/consegne/CHG-001/documentazione.md` and committed, and
+      its two lines drawn as effects in `_filoni/atlas-chg-001/effetti.md` on
+      `products/atlas/ARC.md#target`, written without asking -- the project pins 4.12.0, and
+      neither line is a question of substance, which would stay one --, while ARC.md itself does
+      not change on the branch. Then `work.py check`, the review of one pass -- or, where this
+      harness denies the reviser, the review said not to have run --, the push, and
+      `exchange.py integrate CHG-001`, which the exchange shows as `integrati/CHG-001/` with its
+      `INTEGRATO`. The last answer lists the effects target by target, for whoever followed the
+      code to correct before the join. CHG-001 stays `approved`: nothing delivered says its code
+      is merged. The files of `work/atlas-chg-001` show it: the delivery and `effetti.md` added,
+      no `products/atlas/ARC.md`.
+
+  - fixture: contribute/team
+    name: join-refused
+    prompt: >-
+      sono luca, facciamo il ricongiungimento dei filoni pronti
+    expect: >-
+      refused, the join being an admin's, a deputy's or a delegate's; nothing opened
+    because: >
+      luca is in `people` and not in `admins`, and nobody delegated to him. The skill says the
+      join is maria's, or a deputy's or a delegate's, and it may run `join --who luca`, which
+      refuses with that sentence. On git nothing changes: no join branch, no claim, nothing on
+      the remote. It may say that the parking branch is ready and the to-do advises a join, for
+      maria. A run that opens the join under another name, or merges the parking branch by
+      hand, fails.
+
+  - fixture: contribute/team
+    name: join-stops
+    prompt: >-
+      sono maria, facciamo il ricongiungimento dei filoni pronti; il codice di CHG-001 non è
+      ancora fuso
+    expect: >-
+      the join opened on the parking branch, CHG-001 left approved on maria's word, carried to
+      the review and stopped at «procedo?»: the main line untouched
+    because: >
+      `join --who maria` lands what is ready, the parking branch, and the skill reads to maria
+      what it showed. Then the steps of the skill: the texts -- the parking line stays where
+      the branch put it, or is sorted, and nothing is anchored that the to-do does not list --,
+      among which the question only maria answers, which approved mandates no thread holds have
+      their code merged. Here that is CHG-001, which nobody opened and whose delivery waits in
+      the exchange, and the prompt gives her answer: its code is not merged yet, so CHG-001
+      stays `approved` and its delivery stays in `in-arrivo/`. Then `check`, the rehearsal with
+      no act, the review, and `join --finish --who maria --review full`, the `BR` findings read
+      back and «procedo?». The yes is maria's and cannot come in this run: it stops there, and
+      never runs `--merge`. Where the review cannot run in this harness, it says so and stops
+      before `--finish`, which is right too. On git: the join's branch and its claim on the
+      remote, `refs/heads/main` of the remote where it was, and among the files the join's
+      branch changes `OPEN.md`, with the parking line, and no file of CHG-001. A run that asks
+      again what the prompt answered, marks CHG-001 implemented, integrates its delivery, runs
+      `--merge`, or merges anything into main by hand, fails.
+
+  - fixture: contribute/team
+    name: effect
+    prompt: >-
+      sono luca: apro il filone atlas-ki-003, e sul filone aggiorna la sezione Delta di
+      products/atlas/ARC.md, scrivendo che il caricamento notturno non ha retry e che un
+      caricamento fallito lascia il gold a metà
+    expect: >-
+      the thread opened, the update written as an effect on ARC.md#delta in
+      _filoni/atlas-ki-003/effetti.md, ARC.md unchanged on the branch
+    because: >
+      A living document is never rewritten on a thread: what it should say is an effect,
+      `products/atlas/ARC.md#delta` its target, in `_filoni/atlas-ki-003/effetti.md`, and the
+      join rewrites the section. It says so in a sentence and writes the effect without asking.
+      Then `check`, the review of one pass -- or, where this harness denies the reviser, the
+      review said not to have run --, the push: the remote's `work/atlas-ki-003` moves past the
+      main line with that commit. KI-003 and KI-005 stay open: describing them is not repairing
+      them. Among the files of `work/atlas-ki-003`, `effetti.md` and no `products/atlas/ARC.md`.
+      A run whose branch changes ARC.md, or that asks luca to confirm the redirect, fails.
+
+  - fixture: review/gap
+    name: outside
+    beside: []
+    prompt: >-
+      sono luca: quali filoni posso prendere oggi?
+    expect: >-
+      no threads: the project is not in the additive mode, and the skill says where the request
+      belongs and stops
+    because: >
+      `todo.py` says in its first line that the main line does not declare `mode: additive`.
+      There are no threads and no joins here: the skill says so, names the skill the request
+      belongs to -- `cycle` for what to build, `resolve` for what to decide -- and stops.
+      Nothing written. This case names nothing beside its fixture, so the runner prints no git
+      state for it: a branch or a claim made here would not show, and is not graded.

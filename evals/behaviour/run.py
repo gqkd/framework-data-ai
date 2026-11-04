@@ -4,6 +4,7 @@
     python evals/behaviour/run.py release             # every case, one at a time
     python evals/behaviour/run.py release --case D    # one of them
     python evals/behaviour/run.py release --baseline  # the same, with no framework at all
+    python evals/behaviour/run.py contribute --plugin-dir .  # with the plugin of this tree
 
 Triggering asks whether the skill answers. This asks whether the answer is right, which
 for a gate is the half that matters: one that fires reliably and says yes to everything is
@@ -22,6 +23,32 @@ same reason: `-p` denies them by default, and the first run of this graded judge
 because the skill reached the right verdict and then printed a manifest it could not save.
 Half of what these skills do is produce artifacts, and an unwritten one cannot be wrong.
 The fixture is copied first.
+
+WHAT SITS BESIDE THE PROJECT, FOR A CASE THAT NEEDS IT. A case, or its file, may name in
+`beside` what the build put next to the fixture -- `contribute/team` has its remote at
+`../remote.git` and the exchange at `../_scambio` --, and each is copied next to the copy under
+its own name, so that a push lands in the copy's remote and a delivery is read from the copy's
+exchange. For such a case what the run did to git is printed too, as what changed between
+before and after: the branches, the remote-tracking ones, the claim, reservation and delegation
+tags, the worktrees beside the project, the refs of the bare remote and the files of the
+exchange. A skill that works on branches leaves most of what it did there, and a list of the
+files in the checkout would read as "nothing written": so for every local branch the run made
+or moved, the files it changes against the main line before the run are printed as well, with
+git's letter, before the copy is deleted. Such a run is also given `--add-dir` on the folder
+that holds the copy and what sits beside it, where a skill makes a thread's worktree, so that
+it writes there as a person would.
+
+A CASE FILE MAY ASK FOR THE BASH SANDBOX OFF. Under the sandbox, `contribute` hands `open`,
+`list`, every push and the steps of `join` to the person as lines to paste, because its text
+says so, not because a command failed: `--add-dir` does not change that, and a run would stop at
+its first command, short of what the case expects -- `outside` too, which names nothing beside
+it and may begin with a fetch. So a case file may set `without_sandbox: true`, inherited by its
+cases as `beside` is, and a case may say otherwise for itself; `contribute`'s sets it. The
+header of every case says what the settings `claude -p` reads declare of the sandbox, and where
+they declare it on, a case so marked is not run, in either arm, and the runner says why: in the
+baseline arm, so that the two arms differ in the framework alone. What the files declare, and
+not whether the sandbox could start, which a run has no one to ask. What a skill does under the
+sandbox is measured by the version that tries it on a machine.
 
 GRADING IS BY HAND, AND THE CASE COUNT IS WHY. A keyword match on "go" and "block" scores
 the laundering fixture correct for saying the word while missing that 0.812 under a 0.85
@@ -99,11 +126,111 @@ def inspect(fixture: Path, cwd: Path) -> tuple[list[str], str]:
     return changed, verdict
 
 
-def run_one(fixture: Path, prompt: str, timeout: int, baseline: bool = False) -> tuple[str, list[str], list[str], str]:
-    """Return the closing text, the skills invoked, what was written, and the validator."""
-    tmp = Path(tempfile.mkdtemp(prefix="rel-"))
+def lay_out(fixture: Path, beside: list[str], tmp: Path) -> Path:
+    """The copy the run happens in: the fixture as `project`, and what the case names in
+    `beside`, found next to the fixture, copied next to it under the same names."""
     cwd = tmp / "project"
     shutil.copytree(fixture, cwd)
+    for name in beside:
+        src = fixture.parent / name
+        if not src.exists():
+            raise FileNotFoundError(f"{src}: named in `beside`, and the build did not write it")
+        shutil.copytree(src, tmp / name)
+    return cwd
+
+
+def git_state(tmp: Path, cwd: Path, beside: list[str]) -> set[str]:
+    """What git and the exchange hold, one line per fact, paths relative to the copy: the refs
+    of the project -- branches, remote-tracking branches, tags with the subject of their
+    message --, its worktrees, the refs of each bare repository named in `beside` and the
+    files of every other folder named there."""
+    def git(where: Path, *args: str) -> list[str]:
+        r = subprocess.run(["git", "-C", str(where), *args], capture_output=True, text=True)
+        return r.stdout.splitlines() if r.returncode == 0 else [f"git {args[0]} failed: "
+                                                                 f"{r.stderr.strip()}"]
+    out = {f"project {line}" for line in git(
+        cwd, "for-each-ref", "--format=%(refname) %(objectname:short) %(contents:subject)",
+        "refs/heads", "refs/remotes", "refs/tags")}
+    # git prints a worktree by its real path: a temporary folder behind a link (`/var` on macOS)
+    # is compared resolved.
+    real = tmp.resolve()
+    for line in git(cwd, "worktree", "list", "--porcelain"):
+        if line.startswith("worktree "):
+            path = Path(line[len("worktree "):])
+            out.add(f"worktree {path.relative_to(real) if path.is_relative_to(real) else path}")
+    for name in beside:
+        where = tmp / name
+        if (where / "HEAD").is_file() and (where / "objects").is_dir():
+            out |= {f"{name} {line}" for line in git(
+                where, "for-each-ref", "--format=%(refname) %(objectname:short)")}
+        elif where.is_dir():
+            out |= {f"{name} {p.relative_to(where).as_posix()}"
+                    for p in where.rglob("*") if p.is_file()}
+    return out
+
+
+def branch_changes(cwd: Path, base: str, before: set[str], after: set[str]) -> list[str]:
+    """What each local branch the run made or moved changes against `base`, the commit the
+    copy stood on before it, one file per line with git's letter: `<branch>: M <path>`. The
+    work of a thread is on its branch and in its worktree, never in the copy, and the refs
+    alone do not say whether a living document was rewritten there."""
+    def heads(state: set[str]) -> dict[str, str]:
+        return {line.split()[1]: line.split()[2] for line in state
+                if line.startswith("project refs/heads/") and len(line.split()) > 2}
+    old, new = heads(before), heads(after)
+    out = []
+    for ref in sorted(r for r in new if new[r] != old.get(r)):
+        name = ref[len("refs/heads/"):]
+        r = subprocess.run(["git", "-C", str(cwd), "diff", "--name-status", "--no-renames",
+                            f"{base}...{ref}"], capture_output=True, text=True)
+        if r.returncode:
+            out.append(f"{name}: git diff failed: {r.stderr.strip()}")
+            continue
+        files = [" ".join(line.split("\t")) for line in r.stdout.splitlines() if line]
+        out += [f"{name}: {f}" for f in files] or [f"{name}: no file"]
+    return out
+
+
+def sandbox_declared(project: Path, baseline: bool) -> str:
+    """Whether the settings files `claude -p` reads in `project` turn the Bash sandbox on, read
+    in their order of precedence: the managed ones, the project's local and shared ones, the
+    person's -- which the baseline arm does not load. What the files say, not what the session
+    could start: `/sandbox` says that, and a run has no one to type it."""
+    managed = {"darwin": Path("/Library/Application Support/ClaudeCode"),
+               "win32": Path("C:/Program Files/ClaudeCode")}.get(sys.platform,
+                                                                 Path("/etc/claude-code"))
+    files = [managed / "managed-settings.json", project / ".claude" / "settings.local.json",
+             project / ".claude" / "settings.json"]
+    if not baseline:
+        config = os.environ.get("CLAUDE_CONFIG_DIR")
+        files.append((Path(config) if config else Path.home() / ".claude") / "settings.json")
+    for f in files:
+        try:
+            d = json.loads(f.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        sandbox = d.get("sandbox") if isinstance(d, dict) else None
+        if isinstance(sandbox, dict) and "enabled" in sandbox:
+            return f"{'on' if sandbox['enabled'] else 'off'}, by {f}"
+    return "off, declared by no settings file"
+
+
+def run_one(fixture: Path, prompt: str, timeout: int, baseline: bool = False,
+            beside: list[str] | None = None, plugin_dir: Path | None = None
+            ) -> tuple[str, list[str], list[str], str, list[str], list[str]]:
+    """Return the closing text, the skills invoked, what was written, the validator, what
+    changed in git and beside the project, and the files each branch made or moved changes, for
+    a case that names something `beside` it, which also gets `--add-dir` on the folder of the
+    copy.
+    `plugin_dir`, absolute, is passed to `claude --plugin-dir`: the skills, agents and hooks of
+    that checkout in place of the plugin installed. The fixture and the validator stay those of
+    the tree this runner is in."""
+    beside = list(beside or [])
+    tmp = Path(tempfile.mkdtemp(prefix="rel-"))
+    cwd = lay_out(fixture, beside, tmp)
+    before = git_state(tmp, cwd, beside) if beside else set()
+    base = subprocess.run(["git", "-C", str(cwd), "rev-parse", "HEAD"], capture_output=True,
+                          text=True).stdout.strip() if beside else ""
     env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
     # THE ARM THAT ANSWERS THE QUESTION THIS DIRECTORY CANNOT ANSWER WITHOUT IT. Every score
     # here says the skill did something; none of them says it did better than the same model
@@ -133,7 +260,9 @@ def run_one(fixture: Path, prompt: str, timeout: int, baseline: bool = False) ->
         p = subprocess.run(
             ["claude", "-p", prompt, "--output-format", "stream-json", "--verbose",
              "--permission-mode", "acceptEdits",
-             "--allowedTools", "Read", "Glob", "Grep", "Bash(python3:*)", "Bash(git:*)"],
+             "--allowedTools", "Read", "Glob", "Grep", "Bash(python3:*)", "Bash(git:*)"]
+            + (["--plugin-dir", str(plugin_dir)] if plugin_dir else [])
+            + (["--add-dir", str(tmp)] if beside else []),
             cwd=cwd, env=env, stdin=subprocess.DEVNULL,
             capture_output=True, text=True, timeout=timeout)
         out = p.stdout
@@ -141,7 +270,7 @@ def run_one(fixture: Path, prompt: str, timeout: int, baseline: bool = False) ->
         # Kept explicitly separate from "it answered nothing". Conflating the two is how
         # the trigger measurement produced a wrong number twice.
         shutil.rmtree(tmp, ignore_errors=True)
-        return "TIMED OUT before answering", [], [], "not run"
+        return "TIMED OUT before answering", [], [], "not run", [], []
 
     texts, skills = [], []
     for line in out.splitlines():
@@ -158,6 +287,10 @@ def run_one(fixture: Path, prompt: str, timeout: int, baseline: bool = False) ->
                 if c.get("type") == "tool_use" and c.get("name") == "Skill":
                     skills.append(str(c.get("input", {}).get("skill", "")).split(":")[-1])
     written, valid = inspect(fixture, cwd)
+    after = git_state(tmp, cwd, beside) if beside else set()
+    moved = ([f"- {line}" for line in sorted(before - after)]
+             + [f"+ {line}" for line in sorted(after - before)])
+    changes = branch_changes(cwd, base, before, after) if beside else []
     shutil.rmtree(tmp, ignore_errors=True)
     # A run with no assistant turn at all did not choose to do nothing: it did not run.
     # The phrase the regex looks for only appears when the CLI gets far enough for the model
@@ -165,14 +298,15 @@ def run_one(fixture: Path, prompt: str, timeout: int, baseline: bool = False) ->
     if not texts and not skills:
         return ("NOT A MEASUREMENT. This run produced no assistant turn at all -- no text, "
                 "no tool use. The account was out of quota, or the CLI could not start.",
-                [], written, valid)
+                [], written, valid, moved, changes)
     if not skills and UNUSABLE.search(" ".join(texts)):
         return ("NOT A MEASUREMENT. This run never reached a model: the account was out of "
                 "quota. It scores as `none` fired and nothing written, which is the same "
                 "shape as a description that stopped working.\n\n" + (texts[-1] if texts
                                                                        else "")), \
-               [], written, valid
-    return (texts[-1] if texts else "(no closing text)"), skills, written, valid
+               [], written, valid, moved, changes
+    return ((texts[-1] if texts else "(no closing text)"), skills, written, valid, moved,
+            changes)
 
 
 def main() -> int:
@@ -183,7 +317,18 @@ def main() -> int:
     ap.add_argument("--baseline", action="store_true",
                     help="run the same fixtures with no plugins and no skills directory: "
                          "the arm that says whether the framework beat the model alone")
+    ap.add_argument("--plugin-dir", type=Path,
+                    help="load the skills, agents and hooks of this checkout in every run, in "
+                         "place of the plugin installed; the fixtures and the validator stay "
+                         "those of the tree this runner is in, so a version not yet released "
+                         "is run from its own tree with --plugin-dir on that tree")
     args = ap.parse_args()
+    if args.plugin_dir and args.baseline:
+        sys.exit("--plugin-dir and --baseline: the arm with no framework cannot load one")
+    plugin_dir = args.plugin_dir.resolve() if args.plugin_dir else None
+    if plugin_dir and not (plugin_dir / ".claude-plugin" / "plugin.json").is_file():
+        sys.exit(f"--plugin-dir {plugin_dir}: no .claude-plugin/plugin.json there, so the header "
+                 "would name a plugin no run loaded")
 
     spec_file = HERE / args.skill / "cases.yaml"
     if not spec_file.exists():
@@ -195,6 +340,8 @@ def main() -> int:
     for c in spec["cases"]:
         c.setdefault("name", c["fixture"])
         c.setdefault("prompt", spec.get("prompt"))
+        c.setdefault("beside", spec.get("beside") or [])
+        c.setdefault("without_sandbox", bool(spec.get("without_sandbox")))
     cases = [c for c in spec["cases"]
              if not args.case or c["name"].startswith(args.case)]
     if not cases:
@@ -205,11 +352,23 @@ def main() -> int:
         if not fx.exists():
             print(f"! {fx} is missing, skipping", file=sys.stderr)
             continue
-        arm = "  [BASELINE: no plugins, no skills]" if args.baseline else ""
-        print(f"\n{'=' * 78}\n{c['name']}   expected: {c['expect']}{arm}\n  because: "
-              f"{c['because']}\n{'=' * 78}")
-        text, skills, written, valid = run_one(fx, c["prompt"], args.timeout,
-                                               baseline=args.baseline)
+        arm = ("  [BASELINE: no plugins, no skills]" if args.baseline
+               else f"  [PLUGIN: {plugin_dir}]" if plugin_dir else "")
+        declared = sandbox_declared(fx, args.baseline)
+        print(f"\n{'=' * 78}\n{c['name']}   expected: {c['expect']}{arm}\n  sandbox, as the "
+              f"settings declare it: {declared}\n  because: {c['because']}\n{'=' * 78}")
+        if c["without_sandbox"] and declared.startswith("on"):
+            print("! NOT RUN: the settings declare the Bash sandbox on, and this case is measured "
+                  "without it: " + (
+                      "the plugin arm is not run under it either, and the two arms differ in "
+                      "the framework alone." if args.baseline else
+                      "under it the skill hands its commands on git and beside the project to "
+                      "the person, as lines to paste, and the run would stop at the first of "
+                      "them.") + " Run it with the sandbox off.")
+            continue
+        text, skills, written, valid, moved, changes = run_one(
+            fx, c["prompt"], args.timeout, baseline=args.baseline, beside=c["beside"],
+            plugin_dir=plugin_dir)
         # The answer first. A run of this was cut off partway through the front matter
         # listing, and the closing text, which is most of what is being graded, never
         # printed. Reading that transcript back, a grep for what the skill should have
@@ -223,6 +382,11 @@ def main() -> int:
         print()
         print(text.strip()[:3500])
         print(f"\n{'-' * 78}\nwrote: " + (", ".join(written) if written else "nothing"))
+        if c["beside"]:
+            print("git and beside it: " + ("\n  " + "\n  ".join(moved) if moved
+                                           else "nothing changed"))
+            print("files each branch made or moved changes against the main line before the run: "
+                  + ("\n  " + "\n  ".join(changes) if changes else "no branch made or moved"))
     return 0
 
 

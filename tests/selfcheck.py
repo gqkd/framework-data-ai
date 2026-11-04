@@ -5475,7 +5475,7 @@ def _eval_cases_load():
             continue
         # THE TWO RUNNERS INDEX DIFFERENTLY, AND THE CHECK ASKS WHAT EACH ONE READS. A
         # behaviour case names a `fixture` and may inherit the prompt from the file --
-        # `behaviour/run.py:197` does `c.setdefault("prompt", spec.get("prompt"))` -- while a
+        # `behaviour/run.py:341` does `c.setdefault("prompt", spec.get("prompt"))` -- while a
         # trigger case carries its own prompt and the label to score it against. Asserting
         # one shape over both reported six correct files as broken, which is the failure this
         # check is supposed to be the opposite of.
@@ -14926,7 +14926,7 @@ def _additive_end_to_end():
     return problems
 
 
-@check("the fixture contribute's prompts run in is in the additive mode, reports nothing, and gives the to-do the four threads its README row names")
+@check("the fixture contribute's prompts run in is in the additive mode, reports nothing, gives the to-do the four threads its README row names, and has beside it the remote with the parking branch ready and the exchange with the delivery")
 def _contribute_fixture():
     # `evals/fixtures/README.md` says what `contribute/team` holds, and a sentence nothing
     # reads goes stale: a generator that failed would leave the corpus without it in silence,
@@ -14956,6 +14956,240 @@ def _contribute_fixture():
     if not todo.get("additive") or names != ["atlas-chg-001", "atlas-ki-003", "atlas-od-004",
                                              "atlas-od-012"]:
         problems.append(f"the to-do of contribute/team computes the threads {names}")
+    # Beside it, what the behaviour cases of `contribute` run on: the remote the clone pushes to,
+    # with luca's parking branch, which the to-do reads ready -- the join a case asks for --, and
+    # the delivery of CHG-001 in the exchange the project declares.
+    parking = "work/parcheggio-retry-policy"
+    if todo.get("ready") != [parking] or todo.get("join") != "advised":
+        problems.append(f"the to-do of contribute/team reads ready {todo.get('ready')}, join "
+                        f"{todo.get('join')}: the parking branch is not ready for a join")
+    r = subprocess.run(["git", "-C", str(team.parent / "remote.git"), "for-each-ref",
+                        "--format=%(refname)"], capture_output=True, text=True)
+    heads = sorted(r.stdout.split())
+    if heads != ["refs/heads/main", f"refs/heads/{parking}"]:
+        problems.append(f"the remote beside contribute/team holds {heads or r.stderr.strip()}")
+    url = subprocess.run(["git", "-C", str(team), "remote", "get-url", "origin"],
+                         capture_output=True, text=True).stdout.strip()
+    if url != "../remote.git":
+        problems.append(f"contribute/team pushes to {url!r}, not to the remote beside it by a "
+                        "relative path, which a copy of the three resolves to its own")
+    if not (team.parent / "_scambio" / "in-arrivo" / "CHG-001" / "documentazione.md").is_file():
+        problems.append("the exchange beside contribute/team holds no delivery for CHG-001")
+    # Built again where it was built, as `make.py contribute` does: the generator removes what it
+    # wrote beside the project, which `make.py` does not, and the second build is the first.
+    with tempfile.TemporaryDirectory() as tmp:
+        gen = ROOT / "evals" / "fixtures" / "generators" / "additive.py"
+        dest = Path(tmp) / "contribute" / "team"
+        for n in (1, 2):
+            shutil.rmtree(dest, ignore_errors=True)
+            r = subprocess.run([sys.executable, str(gen), str(dest)], capture_output=True,
+                               text=True)
+            if r.returncode:
+                return problems + [f"contribute/team built a {('first', 'second')[n - 1]} time "
+                                   f"in the same place failed: {r.stderr[-300:]!r}"]
+        again = subprocess.run(["git", "-C", str(dest.parent / "remote.git"), "for-each-ref",
+                                "--format=%(refname)"], capture_output=True, text=True).stdout
+        if sorted(again.split()) != heads:
+            problems.append(f"built twice, the remote beside contribute/team holds "
+                            f"{sorted(again.split())}")
+    return problems
+
+
+@check("the behaviour runner copies what a case names beside its fixture, opens its folder to the run, and prints what a run changed on git and beside it and the files each branch it made or moved changes: a push lands in the copy's own remote; a case marked to run without the Bash sandbox is not run where the settings declare it on")
+def _behaviour_runner_lays_out_beside():
+    # `contribute` leaves most of what it does on git -- claims, a branch, a worktree, a push --
+    # and in the exchange, so its cases name in `beside` the remote and the exchange the build
+    # put next to the fixture. A run is stood in for by the command a skill runs to take a
+    # thread: the state read before and after must show what it made, the worktree must reach
+    # the copy's remote by the same relative path, and the build's own remote must not move.
+    # What the thread writes is on its branch, never in the copy: a commit in the worktree must
+    # show as the file the branch adds against the main line, and the main line as no branch
+    # moved. The model is stood in for too, to read what `claude -p` is given: `--add-dir` on the
+    # folder of the copy where something sits beside it, so that a worktree beside the project
+    # is written as a person would write it, and nothing more where nothing does. Under the
+    # sandbox the skill hands its commands on git to the person, and a run would stop at the
+    # first: the cases of `contribute` are marked `without_sandbox`, and where the settings
+    # declare the sandbox on, a case so marked is not run, in either arm, and one that says
+    # otherwise for itself is.
+    team = built("contribute")
+    if team is None:
+        return ["evals/fixtures/generators/additive.py did not build contribute/team"]
+    runner = _load(ROOT / "evals" / "behaviour" / "run.py", "behaviour_run")
+    spec = yaml.safe_load((ROOT / "evals" / "behaviour" / "contribute" / "cases.yaml")
+                          .read_text(encoding="utf-8"))
+    beside = list(spec.get("beside") or [])
+    problems = []
+    if sorted(beside) != ["_scambio", "remote.git"]:
+        problems.append(f"contribute's cases name {beside} beside their fixture")
+    if spec.get("without_sandbox") is not True:
+        problems.append("contribute's cases are not marked `without_sandbox: true`")
+    remote = team.parent / "remote.git"
+    refs = lambda: subprocess.run(["git", "-C", str(remote), "for-each-ref"],
+                                  capture_output=True, text=True).stdout
+    built_refs = refs()
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        try:
+            runner.lay_out(team, ["nothing-there"], tmp / "missing")
+            problems.append("a `beside` the build did not write was copied as nothing")
+        except FileNotFoundError:
+            pass
+        cwd = runner.lay_out(team, beside, tmp / "run")
+        before = runner.git_state(tmp / "run", cwd, beside)
+        base = subprocess.run(["git", "-C", str(cwd), "rev-parse", "HEAD"], capture_output=True,
+                              text=True).stdout.strip()
+        for line in ("_scambio in-arrivo/CHG-001/documentazione.md", "worktree project"):
+            if line not in before:
+                problems.append(f"the state before the run has no {line!r}")
+        rc, out = _work(cwd, "open", "--thread", "atlas-ki-003", "--who", "luca")
+        if rc:
+            return problems + [f"`open` did not take the thread in the copy: {out[-300:]!r}"]
+        after = runner.git_state(tmp / "run", cwd, beside)
+        # A ref is read with its object, a file of the exchange by its path alone: a bare remote
+        # listed as files would name its refs too, with nothing after them.
+        made = {" ".join(line.split()[:2]) for line in after - before
+                if line.startswith("worktree ") or len(line.split()) > 2}
+        want = {"remote.git refs/heads/work/atlas-ki-003", "remote.git refs/tags/claim/KI-003",
+                "remote.git refs/tags/claim/KI-005", "project refs/heads/work/atlas-ki-003",
+                "project refs/tags/claim/KI-003", "project refs/tags/claim/KI-005",
+                "worktree project--atlas-ki-003"}
+        if not want <= made or before - after:
+            problems.append(f"the state after `open` adds {sorted(made)} and drops "
+                            f"{sorted(before - after)}; expected to add {sorted(want)}")
+        rc, out = _work(tmp / "run" / "project--atlas-ki-003", "list")
+        if rc:
+            problems.append(f"from the worktree the copy's remote does not answer: "
+                            f"{out[-300:]!r}")
+        said = runner.branch_changes(cwd, base, before, after)
+        if said != ["work/atlas-ki-003: no file"]:
+            problems.append(f"a branch just taken reads as changing {said}")
+        tree = tmp / "run" / "project--atlas-ki-003"
+        effects = tree / "_filoni" / "atlas-ki-003" / "effetti.md"
+        effects.parent.mkdir(parents=True, exist_ok=True)
+        effects.write_text("# Effects\n", encoding="utf-8")
+        for args in (["add", "-A"], ["commit", "-q", "-m", "an effect"]):
+            subprocess.run(["git", "-C", str(tree), *args], capture_output=True,
+                           env={**os.environ, **_WORK_ENV}, check=False)
+        # Read against the state after `open`, the branch is one the run moved, not made.
+        said = runner.branch_changes(cwd, base, after,
+                                     runner.git_state(tmp / "run", cwd, beside))
+        if said != ["work/atlas-ki-003: A _filoni/atlas-ki-003/effetti.md"]:
+            problems.append(f"a commit of `effetti.md` in the worktree reads as {said}")
+        # A run that writes the main line of the copy by hand moves its HEAD: each branch is read
+        # against the main line before the run, so the main line shows the file it took, and the
+        # thread's branch what it had.
+        (cwd / "nota.md").write_text("# Nota\n", encoding="utf-8")
+        for args in (["add", "nota.md"], ["commit", "-q", "-m", "by hand"]):
+            subprocess.run(["git", "-C", str(cwd), *args], capture_output=True,
+                           env={**os.environ, **_WORK_ENV}, check=False)
+        said = runner.branch_changes(cwd, base, before,
+                                     runner.git_state(tmp / "run", cwd, beside))
+        if said != ["main: A nota.md", "work/atlas-ki-003: A _filoni/atlas-ki-003/effetti.md"]:
+            problems.append(f"a commit on the copy's main line reads as {said}")
+    if refs() != built_refs:
+        problems.append("the run in the copy moved the build's own remote")
+
+    # `claude -p` stood in for: only its arguments are read, and the run is then unscored.
+    given = []
+    def fake(cmd, *a, **k):
+        if cmd and cmd[0] == "claude":
+            given.append((list(cmd), Path(k.get("cwd", ""))))
+            return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+        return subprocess.run(cmd, *a, **k)
+    real = runner.subprocess
+    runner.subprocess = types.SimpleNamespace(
+        run=fake, DEVNULL=subprocess.DEVNULL, TimeoutExpired=subprocess.TimeoutExpired)
+    try:
+        for names in (beside, []):
+            runner.run_one(team, "nothing", 60, beside=names)
+    finally:
+        runner.subprocess = real
+    if len(given) != 2:
+        problems.append(f"two runs stood in for gave `claude` {len(given)} calls")
+    else:
+        opened = [(Path(cmd[cmd.index("--add-dir") + 1]), where) for cmd, where in given
+                  if "--add-dir" in cmd]
+        if len(opened) != 1 or "--add-dir" not in given[0][0]:
+            problems.append(f"`--add-dir` given as {opened}: once, to the run with something "
+                            f"beside it, was expected")
+        elif opened[0][0] != opened[0][1].parent:
+            problems.append(f"`--add-dir` {opened[0][0]}: not the folder that holds the copy "
+                            f"{opened[0][1]}")
+
+    # The header says what the settings declare, the nearest in precedence first; the person's
+    # real file is outside the test, and a machine's managed file, where there is one, wins.
+    with tempfile.TemporaryDirectory() as tmp:
+        project = Path(tmp)
+        (project / ".claude").mkdir()
+        shared = project / ".claude" / "settings.json"
+        local = project / ".claude" / "settings.local.json"
+        shared.write_text('{"sandbox": {"enabled": true}}', encoding="utf-8")
+        local.write_text('{"sandbox": {"enabled": false}}', encoding="utf-8")
+        for want in (f"off, by {local}", f"on, by {shared}"):
+            said = runner.sandbox_declared(project, True)
+            if said != want and "managed-settings" not in said:
+                problems.append(f"the sandbox read as {said!r}, where {want!r} was expected")
+            local.unlink(missing_ok=True)
+
+        # The person's own file, where `CLAUDE_CONFIG_DIR` points, is read by the plugin arm
+        # and not by the baseline, which loads no configuration; and after the project's, so a
+        # person's "off" does not hide a project's "on".
+        bare, config = project / "bare", project / "config"
+        bare.mkdir()
+        config.mkdir()
+        (config / "settings.json").write_text('{"sandbox": {"enabled": true}}', encoding="utf-8")
+        kept = os.environ.get("CLAUDE_CONFIG_DIR")
+        os.environ["CLAUDE_CONFIG_DIR"] = str(config)
+        try:
+            arms = (runner.sandbox_declared(bare, False), runner.sandbox_declared(bare, True))
+            (config / "settings.json").write_text('{"sandbox": {"enabled": false}}',
+                                                  encoding="utf-8")
+            under = runner.sandbox_declared(project, False)
+        finally:
+            if kept is None:
+                os.environ.pop("CLAUDE_CONFIG_DIR", None)
+            else:
+                os.environ["CLAUDE_CONFIG_DIR"] = kept
+        want = (f"on, by {config / 'settings.json'}", "off, declared by no settings file")
+        if arms != want and not any("managed-settings" in a for a in arms):
+            problems.append(f"the person's settings read as {arms} by the two arms, where "
+                            f"{want} was expected")
+        if under != f"on, by {shared}" and "managed-settings" not in under:
+            problems.append(f"a person's off over a project's on read as {under!r}")
+
+        # Three cases on the same fixture, run by `main` with the model stood in for: the file
+        # marks them `without_sandbox`, `with` has something beside it, `outside` nothing, and
+        # `free` says otherwise for itself. Each run is known by its prompt, its name.
+        (project / "contribute").mkdir()
+        (project / "contribute" / "cases.yaml").write_text(yaml.safe_dump({
+            "fixtures_root": str(team.parent.parent), "without_sandbox": True,
+            "cases": [{"fixture": "contribute/team", "name": n, "prompt": n, "beside": b,
+                       "expect": "x", "because": "x", **extra}
+                      for n, b, extra in (("with", beside, {}), ("outside", [], {}),
+                                          ("free", [], {"without_sandbox": False}))]}),
+            encoding="utf-8")
+        saved = (runner.HERE, runner.sandbox_declared, runner.run_one, sys.argv)
+        for declared, arm, want, why in (
+                ("on, by a file", [], ["free"], "the run would stop at the first"),
+                ("on, by a file", ["--baseline"], ["free"], "differ in the framework alone"),
+                ("off, by a file", [], ["with", "outside", "free"], "")):
+            ran = []
+            runner.HERE = project
+            runner.sandbox_declared = lambda *a, d=declared: d
+            runner.run_one = lambda fx, prompt, *a, **k: (
+                ran.append(prompt) or ("text", [], [], "clean", [], []))
+            sys.argv = ["run.py", "contribute", *arm]
+            out = io.StringIO()
+            try:
+                with contextlib.redirect_stdout(out):
+                    runner.main()
+            finally:
+                runner.HERE, runner.sandbox_declared, runner.run_one, sys.argv = saved
+            refused = out.getvalue().count("! NOT RUN")
+            if ran != want or refused != 3 - len(want) or why not in out.getvalue():
+                problems.append(f"with the sandbox declared {declared.split(',')[0]} {arm}, "
+                                f"`main` ran {ran} and refused {refused}; it should have run "
+                                f"{want}, and said why")
     return problems
 
 
