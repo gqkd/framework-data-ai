@@ -409,7 +409,8 @@ a git repository -- and from 4.12.0 pinned, or no version that reads, they are t
 warnings `require_all` counts on a thread's or a parking branch, since the join, run on
 another machine, never sees them; there the way out is the repair. Since 4.12.0 `FW001` and
 `FW003` do not count either: they say which validator, and which commit of the framework, a
-machine runs.
+machine runs -- but for the line of a commit that is wrong, which below 4.12.0 pinned is still
+an `FW003`, the document's, and counts as it did.
 
 The rule has to reach sessions that run no skill, which only the project's `AGENTS.md` does.
 The template's section *Sessions and the exchange* says it, and `migrate.py --adopt` writes

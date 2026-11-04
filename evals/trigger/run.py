@@ -78,8 +78,14 @@ DENY = ["Write", "Edit", "NotebookEdit", "Bash", "WebFetch", "WebSearch"]
 # Matched on the assistant text, because that is where it was actually observed. Matching
 # on a `result` event whose error shape nobody here has seen would be a check written
 # against a guess, and an unfired check is worse than none.
+# And a run with no login. This runner has no baseline arm; the behaviour runner's points
+# `CLAUDE_CONFIG_DIR` at an empty folder, and where the login is a subscription's, kept in the
+# configuration folder, each of its seven runs answered "Not logged in · Please run /login" and
+# was printed as a result (2026-11-04). The same answer here would score as `none`, and the two
+# guards are one pattern.
 UNUSABLE = re.compile(r"session limit|usage limit|rate limit|credit balance|"
-                      r"upgrade to increase|Claude AI usage limit", re.I)
+                      r"upgrade to increase|Claude AI usage limit|"
+                      r"Not logged in|Please run /login", re.I)
 UNAVAILABLE = "<unusable>"
 
 
@@ -224,9 +230,10 @@ def main() -> int:
 
     unusable = sum(1 for f in fired if f == [UNAVAILABLE])
     if unusable:
-        print(f"\n{unusable} of {len(jobs)} runs never produced an assistant turn -- the "
-              "account was out of quota, or the CLI could not start. Those cases would score "
-              "as `none`, which is indistinguishable from a description that does not fire.\n"
+        print(f"\n{unusable} of {len(jobs)} runs measured nothing -- no assistant turn, from a "
+              "CLI that could not start or a deadline met first, or one saying the account was "
+              "out of quota or not logged in. Those cases would score as `none`, which is "
+              "indistinguishable from a description that does not fire.\n"
               "NOT SCORED. Re-run when the account is available.", file=sys.stderr)
         return 2
 

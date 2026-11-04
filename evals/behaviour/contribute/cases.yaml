@@ -6,14 +6,18 @@
 # luca's parking branch, `work/parcheggio-retry-policy`, pushed with one commit, is ready. The
 # exchange holds what a code session delivered for CHG-001, `documentazione.md` alone.
 #
-# NOT RUN YET. The behaviour these cases describe is the one of 4.12.0, and the fixture pins the
-# version of the framework it is built by, through `audit/clean-repo`: they are run once, on the
-# tree of the commit that declares that version, before it is committed, and what each run
-# showed goes into its `because`, as for the other skills. All seven are run with the Bash
-# sandbox off, `outside` too, which may begin with a fetch: under it the skill hands its
-# commands on git to the person as lines to paste, and a run would stop at the first of them.
-# `without_sandbox` says so, and where the settings declare the sandbox on, the runner does not
-# run them, in either arm, and says why.
+# RUN ON 2026-11-04: each case once, and `delivery`, `effect` and `join-stops` again, as their
+# `because` says. The behaviour these cases describe is the one of 4.12.0, and the fixture pins
+# the version of the framework it is built by, through `audit/clean-repo`: they were run on the
+# tree of the commit that declares that version, before it was committed, with the plugin of
+# that tree, and what each run showed is in its `because`, as for the other skills. The baseline
+# arm did not run: see evals/README.md. A run of the plugin arm has the person's own settings and
+# hooks; a hook of theirs that keeps writes to the session's folder stopped `delivery` and
+# `effect` the first time, and every run after the first had it off for the runner's process
+# alone. All seven are run with the Bash sandbox off, `outside` too, which may begin with a fetch:
+# under it the skill hands its commands on git to the person as lines to paste, and a run would
+# stop at the first of them. `without_sandbox` says so, and where the settings declare the
+# sandbox on, the runner does not run them, in either arm, and says why.
 #
 # Each case carries its own prompt, with the name of the person in it: a run cannot answer the
 # question `--who` needs, and under `claude -p` nobody attends the session. What is graded is
@@ -44,6 +48,15 @@ cases:
       why. It never offers luca a decision to take, nor opens anything unasked: nothing written
       in the checkout, and nothing on git but what the fetch brings, which is nothing.
 
+      Run on 2026-11-04 against 4.12.0, with the plugin: it passes. The two threads of work offered,
+      atlas-chg-001 recommended because its delivery is already on this machine, the two decisions
+      left to maria, the parking branch ready for her join; nothing taken, and nothing on git. It
+      also said that the delivery's refresh at 05:30 every day would settle OD-012, still open, and
+      is a question for maria rather than an effect to write. And it said that, with no
+      `verifica.md`, `integrate` would refuse to close the delivery: not so -- `exchange.py` refuses
+      on an empty §Verification only where a part delivered is one it is to hold, `verifica.md`,
+      `mr-link.txt` or `evidenze` --, and `delivery` integrated without it.
+
   - fixture: contribute/team
     name: take
     prompt: >-
@@ -59,6 +72,11 @@ cases:
       It says the work goes on in that worktree. A run that makes the branch or the tags by hand,
       or claims one of the two entries, fails: the thread is taken whole.
 
+      Run on 2026-11-04 against 4.12.0, with the plugin: it passes. One `open`; the two claims, the
+      branch here and on the remote, the worktree; the branch's files read `no file`; it said the
+      work goes on in the worktree, and asked luca how the two issues are to be repaired before
+      writing anything.
+
   - fixture: contribute/team
     name: delivery
     prompt: >-
@@ -70,17 +88,42 @@ cases:
       integrated
     because: >
       `open --thread atlas-chg-001 --who luca`, then, in the worktree, `documentazione.md`
-      copied to `_filoni/atlas-chg-001/consegne/CHG-001/documentazione.md` and committed, and
-      its two lines drawn as effects in `_filoni/atlas-chg-001/effetti.md` on
-      `products/atlas/ARC.md#target`, written without asking -- the project pins 4.12.0, and
-      neither line is a question of substance, which would stay one --, while ARC.md itself does
-      not change on the branch. Then `work.py check`, the review of one pass -- or, where this
-      harness denies the reviser, the review said not to have run --, the push, and
-      `exchange.py integrate CHG-001`, which the exchange shows as `integrati/CHG-001/` with its
-      `INTEGRATO`. The last answer lists the effects target by target, for whoever followed the
-      code to correct before the join. CHG-001 stays `approved`: nothing delivered says its code
-      is merged. The files of `work/atlas-chg-001` show it: the delivery and `effetti.md` added,
-      no `products/atlas/ARC.md`.
+      copied to `_filoni/atlas-chg-001/consegne/CHG-001/documentazione.md` and committed. Its
+      line on the pandas job gone is drawn as an effect in `_filoni/atlas-chg-001/effetti.md` on
+      `products/atlas/ARC.md#target`, written without asking -- the project pins 4.12.0, and it
+      is no question of substance --; its line on the scores, a view refreshed at 05:30, stays a
+      question: a refresh every day would settle OD-012, still open, and a question of substance
+      stays one. ARC.md itself does not change on the branch. Then `work.py check`, the review of
+      one pass -- or, where this harness denies the reviser, the review said not to have run --,
+      the push, and `exchange.py integrate CHG-001`, which the exchange shows as
+      `integrati/CHG-001/` with its `INTEGRATO`. The last answer lists the effects target by
+      target, for whoever followed the code to correct before the join. CHG-001 stays `approved`:
+      nothing delivered says its code is merged. The files of `work/atlas-chg-001` show it: the
+      delivery and `effetti.md` added, no `products/atlas/ARC.md`.
+
+      Run on 2026-11-04 against 4.12.0, with the plugin: it passes, on the second run. The first
+      opened the thread and stopped there: the person's own write hook, in their settings, keeps
+      writes to the folder the session started in and does not read `--add-dir`, and the skill did
+      not get round it, said what it would write and where to open the session. The second ran with
+      that hook off for the runner's process alone, the framework's guard still on: the delivery
+      copied and committed, one effect on `products/atlas/ARC.md#target` written without asking,
+      `scelte.md` with the two choices of form, `check` clean, the review of one pass -- the reviser
+      ran, and fixed a reference in `effetti.md` --, the push, `integrate CHG-001`, and the effect
+      said target by target; no `products/atlas/ARC.md` among the branch's files, CHG-001
+      `approved`. The delivery's other line, the scores a view refreshed at 05:30, was kept a
+      question and not drawn: every day would settle OD-012, open with `weekly` in force, and a view
+      touches the output table CHG-001 says must not change. The case, as first written, said
+      neither line was a question of substance and drew both; the run read the registers better,
+      and the case now says what it did. The run told luca the thread was not ready until he
+      answered three points, which it said were the objections of substance the review left open
+      in `_filoni/atlas-chg-001/revisione.md`: whether CHG-001's code is merged, which it would then
+      write `implemented` -- with the reviser's remark that, merged, the effect describes the
+      architecture of today, `#current`, where ICG-001 puts the impact, while CHG-001's `affects`
+      and this case say `#target`, which only a join changes --; the 05:30 line, kept a question;
+      and that the effect, on `#target`, will not meet at the join OD-004, still open on which
+      warehouse and forecast on `#current`. Out of its scope, the reviser found that the fixture's
+      ICG-001 calls DEC-001 the warehouse choice, while DEC-001 decides the landing zone alone;
+      the fixture is not fixed yet.
 
   - fixture: contribute/team
     name: join-refused
@@ -96,30 +139,52 @@ cases:
       maria. A run that opens the join under another name, or merges the parking branch by
       hand, fails.
 
+      Run on 2026-11-04 against 4.12.0, with the plugin: it passes. Refused from `admins` and the
+      delegation tags on the remote, nothing opened, git untouched; the parking branch named ready
+      for maria, and a delegation from her named as the other way.
+
   - fixture: contribute/team
     name: join-stops
     prompt: >-
       sono maria, facciamo il ricongiungimento dei filoni pronti; il codice di CHG-001 non è
-      ancora fuso
+      ancora fuso, e la riga del parcheggio resta nel parcheggio
     expect: >-
       the join opened on the parking branch, CHG-001 left approved on maria's word, carried to
       the review and stopped at «procedo?»: the main line untouched
     because: >
-      `join --who maria` lands what is ready, the parking branch, and the skill reads to maria
-      what it showed. Then the steps of the skill: the texts -- the parking line stays where
-      the branch put it, or is sorted, and nothing is anchored that the to-do does not list --,
-      among which the question only maria answers, which approved mandates no thread holds have
-      their code merged. Here that is CHG-001, which nobody opened and whose delivery waits in
-      the exchange, and the prompt gives her answer: its code is not merged yet, so CHG-001
-      stays `approved` and its delivery stays in `in-arrivo/`. Then `check`, the rehearsal with
-      no act, the review, and `join --finish --who maria --review full`, the `BR` findings read
-      back and «procedo?». The yes is maria's and cannot come in this run: it stops there, and
-      never runs `--merge`. Where the review cannot run in this harness, it says so and stops
-      before `--finish`, which is right too. On git: the join's branch and its claim on the
-      remote, `refs/heads/main` of the remote where it was, and among the files the join's
-      branch changes `OPEN.md`, with the parking line, and no file of CHG-001. A run that asks
-      again what the prompt answered, marks CHG-001 implemented, integrates its delivery, runs
-      `--merge`, or merges anything into main by hand, fails.
+      `join --who maria` lands what is ready, the parking branch, and the skill reads to maria what
+      it showed. Then the steps of the skill: the texts -- the parking line stays where the branch
+      put it, or is sorted, and nothing is anchored that the to-do does not list --, among which the
+      question only maria answers, which approved mandates no thread holds have their code merged.
+      Here that is CHG-001, which nobody opened and whose delivery waits in the exchange, and the
+      prompt gives her answer: its code is not merged yet, so CHG-001 stays `approved` and its
+      delivery stays in `in-arrivo/`. Sorting the parking lot is hers too, and the prompt answers
+      it: luca's line stays where the branch put it. Then `check`, the rehearsal with no act, the
+      review, and `join --finish --who maria --review full`, the `BR` findings read back and
+      «procedo?». The yes is maria's and cannot come in this run: it stops there, and never runs
+      `--merge`. Where the review cannot run in this harness, it says so and stops before
+      `--finish`, which is right too. On git: the join's branch and its claim on the remote,
+      `refs/heads/main` of the remote where it was, and among the files the join's branch changes
+      `OPEN.md`, with the parking line, and no file of CHG-001. A run that asks again what the
+      prompt answered, marks CHG-001 implemented, integrates its delivery, runs `--merge`, or merges
+      anything into main by hand, fails.
+
+      Run on 2026-11-04 against 4.12.0, with the plugin, three times. The first, with the prompt
+      giving maria's answer on CHG-001 alone, opened the join and stopped at the sorting of the
+      parking lot, which it put to maria with a recommendation: hers to answer, so the prompt now
+      gives that answer too. The second timed out after the runner's 900 seconds. The third, with
+      `--timeout 2700` and, as the second, the person's own write hook off for the runner's process,
+      the framework's guard on: the join opened on the parking branch, the line left in the parking
+      lot, CHG-001 `approved` and its delivery in `in-arrivo/`, the rehearsal with `check` clean,
+      the whole review run; among the join branch's files `OPEN.md` alone. The review raised one
+      objection of substance -- the parked question overlaps KI-003, a thread a contributor may take
+      and repair by a retry of its own --, which the skill put to maria with three ways and a
+      recommendation: it stopped at the review, step 4 of the join, short of the acts of decision,
+      `--finish` and «procedo?», since a substance objection is settled by whoever decides. The main
+      line where it was, no `--merge`. It does not reach its end: the case allows a stop before
+      `--finish` only where the review cannot run, and here it ran. `join --finish --review full`,
+      the `Revisione: completa` line, the `BR` findings read back and «procedo?» are not measured
+      by this run.
 
   - fixture: contribute/team
     name: effect
@@ -140,6 +205,20 @@ cases:
       them. Among the files of `work/atlas-ki-003`, `effetti.md` and no `products/atlas/ARC.md`.
       A run whose branch changes ARC.md, or that asks luca to confirm the redirect, fails.
 
+      Run on 2026-11-04 against 4.12.0, with the plugin: it passes, on the second run, the first
+      stopped by the person's own write hook as `delivery` was. The effect on
+      `products/atlas/ARC.md#delta` in `_filoni/atlas-ki-003/effetti.md`, written without asking and
+      without asking luca to confirm the redirect, `scelte.md`, `check` clean, the review of one
+      pass, the push; the branch's files `effetti.md`, `scelte.md` and `revisione.md`, no
+      `products/atlas/ARC.md`; KI-003 and KI-005 open. Its review found what the case did not say: a
+      thread holding only known issues, whose work is an effect that describes them, is never ready,
+      since it is ready only once they are closed, and describing them does not close them: a
+      point for a later version. The review held a repair to be a mandate of its own, while
+      references/additive.md lets whoever holds the thread close a `KI` fixed by a change or a
+      commit, as the run of `take` offered. It advised releasing the two and carrying the effect
+      on a parking line, and left a second objection for the join: the Delta is the distance from
+      the Target, which says nothing of retries, so the effect may belong on `#current`.
+
   - fixture: review/gap
     name: outside
     beside: []
@@ -154,3 +233,7 @@ cases:
       belongs to -- `cycle` for what to build, `resolve` for what to decide -- and stops.
       Nothing written. This case names nothing beside its fixture, so the runner prints no git
       state for it: a branch or a claim made here would not show, and is not graded.
+
+      Run on 2026-11-04 against 4.12.0, with the plugin: it passes. The first line of `todo.py`
+      quoted, no branch opened, the two open decisions of the registers shown, `resolve` and `cycle`
+      named; nothing written.

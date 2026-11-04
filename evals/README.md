@@ -10,23 +10,28 @@ here, and it needs a model to run, which is why it is not in CI.
 `trigger/cases.yaml` holds 143 prompts, each labelled with the one skill that should
 answer, or `none`.
 
-**Twenty-five of them are marked `unmeasured: true`, and the mark is the lesson of the paragraph
+**Twenty of them are marked `unmeasured: true`, and the mark is the lesson of the paragraph
 below.** `presentation` arrived in 4.0.1 with four cases of its own and three traps, one each
 toward `start`, `business` and `none`; `digest` arrived in 4.1.0 with six of its own, one of
 them a trap that `requirement` must not take, and five traps toward `business`, `cycle`,
 `release` and `none`; `contribute` arrived in 4.9.0 with five of its own and two traps, toward
 `cycle` and `resolve`, whose sentences sit closest to its own. All seven run in
 `contribute/team`, a project in the additive mode, the traps by the `fixture` they name: the
-risk they measure exists only in such a project. The behaviour cases of `contribute` came in
+risk they measure exists only in such a project. Its five were measured on 2026-11-04 and lost
+the mark (*4.12.0, the five of `contribute`*, below); the two traps keep it, and the sentence
+below on the run that scores a case does not hold for them: they are labelled `cycle` and
+`resolve`, and scored they would enter denominators that every table of those two skills was
+measured without, which no new run can make true again. The behaviour cases of `contribute` came in
 4.12.0, with the remote and the exchange the fixture carries beside the repository, which the
 behaviour runner copies with it (*Behaviour*, below). The measured cases of `cycle` and
 `resolve` that ask what to do or decide next are at risk from `contribute`, and no mark protects
-them. None of the twenty-five marked has been run, and the tables further down were measured on
-the 118 without them: the mark keeps those twenty-five out of the denominators the self check
-compares, so a score is never read against a set it was not measured on. The run that scores
-them removes the mark and adds its own table. One measured case is at risk from the second
-batch and no mark protects it: *the image digest is in the CI log* is scored for `release`,
-and a skill whose description says "digest" is the first thing that could pull it away.
+them. None of the twenty marked has been run, and the tables of 3.0.x further down were measured
+on 118, the set without them and the five of `contribute`: the mark keeps those twenty out of
+the denominators the self check compares, so a score is never read against a set it was not
+measured on. The run that scores them removes the mark and adds its own table. One measured case
+is at risk from the second batch and no mark protects it: *the image digest is in the CI log* is
+scored for `release`, and a skill whose description says "digest" is the first thing that could
+pull it away.
 
 **Six of them have never been run, and for four days none of them could be.** `business`
 arrived in 2.8.11 with four cases of its own, one more for `audit` and one more negative,
@@ -140,6 +145,17 @@ contiene un CHG* which overtriggered `cycle` on 08-19, is now 5 of 5 correct.
 The failure across the set is entirely undertriggering: four cases that fired nothing, and not
 one misroute between siblings. Undertriggering costs a user a repeated sentence; the other
 direction costs them a skill that starts rewriting documentation.
+
+### 4.12.0, the five of `contribute`
+
+**5 of 5, measured 2026-11-04 against 4.12.0,** once each, in `contribute/team`, with the
+plugin of the tree read in place. They had been in the set since 4.9.0 with the mark; this is
+their first run, and it compares with nothing. The two traps toward `cycle` and `resolve` were
+not run (above).
+
+| | | miss |
+|---|---|---|
+| `contribute` | 5/5 | |
 
 ### 3.0.2, the whole set on one fixture state
 
@@ -283,7 +299,7 @@ wrong the number is wrong, and that is a better failure than a number nobody can
 
 `claude plugin eval` is the right tool and it is in early access: it reads
 `evals/**/case.yaml`, resolves skills-dir plugins, and runs a no-plugin baseline arm on its
-own, which is the comparison this runner does not do. `cases.yaml` keeps the labels in data
+own, which is the comparison the trigger runner does not do. `cases.yaml` keeps the labels in data
 rather than in code so the move costs a reshape of one file and nothing else.
 
 ## Behaviour
@@ -297,34 +313,41 @@ python evals/behaviour/run.py release  # or audit, cycle, requirement, resolve, 
                                        # contribute
 ```
 
-Six of them have a run, and every one of those found something; in four cases the defect was in
-this repository rather than in the skill: a gate rule that blocked on metrics the plan
-declares non-blocking, a fixture claiming a coverage it did not have, a measurement that
-could not reach the validator the skill is told to run first, and a truncated transcript
-read as a result. `digest` has a case and no run yet, and `contribute` has seven,
-written for the behaviour of 4.12.0 and run first on the tree of the commit that declares it,
-since the fixture pins the version it is built by. A case may name in `beside` what the build put
-next to its fixture -- `contribute/team` has its remote at `../remote.git` and the exchange at
-`../_scambio` --, copied next to the copy; for such a case the runner also prints what the run
-changed on git and beside the project: the branches, the claim, reservation and delegation tags,
-the worktrees, the remote's refs and the files of the exchange, and, before the copy is deleted,
-the files each branch the run made or moved changes against the main line before the run, since the
-work of a thread is on its branch and not in the copy. Such a run gets `--add-dir` on the folder of
-the copy, where a thread's worktree goes, so that it writes there as a person would. The cases of
-`contribute` are measured with the Bash sandbox off, and their file says so, `without_sandbox`:
-under it the skill hands its commands on git and beside the project to the person as lines to
-paste, as its text says, and a run would stop at the first of them. The header of every case says
-what the settings `claude -p` reads declare of the sandbox, and where they declare it on, a case
-so marked is not run, in either arm, and the runner says why; what the skill does under the
-sandbox is measured by the version that tries it.
-`--plugin-dir <checkout>` loads the skills, agents and hooks of that checkout in every run, in
-place of the plugin installed, and the case's header names it; the fixtures and the validator
-stay those of the tree the runner is in, so a version not yet released is run from its own tree,
-with `--plugin-dir` on that tree.
+Seven of them have a run, and every one of those found something; in five cases the defect was in
+this repository rather than in the skill: a gate rule that blocked on metrics the plan declares
+non-blocking, a fixture claiming a coverage it did not have, a measurement that could not reach the
+validator the skill is told to run first, a truncated transcript read as a result, and, for
+`contribute`, a case that called a line of a delivery plain when it settles an open decision and a
+fixture whose `ICG-001` calls `DEC-001`, the landing zone, the warehouse choice, not fixed yet.
+`digest` has a case and no run yet. The seven of `contribute`, written for the behaviour of 4.12.0,
+ran on 2026-11-04 on the tree of the commit that declares it, since the fixture pins the version it
+is built by, with the plugin of that tree: four pass as written; `delivery` and `effect` pass on a
+second run, the first stopped by a write hook of the person's own that keeps writes to the
+session's folder, run again with it off for the runner's process alone; `join-stops` carries the
+join through the whole review and stops on an objection of it that is the admin's, before the acts
+of decision, `--finish` and «procedo?»: it does not reach its end. The run of `effect` found that a
+thread holding only known issues, whose work is an effect describing them, is never ready: a point
+for a later version. Each `because` says what its run showed. A case may name in `beside` what the
+build put next to its fixture -- `contribute/team` has its remote at `../remote.git` and the
+exchange at `../_scambio` --, copied next to the copy; for such a case the runner also prints what
+the run changed on git and beside the project: the branches, the claim, reservation and delegation
+tags, the worktrees, the remote's refs and the files of the exchange, and, before the copy is
+deleted, the files each branch the run made or moved changes against the main line before the run,
+since the work of a thread is on its branch and not in the copy. Such a run gets `--add-dir` on the
+folder of the copy, where a thread's worktree goes, so that it writes there as a person would. The
+cases of `contribute` are measured with the Bash sandbox off, and their file says so,
+`without_sandbox`: under it the skill hands its commands on git and beside the project to the
+person as lines to paste, as its text says, and a run would stop at the first of them. The header
+of every case says what the settings `claude -p` reads declare of the sandbox, and where they
+declare it on, a case so marked is not run, in either arm, and the runner says why; what the skill
+does under the sandbox is measured by the version that tries it. `--plugin-dir <checkout>` loads
+the skills, agents and hooks of that checkout in every run, in place of the plugin installed, and
+the case's header names it; the fixtures and the validator stay those of the tree the runner is in,
+so a version not yet released is run from its own tree, with `--plugin-dir` on that tree.
 
 `audit` and `resolve` were re-run twice on **2026-08-18**: once against 1.1.0 and the
 register split one per product, and again after 2.0.0 replaced `deadline` with `trigger`
-and planted `REG009` in `audit/dirty-repo`. The other four are from the runs above. Every one of those runs found the defect in this repository rather than in the skill: the
+and planted `REG009` in `audit/dirty-repo`. The other five are from the runs above. Every one of those runs found the defect in this repository rather than in the skill: the
 warning count `audit/dirty-repo` produces, the list of views a clean repository is missing
 which still named two of four, and then an expectation that asks a fixture never to be
 written to while the skill it measures is told to transcribe values the repository already
@@ -340,9 +363,20 @@ the first thing that has to change if the set grows.
 
 ## What is not measured yet
 
-**No baseline arm.** Nothing here answers "would plain Claude have done as well", which is
-the question that decides whether the skills earn their token cost. `claude plugin eval`
-runs that arm by itself and is in early access.
+**No baseline measured.** Nothing here answers "would plain Claude have done as well", which
+is the question that decides whether the skills earn their token cost. The behaviour runner has
+the arm, `--baseline`, which points `CLAUDE_CONFIG_DIR` at an empty folder so that no plugin and
+no skill load; but where the login is a subscription's, it is kept in that folder too, and on
+2026-11-04 each of the seven runs of `contribute` in that arm answered "Not logged in": not a
+measurement, which both runners now say. The trigger runner has no such arm. `claude plugin eval`
+runs it by itself and is in early access; short of it, a baseline that turns off the framework's
+plugin alone, through `--settings`, is for a later version, tried first.
+
+**The end of a join, by a run.** No run of `contribute` has reached `join --finish --review
+full`, the `Revisione: completa` line it writes, the `BR` findings read back and «procedo?»:
+the one case written for that path, `join-stops`, stopped on 2026-11-04 at an objection of the
+review that is the admin's to settle. The selfcheck covers the commands; the skill carrying
+them is unmeasured.
 
 **Nothing runs in CI**, because all of it needs a model.
 

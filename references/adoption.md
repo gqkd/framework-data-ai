@@ -6,7 +6,10 @@ the new version grants no permission for the second.
 
 ```text
 trusted previous framework + proposed framework
-                    | compare validators, same project, read-only
+                    | compare validators, same project, its files untouched
+                    | (the new one by the rules of the version of arrival;
+                    |  in the additive mode, on the commit checked out, in a
+                    |  detached worktree added to its repository and removed)
                     v
               migration report -- approved adoption --> framework.yaml pin/version
 
@@ -22,6 +25,12 @@ from any directory, with Python dependencies installed from the proposed complet
 ```bash
 python3 /path/to/new-framework/skills/audit/scripts/migrate.py --root /path/to/documents --json
 ```
+
+The new validator reads by the rules of the version of arrival, so that what the move asks
+of the documents is under NEW before `--adopt` writes the number. In the additive mode both
+validators read a detached worktree of the commit checked out -- the join's branch, read as
+the main line will read it --, and what no commit holds is not read: the report names it, in
+`not_read` with `--json`, and `--adopt` refuses until it is committed or set aside.
 
 When the project's `framework_commit` is available in the framework clone, it is the
 baseline. Otherwise an unpinned version resolves via the registry's Git history; that is

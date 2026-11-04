@@ -183,6 +183,16 @@ WITHDRAWN_STAYS_SINCE = "4.12.0"
 # Where a change may be a hotfix, `hotfix: true`, and `CHG005` reads the field: the version that
 # brought it. `join` and the to-do read it with their own constants.
 HOTFIX_SINCE = "4.12.0"
+# Where what is wrong with the `framework_commit` line itself -- a number, a name that is not a
+# commit -- is `FW005`, the document's, and no longer the `FW003` it was. Below, it stays
+# `FW003`: a project pinning the version before may have annotated it so, and CI, validating
+# with that version, still reads the annotation as matching.
+PIN_LINE_CODE_SINCE = "4.12.0"
+# The version whose rules this run reads, in place of the one the project declares: set by
+# `--rules-version`, which `migrate.py` passes so that what the project will be told once it
+# declares the version of arrival is seen before the number is written. The rules only:
+# `FW001` and `FW004` still read the line as it is, and nothing else passes it.
+RULES_VERSION: str | None = None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -199,6 +209,11 @@ class Finding:
     # would drop out of that check without a word. The annotation arrives beside the
     # finding, never instead of it.
     accepted: dict | None = None
+    # Counted by `require_all` whatever its code says. One finding has it: below the version
+    # that gave it `FW005`, the `framework_commit` line that is wrong is still an `FW003`, and
+    # the document's, counted as it was, while every other `FW003` says only what a machine
+    # runs and stays outside.
+    counted: bool = False
 
     def line(self) -> str:
         icon = {"error": "x", "warn": "!", "info": "-"}[self.level]
@@ -242,9 +257,10 @@ class Report:
     def level(self, code: str) -> str:
         return (self.config.get(code) or {}).get("level", "warn")
 
-    def add(self, code: str, path: str, message: str) -> None:
+    def add(self, code: str, path: str, message: str, counted: bool = False) -> None:
         if self.enabled(code):
-            self.findings.append(Finding(code, path, message, self.level(code)))
+            self.findings.append(Finding(code, path, message, self.level(code),
+                                         counted=counted))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -553,9 +569,10 @@ def load_annotations(root: Path) -> tuple[list[dict], bool, str | None]:
 # older than 4.8.1 may (`ci/pull-request.yml`). `FW004`, a `framework_version` that is not three
 # numbers, and `FW005`, a `framework_commit` that is a number or not a commit at all, are the
 # document's, and stay counted; a commit this checkout does not have is an `FW003`, since without
-# a fetch it cannot be told from a checkout behind a pin adopted elsewhere. The line between
-# them: what is the document's, or exposes something, is counted; what says only the state of a
-# machine is not.
+# a fetch it cannot be told from a checkout behind a pin adopted elsewhere. Below the version that
+# gave the line its own code, the line that is wrong is still an `FW003`, and counted as it was
+# (`Finding.counted`). The line between them: what is the document's, or exposes something, is
+# counted; what says only the state of a machine is not.
 OUTSIDE_REQUIRE_ALL = ("EXC001", "EXC002", "EXC003", "EXC004", "EXC007", "FW001", "FW003")
 
 # What `require_all` still counts on a thread's or a parking branch, where the other warnings are
@@ -637,7 +654,7 @@ def apply_annotations(report: Report, rows: list[dict], require_all: bool,
     if not require_all:
         return
     for f in list(report.findings):
-        if f.level != "warn" or f.accepted or f.code in outside:
+        if f.level != "warn" or f.accepted or (f.code in outside and not f.counted):
             continue
         if only is not None:
             # A thread's or a parking branch: only the two warnings that can say an exposure on
@@ -687,13 +704,24 @@ def load_config(project: dict) -> tuple[dict, int]:
         if checks[code]["level"] == RETIRED:
             since = checks[code].get("retired_in", "an earlier version")
             declared, gone = semver(project.get("framework_version")), semver(since)
+            if RULES_VERSION is not None:
+                # READ BY THE RULES OF ANOTHER VERSION, FOR `--adopt`. The rules follow the
+                # version given, this refusal does not: it is about the line the project wrote,
+                # which `migrate.py` files under GONE and `--adopt` removes with the number --
+                # stopping here would leave the comparison nothing to compare.
+                print(f"framework-data-ai: framework.yaml pins {code!r}, retired in {since}. "
+                      f"Read by the rules of {RULES_VERSION}, the line is ignored, and "
+                      "`migrate.py --adopt` removes it.", file=sys.stderr)
+                continue
             if declared and gone and declared < gone:
                 # NOT WRONG YET. A project that still declares the version before the one
-                # that retired the code wrote the line when it was right, and is running this
-                # validator to see what the move asks of it -- `migrate.py` runs it exactly
-                # so. The line switches nothing on, which is said on stderr rather than in a
-                # finding, and `--adopt` removes it with the number. Once the project declares
-                # the version that retired the code, the same line stops the run below.
+                # that retired the code wrote the line when it was right, and a machine whose
+                # validator is newer than the pin -- the normal state between a plugin updated
+                # and the adoption -- reads it here; `migrate.py`, which reads by the rules of
+                # the version of arrival, takes the branch above. The line switches nothing on,
+                # which is said on stderr rather than in a finding, and `--adopt` removes it
+                # with the number. Once the project declares the version that retired the
+                # code, the same line stops the run below.
                 print(f"framework-data-ai: framework.yaml pins {code!r}, retired in {since}. "
                       f"This repository declares {project.get('framework_version')}, so the "
                       "line is ignored until it adopts, and `migrate.py --adopt` removes it.",
@@ -3776,8 +3804,10 @@ def rules_hold(project: dict, since: str) -> bool:
     otherwise read one repository by two sets of rules, and an annotation written for the old
     one would turn into an `AN001` on the machine that updated first. A project that pins
     nothing, or a number nobody can read, has the rules of this validator, as it has every
-    other one."""
-    declared, introduced = semver(project.get("framework_version")), semver(since)
+    other one. Under `--rules-version`, the version given stands for the one declared."""
+    declared = semver(RULES_VERSION if RULES_VERSION is not None
+                      else project.get("framework_version"))
+    introduced = semver(since)
     return declared is None or introduced is None or declared >= introduced
 
 
@@ -3909,17 +3939,24 @@ def check_framework_pin(project: dict, report: Report) -> None:
     # ITS OWN CODE SINCE 4.12.0, `FW005`, for what is wrong with the line itself -- a number,
     # a name that is not a commit: the document's, and CI sees it, so `require_all` counts it.
     # `FW003` is left with the commit a machine runs, a checkout that moved or one without the
-    # pinned commit, and leaves `require_all` for that, as `FW001` does.
+    # pinned commit, and leaves `require_all` for that, as `FW001` does. The new code follows
+    # the version pinned (`PIN_LINE_CODE_SINCE`); below it the line is `FW003`, as before.
+    def wrong_line(message: str) -> None:
+        # Below that version the line is the `FW003` it was, and counted by `require_all` as it
+        # was. The codes are written out, for the check that reads which codes are emitted.
+        if rules_hold(project, PIN_LINE_CODE_SINCE):
+            report.add("FW005", "framework.yaml", message)
+        else:
+            report.add("FW003", "framework.yaml", message, counted=True)
+
     if isinstance(pinned, int) and not isinstance(pinned, bool):
-        report.add("FW005", "framework.yaml",
-                   f"framework_commit is {pinned}, a number: YAML reads a hash made only of "
+        wrong_line(f"framework_commit is {pinned}, a number: YAML reads a hash made only of "
                    "digits as one, and one that starts with 0 may not come back as written. "
                    'Write the hash in quotes, seven characters or more, `framework_commit: '
                    '"<hash>"`, as `migrate.py --adopt` writes it.')
         return
     if not isinstance(pinned, str) or not COMMIT.match(pinned.strip()):
-        report.add("FW005", "framework.yaml",
-                   f"framework_commit is {pinned!r}, which is not a commit. It takes the "
+        wrong_line(f"framework_commit is {pinned!r}, which is not a commit. It takes the "
                    "hash the framework is pinned at, seven characters or more. A branch or "
                    "a tag name is not enough: both move, and a pin that moves is the state "
                    "this field exists to leave.")
@@ -3969,13 +4006,14 @@ def say_if_the_checkout_moved(root: Path, project: dict) -> None:
     This is not a second check and it takes no decision: the same fact, a pin that reads as a
     commit and is not the one running, said on stderr before anything is scanned -- whether
     or not the framework has the commit. It is not said on a shallow checkout, nor on a
-    number or a name, which are `FW005`. Stderr and not stdout, which is not a preference:
-    stdout carries the JSON that every caller parses, `migrate.py` included, and a line
-    printed there would break the tool the message is telling somebody to run.
+    number or a name, which the report says: `FW005`, or `FW003` where the project pins a
+    version before 4.12.0 (`PIN_LINE_CODE_SINCE`). Stderr and not stdout, which is not a
+    preference: stdout carries the JSON that every caller parses, `migrate.py` included, and a
+    line printed there would break the tool the message is telling somebody to run.
     """
     pinned = project.get("framework_commit")
     if not isinstance(pinned, str) or not COMMIT.match(pinned.strip()):
-        return                      # `FW005` reports the malformed pin, in the report
+        return                      # the report says it: `FW005`, or `FW003` below 4.12.0
     pinned = pinned.strip()
     head = framework_head()
     if head is None or head.lower().startswith(pinned.lower()) or framework_is_shallow():
@@ -5562,7 +5600,17 @@ def main() -> int:
                     help="explicit opt-in; strict reads caller-trusted Git objects, not project worktrees")
     ap.add_argument("--trust-input", type=Path,
                     help="CI-authenticated contribution input, never a PR-supplied approval")
+    ap.add_argument("--rules-version", metavar="X.Y.Z",
+                    help="read the project by the rules of this version, as if it declared it: "
+                         "what `migrate.py` passes, with the version of arrival, so that what "
+                         "the project will be told once it adopts is seen before; `FW001` still "
+                         "compares the version declared")
     args = ap.parse_args()
+    if args.rules_version is not None:
+        if semver(args.rules_version) is None:
+            ap.error(f"--rules-version {args.rules_version!r}: not three numbers")
+        global RULES_VERSION
+        RULES_VERSION = args.rules_version
 
     if args.profile == "strict-contribution":
         authority = importlib.import_module(f"{_CORE_NAME}.authority")

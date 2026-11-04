@@ -226,7 +226,7 @@ Three things it will not let you do, and each is an `error`:
 |---|---|
 | `AN001` | an annotation matching no finding. The claim is about nothing, and a reason left standing for a finding that is gone reads as current. When the finding is repaired, the annotation goes with it |
 | `AN002` | an annotation on a finding reported at `error`. An error that can be explained away in one project has stopped being an error. If the check is wrong the repair is in the framework, not in a paragraph here |
-| `AN003` | a warning with no annotation, only where `require_all: true` says the list has to be complete. Not on `EXC001`-`EXC004` and `EXC007`, the upkeep of the exchange, a folder that differs on every machine: a list in a shared file cannot rule on them; since 4.12.0 not on `FW001` and `FW003`, which say which validator and which commit of the framework a machine runs, while `FW004` and `FW005`, the version or the pin line that is wrong, are the document's and count; and from 4.12.0 pinned, or no version that reads, on a thread's or a parking branch, whose warnings the join counts, only on `EXC005` and `EXC006`, which can say an exposure on that machine the join never sees, and whose way out is the repair |
+| `AN003` | a warning with no annotation, only where `require_all: true` says the list has to be complete. Not on `EXC001`-`EXC004` and `EXC007`, the upkeep of the exchange, a folder that differs on every machine: a list in a shared file cannot rule on them; since 4.12.0 not on `FW001` and `FW003`, which say which validator and which commit of the framework a machine runs, while `FW004` and `FW005`, the version or the pin line that is wrong, are the document's and count -- below 4.12.0 pinned that pin line is still an `FW003`, and counts as it did --; and from 4.12.0 pinned, or no version that reads, on a thread's or a parking branch, whose warnings the join counts, only on `EXC005` and `EXC006`, which can say an exposure on that machine the join never sees, and whose way out is the repair |
 
 **You may propose an annotation. You do not write one on your own.** It is a decision about
 what this repository accepts, with the same weight as `XP003: off` in `framework.yaml`, and
@@ -598,8 +598,12 @@ python3 "${CLAUDE_PLUGIN_ROOT:?}/skills/audit/scripts/migrate.py" --root <projec
 
 It reads the project's `framework_version` and available `framework_commit`, reconstructs
 the previous complete framework (or uses explicit `--from-framework`), runs each validator
-in its own process over the same repository, and splits the
-findings:
+in its own process over the same repository -- the new one by the rules of the version of
+arrival, `--rules-version`, so that what the move asks of the documents shows before the
+number is written --, and splits the findings. In the additive mode both read a detached
+worktree of the commit checked out, with no branch name and no `--base`, as the main line
+will read the join: what no commit holds is not read, the report names it (`not_read` in the
+JSON), and `--adopt` refuses until it is committed or set aside:
 
 - **new** — reported only by the new validator. This is the migration work.
 - **already there** — reported by both. Documents to repair, and nothing to do with the

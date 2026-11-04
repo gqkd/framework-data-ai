@@ -1069,13 +1069,15 @@ checks:
       the repository records. `framework_commit` is the project writing the commit down, and
       this is what makes writing it down mean something.
 
-      Since 4.12.0 it says only the commit a machine runs -- a checkout that moved, or one
-      without the pinned commit, which its message sends to fetch before reading the pin as
-      never true --, and `require_all` does not count it, for the reason it does not count
-      `FW001`: without a fetch, which the validator does not make, a commit absent from the
-      checkout cannot be told from one adopted elsewhere and not fetched yet, and CI, which
-      checks the pin out, fails on one that does not exist before the validator runs. What is
-      wrong with the line itself, a number or a name that is not a commit, is `FW005`.
+      Since 4.12.0, whatever version the project pins, `require_all` does not count it when it
+      says the commit a machine runs -- a checkout that moved, or one without the pinned commit,
+      which its message sends to fetch before reading the pin as never true --, for the reason
+      it does not count `FW001`: without a fetch, which the validator does not make, a commit
+      absent from the checkout cannot be told from one adopted elsewhere and not fetched yet,
+      and CI, which checks the pin out, fails on one that does not exist before the validator
+      runs. What is wrong with the line itself, a number or a name that is not a commit, is
+      `FW005` where the project pins 4.12.0 or later; below, it stays this code, and
+      `require_all` counts that one as it did, since it is the document's.
 
       It is silent when the field is absent, and that is correct rather than a gap: pinning
       costs a deliberate bump for every fix the framework ships, and a project with one
@@ -1093,8 +1095,9 @@ checks:
       itself removes. Both entry points therefore say the same thing on stderr before they
       scan anything; that line is not a second check and takes no decision, it is this
       finding said where the circularity cannot swallow it, whether or not the framework has
-      the commit. It is not said on a shallow checkout, nor on a pin that is not a commit
-      (`FW005`).
+      the commit. It is not said on a shallow checkout, nor on a pin that is not a commit,
+      which the report says (`FW005`, or this code where the project pins a version before
+      4.12.0).
 
   FW005:
     level: warn
@@ -1104,9 +1107,15 @@ checks:
       starts with 0 may not come back as written; a branch or a tag name moves, which is the
       state the field exists to leave. Neither is a migration to read. Until 4.12.0 they were an
       `FW003`; they have a code of their own because they are the document's, and CI sees them,
-      so `require_all` counts them, while `FW003` says only which commit a machine runs. A
-      commit the framework checkout does not have stays an `FW003`: without a fetch it cannot be
-      told from one adopted elsewhere that the checkout has not fetched yet.
+      so `require_all` counts them, while `FW003` says only which commit a machine runs. The
+      code follows the version pinned: below 4.12.0 the line is still an `FW003`, counted by
+      `require_all` as it was, so that a project is read alike by CI and by a machine with a
+      newer plugin, whether it annotated the line or not.
+      The comparison of an adoption reads such a pin only with `--from`, `--from-commit` or
+      `--from-framework`; with them the annotation is an `AN001` under NEW, and `--adopt`
+      refuses until it is removed. A commit the framework checkout does not have stays an
+      `FW003`: without a fetch it cannot be told from one adopted elsewhere that the checkout
+      has not fetched yet.
 
   # ── Findings a project has examined and left standing ──────────────────────
   #
@@ -1173,7 +1182,8 @@ checks:
       writes, at a join. Not what exposes something -- `EXC005`, a credential, and `EXC006`,
       which says among other names an exchange inside a git repository --, nor `EXC008`, which
       reads the value committed, the same everywhere. Since 4.12.0, whatever version the
-      project pins, `FW001` and `FW003` are outside it too: which
+      project pins, `FW001` and `FW003` are outside it too -- but for the line of a commit that
+      is wrong, below 4.12.0 pinned still an `FW003` and counted as it was --: which
       validator and which commit of the framework a machine runs, a newer one being the normal
       state between a plugin updated and an adoption, which CI, checking out the framework the
       project pins, does not see -- it does where it checks out another --; `FW004`, a version

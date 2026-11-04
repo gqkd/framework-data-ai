@@ -6580,13 +6580,15 @@ def _previous_version(before: str | None = None) -> str | None:
     return None
 
 
-@check("CHG005 says a hotfix routed past the product with no decision, and the field on what is not a change, from the version that brought it")
+@check("CHG005 says a hotfix routed past the product with no decision, and the field on what is not a change, from the version that brought it, or read by its rules with --rules-version")
 def _hotfix_routing():
     # A hotfix is classified like any change; its lightning join is for one routed `none` or
     # `product`, and one routed `architecture` or `both` wants a `DEC`. Where `impacts` say
     # `architecture` too, `CHG002` says it from `approved` on, and `CHG005` leaves it those
     # states. The pins are the rule's own version and the one before it, read from the registry's
-    # history, and no pin at all, which has the rules of the version that reads it.
+    # history, and no pin at all, which has the rules of the version that reads it. Pinned
+    # before, `--rules-version` at the rule's version reads it as if it were pinned there --
+    # what `migrate.py` asks before `--adopt` writes the number --, and at the one before, not.
     since = _load(VALIDATE, "validate_for_hotfix").HOTFIX_SINCE
     before = _previous_version(since)
     fm = lambda **kw: "---\n" + "\n".join(f"{k}: {v}" for k, v in kw.items()) + "\n---\n\n"
@@ -6615,7 +6617,7 @@ def _hotfix_routing():
         lifecycle="immutable", status="accepted", scope="architecture", products="[p]",
         owners="[o]", created="2026-01-01", **({"hotfix": "true"} if extra else {})) + "# DEC-001\n"
 
-    def codes(files: dict, pin: str | None) -> set | None:
+    def codes(files: dict, pin: str | None, extra=()) -> set | None:
         with tempfile.TemporaryDirectory() as tmp:
             files = dict(files, **{"OPEN.md": fm(
                 schema="framework/open-register/v1", artifact_type="open-register",
@@ -6628,7 +6630,7 @@ def _hotfix_routing():
                 f.parent.mkdir(parents=True, exist_ok=True)
                 f.write_text(text)
             r = subprocess.run([sys.executable, str(VALIDATE), "--root", tmp, "--json",
-                                "--stale-days", "36500"], capture_output=True, text=True)
+                                "--stale-days", "36500", *extra], capture_output=True, text=True)
             if r.returncode not in (0, 1) or not r.stdout.strip():
                 return None
             # The schema's finding on the field alone: the unqualified signal is another's.
@@ -6663,10 +6665,16 @@ def _hotfix_routing():
          at("architecture", "architecture", chg("draft", "[SIG-001]")), set()),
         ("pinned before the rule, on a decision", before,
          at("product", "data", chg("draft", "[SIG-001]"), dec("hotfix")), set()),
+        ("pinned before the rule, read by its rules", before,
+         at("architecture", "architecture", chg("draft", "[SIG-001]")), {"CHG005"},
+         ("--rules-version", since)),
+        ("pinned at the rule, read by the rules of the one before", since,
+         at("architecture", "architecture", chg("draft", "[SIG-001]")), set(),
+         ("--rules-version", str(before))),
     ]
     problems = [] if before else ["no version before the hotfix's in the registry's history"]
-    for what, pin, files, want in cases:
-        got = codes(files, pin)
+    for what, pin, files, want, *extra in cases:
+        got = codes(files, pin, *extra)
         if got is None:
             problems.append(f"{what}: the validator did not complete")
         elif got != want:
@@ -7790,6 +7798,177 @@ def _retired_pin_migrates():
     return problems
 
 
+@check("migrate.py reads by the rules of the version of arrival: what that version brings is NEW, an annotation on a code it retires is NEW, the additive mode is compared on a detached worktree and --adopt refuses there what no commit holds, annotation findings are matched by what they name, and --adopt removes a pin on EXC004")
+def _adopt_reads_the_arrival():
+    # R-4. Run with the version still declared, the new validator kept the rules of that
+    # version off, and what the move asks of the documents showed only after `--adopt` had
+    # written the number: an `AN001` on a code the move retires, a finding a rule brings.
+    migrate = _load(ROOT / "skills" / "audit" / "scripts" / "migrate.py", "migrate_for_arrival")
+    validate = _load(VALIDATE, "validate_for_arrival")
+    problems = []
+
+    # Annotation findings all sit on the annotations file: keyed by what they name, one that
+    # turns obsolete with the move does not pair with another obsolete before it.
+    an = lambda code, path: {"code": "AN001", "path": ".framework/expected-findings.yaml",
+                             "message": f"an annotation names [{code}] {path}, and nothing "
+                                        "reports it."}
+    a, b = (migrate.key(an("LC006", "OPEN.md"), collections.Counter()),
+            migrate.key(an("LC001", "OPEN.md"), collections.Counter()))
+    if a == b or a != migrate.key(an("LC006", "OPEN.md"), collections.Counter()):
+        problems.append(f"two AN001 on different annotations keyed {a} and {b}: by what they "
+                        "name, not by their order")
+
+    # The additive mode: compared on a detached worktree of HEAD, no branch name, no
+    # `GITHUB_HEAD_REF`, removed after; outside the mode, the project itself.
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = _Repo(Path(tmp) / "docs")
+        repo.write(".framework/work.yaml", "mode: additive\n")
+        repo.commit("additive", "2026-01-01T09:00:00")
+        repo.git("switch", "-q", "-c", "work/ricongiungimento-x")
+        head = repo.git("rev-parse", "HEAD")
+        kept = os.environ.get("GITHUB_HEAD_REF")
+        os.environ["GITHUB_HEAD_REF"] = "work/ricongiungimento-x"
+        try:
+            with migrate.compared_tree(repo.path) as (tree, at, env):
+                named = subprocess.run(["git", "-C", str(tree), "symbolic-ref", "-q", "HEAD"],
+                                       capture_output=True, text=True)
+                seen = (tree != repo.path, at == head, named.returncode != 0,
+                        "GITHUB_HEAD_REF" not in (env or {}))
+        finally:
+            if kept is None:
+                os.environ.pop("GITHUB_HEAD_REF", None)
+            else:
+                os.environ["GITHUB_HEAD_REF"] = kept
+        if not all(seen):
+            problems.append(f"the additive mode compared on (apart, at HEAD, no name, no "
+                            f"GITHUB_HEAD_REF) = {seen}")
+        if len(repo.git("worktree", "list").splitlines()) != 1:
+            problems.append("the worktree of the comparison was left behind")
+        repo.write(".framework/work.yaml", "mode: classic\n")
+        with migrate.compared_tree(repo.path) as (tree, at, env):
+            if tree != repo.path or at is not None:
+                problems.append("outside the additive mode the comparison left the project")
+
+    # The version before the one that brings `CHG005` and retires `EXC004`, and not the one
+    # before the registry's: from the first patch on top, that one is the version that retires
+    # `EXC004`, where the old validator stops on the pin below and `CHG005` is no longer new.
+    since = validate.HOTFIX_SINCE
+    previous = _previous_version(before=min(
+        since, str(CHECKS["checks"]["EXC004"].get("retired_in") or since), key=migrate.semver))
+    if previous is None:
+        return problems + ["no earlier version in the registry's history: the case cannot be "
+                           "built"]
+    fm = lambda **kw: "---\n" + "\n".join(f"{k}: {v}" for k, v in kw.items()) + "\n---\n\n"
+    hotfix = {
+        "products/p/cycles/ICG-001.md": fm(
+            schema="framework/impact-classification/v1", artifact_type="impact-classification",
+            lifecycle="immutable", status="accepted", id="ICG-001", products="[p]",
+            owners="[o]", created="2026-01-01", routing="\n  SIG-001: architecture",
+            impacts="\n  SIG-001: [architecture]")
+        + "# ICG-001\n\n<!-- section: intake -->\n## I\n<!-- section: classification -->\n"
+          "## C\n<!-- section: open-questions -->\n## O\n",
+        "products/p/changes/CHG-001.md": fm(
+            schema="framework/change-contract/v1", artifact_type="change-contract",
+            lifecycle="immutable", status="draft", id="CHG-001", products="[p]", owners="[o]",
+            created="2026-01-01", icg="ICG-001", derives_from="[SIG-001]", hotfix="true")
+        + "# CHG-001\n\n<!-- section: what-changes -->\n## A\n<!-- section: "
+          "what-must-not-change -->\n## B\n<!-- section: how-we-know-it-worked -->\n## C\n"}
+    annotation = ("expected:\n  - code: EXC004\n    path: ../_scambio/integrati/CHG-001/"
+                  "risorse.md\n    reason: a branch its person keeps.\n"
+                  "    clears_when: its row is removed.\n")
+
+    def project(where: Path, extra: dict) -> Path:
+        where.mkdir(parents=True)
+        files = {"framework.yaml": f'framework_version: "{previous}"\n# kept\nchecks:\n'
+                                   "  EXC004: off\n",
+                 "products/p/PBR.md": _brief("p", "2026-01-01 09:00", created="2026-01-01"),
+                 **extra}
+        for rel, text in files.items():
+            (where / rel).parent.mkdir(parents=True, exist_ok=True)
+            (where / rel).write_text(text, encoding="utf-8")
+        return where
+
+    def run(proj: Path, framework: Path, *more: str) -> dict:
+        r = subprocess.run([sys.executable, str(ROOT / "skills/audit/scripts/migrate.py"),
+                            "--root", str(proj), "--framework", str(framework), "--json",
+                            *more], capture_output=True, text=True)
+        try:
+            return json.loads(r.stdout)
+        except json.JSONDecodeError:
+            return {"problems": [f"nothing readable: {r.stderr.strip()[-300:]}"], "new": [],
+                    "gone": []}
+
+    with tempfile.TemporaryDirectory() as tmp:
+        out = run(project(Path(tmp) / "report", {
+            **hotfix, ".framework/expected-findings.yaml": annotation}), ROOT)
+        new = {(f["code"], f["path"]) for f in out["new"]}
+        if out["problems"]:
+            problems.append(f"migrate.py could not compare: {out['problems']}")
+        if migrate.semver(previous) < migrate.semver(since) \
+                and ("CHG005", "products/p/changes/CHG-001.md") not in new:
+            problems.append(f"a hotfix routed to the architecture with no DEC, the project at "
+                            f"{previous}: CHG005 not under NEW ({sorted(new)}), so the new "
+                            "validator did not read by the rules of the version of arrival")
+        if not any(f["code"] == "AN001" and "[EXC004]" in f["message"] for f in out["new"]):
+            problems.append(f"an annotation on EXC004, which the move retires: not under NEW "
+                            f"({sorted(new)})")
+        if not any(g["code"] == "EXC004" and g["path"] == "framework.yaml" for g in out["gone"]):
+            problems.append("the pin on EXC004 is not under GONE")
+
+        dirty = subprocess.run(["git", "-C", str(ROOT), "status", "--porcelain"],
+                               capture_output=True, text=True).stdout.strip()
+        if dirty:
+            return problems + ["NOT RUN: the working tree is dirty, so `--adopt` against a "
+                               "clone of it would test committed bytes that are not these. "
+                               "Commit and run again"]
+        clone = Path(tmp) / "trusted"
+        c = subprocess.run(["git", "clone", "-q", "--local", "--no-hardlinks", str(ROOT),
+                            str(clone)], capture_output=True, text=True)
+        if c.returncode:
+            return problems + ["could not clone the framework for the adoption: " + c.stderr]
+        refused = project(Path(tmp) / "refused", {".framework/expected-findings.yaml":
+                                                  annotation})
+        before = (refused / "framework.yaml").read_text(encoding="utf-8")
+        out = run(refused, clone, "--adopt")
+        if (refused / "framework.yaml").read_text(encoding="utf-8") != before \
+                or not any(p.startswith("not adopted") for p in out["problems"]):
+            problems.append(f"--adopt with an annotation on EXC004 wrote the number, or did not "
+                            f"say why not: {out['problems']}")
+        adopting = project(Path(tmp) / "adopting", {})
+        out = run(adopting, clone, "--adopt")
+        after = (adopting / "framework.yaml").read_text(encoding="utf-8")
+        if REGISTRY["version"] not in after or "EXC004" in after or "# kept" not in after:
+            problems.append(f"--adopt on a pin of EXC004 left {after!r}: the number written, the "
+                            f"line gone, the comment kept ({out['problems']})")
+
+        # The additive mode compares a commit: a change no commit holds is not read, the report
+        # names it, and `--adopt` refuses rather than adopt what it did not read.
+        # The project in a folder of its repository, so that the paths come back relative to
+        # `--root`; a name with a space, and a rename, whose old name `-z` gives in a field of
+        # its own and which is not a file to read.
+        repo = _Repo(Path(tmp) / "additive")
+        repo.write("docs/framework.yaml", f'framework_version: "{previous}"\n')
+        repo.write("docs/.framework/work.yaml",
+                   "mode: additive\npeople: [Admin]\nadmins: [Admin]\n")
+        repo.write("docs/products/p/PBR.md",
+                   _brief("p", "2026-01-01 09:00", created="2026-01-01"))
+        repo.write("docs/products/p/OLD.md", "committed\n")
+        repo.commit("additive", "2026-01-01T09:00:00")
+        repo.write("docs/products/p/a note.md", "not committed\n")
+        repo.git("mv", "docs/products/p/OLD.md", "docs/products/p/NEW.md")
+        docs = repo.path / "docs"
+        before = (docs / "framework.yaml").read_text(encoding="utf-8")
+        out = run(docs, clone, "--adopt")
+        if sorted(out.get("not_read") or []) != ["products/p/NEW.md", "products/p/a note.md"] \
+                or (docs / "framework.yaml").read_text(encoding="utf-8") != before \
+                or not any(p.startswith("not adopted") and "no commit holds" in p
+                           for p in out["problems"]):
+            problems.append(f"--adopt in the additive mode with a file no commit holds: not "
+                            f"read {out.get('not_read')}, problems {out['problems']}; it should "
+                            "name it and refuse, writing nothing")
+    return problems
+
+
 @check("the static fixtures carry no attestation ahead of its commit and no reading without a note")
 def _static_fixtures_attest_cleanly():
     # They sit inside this repository, so the history behind their lines is this
@@ -8243,7 +8422,7 @@ def _exchange_integrate():
     return problems
 
 
-@check("EXC004 retires by the version pinned: from its retired_in, or no version that reads, nothing reports it, an annotation on it is an AN001, a pin on it stops the run and exchange.py lists no resources; below, all as before")
+@check("EXC004 retires by the version pinned: from its retired_in, or no version that reads, nothing reports it, an annotation on it is an AN001, a pin on it stops the run and exchange.py lists no resources; below, all as before; read by the rules of its retired_in with --rules-version, retired, the pin ignored on stderr and FW001 still on the version declared")
 def _exc004_retires_by_the_pin():
     # What a contributor's session leaves on a machine is that person's (4.12.0): the catalog
     # keeps `EXC004` at its level with a `retired_in`, and the version the project pins says
@@ -8314,6 +8493,29 @@ def _exc004_retires_by_the_pin():
             if not retired and (out is None or not any(
                     f["code"] == "EXC004" and f["level"] == "info" for f in out["findings"])):
                 problems.append(f"{pin.strip()!r} pinning EXC004 at info: {rc}, {err[-200:]!r}")
+
+        # Pinned before, read by the rules of `since` -- what `migrate.py` runs before `--adopt`:
+        # retired as where it is pinned, the annotation an `AN001`, the pin ignored and said on
+        # stderr rather than stopping the run, and `FW001` on the version the line declares.
+        forced = ("--rules-version", since)
+        repo.write("framework.yaml", f"framework_version: {before}\n")
+        repo.write(".framework/expected-findings.yaml", annotation)
+        rc, out, err = repo.validate(*forced)
+        found = (out or {}).get("findings", [])
+        if any(f["code"] == "EXC004" for f in found) or not any(
+                f["code"] == "AN001" and "[EXC004]" in f["message"]
+                and "retired in" in f["message"] for f in found):
+            problems.append(f"pinned {before}, read by the rules of {since}: EXC004 not retired "
+                            f"(exit {rc}, {err[-200:]!r})")
+        if not any(f["code"] == "FW001" and str(before) in f["message"] for f in found):
+            problems.append(f"pinned {before}, read by the rules of {since}: no FW001 on the "
+                            "version declared, which `--rules-version` does not move")
+        repo.write(".framework/expected-findings.yaml", "expected: []\n")
+        repo.write("framework.yaml", f"framework_version: {before}\nchecks:\n  EXC004: info\n")
+        rc, out, err = repo.validate(*forced)
+        if rc not in (0, 1) or out is None or "Read by the rules of" not in err:
+            problems.append(f"pinned {before} with EXC004 at info, read by the rules of "
+                            f"{since}: exit {rc}, {err[-200:]!r}; the pin is ignored and said")
 
     # `migrate.py` files the pin under GONE against the version of arrival, the registry's of
     # the framework it is run from: a framework at `since` retires it, one before does not.
@@ -13206,7 +13408,7 @@ def _join_unreserved_thread():
     return problems
 
 
-@check("from 4.12.0 a thread's warnings are the join's to count, the join's branch is read as the main line, a withdrawn change stays withdrawn, and FW001 and FW003 are outside require_all, FW004 and FW005 inside")
+@check("from 4.12.0 a thread's warnings are the join's to count, the join's branch is read as the main line, a withdrawn change stays withdrawn, and FW001 and FW003 are outside require_all, FW004 and FW005 inside, FW005 from the version that brought it")
 def _warnings_at_the_join():
     # On a thread's or a parking branch `require_all` makes no `AN003` but on `EXC005` and
     # `EXC006`, a contributor cannot annotate; with `rereading: optional`, from 4.12.0 the
@@ -13218,7 +13420,8 @@ def _warnings_at_the_join():
     # was. And whatever the version, `FW001` and `FW003` say which validator and which commit a
     # machine runs, and `require_all` does not count them; `FW004` and `FW005`, the version and
     # the pin lines that are wrong, it does -- on the main line: on a thread `FW005` is the
-    # join's to count too. The two exchange warnings that still count on a thread are
+    # join's to count too --, and below the version that gave the pin line `FW005`, that line is
+    # still an `FW003`, counted as it was. The two exchange warnings that still count on a thread are
     # `_exc_outside_require_all`'s.
     problems = []
     val = _load(VALIDATE, "validate")
@@ -13356,8 +13559,8 @@ def _warnings_at_the_join():
             problems.append(f"at {before}: BR006 on a change brought back, a rule of {since}")
         repo.write("changes/CHG-001.md", chg("withdrawn", "withdrawn_by: [OD-001]\n"))
 
-        # `FW001` and `FW003` outside `require_all`, whatever the version; `FW004` and `FW005`
-        # inside.
+        # `FW001` and `FW003` outside `require_all`, whatever the version, but for the pin line
+        # that is wrong below the version that gave it `FW005`; `FW004` and `FW005` inside.
         repo.git("checkout", "-q", "-f", "main")
         repo.write(".framework/expected-findings.yaml", "require_all: true\nexpected: []\n")
         ahead = f"{int(REGISTRY['version'].split('.')[0]) + 1}.0.0"
@@ -13388,6 +13591,32 @@ def _warnings_at_the_join():
             problems.append(f"a pin of digits: FW005 {has(found, 'FW005')}, AN003 on it "
                             f"{has(found, 'AN003', text='[FW005]')}, FW003 "
                             f"{has(found, 'FW003')}: the line's own fault is counted")
+        # Below the version that brought it, the same line is the `FW003` it was, and counted by
+        # `require_all` as it was: a project is read alike by CI and by a newer plugin until it
+        # adopts, whether it annotated the line or not. The `FW003` of a checkout that moved,
+        # above, stays outside at every version.
+        repo.write("framework.yaml", f"framework_version: {before}\nframework_commit: 0000000\n")
+        rc, out, err = repo.validate()
+        found = (out or {}).get("findings", [])
+        if has(found, "FW005") or not has(found, "FW003") \
+                or not has(found, "AN003", text="[FW003]") \
+                or has(found, "AN003", text="[FW001]"):
+            problems.append(f"a pin of digits at {before} under require_all: FW005 "
+                            f"{has(found, 'FW005')}, FW003 {has(found, 'FW003')}, AN003 on it "
+                            f"{has(found, 'AN003', text='[FW003]')}, AN003 on FW001 "
+                            f"{has(found, 'AN003', text='[FW001]')}: below {since} the line is "
+                            "the FW003 it was, and counted as it was, and nothing else is")
+        # And the `FW003` of a checkout that moved stays outside there too: the line alone counts.
+        if older.returncode == 0:
+            repo.write("framework.yaml", f'framework_version: {before}\n'
+                                         f'framework_commit: "{older.stdout.strip()}"\n')
+            rc, out, err = repo.validate()
+            found = (out or {}).get("findings", [])
+            if not has(found, "FW003") or has(found, "AN003", text="[FW003]"):
+                problems.append(f"a checkout that moved, at {before} under require_all: FW003 "
+                                f"{has(found, 'FW003')}, AN003 on it "
+                                f"{has(found, 'AN003', text='[FW003]')}: it says what a machine "
+                                "runs, and stays outside at every version")
         if not has(run(f"{major}.{minor}"), "AN003", text="[FW004]"):
             problems.append("a framework_version of two numbers: no AN003 on FW004 under "
                             "require_all")
@@ -13562,12 +13791,19 @@ def _join_text_owes_no_reading():
                                 "(p was read between the first join and the second)")
         if paths("LC009", "--stale-days", "1") != ["products/q/PBR.md"]:
             problems.append(f"LC009 where LC002 speaks: {paths('LC009', '--stale-days', '1')}")
-        repo.write(".framework/work.yaml", work.replace("rereading: optional\n", ""))
+        # Written `required`: as before. Not written at all, with the project pinning the
+        # version of the default (D-7) -- `_Repo` pins the registry's --: optional.
+        repo.write(".framework/work.yaml", work.replace("rereading: optional\n",
+                                                        "rereading: required\n"))
         if not {"products/p/PBR.md", "products/t/PBR.md", "products/z/PBR.md", *want006} \
                 <= set(paths("LC006")) or paths("LC001") != ["products/q/PBR.md", "products/s/PBR.md"] \
                 or paths("LC009"):
             problems.append(f"rereading required, as before: LC006 {paths('LC006')}, LC001 "
                             f"{paths('LC001')}, LC009 {paths('LC009')}")
+        repo.write(".framework/work.yaml", work.replace("rereading: optional\n", ""))
+        if paths("LC006") != want006 or paths("LC001") != ["products/s/PBR.md"]:
+            problems.append(f"no `rereading`, pinned {REGISTRY['version']}: LC006 "
+                            f"{paths('LC006')}, LC001 {paths('LC001')}, read as optional")
         repo.write(".framework/work.yaml", work)
         # A branch outside the prefix reads as the main line does; a detached HEAD is the branch
         # `GITHUB_HEAD_REF` names, as in CI.
@@ -13624,7 +13860,8 @@ def _join_text_owes_no_reading():
                             f"{paths('LC001')}")
         repo.git("reset", "-q", "--hard", "origin/work/x-thread")
         repo.git("checkout", "-q", "main")
-        repo.write(".framework/work.yaml", work.replace("rereading: optional\n", ""))
+        repo.write(".framework/work.yaml", work.replace("rereading: optional\n",
+                                                        "rereading: required\n"))
         repo.commit("rereading required", ago(0.05))
         repo.git("push", "-q", "origin", "main")
         repo.git("checkout", "-q", "work/x-thread")
@@ -15190,6 +15427,27 @@ def _behaviour_runner_lays_out_beside():
                 problems.append(f"with the sandbox declared {declared.split(',')[0]} {arm}, "
                                 f"`main` ran {ran} and refused {refused}; it should have run "
                                 f"{want}, and said why")
+    return problems
+
+
+@check("both eval runners refuse to score a run that never reached a model -- out of quota, or not logged in -- and by the same pattern")
+def _eval_runners_refuse_an_unusable_run():
+    # The baseline arm of the behaviour runner points `CLAUDE_CONFIG_DIR` at an empty folder, and
+    # where the login is kept there every run answered "Not logged in", which neither guard
+    # matched: seven runs printed as results. The two guards are one rule written twice.
+    trigger = _load(ROOT / "evals" / "trigger" / "run.py", "trigger_run_guard")
+    behaviour = _load(ROOT / "evals" / "behaviour" / "run.py", "behaviour_run_guard")
+    problems = []
+    if trigger.UNUSABLE.pattern != behaviour.UNUSABLE.pattern:
+        problems.append("the trigger and the behaviour runner guard against different texts")
+    for said, unusable in (("You've hit your session limit", True),
+                           ("Not logged in · Please run /login", True),
+                           ("Credit balance is too low", True),
+                           ("Il filone atlas-ki-003 è aperto, nel suo worktree.", False)):
+        for name, runner in (("trigger", trigger), ("behaviour", behaviour)):
+            if bool(runner.UNUSABLE.search(said)) != unusable:
+                problems.append(f"the {name} runner reads {said!r} as "
+                                f"{'a measurement' if unusable else 'unusable'}")
     return problems
 
 

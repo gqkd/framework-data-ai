@@ -261,21 +261,81 @@ def key(f: dict, seen: Counter) -> tuple:
     would come out of this tool as "nothing new". Counting them keeps the two extra ones
     visible without making the diff sensitive to wording.
     """
-    k = (f["code"], f["path"])
+    k = (f["code"], f["path"], *annotated(f))
     seen[k] += 1
     return (*k, seen[k])
 
 
-def findings(validator: Path, root: Path) -> dict:
-    """One validator's report on the project, keyed by `key`."""
-    r = subprocess.run([sys.executable, "-I", "-B", str(validator), "--root", str(root), "--json"],
-                       capture_output=True, text=True)
+# What an `AN001` or an `AN002` is about: the code and the path the annotation names, at the
+# head of its message. Every such finding has the annotations file as its path, so keyed on
+# the pair and an ordinal, the first `AN001` of one validator met the first of the other
+# whatever each was about, and one annotation turning obsolete with the move could be filed as
+# ALREADY THERE against another that was obsolete before it.
+ANNOTATED = re.compile(r"^an annotation names \[([A-Z]{2,3}\d{3})\] (.+?), (?:and|which) ")
+
+
+def annotated(f: dict) -> tuple:
+    """The code and the path an annotation finding is about, or nothing for any other."""
+    if f.get("code") not in ("AN001", "AN002"):
+        return ()
+    m = ANNOTATED.match(str(f.get("message") or ""))
+    return (m.group(1), m.group(2)) if m else ()
+
+
+def findings(validator: Path, root: Path, rules_version: str | None = None,
+             env: dict | None = None) -> dict:
+    """One validator's report on the project, keyed by `key`; by the rules of `rules_version`
+    where it is given, which only the validator of the version of arrival knows."""
+    r = subprocess.run([sys.executable, "-I", "-B", str(validator), "--root", str(root), "--json"]
+                       + (["--rules-version", rules_version] if rules_version else []),
+                       capture_output=True, text=True, env=env)
     if r.returncode not in (0, 1) or not r.stdout.strip():
         tail = (r.stderr or r.stdout).strip().splitlines()
         raise RuntimeError(tail[-1] if tail else "no output")
     out = json.loads(r.stdout)
     seen: Counter = Counter()
     return {key(f, seen): f for f in out["findings"]}
+
+
+@contextmanager
+def compared_tree(root: Path):
+    """Where the two validators read the project, and the commit they read, if one.
+
+    OUTSIDE THE ADDITIVE MODE, THE PROJECT ITSELF. In it, `--adopt` runs on the branch of a
+    join, and both validators read that branch's commit in a worktree of their own, detached,
+    in a temporary folder: with no branch name and no `GITHUB_HEAD_REF` the validator does not
+    read it as a branch of the mode, and reads it as the main line will be once the join lands
+    -- on the join's branch itself, the texts `rereading: optional` silences would be left
+    unread, and an annotation on them would not turn into the `AN001` the main line will
+    report. No `--base` either: on a tree with no name it would set `BR005` and `BR006`
+    talking in both. What is not committed is not read, and the report says which commit was.
+    """
+    if not additive_declared(root):
+        yield root, None, None
+        return
+    top = git(["rev-parse", "--show-toplevel"], root)
+    head = git(["rev-parse", "--verify", "-q", "HEAD^{commit}"], root)
+    if top.returncode or head.returncode:
+        raise RuntimeError("in the additive mode the comparison reads the commit the branch "
+                           "names, and this project has none: commit, then compare")
+    sha = head.stdout.strip()
+    inside = root.resolve().relative_to(Path(top.stdout.strip()).resolve())
+    with tempfile.TemporaryDirectory(prefix="framework-adopt-") as tmp:
+        tree = Path(tmp) / "tree"
+        r = git(["worktree", "add", "-q", "--detach", str(tree), sha], root)
+        if r.returncode:
+            raise RuntimeError(f"no worktree of {sha[:12]} to compare in: {r.stderr.strip()}")
+        env = {k: v for k, v in os.environ.items() if k != "GITHUB_HEAD_REF"}
+        try:
+            yield tree / inside, sha, env
+        finally:
+            # This worktree alone: `git worktree prune` would drop as well the entry of any
+            # other whose folder is not there now, a thread's included.
+            r = git(["worktree", "remove", "--force", str(tree)], root)
+            if r.returncode:
+                print(f"migrate.py: the comparison's worktree {tree} was not removed "
+                      f"({r.stderr.strip()}); its entry stays in `git worktree list`, marked "
+                      "prunable once the folder is gone", file=sys.stderr)
 
 
 @contextmanager
@@ -795,6 +855,33 @@ def agents_dirty(root: Path) -> str | None:
     return None
 
 
+def uncommitted(root: Path) -> list[str]:
+    """The files under the project with changes no commit holds -- staged, not staged,
+    untracked --, relative to `--root` as the report's other paths are. In the additive mode
+    the comparison reads a commit, and these are what it did not read. `-z`, so that a name
+    with a space, a quote or an accented letter comes back as written and not quoted or
+    escaped; the paths git gives are from the repository's top, and the project's own prefix
+    is taken off them. Where git cannot answer -- a lock, a broken index -- it raises, as the
+    comparison does: an empty list would read as nothing uncommitted, and let `--adopt` write
+    the number over what it could not see."""
+    r = git(["status", "--porcelain", "-z", "--untracked-files=all", "--", "."], root)
+    prefix = git(["rev-parse", "--show-prefix"], root)
+    if r.returncode or prefix.returncode:
+        raise RuntimeError("git could not say which files have changes no commit holds: "
+                           + ((r.stderr or prefix.stderr or "").strip() or "no answer"))
+    prefix = prefix.stdout.strip()
+    fields, names, i = r.stdout.split("\0"), set(), 0
+    while i < len(fields):
+        entry, i = fields[i], i + 1
+        if len(entry) < 4:
+            continue
+        if "R" in entry[:2] or "C" in entry[:2]:
+            i += 1          # a rename or a copy: the old name follows, in a field of its own
+        name = entry[3:]
+        names.add(name[len(prefix):] if prefix and name.startswith(prefix) else name)
+    return sorted(names)
+
+
 def apply_sections(text: str, plan: dict) -> tuple[str, list[str]]:
     """The plan applied to the text of `AGENTS.md`, one section at a time, rereading between
     them; and the headings written. Nothing is written to disk here, so that the number and
@@ -870,6 +957,53 @@ def retired_pins(root: Path, framework: Path) -> list[dict]:
                                 "nothing on, and the validator of the new version stops on it "
                                 "once the project declares that version. `--adopt` removes "
                                 "the line with the number.")})
+    return out
+
+
+ANNOTATIONS_REL = ".framework/expected-findings.yaml"
+
+
+def retired_annotations(root: Path, framework: Path) -> list[dict]:
+    """The annotations of the project that name a code retired in the version of arrival.
+
+    READ HERE, NOT LEFT TO THE COMPARISON. Once the project declares that version, such an
+    annotation matches nothing that can ever be reported again, and the validator says so with
+    an `AN001`, an error. But the validator only looks where the finding can be looked for:
+    the annotations on the exchange's checks are skipped where no exchange is found, and the
+    comparison of the additive mode runs in a temporary folder where none is. So `--adopt`
+    reads the file itself, as `retired_pins` reads `framework.yaml`, and the annotation is
+    work under NEW until it is removed -- whatever code it is, and whatever version retires
+    it next."""
+    path = root / ANNOTATIONS_REL
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except (OSError, UnicodeError, yaml.YAMLError):
+        return []                     # missing, or the validator says why it does not read
+    rows = data.get("expected") if isinstance(data, dict) else None
+    if not isinstance(rows, list):
+        return []
+    catalog = yaml.safe_load((framework / "skills/audit/checks.yaml")
+                             .read_text(encoding="utf-8")).get("checks") or {}
+    try:
+        arrival = registry_version((framework / REGISTRY_REL).read_text(encoding="utf-8"))
+    except OSError:
+        arrival = None
+    out = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        code, where = str(row.get("code") or ""), str(row.get("path") or "")
+        spec = catalog.get(code) or {}
+        gone = semver(str(spec.get("retired_in") or ""))
+        if spec.get("level") != "retired" and not (semver(arrival) and gone
+                                                   and semver(arrival) >= gone):
+            continue
+        out.append({"code": "AN001", "path": ANNOTATIONS_REL, "level": "error",
+                    "message": (f"an annotation names [{code}] {where}, and {code} was retired "
+                                f"in {spec.get('retired_in', 'an earlier version')}: once the "
+                                f"project declares {arrival}, nothing reports it any more, and "
+                                "the annotation is an `AN001`, an error. Remove it before "
+                                "adopting.")})
     return out
 
 
@@ -1086,10 +1220,24 @@ def main() -> int:
                     report["new_checks"] = new_checks(before, now)
                 if (old_tree / TEMPLATE_REL).is_file():
                     old_template = (old_tree / TEMPLATE_REL).read_text(encoding="utf-8")
-                old = findings(old_tree / VALIDATE_REL, root)
-                new = findings(framework / VALIDATE_REL, root)
+                # The new validator reads by the rules of the version of arrival: the rules a
+                # version brings follow the version a project declares, and read with the one
+                # still declared, what the move asks of the documents would show only after
+                # `--adopt` had written the number.
+                with compared_tree(root) as (tree, at, env):
+                    old = findings(old_tree / VALIDATE_REL, tree, env=env)
+                    new = findings(framework / VALIDATE_REL, tree, rules_version=current,
+                                   env=env)
+                if at:
+                    report["compared_at"] = at[:12]
+                    report["not_read"] = uncommitted(root)
                 if origin.get("commit"):
                     report["commit"] = origin["commit"][:12]
+                # The annotations on a code the move retires, read from the file: filed under
+                # NEW unless one of the two validators already reported the same.
+                said = {annotated(f) for f in (*old.values(), *new.values())}
+                report["new"].extend(f for f in retired_annotations(root, framework)
+                                     if annotated(f) not in said)
                 # The pins on codes the move retires. Not a finding of either validator: the
                 # old one applied the line, the new one ignores it and says so on stderr. It
                 # is filed here, under GONE, because that is what the move does to it.
@@ -1163,6 +1311,18 @@ def main() -> int:
             problem = agents_dirty(root)
             if problem:
                 report["problems"].append(problem)
+        # IN THE ADDITIVE MODE WHAT IS ADOPTED IS WHAT WAS READ. The comparison read a
+        # commit; a text no commit holds, which a rule of the version of arrival would report,
+        # would show only after the number is written -- the failure reading with that version
+        # exists to remove. As for `AGENTS.md` above: commit, or set aside, and adopt again.
+        if not report["problems"] and report.get("not_read"):
+            names = report["not_read"]
+            report["problems"].append(
+                f"not adopted, and nothing written: in the additive mode the comparison read "
+                f"commit {report['compared_at']}, and {len(names)} file(s) have changes no "
+                f"commit holds ({', '.join(names[:5])}{', ...' if len(names) > 5 else ''}). "
+                "Commit them, or set them aside, and adopt again: what `--adopt` adopts has to "
+                "be what it read.")
         if not report["problems"]:
             problem = adoption_problem(root, framework, current)
             if problem:
@@ -1227,6 +1387,13 @@ def main() -> int:
     print(f"Declared:  {declared}")
     print(f"Framework: {current}" + (f"  (old validator from {report['commit']})"
                                      if report.get("commit") else ""))
+    if report.get("compared_at"):
+        unread = report.get("not_read") or []
+        print(f"Compared:  commit {report['compared_at']}, in a worktree of its own, read by the "
+              f"rules of {current}; " + (f"{len(unread)} file(s) with changes no commit holds "
+                                         f"were not read: {', '.join(unread[:5])}"
+                                         f"{', ...' if len(unread) > 5 else ''}" if unread
+                                         else "nothing uncommitted"))
     if report["up_to_date"]:
         print(f"\nAlready on {current}: nothing to migrate"
               + (f", and {len(pending)} of the framework's sections of {AGENTS_REL} to write, "

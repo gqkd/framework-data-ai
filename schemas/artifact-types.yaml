@@ -2376,7 +2376,324 @@
 # contributor out of the documentation, with `EXC004` retired; the hotfix; `FW001` and `FW003` out
 # of `require_all`; the critic reading the framework's rules; `--adopt` reading with the version of
 # arrival. To 4.13.0: the code session that the thread's documentation session starts.
-version: "4.11.0"
+#
+# 4.11.0 -> 4.12.0. The review is one pass on a thread and whole at the join, before anybody
+# decides; what is form takes its default on a thread and is written down; the join is carried by
+# the skill, its mechanical steps by scripts; a contributor's resources are theirs; a hotfix has a
+# short way; the plugin says its version at every session; and the list sent on since 4.9.0 is
+# closed, item by item.
+#
+# A RULE FOLLOWS THE VERSION PINNED, AND FOUR THINGS DO NOT. What this version changes in what a
+# check reports, a skill does or the to-do computes holds where the project pins 4.12.0 or later, or
+# no version that reads, each rule by a constant of its own read through `rules_hold`, as
+# `APART_SINCE` and `CODES_NOT_DATES_SINCE` were in 4.11.0; below, the rule before holds, whatever
+# plugin a person has, so that between a plugin updated and the adoption every machine reads one
+# repository by one set of rules. Four exceptions are declared. The plugin's version said at every
+# session concerns the plugin and holds always. `FW001` and `FW003` leave `require_all` whatever the
+# pin -- but for the line of a commit that is wrong, which below 4.12.0 is still an `FW003`, the
+# document's, and counted as it was --, because they serve exactly where a project pins less than
+# the plugin runs. What `work.py doctor` says of a project that declares no exchange holds at every
+# pin: it describes the machine and the project, changes what no document says, and what it said
+# before was false. And the critic reads the framework's rules before it says a procedure exists or
+# does not, with the plugin, whatever the project pins: it adds a verification and changes the
+# outcome of no check. Its other change, substance and errors of fact only on a plan, follows the
+# pin of the repository it reviews, read from its `framework.yaml` as `rules_hold` reads it. The new
+# commands are tied to no version either: they do by machine what was done by hand, and change what
+# no document says.
+#
+# THE REVIEW, LIGHT ON A THREAD AND WHOLE AT THE JOIN. On the branch of a thread or of a parking
+# line the reviser runs the critic once on the branch's diff against `origin/main`, effects
+# included, fixes what is on the proposal and does not relaunch; what is substance goes to the
+# contributor, who fixes it or carries it to the join, written in the thread's `revisione.md`. A
+# brief written on a thread keeps up to three passes, as everywhere: it passes through no join, and
+# a code session runs it to the letter. At the join the review is whole, up to three passes, on the
+# diff of the join's branch against `origin/main` -- what the threads bring and what the join
+# writes, states alone included --; the reviser receives the logs of the threads and parking lines
+# it lands, and the critic rereads against the diff every substance objection still open. The
+# corrections of whoever decides go back to the reviser, relaunched with them, within the three
+# passes or, once they are spent, in one more on them alone; an element they leave in draft or
+# proposed waits for a later join. On a plan the critic gives substance and errors of fact, and
+# lists in a line what is missing, for the review of the diff to find where it costs least.
+#
+# THE CHOICES OF FORM, BY DEFAULT. On a thread's or a parking branch the session does not ask what
+# is placement, form or classification -- the destination the routing table gives, the anchor taken
+# from the text, the routing of an `ICG`, the increment of a `CHG` from what it derives from --: it
+# takes the default, writes it, and records it in `_filoni/<slug>/scelte.md`, one row per choice,
+# with the alternatives and why. Questions of substance stay questions, and the phases of the
+# roadmap are not touched on a thread: the join asks for them. `EFF002`, a warning, says a
+# `scelte.md` that does not read. The effects drawn from a delivery are written without
+# confirmation, and the session says them in its last answer, target by target, for whoever followed
+# the code to correct before the join. A skill that writes an entry or a `CHG` always writes its
+# `affects`, never empty. `join` shows, thread by thread, the choices taken by default and what
+# arrived with no anchor, and at the top the whole list the to-do keeps to anchor; whoever decides
+# confirms or changes them on the join's branch.
+#
+# THE WARNINGS ARE THE JOIN'S. On a thread's or a parking branch `require_all` makes no `AN003`,
+# because whoever contributes cannot annotate: the join counts them. It still counts there `EXC005`
+# and `EXC006`, an exposure on the machine of whoever works that the join, on another machine, never
+# sees; there the way out is the repair, and the message says so. An annotation on what `rereading:
+# optional` silences on such a branch is not looked for. In the additive mode `rereading` left
+# unwritten is `optional`, and `required` written stays `required`; the validator and the to-do read
+# it alike. The join's branch, read with `--base` as `join --finish` and `join --merge` read it, is
+# read as the main line after the merge: what the join brings is its own, the rest speaks, and an
+# annotation finds its warning before the merge and not after; `LC009` dates that preview today. A
+# `CHG` withdrawn stays withdrawn, in every mode: `BR006` says one brought back out of `withdrawn`,
+# and the way back is a new `CHG` that derives from it or from the decision.
+#
+# `FW001` AND `FW003` OUT OF `require_all`. With the plugin said at every session, a plugin newer
+# than the pin is the normal state between an update and the adoption, and under `require_all` its
+# `FW001` was an `AN003` on the join's branch, which `--merge` refuses: no join, not even a
+# hotfix's, until the adoption. `FW001` and `FW003` say which validator and which commit of the
+# framework run on a machine, not what the documents say; CI validates with the version pinned and
+# does not see them, so they are not to be annotated, and they are now in `OUTSIDE_REQUIRE_ALL`, all
+# but that line of a commit below 4.12.0, below. What is wrong in the line itself is the document's,
+# CI sees it, and it keeps being counted under a code of its own: `FW004`, a `framework_version`
+# that is not three numbers, so far an `FW001`; `FW005`, a `framework_commit` that is a number or
+# not a commit at all, so far an `FW003`. Both follow the version pinned, as every rule here: a
+# version that does not read is no version, so `FW004` holds wherever it can be said, and below
+# 4.12.0 the line of a commit is still an `FW003`, and counted by `require_all` as it was, so that a
+# project is read alike by CI and by a newer plugin until it adopts, whether it annotated the line
+# or not. `--adopt` clears both by writing the lines. A commit the framework on that machine does
+# not have stays `FW003`, outside: without a fetch, which the validator does not do, it cannot be
+# told from a pin adopted elsewhere and not yet fetched, and the message says to update the
+# framework first.
+#
+# THE STEPS AS SCRIPTS, AND THE JOIN CARRIED BY THE SKILL. `attest.py --commit` commits the
+# attestations written and not committed, files that from `HEAD` change only `last_review` and
+# `review_scope`; attesting stays the person's. `work.py check`, with no network, regenerates the
+# views, runs the validator with `--base`, shows in detail only what the main line does not have,
+# gives the branch's line as `list` reads it and says how old the last fetch is; before every push
+# the fetch, then `check`, then the push. `exchange.py integrate <ID>`, the first subcommand of
+# `exchange.py`, moves an element of the exchange to `integrati/` and writes `INTEGRATO` with where
+# each part went, and refuses, moving nothing, what it cannot vouch for. The join is run by
+# `contribute`, commands included; the person answers only what is theirs and gives the yes that
+# lands it. Its steps, where the project pins 4.12.0 or later: the texts, committed with no act of
+# decision; the rehearsal, with the acts applied uncommitted, `check` and the restore; the whole
+# review before anybody decides, with the rehearsal's outcome; the acts of decision, states and
+# names alone, the cascade of each act that obliges texts in a commit of its own, `join: the cascade
+# of <ID>`, so that leaving the act is the revert of that commit; `check`, `join --finish` with the
+# `BR` findings explained and "procedo?", and `join --merge` after the yes. Below 4.12.0 the acts
+# are written with the texts and the review reads them committed, as before. With the sandbox the
+# network steps stay the person's, given as lines to paste. The skill that writes a new identifier
+# reserves it first, from the branch that will write it.
+#
+# THE RECONCILER. When the validator with `--base`, or `sync`, finds taken a number the branch
+# created, the skill of whoever holds the branch renumbers it with `work.py renumber <ID>`, without
+# asking, because a number is form, and says so: it reserves the next number, renames, rewrites the
+# references in the files the branch changed since it left the main line, `_filoni/` included,
+# regenerates the views, commits, pushes only the reservation, and names what it could not change.
+# `join` refuses, before merging it, a thread with a new number that has no reservation of its own:
+# the join goes on without it, and the thread waits for the next one, renumbered. A number of a
+# thread already merged is never renumbered at the join: found wrong after the merge, whoever
+# decides abandons the join and reopens it without that thread. `work.py meetings --out <folder>`
+# writes, outside the repository, a card for every place the threads of a join meet -- two effects
+# on one target or on two nested, an effect and a decision's cascade, an entry or a document whose
+# state two threads changed, two elements derived from the same --, each text with its thread, who
+# holds it, the commit, the day, `Da:` and `Perché:`; the skill reads them at the step of the texts,
+# two equal texts becoming one, two different going to whoever decides with their provenance, and
+# passes them to the review. No new agent compares them. The recommended sandbox lets two commands
+# out, `python3 *work.py* reserve *` and `python3 *work.py* renumber *`, so that writing an
+# identifier asks for no line to paste: written from Claude Code's documentation and untried, as the
+# rest of that section, with the line to paste as the fallback; `doctor` says whether the settings
+# hold them.
+#
+# THE PLUGIN'S VERSION, AT EVERY SESSION. The session-start hook speaks in every project of the
+# framework, not only in the additive mode, and puts in the context three versions: the plugin's;
+# the latest release, read with `git ls-remote --tags` at most once a day; and the one the project
+# pins, read as the to-do reads it, from the main line. A plugin older than the latest release is
+# said first, older than the pin more strongly, and the agent asks the person, when an attended
+# session starts, to accept going on or to update first, with the commands of the way the plugin was
+# installed; nothing records the answer. WHAT IT COSTS: at every session start, up to four calls to
+# git for the main line, within 5 seconds together, and one read of the latest release a day, within
+# 8 seconds, without a terminal; where the release cannot be read the hook says so and uses the last
+# answer kept. The "WHAT IT COSTS" of the 4.9.0 note stays as it is: it said what was true of 4.9.0.
+# `doctor` compares the plugin with the pin read as the hook reads it, and takes a newer plugin as
+# good. Of a project that declares no exchange it no longer says a code session has nowhere to
+# deliver: in the additive mode, read from the main line, declaring it is to do for an admin, a
+# deputy or a delegate, at a join, and a note for a contributor; outside the mode a note; in both, a
+# note says whether `../_scambio` is on this machine.
+#
+# A CONTRIBUTOR'S RESOURCES ARE THEIRS. What the session of a contributor leaves on a machine is
+# that person's, on that machine, and not the documentation's. The code session still lists in
+# `risorse.md` what it creates, with the command that removes it, and tells its person in its last
+# answer what remains; the brief does not ask it to remove them, and the documentation session
+# neither reads `risorse.md` nor proposes removals nor waits for anything: a `CHG` reaches
+# `implemented` at the merge. `EXC004` is retired with the version pinned, not by the catalog alone:
+# it keeps `level: warn` with `retired_in: "4.12.0"`, and where the rule holds it reports nothing,
+# an annotation on it is an `AN001` that says it is retired where the exchange is read, and a line
+# of `framework.yaml` pinning it stops the validator; below 4.12.0 it reports, is annotated and is
+# pinned as before. Copies of credentials stay watched by `EXC005` and `EXC007`. The rule on them
+# leaves the exchange section of `templates/AGENTS.md` for a section of its own, *Copies of
+# credentials*, which `--adopt` writes in every project, with an exchange or without: a copy lives
+# in the scratchpad of the session that needs it, is named by path and key names and never by value,
+# and is deleted when the session closes unless its person asks to keep it; the brief carries it
+# among the guard rules. No check looks for copies nobody listed: the machine is the person's. A
+# session that committed everything, with no review due left undone, writes no closing declaration:
+# one that says `niente` under "Non committato" was removed by nobody.
+#
+# THE HOTFIX. A hotfix shortens the papers, not the environments: its code follows the project's
+# road to production, and that road is written by the project's documentation session, never by the
+# framework. It is a cycle of its own, with its `ICG` and a short `CHG` with `hotfix: true`, a new
+# optional boolean field. `CHG005`, a warning in every mode, says a hotfix its `ICG` routes to
+# `architecture` or `both` with no `DEC` in `derives_from`, and `hotfix` on a document that is not a
+# `CHG`. In the additive mode `contribute` carries the flash join: `join --no-threads`, the signal,
+# the `ICG` and the `CHG`, one pass of review before anybody decides, the approval, the brief
+# written at once in the same join with one pass of its own, and `join --finish --review one-pass`.
+# `join --finish` writes in the commit it signs `Revisione: completa` or `Revisione: una passata`,
+# from `--review full` or `--review one-pass`, which the skill always gives; a join with no such
+# line counts as one pass. `join` lists the hotfixes approved by the joins landed after the last one
+# signed `Revisione: completa`, for the next whole review to read again, with their delivery when it
+# arrives; the brief keeps its one pass. The to-do keeps a hotfix out of the threads: it makes the
+# mandates sharing its code prefixes wait, and `open` refuses it.
+#
+# THE DIGEST ON THE MAIN LINE. Where the main line declares the additive mode and pins 4.12.0 or
+# later, or no version that reads, the digest reads the registers and the pin from the main line, as
+# the to-do does, and stops, saying so, where the main line does not read. It proposes hours only
+# from the person's work, named by `--who` as `contribute` asks it: the commits of the threads they
+# hold, since they took them, and, to whoever holds the join's claim, the join branch's own commits;
+# the main line's history is nobody's work, and gives instead the day an element landed, which is
+# the closing day proposed. The work of a thread before its join is said in the conversation, and
+# the workbook stays what is true on the main line. In every mode, from the same pin, a `CHG` is an
+# item of the product of its folder, as the to-do reads it; in another product its `products:` names
+# it is a mention, with no hours, unless that product's roadmap lists it in its `changes:`. The
+# workbook shows the mentions in a fifth list of the Activities sheet, "5. Di altri prodotti", only
+# when there is one, out of every total; a mention prints only once the state file of its own
+# product holds a row for it that does not exclude it, and an exclusion in either product's state
+# file holds on it. Before reading, the digest brings its store up to date from its remote with a
+# fast-forward, and says so where it cannot. The recommended sandbox lists none of the digest's
+# network steps, neither the push of before nor this fetch: under it every inventory says the store
+# was not brought up to date. The repositories of code are still read with `--all`, everybody's
+# branches included.
+#
+# AFTER THE FACT, ON THE SERVER. No git hook on the machines: in the additive mode a pre-push hook
+# would refuse `join --merge` itself, `--no-verify` gets round it, and under the sandbox the person
+# would have to install it. What `work.py` never does -- delete or move a reservation, move a
+# delegation, force the push of a work branch -- the project's CI sees after the fact, in a new
+# workflow, `ci/refs.yml`, which a project with `.framework/work.yaml` copies beside
+# `ci/branches.yml` and fills the same way; `ci/branches.yml` does not change but for its `ref:`.
+# Its job, `refs`, opens or updates an issue of its own, and is never a required check. What it
+# cannot see, by GitHub's rules on these events: more than three tags pushed or deleted at once,
+# which make no event; a tag moved, or a work branch forced, onto a commit that does not carry the
+# copy, since a push runs the copy of the commit it pushes; a deletion, until the copy is on the
+# default branch; a push whose top commit asks GitHub to skip workflows, `[skip ci]` or one of its
+# forms. Every push of a branch other than the main line makes a run whose job is skipped, at no
+# cost. The two readings of the join's merge, CI's and `read_joins`, stay as they are.
+#
+# THE CASES OF `contribute`. The behaviour runner copies beside its copy of a fixture what a case
+# names in `beside` -- `contribute/team` has its remote and its exchange beside it --, opens that
+# folder to the run with `--add-dir`, prints what the run changed on git and beside the project and
+# the files each branch it made or moved changes against the main line, and takes `--plugin-dir`.
+# Seven cases of `contribute` were written for this version and run on its tree, on 2026-11-04,
+# with the plugin of that tree and the Bash sandbox off, which their file asks with
+# `without_sandbox`: under the sandbox the skill hands its commands on git to the person and a run
+# would stop at the first. Four pass as written; the two that write on a thread's branch pass on a
+# second run, the first stopped by a write hook of the person's own; the join is carried through the
+# whole review and stops on an objection of it that is the admin's, before the acts of decision,
+# `--finish` and «procedo?», never landing: it does not reach its end, and the path from `--finish`
+# to «procedo?» is not measured by a run. What each run showed is in its `because` and in
+# `evals/README.md`. The baseline arm, with no framework, did not run: it points `CLAUDE_CONFIG_DIR`
+# at an empty folder, and a login kept in the configuration folder is lost, which both runners now
+# refuse to score. The five trigger cases of `contribute` were measured, five of five, and lose
+# `unmeasured`; its two traps keep it.
+#
+# THREE DEFECTS. `REG009`, `UNA003` and `RMP005` read the four digits of a code such as `KI-2015` as
+# a year, as `REG010` did until 4.11.0; the codes are now left out before a date is looked for.
+# `RMP004` gathered the changes of an increment from the whole repository by its bare number, while
+# increments are numbered by product: it now counts the `CHG`s of the roadmap's folder and those the
+# roadmap lists in its `changes:`. The 4.10.0 note said `RMP004` read a change by its folder; it did
+# not until now. Outside the additive mode `open` no longer advises "Claim both in one `open`" of an
+# entry that is closed or held by another: it says where that entry is. All three follow the pin, so
+# that an annotation written for the old reading does not become an `AN001` before the adoption.
+#
+# THE LIST SENT ON SINCE 4.9.0, ITEM BY ITEM. The order of `cycle`'s steps with `require_all: true`
+# was done in 4.10.1, as its note says. A change of several products: the digest takes it in the
+# product of its folder and mentions it in the others, `RMP004` counts by folder, and `RMP003`,
+# which accepts in a roadmap's `changes:` a `CHG` of another folder naming that product, stays as it
+# is -- its message, which calls such a listing agreeing with an increment of the same number, is
+# for later. A change brought back out of `withdrawn`: `BR006`, above. The reconciler that extracts
+# and renumbers: `work.py renumber` and `work.py meetings`, with no new agent. The pre-push hook:
+# none, and `ci/refs.yml` instead. The digest that reads the branches: it reads the main line, and
+# the threads the person holds for the hours. The strict profile on documentation pull requests
+# without branch protection is closed with no code: the contribution checker needs protection by
+# construction, since the protected tip is what it trusts; on a free plan the answer is CI's
+# detection; in the additive mode the gate is the join, and there are no documentation pull
+# requests; the strict profile stays for contributions of code. In the mode with branches the
+# decision to apply it to documentation pull requests is not carried out, and this note says so. The
+# cases of `contribute` measured for behaviour: above. What `doctor` says of a project with no
+# exchange: above. A line for credentials in every project: the section *Copies of credentials*. A
+# closing declaration that says nothing and that nobody removes: none is written any more, and those
+# already in the `sessioni/` folder of the exchange are to be removed once, by hand; `exchange.py`
+# will list them until then.
+#
+# `--adopt` READS WITH THE VERSION OF ARRIVAL. In 4.11.0 `migrate.py` ran the validator with the
+# version still declared, so the rules of the version being adopted were off there, and what they
+# would say came out only afterwards, on the join's branch, with the number written. `migrate.py`
+# now runs the new validator with the version of arrival forced for the rules alone, through
+# `validate.py --rules-version`, which nothing else passes -- `FW001` and `FW004` still read the
+# line declared --, in its report as with `--adopt`, so that the report says beforehand what
+# `--adopt` refuses: what a rule of 4.12.0 brings is under NEW, and `--adopt` refuses with the list
+# before writing the number. Under that forcing a line of `framework.yaml` pinning a code retired at
+# the version of arrival is ignored and said on stderr, as with the declared one. An `AN001` or an
+# `AN002` is compared by the code and the path its annotation names, not by its order. In the
+# additive mode the two validators read a detached worktree of the commit checked out, in a
+# temporary folder, with no branch name, no `GITHUB_HEAD_REF` and no `--base`, so that the join's
+# own texts are read alike by both; what no commit holds is not read: the report names it,
+# `not_read` in its JSON, and `--adopt` refuses until it is committed or set aside, as it does for
+# an `AGENTS.md` with changes, so that what is adopted is what was read. Annotations naming a code
+# retired at the version of arrival are read directly from `.framework/expected-findings.yaml`, as
+# `framework.yaml` is, and are under NEW, so that `--adopt` refuses while any is there.
+#
+# MINOR, ARGUED. Something arrives -- a file of the thread, `scelte.md`; an optional field,
+# `hotfix`; four checks, `CHG005`, `EFF002`, `FW004` and `FW005`, the last two giving a code of
+# their own to cases that were `FW001` and `FW003`; new commands, `work.py check`, `work.py
+# renumber`, `work.py meetings`, `exchange.py integrate`, `attest.py --commit` and `--review` of
+# `join --finish`; an exception in the recommended sandbox; a new rule in `BR006`; a section of
+# `AGENTS.md`; a default that changes, `rereading`; a workflow to copy -- and one check is retired,
+# `EXC004`. No document stops validating under the version it pins, but in these cases, which the
+# adoption clears as 4.0.0 cleared `LC005`. A line of `framework.yaml` pinning `EXC004` stops the
+# validator once the project declares 4.12.0: the report lists it under GONE, and `--adopt` removes
+# it. An annotation on `EXC004` becomes an `AN001` where the exchange is read, and is under NEW
+# wherever it is: `--adopt` refuses while it is there. A project that writes no `rereading` and
+# annotated `LC006` or `LC001` on the text of its joins has those annotations as `AN001` on the main
+# line; and, under `require_all`, `LC009` on the text of the joins not reread for more than
+# `unread_days` is an `AN003` for each one not annotated, a new finding that `--adopt` refuses while
+# it is there: annotate it, as an admin at a join, or reread and attest. An annotation on a
+# `REG009`, `UNA003` or `RMP005` that only a code caused, or on an `RMP004` that only a `CHG` of
+# another product caused, matches nothing and is to be removed. An annotation on the `FW001` of a
+# malformed `framework_version` becomes an `AN001` under any validator of 4.12.0, since that case
+# is now `FW004`, which holds wherever it can be said; one on the `FW003` of a `framework_commit`
+# that is a number or not a commit, once the project declares 4.12.0, since that case is then
+# `FW005`. The comparison reads a malformed version only with `--from`, and a malformed pin only
+# with `--from`, `--from-commit` or `--from-framework`: with them the annotation is under NEW, and
+# `--adopt` refuses until it is removed. The empty closing declarations already written are removed
+# once by hand: no check reports them.
+#
+# ADOPTION: each person updates the plugin first, which brings the preamble, the agents and the
+# skills: the warning of a plugin older than the pin arrives with the hook of 4.12.0, so whoever
+# still has 4.11.0 when the project adopts does not receive it, and sees it only from `doctor`,
+# which `contribute` runs the first time on a machine, or from the `FW001` "ahead of" of their old
+# validator, which says to pin the framework and not to update the plugin. Then `migrate.py --root
+# <project>` and `--adopt`, in the additive mode on the branch of a join; it brings the section
+# `review` of `AGENTS.md` where it is still the template's text, the section `additive`, which now
+# says the choices of form, and the new section *Copies of credentials*, which a person rereads.
+# Copies of `ci/branches.yml` and `ci/pull-request.yml` move `ref:` to `v4.12.0`, a copy of
+# `ci/contribution.yml` its sha to the commit `v4.12.0` names; a project with `.framework/work.yaml`
+# copies `ci/refs.yml` beside `ci/branches.yml` and fills it the same way, and `doctor` says when it
+# is missing, keeps its placeholders or differs. The project's levers stay its own.
+#
+# WHAT IS NOT HERE. To 4.13.0: the code session that the thread's documentation session starts on
+# the same machine, and the trial of the Bash sandbox on a machine -- worktrees, git and the
+# network, the two commands let out included --, before the sandbox is required. For later: a thread
+# holding only known issues, whose work is an effect describing them, which is never ready, since a
+# contributor closes a `KI` only by repairing it -- the run of the case `effect` found it; a
+# baseline arm that turns off the framework's plugin alone, keeping the login; the store's remote in
+# the recommended sandbox, so that the digest brings it up to date under it; the message of
+# `RMP003`; in the additive mode with `--thread`, a `decide_with` naming no entry still gets
+# "closed, parked, or a known issue an approved mandate repairs", a message moved and not rewritten;
+# the fixture `audit/clean-repo`, whose `ICG-001` calls `DEC-001` the warehouse choice while it
+# decides only the landing zone, left as the runs of 4.12.0 read it; and the memory workspace, which
+# still selects the files git ignores and is reached only from code that nothing calls.
+version: "4.12.0"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of

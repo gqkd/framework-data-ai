@@ -84,8 +84,12 @@ FRONT = re.compile(r"\A---\n(.*?)\n---\n", re.S)
 #
 # Grading here is by hand, so the guard does not need to score anything: it needs to say, at
 # the top of the case, that what follows is not a measurement.
+# And a run with no login: the baseline arm points `CLAUDE_CONFIG_DIR` at an empty folder, and
+# where the login is a subscription's, kept in the configuration folder, every one of its runs
+# answered "Not logged in · Please run /login" and was printed as seven results (2026-11-04).
 UNUSABLE = re.compile(r"session limit|usage limit|rate limit|credit balance|"
-                      r"upgrade to increase|Claude AI usage limit", re.I)
+                      r"upgrade to increase|Claude AI usage limit|"
+                      r"Not logged in|Please run /login", re.I)
 
 
 def inspect(fixture: Path, cwd: Path) -> tuple[list[str], str]:
@@ -301,9 +305,9 @@ def run_one(fixture: Path, prompt: str, timeout: int, baseline: bool = False,
                 [], written, valid, moved, changes)
     if not skills and UNUSABLE.search(" ".join(texts)):
         return ("NOT A MEASUREMENT. This run never reached a model: the account was out of "
-                "quota. It scores as `none` fired and nothing written, which is the same "
-                "shape as a description that stopped working.\n\n" + (texts[-1] if texts
-                                                                       else "")), \
+                "quota, or not logged in. It scores as `none` fired and nothing written, which "
+                "is the same shape as a description that stopped working.\n\n"
+                + (texts[-1] if texts else "")), \
                [], written, valid, moved, changes
     return ((texts[-1] if texts else "(no closing text)"), skills, written, valid, moved,
             changes)
