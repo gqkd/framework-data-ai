@@ -222,7 +222,8 @@ def header(ws, S, r: int, labels, height=None):
 
 
 def activities(wb, S, m, F) -> dict:
-    """The sheet of the four lists; returns the rows of each, for the formulas of the others."""
+    """The sheet of the four lists, and a fifth of the changes of other products where there is
+    one; returns the rows of the four, for the formulas of the others."""
     ws = wb.add_worksheet("Attività")
     setup(ws, {"A": 10, "B": 36, "C": 13, "D": 22, "E": 8, "F": 15, "G": 11, "H": 42, "I": 62},
           (2, 1))
@@ -277,6 +278,8 @@ def activities(wb, S, m, F) -> dict:
         ws.write_blank(t - 1, c, None, S.total())
     ws.write_string(t + 1, 0, "Ore effettive: solo per le voci chiuse. Le ore lavorate sulle voci "
                               "aperte sono nella colonna Stato.", S.note())
+    if m.mentions:
+        mentions(ws, S, t + 4, m.mentions)
 
     a, b = pos["todo"]
     ws.conditional_format(f"H{a}:H{b}",
@@ -287,6 +290,30 @@ def activities(wb, S, m, F) -> dict:
                           {"type": "formula", "criteria": f'=LEFT($H{a},10)="Rallentata"',
                            "format": wb.add_format({"bg_color": "#FCE4D6"})})
     return pos
+
+
+MENTION_HEAD = ("Voce", "Titolo", "Prodotto", "Stato")
+# A change's status in its register, in the words of the workbook's readers.
+CHANGE_STATUS = {"draft": "In bozza", "approved": "Approvata", "implemented": "Realizzata",
+                 "verified": "Verificata", "rolled-back": "Annullata", "withdrawn": "Ritirata"}
+
+
+def mentions(ws, S, r: int, rows: list) -> None:
+    """The changes of another product that name this one: listed, never counted. Only where
+    there is one, so a workbook without them is what it was."""
+    ws.write_string(r - 1, 0, "5. Di altri prodotti", S.section())
+    header(ws, S, r + 1, MENTION_HEAD, 21.75)
+    for k, x in enumerate(rows):
+        row = r + 1 + k
+        ws.write_string(row, 0, str(x.get("id") or ""), S.cell(bold=True))
+        ws.write_string(row, 1, str(x.get("title") or ""), S.cell())
+        ws.write_string(row, 2, str(x.get("product") or ""), S.cell())
+        status = str(x.get("status") or "")
+        ws.write_string(row, 3, CHANGE_STATUS.get(status, status), S.cell())
+    ws.write_string(r + 2 + len(rows), 0, "Modifiche registrate in un altro prodotto che toccano "
+                                          "anche questo: le loro ore sono nell'aggiornamento di "
+                                          "quel prodotto, e qui non entrano in nessun totale.",
+                    S.note())
 
 
 def count_cells(ws, S, t: int, a: int, b: int, any_rows: bool):
@@ -509,6 +536,10 @@ LEGEND = [
 ]
 EVR_LEGEND = ("Valutazione (EVR)", "Una prova fatta per decidere, con il suo esito messo per "
                                    "iscritto.")
+MENTION_LEGEND = ("Di altri prodotti", "Modifiche registrate in un altro prodotto che toccano "
+                                       "anche questo. Le loro ore sono contate nell'aggiornamento "
+                                       "di quel prodotto: qui non entrano né nella stima né nei "
+                                       "totali.")
 
 
 def legend_sheet(wb, S, m, shown_ids: list[str]):
@@ -529,6 +560,8 @@ def legend_sheet(wb, S, m, shown_ids: list[str]):
         r += 1
         if title == "Tipi di voce" and any(i.startswith("EVR-") for i in shown_ids):
             rows = rows + [EVR_LEGEND]
+        if title == "Regole dei numeri" and m.mentions:
+            rows = rows + [MENTION_LEGEND]
         for a, b in rows:
             ws.write_string(r - 1, 0, a, S.cell(bold=True))
             ws.write_string(r - 1, 1, b, S.cell())

@@ -20,6 +20,7 @@ import ast
 import atexit
 import collections
 import contextlib
+import hashlib
 import importlib.util
 import io
 import json
@@ -6566,7 +6567,10 @@ def _previous_version(before: str | None = None) -> str | None:
     """
     migrate = _load(ROOT / "skills" / "audit" / "scripts" / "migrate.py", "migrate_for_versions")
     now = migrate.semver(before or REGISTRY["version"])
-    for sha in subprocess.run(["git", "-C", str(ROOT), "rev-list", "-60", "HEAD"],
+    # The commits that changed the registry, newest first, and no fixed window: a count of the
+    # last commits ran out the day the version looked for was more commits back than it.
+    for sha in subprocess.run(["git", "-C", str(ROOT), "rev-list", "HEAD", "--",
+                               migrate.REGISTRY_REL],
                               capture_output=True, text=True).stdout.split():
         v = migrate.registry_version(subprocess.run(
             ["git", "-C", str(ROOT), "show", f"{sha}:{migrate.REGISTRY_REL}"],
@@ -7658,7 +7662,7 @@ def _retired_codes():
         # yet: the run goes on, says so on stderr, and `migrate.py` can compare.
         previous = _previous_version(before=retired["LC005"]["retired_in"])
         if previous is None:
-            return problems + ["no earlier version in the last sixty commits: the case cannot "
+            return problems + ["no earlier version in the registry's history: the case cannot "
                                "be built"]
         (root / "framework.yaml").write_text(f'framework_version: "{previous}"\n'
                                              "checks:\n  LC005: warn\n")
@@ -7716,7 +7720,7 @@ def _retired_pin_migrates():
 
     previous = _previous_version(before=CHECKS["checks"]["LC005"]["retired_in"])
     if previous is None:
-        return problems + ["no earlier version in the last sixty commits: the case cannot be built"]
+        return problems + ["no earlier version in the registry's history: the case cannot be built"]
 
     def project(where: Path) -> Path:
         where.mkdir(parents=True)
@@ -8251,7 +8255,7 @@ def _exc004_retires_by_the_pin():
                 "the version that retires it, it reports as it did"]
     before = _previous_version(before=since)
     if before is None:
-        return ["no version before EXC004's retired_in in the last sixty commits: the case "
+        return ["no version before EXC004's retired_in in the registry's history: the case "
                 "cannot be built"]
     row = "| ramo locale | chg-001 in /src/app | git -C /src/app branch -D chg-001 |\n"
     # On the pair `EXC004` reports below: there it is accepted, where it retires an `AN001`.
@@ -8335,7 +8339,7 @@ def _exc004():
     # Below the version that retires it (4.12.0), not at the registry's, which reaches it.
     before = _previous_version(before=str(CHECKS["checks"]["EXC004"].get("retired_in") or ""))
     if before is None:
-        return ["no version before EXC004's retired_in in the last sixty commits"]
+        return ["no version before EXC004's retired_in in the registry's history"]
     with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as away:
         repo, ex, _ = _exchange_docs(Path(tmp))
         repo.write("framework.yaml", f"framework_version: {before}\n")
@@ -8479,7 +8483,7 @@ def _exc_outside_require_all():
     # The main line below the version that retires `EXC004` (4.12.0), so that all seven report.
     below = _previous_version(before=str(CHECKS["checks"]["EXC004"].get("retired_in") or ""))
     if below is None:
-        return ["no version before EXC004's retired_in in the last sixty commits"]
+        return ["no version before EXC004's retired_in in the registry's history"]
     with tempfile.TemporaryDirectory() as tmp:
         repo, ex, _ = _exchange_docs(Path(tmp))
         repo.write("framework.yaml", f"framework_version: {below}\n")
@@ -8917,7 +8921,7 @@ def _exchange_keeps_values_out():
     # Below the version that retires `EXC004` (4.12.0), which prints the rows here.
     below = _previous_version(before=str(CHECKS["checks"]["EXC004"].get("retired_in") or ""))
     if below is None:
-        return ["no version before EXC004's retired_in in the last sixty commits"]
+        return ["no version before EXC004's retired_in in the registry's history"]
     with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as scratch:
         repo, ex, _ = _exchange_docs(Path(tmp))
         repo.write("framework.yaml", f"framework_version: {below}\n")
@@ -11425,6 +11429,528 @@ def _withdrawn_mandates():
     return problems
 
 
+@check("the digest reads a change as an item of the product of its folder, a mention in another its products names unless that product's roadmap lists it -- in the workbook once its own product's digest classifies it and neither state file excludes it --, and the increments it carries as its folder's, from the version that brought it")
+def _digest_reads_changes_by_folder():
+    # Two products each numbering an `INC-001`. A change filed under `b` that names `a` too and
+    # derives from `b`'s `INC-001`; another filed under `b`, naming `a`, that `a`'s roadmap
+    # lists in its `changes:`; one of `a`'s own. The pins are the rule's version, none, and
+    # the one before it, read from the registry's history.
+    problems = []
+    dg = _load(DIGEST, "digest_by_folder")
+    dv = dg.load_validator()
+    since = dg.BY_FOLDER_SINCE
+    before = _previous_version(since)
+    if not before:
+        return [f"no version before {since} in the registry's history"]
+    manifest = lambda p: (
+        "schema: framework/product-manifest/v1\nartifact_type: product-manifest\n"
+        f"lifecycle: living\nstatus: active\nproducts: [{p}]\nname: {p}\none_liner: A thing.\n"
+        "owners: [o]\ncreated: 2026-06-01 09:00\nlast_review: 2026-06-01 09:00\n"
+        "stage:\n  phase: F5\n  block: A\n")
+    roadmap = lambda p, listed: _fm(
+        schema="framework/roadmap/v1", artifact_type="roadmap", lifecycle="living",
+        status="active", products=f"[{p}]", owners="[o]", created="2026-06-01",
+        last_review="2026-06-01 09:00").replace("---\n\n", "increments:\n"
+        "  INC-001:\n    state: committed\n    depends_on: []\n    requires: []\n"
+        "    changes: []\n  INC-002:\n    state: committed\n    depends_on: []\n"
+        f"    requires: []\n    changes: [{listed}]\n---\n\n", 1) \
+        + "# Roadmap\n\n### INC-001 · first\n\n### INC-002 · second\n"
+
+    def chg(repo, folder, i, products, derives=""):
+        fields = dict(schema="framework/change-contract/v1", artifact_type="change-contract",
+                      lifecycle="immutable", status="approved", id=i, products=products,
+                      owners="[o]", created="2026-06-01")
+        if derives:
+            fields["derives_from"] = derives
+        repo.write(f"products/{folder}/changes/{i}-x.md", _fm(**fields) + f"# {i} title\n")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = _Repo(Path(tmp) / "docs")
+        for p in ("a", "b"):
+            repo.write(f"products/{p}/product.yaml", manifest(p))
+        repo.write("products/a/RMP.md", roadmap("a", "CHG-002"))
+        repo.write("products/b/RMP.md", roadmap("b", ""))
+        chg(repo, "b", "CHG-001", "[a, b]", "[INC-001]")
+        chg(repo, "b", "CHG-002", "[a, b]")
+        chg(repo, "a", "CHG-003", "[a]")
+        for pin, by_folder in ((since, True), (None, True), (before, False)):
+            repo.write("framework.yaml", f"framework_version: {pin}\n" if pin else "{}\n")
+            try:
+                ctx = dg.prepare(repo.path, "a", date(2026, 6, 2), False)
+            except dg.Refusal as r:
+                problems.append(f"pin {pin}: the digest refused: {r.problems}")
+                continue
+            items = sorted(i for i in ctx.voci if i.startswith("CHG-"))
+            mentions = [(m["id"], m["product"]) for m in ctx.reg.mentions]
+            inc = (ctx.voci["INC-001"].state, ctx.voci["INC-001"].children) \
+                if "INC-001" in ctx.voci else None
+            want = ((["CHG-002", "CHG-003"], [("CHG-001", "b")], ("open", [])) if by_folder
+                    else (["CHG-001", "CHG-002", "CHG-003"], [], ("replaced", ["CHG-001"])))
+            if (items, mentions, inc) != want:
+                problems.append(f"pin {pin}: items {items}, mentions {mentions}, a's INC-001 "
+                                f"{inc}; expected {want}")
+            inventory = dg.inventory(ctx)
+            if by_folder and [m["id"] for m in inventory.get("mentioned") or []] != ["CHG-001"]:
+                problems.append(f"pin {pin}: the inventory does not name the mention: "
+                                f"{inventory.get('mentioned')}")
+            if not by_folder:
+                continue
+            # The workbook lists a mention only once its own product's digest has classified it
+            # without excluding it, with the title that state file confirmed; either state file
+            # keeps it out, and the inventory says why it is not printed. A state file of b that
+            # does not read is refused. This product's keeps out a mention that was never an
+            # item here with `excluded` alone, and refuses any other row on it, `gone`
+            # included: none is vanished.
+            home = repo.path / dg.STORE / "state-b.yaml"
+            home.parent.mkdir(parents=True, exist_ok=True)
+            told = ctx.reg.mentions[0]["title"]
+            classified = {"title": "Una correzione", "seen": told}
+            for mine, theirs, want, why in (
+                    (None, None, [], "has not classified it"),
+                    (None, classified, [("CHG-001", "Una correzione")], None),
+                    (None, {**classified, "seen": "an older title"}, [("CHG-001", told)], None),
+                    (None, {**classified, "excluded": "a security fix"}, [],
+                     "excluded by the state file of b"),
+                    ({"excluded": "a security fix"}, classified, [],
+                     "excluded by this product's state file")):
+                if theirs is None:
+                    home.unlink(missing_ok=True)
+                else:
+                    home.write_text(yaml.safe_dump({"items": {"CHG-001": theirs}}),
+                                    encoding="utf-8")
+                ctx.state = {"items": {"CHG-001": mine}} if mine else None
+                got = [(m["id"], m["title"]) for m in dg.shown_mentions(ctx)]
+                said = [m.get("not_printed") for m in dg.inventory(ctx)["mentioned"]]
+                if got != want or (said != [None] if why is None
+                                   else not (said[0] and why in said[0])):
+                    problems.append(f"pin {pin}: with a's row {mine} and b's {theirs} the "
+                                    f"workbook would list {got}, the inventory says {said}; "
+                                    f"expected {want}, {why}")
+            for text in ("items: [CHG-001]\n", "items: [\n"):
+                home.write_text(text, encoding="utf-8")
+                ctx.state = {"format": dg.FORMAT, "items": {}}
+                ctx.problems = []
+                said = [p for p in dg.check(ctx) if p.startswith("CHG-001")]
+                dg.shown_mentions(ctx)          # reads it without failing
+                if not said:
+                    problems.append(f"pin {pin}: b's state file {text!r} is not refused")
+            home.write_text(yaml.safe_dump({"items": {"CHG-001": classified}}), encoding="utf-8")
+            for row, refused in (({"excluded": "a security fix"}, False),
+                                 ({"excluded": "a security fix", "title": "t"}, True),
+                                 ({"gone": "moved to b"}, True)):
+                ctx.state = {"format": dg.FORMAT, "items": {"CHG-001": row}}
+                ctx.problems = []
+                said = [p for p in dg.check(ctx) if p.startswith("CHG-001")]
+                vanished = "CHG-001" in dg.inventory(ctx)["vanished"]
+                if bool(said) != refused or vanished or (
+                        "excluded" in row and dg.shown_mentions(ctx)):
+                    problems.append(f"pin {pin}: a's row {row} on the mention: check says "
+                                    f"{said}, vanished {vanished}, listed "
+                                    f"{dg.shown_mentions(ctx)}")
+            home.unlink()
+    return problems
+
+
+@check("from the version that reads a change by its folder, the digest brings its store up to date from the remote, fast-forward only, before reading another product's state file, and says why when it cannot")
+def _digest_brings_the_store_up_to_date():
+    # Products a and b, a change filed under b that names a; the store a clone of a bare
+    # remote, where another clone pushes, after the store was cloned, b's state file excluding
+    # the change. The pins are the one before the rule's version, the rule's, and none.
+    problems = []
+    dg = _load(DIGEST, "digest_store_up_to_date")
+    since = dg.BY_FOLDER_SINCE
+    before = _previous_version(since)
+    if not before:
+        return [f"no version before {since} in the registry's history"]
+    manifest = lambda p: (
+        "schema: framework/product-manifest/v1\nartifact_type: product-manifest\n"
+        f"lifecycle: living\nstatus: active\nproducts: [{p}]\nname: {p}\none_liner: A thing.\n"
+        "owners: [o]\ncreated: 2026-06-01 09:00\nlast_review: 2026-06-01 09:00\n"
+        "stage:\n  phase: F5\n  block: A\n")
+    excluded = yaml.safe_dump({"items": {"CHG-001": {"excluded": "a security fix"}}})
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        repo = _Repo(tmp / "docs")
+        for p in ("a", "b"):
+            repo.write(f"products/{p}/product.yaml", manifest(p))
+        repo.write("products/b/changes/CHG-001-x.md", _fm(
+            schema="framework/change-contract/v1", artifact_type="change-contract",
+            lifecycle="immutable", status="approved", id="CHG-001", products="[a, b]",
+            owners="[o]", created="2026-06-01") + "# CHG-001 title\n")
+        remote = tmp / "store.git"
+        subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(remote)], check=True)
+        other = _Repo(tmp / "other")
+        other.commit("the store", "2026-06-01T09:00:00")
+        other.git("remote", "add", "origin", str(remote))
+        other.git("push", "-q", "-u", "origin", "main")
+        store = repo.path / dg.STORE
+        subprocess.run(["git", "clone", "-q", str(remote), str(store)], check=True,
+                       capture_output=True)
+        other.write("state-b.yaml", excluded)
+        other.commit("b excludes CHG-001", "2026-06-01T10:00:00")
+        other.git("push", "-q")
+        for pin in (before, since, None):
+            repo.write("framework.yaml", f"framework_version: {pin}\n" if pin else "{}\n")
+            ctx = dg.prepare(repo.path, "a", date(2026, 6, 2), False)
+            told = dg.inventory(ctx)["store"].get("brought_up_to_date")
+            there = (store / "state-b.yaml").is_file()
+            if pin == before:
+                if told is not None or there:
+                    problems.append(f"pin {pin}: the store was brought up to date ({told})")
+                continue
+            said = [m.get("not_printed") for m in dg.inventory(ctx).get("mentioned") or []]
+            if told != {"updated": True} or not there or not (
+                    said and "excluded by the state file of b" in (said[0] or "")):
+                problems.append(f"pin {pin}: the store says {told}, b's state file "
+                                f"{'is' if there else 'is not'} there, the mention {said}")
+        # A local change the update would overwrite: said, and the run goes on.
+        other.write("state-b.yaml", excluded + "# a line more\n")
+        other.commit("b again", "2026-06-01T11:00:00")
+        other.git("push", "-q")
+        (store / "state-b.yaml").write_text("items: {}\n", encoding="utf-8")
+        try:
+            ctx = dg.prepare(repo.path, "a", date(2026, 6, 2), False)
+            told = dg.inventory(ctx)["store"].get("brought_up_to_date") or {}
+            if told.get("updated") is not False or "git merge" not in (told.get("why") or ""):
+                problems.append(f"a store that does not fast-forward says {told}")
+        except dg.Refusal as r:
+            problems.append(f"a store that does not fast-forward stopped the run: {r.problems}")
+    return problems
+
+
+@check("in the additive mode the digest reads the registers from the main line, and proposes for hours the work of the threads the person named holds, not the main line's history, from the version that brought it")
+def _digest_reads_the_main_line():
+    # A main line on a remote holding KI-001, KI-002 and a roadmap in stages; in the working
+    # tree a KI-009 and a line of the roadmap nobody committed. Owner holds the thread of
+    # KI-001, Junior the one of KI-002, each taken the hour before a commit on it that the
+    # main line has not. The pins are the rule's version and the one before it, in the
+    # additive mode, and the rule's version outside it.
+    problems = []
+    dg = _load(DIGEST, "digest_main_line")
+    since = dg.FROM_MAIN_SINCE
+    before = _previous_version(since)
+    if not before:
+        return [f"no version before {since} in the registry's history"]
+    manifest = ("schema: framework/product-manifest/v1\nartifact_type: product-manifest\n"
+                "lifecycle: living\nstatus: active\nproducts: [a]\nname: a\n"
+                "one_liner: A thing.\nowners: [o]\ncreated: 2026-06-01 09:00\n"
+                "last_review: 2026-06-01 09:00\nstage:\n  phase: F5\n  block: A\n")
+    roadmap = _fm(
+        schema="framework/roadmap/v1", artifact_type="roadmap", lifecycle="living",
+        status="active", products="[a]", owners="[o]", created="2026-06-01",
+        last_review="2026-06-01 09:00").replace("---\n\n", "delivery_stages:\n  s1:\n"
+        "    name: first\n    after: []\n    increments: [INC-001]\nincrements:\n  INC-001:\n"
+        "    state: committed\n    depends_on: []\n    requires: []\n"
+        "    changes: []\n---\n\n", 1) + "# Roadmap\n\n### INC-001 · first\n"
+    edited = roadmap + "\nA line nobody committed.\n"
+    entries = {"KI-001": {"status": "open"}, "KI-002": {"status": "open"}}
+    for pin, additive, from_main in ((since, True, True), (before, True, False),
+                                     (since, False, False)):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            origin = tmp / "origin.git"
+            subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(origin)],
+                           check=True, env={**os.environ, **_WORK_ENV})
+            repo = _Repo(tmp / "docs")
+            repo.write("framework.yaml", f"framework_version: {pin}\n")
+            if additive:
+                repo.write(".framework/work.yaml",
+                           "mode: additive\npeople: [Owner, Junior]\nadmins: [Owner]\n")
+            repo.write("products/a/product.yaml", manifest)
+            repo.write("products/a/OPEN.md", _register(entries))
+            repo.write("products/a/RMP.md", roadmap)
+            repo.commit("base", "2026-06-01T09:00:00+02:00")
+            repo.git("remote", "add", "origin", str(origin))
+            repo.git("push", "-q", "origin", "main")
+            for ident, who, day in (("KI-001", "Owner", "03"), ("KI-002", "Junior", "04")):
+                branch = f"work/a-{ident.lower()}"
+                repo.git("checkout", "-q", "-b", branch, "main")
+                repo.write("products/a/OPEN.md", _register(
+                    {**entries, ident: {"status": "open", "owner": who}}))
+                repo.commit(f"{ident}: worked on", f"2026-06-{day}T09:00:00+02:00")
+                repo.git("push", "-q", "origin", branch)
+                repo.git("tag", "-a", f"claim/{ident}", "-m",
+                         f"claim {ident}\n\nwho: {who}\nbranch: {branch}\n",
+                         env={"GIT_COMMITTER_DATE": f"2026-06-{day}T08:00:00+02:00"})
+                repo.git("checkout", "-q", "main")
+                repo.git("branch", "-q", "-D", branch)     # the remote's, as a clone has it
+            repo.git("fetch", "-q", "origin")
+            repo.write("products/a/OPEN.md", _register({**entries, "KI-009": {"status": "open"}}))
+            repo.write("products/a/RMP.md", edited)
+            label = f"pin {pin}" + ("" if additive else ", outside the additive mode")
+            try:
+                ctx = dg.prepare(repo.path, "a", date(2026, 6, 5), False, "Owner")
+                found, _, _, landed, read = dg.worked(ctx, "2026-06-02")
+            except dg.Refusal as r:
+                problems.append(f"{label}: the digest refused: {r.problems}")
+                continue
+            worked = sorted({i for d in found.values() for i in d})
+            main = sorted({i for d in landed.values() for i in d})
+            # The roadmap the snapshot freezes is read where the registers were.
+            hashed = hashlib.sha256((roadmap if from_main else edited).encode("utf-8")).hexdigest()
+            if ctx.roadmap_frozen != {"file": "products/a/RMP.md", "sha256": hashed}:
+                problems.append(f"{label}: the roadmap frozen is {ctx.roadmap_frozen}, expected "
+                                f"the {'main line' if from_main else 'working tree'}'s")
+            if from_main:
+                if "KI-009" in ctx.voci or ctx.base != "origin/main":
+                    problems.append(f"pin {pin}: the registers are not the main line's: "
+                                    f"base {ctx.base}, KI-009 an item: {'KI-009' in ctx.voci}")
+                if main or worked != ["KI-001"] or read.get("branches") != ["work/a-ki-001"]:
+                    problems.append(f"pin {pin}: landed on the main line {main}, worked {worked} "
+                                    f"({read}); expected nothing landed since, and KI-001 on "
+                                    "Owner's thread, not Junior's KI-002")
+                try:
+                    dg.prepare(repo.path, "a", date(2026, 6, 5), False, "Nobody")
+                    problems.append(f"pin {pin}: `--who Nobody`, not among the people, was taken")
+                except dg.Refusal:
+                    pass
+            elif "KI-009" not in ctx.voci or ctx.base is not None or landed \
+                    or worked != ["KI-001", "KI-002"]:
+                problems.append(f"{label}: expected the working tree and every reference: "
+                                f"base {ctx.base}, KI-009 an item {'KI-009' in ctx.voci}, "
+                                f"worked {worked}, landed {landed}")
+    return problems
+
+
+@check("in the additive mode the digest proposes hours on a thread from when its holder took it, and on a join's branch from its own commits, and closes an item on the day it lands on the main line")
+def _digest_hours_from_threads_days_from_landing():
+    # Junior takes the thread of KI-001, writes on it and leaves it; Owner takes it again and
+    # closes the entry, after Lead opened the join, so that only the join's first parents keep
+    # Owner's commit out of Lead's hours. Lead merges the thread and writes a commit of the
+    # join's own on KI-002. While the join is open each person's hours are their own; then
+    # the join lands on the 5th, after a digest of the 4th that came between the work and the
+    # landing, and KI-001 is proposed closed on the day it landed.
+    problems = []
+    dg = _load(DIGEST, "digest_landing")
+    manifest = ("schema: framework/product-manifest/v1\nartifact_type: product-manifest\n"
+                "lifecycle: living\nstatus: active\nproducts: [a]\nname: a\n"
+                "one_liner: A thing.\nowners: [o]\ncreated: 2026-06-01 09:00\n"
+                "last_review: 2026-06-01 09:00\nstage:\n  phase: F5\n  block: A\n")
+    entries = {"KI-001": {"status": "open"}, "KI-002": {"status": "open"}}
+    at = lambda day, hour: f"2026-06-{day}T{hour}:00:00+02:00"
+    thread, join = "work/a-ki-001", "work/ricongiungimento-1"
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        origin = tmp / "origin.git"
+        subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(origin)], check=True,
+                       env={**os.environ, **_WORK_ENV})
+        repo = _Repo(tmp / "docs")
+        repo.write("framework.yaml", f"framework_version: {dg.FROM_MAIN_SINCE}\n")
+        repo.write(".framework/work.yaml",
+                   "mode: additive\npeople: [Owner, Junior, Lead]\nadmins: [Lead]\n")
+        repo.write("products/a/product.yaml", manifest)
+        repo.write("products/a/OPEN.md", _register(entries))
+        repo.commit("base", at("01", "09"))
+        repo.git("remote", "add", "origin", str(origin))
+        repo.git("push", "-q", "origin", "main")
+
+        def claim(tag: str, who: str, branch: str, when: str) -> None:
+            repo.git("tag", "-a", f"claim/{tag}", "-m",
+                     f"claim {tag}\n\nwho: {who}\nbranch: {branch}\n",
+                     env={"GIT_COMMITTER_DATE": when})
+
+        claim("KI-001", "Junior", thread, at("02", "08"))
+        repo.git("checkout", "-q", "-b", thread, "main")
+        repo.write("products/a/OPEN.md", _register(
+            {**entries, "KI-001": {"status": "open", "owner": "Junior"}}))
+        repo.commit("KI-001: started", at("02", "09"))
+        repo.git("tag", "-d", "claim/KI-001")              # abandoned: the claim released
+        claim("KI-001", "Owner", thread, at("03", "08"))
+        repo.write("products/a/OPEN.md", _register(
+            {**entries, "KI-001": {"status": "decided", "owner": "Junior"}}))
+        repo.commit("KI-001: decided", at("03", "09"))
+        repo.git("push", "-q", "origin", thread)
+        claim("ricongiungimento", "Lead", join, at("03", "07"))
+        repo.git("checkout", "-q", "-b", join, "main")
+        repo.git("merge", "-q", "--no-ff", "-m", f"Join {join}: merge {thread}", thread,
+                 env={"GIT_AUTHOR_DATE": at("04", "09"), "GIT_COMMITTER_DATE": at("04", "09")})
+        repo.write("products/a/OPEN.md", _register(
+            {"KI-001": {"status": "decided", "owner": "Junior"},
+             "KI-002": {"status": "open", "owner": "Lead"}}))
+        repo.commit("KI-002: the join's cascade", at("04", "10"))
+        repo.git("push", "-q", "origin", join)
+        repo.git("checkout", "-q", "main")
+        for b in (thread, join):
+            repo.git("branch", "-q", "-D", b)               # the remote's, as a clone has it
+        repo.git("fetch", "-q", "origin")
+
+        def read(who: str, since: str):
+            ctx = dg.prepare(repo.path, "a", date(2026, 6, 8), False, who)
+            found, _, _, landed, threads = dg.worked(ctx, since)
+            return ({d: sorted(x) for d, x in found.items()},
+                    {d: sorted(x) for d, x in landed.items()}, threads)
+
+        for who, want, threads, why in (
+                ("Owner", {"2026-06-03": ["KI-001"]}, {"branches": [thread]},
+                 "the commit after taking the thread again, not Junior's of the 2nd"),
+                ("Lead", {"2026-06-04": ["KI-002"]}, {"branches": [], "join": join},
+                 "the join's own commit, not the thread's it merged"),
+                ("Junior", {}, {"branches": []}, "nothing: the claim was released")):
+            try:
+                found, landed, got = read(who, at("01", "18"))
+            except dg.Refusal as r:
+                problems.append(f"{who}: the digest refused: {r.problems}")
+                continue
+            if found != want or landed or \
+                    {k: got.get(k) for k in threads} != threads or ("join" in got) != \
+                    ("join" in threads):
+                problems.append(f"{who} with the join open: worked {found}, landed {landed}, "
+                                f"threads {got}; expected {want} -- {why} --, nothing landed, "
+                                f"threads {threads}")
+
+        repo.git("merge", "-q", "--no-ff", "-m", f"Merge {join} into main", f"origin/{join}",
+                 env={"GIT_AUTHOR_DATE": at("05", "11"), "GIT_COMMITTER_DATE": at("05", "11")})
+        repo.git("push", "-q", "origin", "main")
+        for tag in ("KI-001", "ricongiungimento"):
+            repo.git("tag", "-d", f"claim/{tag}")
+        repo.git("fetch", "-q", "origin")
+        try:
+            ctx = dg.prepare(repo.path, "a", date(2026, 6, 8), False, "Owner")
+        except dg.Refusal as r:
+            return problems + [f"after the join landed the digest refused: {r.problems}"]
+        ctx.prev = dg.Snap(1, "a", date(2026, 6, 4), tmp / "DIG-001-a-2026-06-04",
+                           {"at": at("04", "18"),
+                            "voci": {"KI-001": {"state": "open"}, "KI-002": {"state": "open"}}})
+        inv = dg.inventory(ctx)
+        if inv.get("closed_since") != [{"id": "KI-001", "proposed_closed_on": "2026-06-05"}]:
+            problems.append(f"a digest between the work and the join: closed since "
+                            f"{inv.get('closed_since')}, expected KI-001 on the day it landed, "
+                            "the 5th")
+        if inv.get("worked_by_day"):
+            problems.append(f"the main line's history proposed as Owner's work: "
+                            f"{inv.get('worked_by_day')}")
+    return problems
+
+
+@check("in the additive mode the digest refuses a main line it cannot read -- a register whose front matter does not parse there, or no main line at all -- from the version that brought it")
+def _digest_refuses_an_unread_main_line():
+    problems = []
+    dg = _load(DIGEST, "digest_unread")
+    since = dg.FROM_MAIN_SINCE
+    before = _previous_version(since)
+    if not before:
+        return [f"no version before {since} in the registry's history"]
+    manifest = ("schema: framework/product-manifest/v1\nartifact_type: product-manifest\n"
+                "lifecycle: living\nstatus: active\nproducts: [a]\nname: a\n"
+                "one_liner: A thing.\nowners: [o]\ncreated: 2026-06-01 09:00\n"
+                "last_review: 2026-06-01 09:00\nstage:\n  phase: F5\n  block: A\n")
+    good = _register({"KI-001": {"status": "open"}})
+    broken = good.replace("entries:\n", "entries: [\n", 1)
+    for pin, refused in ((since, True), (before, False)):
+        # The main line's register does not parse; the checkout's, edited and not committed,
+        # does, so the validator on the checkout says nothing.
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            origin = tmp / "origin.git"
+            subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(origin)],
+                           check=True, env={**os.environ, **_WORK_ENV})
+            repo = _Repo(tmp / "docs")
+            repo.write("framework.yaml", f"framework_version: {pin}\n")
+            repo.write(".framework/work.yaml", "mode: additive\npeople: [Owner]\n")
+            repo.write("products/a/product.yaml", manifest)
+            repo.write("products/a/OPEN.md", broken)
+            repo.commit("base", "2026-06-01T09:00:00+02:00")
+            repo.git("remote", "add", "origin", str(origin))
+            repo.git("push", "-q", "origin", "main")
+            repo.git("fetch", "-q", "origin")
+            repo.write("products/a/OPEN.md", good)
+            try:
+                dg.inventory(dg.prepare(repo.path, "a", date(2026, 6, 5), False, "Owner"))
+                said = None
+            except dg.Refusal as r:
+                said = " ".join(r.problems)
+            if refused and not (said and "products/a/OPEN.md on origin/main" in said):
+                problems.append(f"pin {pin}: a register that does not parse on the main line: "
+                                f"the inventory said {said!r}, expected a refusal naming the "
+                                "file and the main line")
+            if not refused and said is not None:
+                problems.append(f"pin {pin}: below the version the working tree is read, and "
+                                f"the inventory refused: {said}")
+        # No main line at all: a clone whose only branch is not `main`, and no remote.
+        for additive in (True, False):
+            with tempfile.TemporaryDirectory() as tmp:
+                repo = _Repo(Path(tmp) / "docs")
+                repo.git("checkout", "-q", "-b", "draft")
+                repo.write("framework.yaml", f"framework_version: {pin}\n")
+                if additive:
+                    repo.write(".framework/work.yaml", "mode: additive\npeople: [Owner]\n")
+                repo.write("products/a/product.yaml", manifest)
+                repo.write("products/a/OPEN.md", good)
+                repo.commit("base", "2026-06-01T09:00:00+02:00")
+                try:
+                    dg.prepare(repo.path, "a", date(2026, 6, 5), False, "Owner")
+                    said = None
+                except dg.Refusal as r:
+                    said = " ".join(r.problems)
+                want = refused and additive
+                label = f"pin {pin}, {'additive' if additive else 'not additive'}, no main line"
+                if want and not (said and "neither origin/main nor main" in said):
+                    problems.append(f"{label}: expected a refusal as the to-do's, got {said!r}")
+                if not want and said is not None:
+                    problems.append(f"{label}: the working tree is read there, and the digest "
+                                    f"refused: {said}")
+    return problems
+
+
+@check("the workbook lists the changes of another product that name this one apart, without hours, only where there is one, and the snapshot records them")
+def _digest_lists_mentions():
+    # The model of `_digest_edge_cases`, with a mention and without: the fifth list of
+    # «Attività» and its line in «Come leggerlo» appear only with it, and the snapshot
+    # written beside the workbook records what it listed.
+    import openpyxl
+    from types import SimpleNamespace
+    x = _load(DIGEST, "digest_mentions")
+    wbm = _load(WORKBOOK, "digest_mentions_workbook")
+    from datetime import date as _d
+    from fractions import Fraction as Fr
+    when, start = _d(2026, 10, 9), _d(2026, 10, 1)
+    table = []
+    d = start
+    while d < when:
+        table.append([d] + [Fr(0)] * 4 + [Fr(4), Fr(0), Fr(1), Fr(0), Fr(0)])
+        d += x.timedelta(days=1)
+    mention = {"id": "CHG-007", "product": "b", "status": "approved", "title": "x title"}
+    problems = []
+    for mentions in ([mention], []):
+        m = x.Model("Borea", when, _d(2026, 10, 8), _d(2026, 10, 20), start, _d(2026, 10, 12),
+                    "1.0", "linea di base", "08/10", [], [], [], [], {}, [],
+                    {t: 0 for t in x.THEMES}, {t: 0 for t in x.THEMES},
+                    {t: 0 for t in x.THEMES}, table, [], [])
+        m.mentions = list(mentions)
+        F = x.figures(m)
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "m.xlsx"
+            wbm.write(m, F, out, x.datetime(2026, 10, 9, 8, 30))
+            wb = openpyxl.load_workbook(out, data_only=True)
+            # No previous snapshot, so frozen as a baseline is: what is recorded of the
+            # mentions does not depend on it.
+            ctx = SimpleNamespace(items={}, product="borea", when=when, now=None, baseline=True,
+                                  prev=None, days={}, alias={}, roadmap_frozen=None, notes=[],
+                                  corrected=[],
+                                  state={"release": {"name": "1.0", "delivery": "2026-10-20",
+                                                     "start": "2026-10-01"}})
+            x.freeze(ctx, m, Path(tmp), 1)
+            frozen = yaml.safe_load((Path(tmp) / "frozen.yaml").read_text(encoding="utf-8"))
+        cells = [[c.value for c in row] for row in wb["Attività"].iter_rows()]
+        at = next((k for k, row in enumerate(cells) if row[0] == "5. Di altri prodotti"), None)
+        legend = any(c.value == "Di altri prodotti" for row in wb["Come leggerlo"].iter_rows()
+                     for c in row)
+        if mentions:
+            row = cells[at + 2][:4] if at is not None and len(cells) > at + 2 else None
+            if row != ["CHG-007", "x title", "b", "Approvata"]:
+                problems.append(f"the fifth list holds {row}, expected the mention with its "
+                                "product and its status in the register")
+            if not legend:
+                problems.append("«Come leggerlo» does not say what the fifth list is")
+            if frozen.get("mentioned") != [mention]:
+                problems.append(f"the snapshot records {frozen.get('mentioned')}, not the "
+                                "mention the workbook listed")
+        elif at is not None or legend or "mentioned" in frozen:
+            problems.append("with no mention the workbook or the snapshot still speaks of other "
+                            "products")
+    return problems
+
+
 @check("BR006 says a mandate withdrawn, or its forecast moved, when or where it may not be")
 def _mandate_moves():
     # Since 4.10.0 a change contract moves in place three fields besides `status`: what
@@ -13380,7 +13906,7 @@ def _exchange_lists_what_waits():
     # registry's, which reaches it.
     before = _previous_version(before=str(CHECKS["checks"]["EXC004"].get("retired_in") or ""))
     if before is None:
-        return ["no version before EXC004's retired_in in the last sixty commits"]
+        return ["no version before EXC004's retired_in in the registry's history"]
     with tempfile.TemporaryDirectory() as tmp:
         repo, ex, _ = _exchange_docs(Path(tmp))
         repo.write("framework.yaml", f"framework_version: {before}\n")

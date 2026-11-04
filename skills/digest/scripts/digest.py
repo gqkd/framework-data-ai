@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Compute one product's daily status from the registers and the state file, as an Excel file.
 
-    python3 digest.py --root <project> --product atlas --inventory
+    python3 digest.py --root <project> --product atlas --inventory [--who "<name>"]
     python3 digest.py --root <project> --product atlas --check
     python3 digest.py --root <project> --product atlas [--copy-to <dir>]
     python3 digest.py --root <project> --product atlas --baseline
@@ -50,6 +50,26 @@ THE STATE FILE, FORMAT 2:
     gantt: {done: recent, from: window, owner: Team tecnico, requests: [team funzionale],
             outline: {t3: {from: 2026-11-02, to: 2026-11-27}}}     # every key optional
 
+IN THE ADDITIVE MODE, where the main line's `.framework/work.yaml` declares it and the version
+the main line pins is 4.12.0 or later, or none that reads: the registers are the main line's --
+`origin/main`, or `main` where there is no remote --, as the to-do reads them, and not the
+working tree, which nobody brings forward there; with neither, the digest refuses, as the to-do
+does, and so does `--inventory` when a register's front matter does not parse there. The work
+proposed for hours in the documents is that of the threads the person named by `--who` holds,
+from when they took them, read from the claim tags, and, for whoever holds the join's claim, the
+join branch's own commits: the main line's history is nobody's work, and the code repositories
+are read as before. An item is closed when it lands, and the closing day proposed is the day the
+main line's first-parent commit that brought it was made.
+From the same version, in every mode, a change is an item of the product of its folder, and a
+mention, without hours, in another its `products:` names -- in the inventory and in a list of
+its own in the workbook --, unless that product's roadmap lists it in its `changes:`; the
+increments it carries are its folder's. The workbook prints a mention only once its own
+product's state file has a row for it that does not exclude it, and this product's can keep it
+out too; the inventory says why one is not printed. Before `--inventory`, `--check`,
+`--baseline` or the run that writes reads the store, it is brought up to date from its remote,
+fast-forward only, with whatever other clones pushed; where it cannot be, the inventory says
+why, the other runs say it on stderr, and the run goes on.
+
 WITH A ROADMAP IN STAGES. When the product's `RMP.md` declares `delivery_stages`, the order of
 «Da fare» is computed from them through the validator's `roadmap_plan`, so the two cannot
 disagree: pinned items (`order.first`), then the stages, then items in no stage, which are
@@ -83,6 +103,7 @@ import argparse
 import hashlib
 import importlib.util
 import math
+import os
 import re
 import shutil
 import subprocess
@@ -101,6 +122,21 @@ WORKBOOK = Path(__file__).resolve().parent / "workbook.py"
 STORE = Path("_meta") / "digest"
 OUT = "out"
 FORMAT = 2
+# The main line of the additive mode, as the to-do reads it: the remote's, or `main` where the
+# clone has no remote.
+MAIN_LINE = ("origin/main", "main")
+# Where the project pins 4.12.0 or later, or no version that reads (`rules_hold`), and declares
+# the additive mode: the registers are the main line's, as the to-do reads them, the work
+# proposed for hours is the threads' the person holds and the join's own, and a closing day is
+# the day an item landed on the main line -- not the working tree and every reference.
+FROM_MAIN_SINCE = "4.12.0"
+# From the same version: a change is an item of the product of its folder, and a mention,
+# without hours, in another its `products:` names, unless that product's roadmap lists it in
+# its `changes:`. The increments it carries are always its folder's. A mention is printed once
+# its own product's state file has a row for it that does not exclude it, and, since that file
+# may have been written in another clone, every run that reads the store for a digest first
+# brings it up to date from its remote (`refresh_store`), with or without a mention.
+BY_FOLDER_SINCE = "4.12.0"
 
 THEMES = {"architettura": "Architettura", "sviluppo": "Sviluppo", "deploy": "Deploy"}
 # What a snapshot written before 4.2.0 calls a theme, read as what it is called now.
@@ -347,26 +383,94 @@ class Registers:
     manifest: object
     arts: list
     product_name: str
+    mentions: list = field(default_factory=list)   # changes of another folder naming this one
 
 
-def discover(root: Path, v) -> tuple[list, list]:
-    """Every artifact the validator would look at, and the files whose front matter is broken."""
+def discover(root: Path, v, ref: str | None = None) -> tuple[list, list]:
+    """Every artifact the validator would look at, and the files whose front matter is broken:
+    in the working tree, or as `ref` holds them, read with the working tree's `scan`, as the
+    to-do reads the main line."""
     registry = yaml.safe_load(v.REGISTRY.read_text(encoding="utf-8"))
     try:
         project = v.load_project(root)
     except SystemExit as e:          # an unknown key or bad YAML in framework.yaml
         raise Refusal([str(e.code)])
     report = v.Report({})
-    arts = v.discover(root, v.load_scan(registry, project), registry, report)
-    return arts, [f"{f.path}: {f.message}" for f in report.findings if f.code == "FM001"]
+    scan = v.load_scan(registry, project)
+    if ref is None:
+        arts = v.discover(root, scan, registry, report)
+    else:
+        try:
+            arts = v._branches.snapshot(root, ref, registry, scan, report)
+        except v._branches.BranchError as e:
+            raise Refusal([f"{ref} could not be read: {e}"])
+    on = f" on {ref}" if ref else ""     # a file of the main line, not of the checkout
+    return arts, [f"{f.path}{on}: {f.message}" for f in report.findings if f.code == "FM001"]
 
 
-def read_registers(arts: list, broken: list, product: str, v) -> Registers:
+def main_line(root: Path, v) -> tuple[str, dict, dict] | None:
+    """The main line as the to-do reads it -- `origin/main`, or `main` where there is none --,
+    its `.framework/work.yaml` and its `framework.yaml`. None where neither is a commit here:
+    the to-do refuses there, and so does the digest where the checkout declares the additive
+    mode at a version that reads the main line (`refuse_without_main_line`); elsewhere it reads
+    the working tree and the checkout's pin, as outside the additive mode."""
+    B = v._branches
+    base = next((b for b in MAIN_LINE if git("rev-parse", "--verify", "-q", f"{b}^{{commit}}",
+                                             cwd=root).returncode == 0), None)
+    if base is None:
+        return None
+    try:
+        where = B.prefix(root)
+    except B.BranchError:
+        return None
+    shown = git("show", f"{base}:{where}framework.yaml", cwd=root)
+    try:
+        pinned = (yaml.safe_load(shown.stdout) or {}) if shown.returncode == 0 else {}
+    except yaml.YAMLError:
+        pinned = {}
+    return base, B.work_at(root, base), pinned if isinstance(pinned, dict) else {}
+
+
+def refuse_without_main_line(root: Path, v) -> None:
+    """Where neither main line is a commit here, and the checkout declares the additive mode
+    and pins a version where the registers are the main line's: refused, as the to-do refuses,
+    rather than the working tree read in silence."""
+    try:
+        work = yaml.safe_load((root / v._branches.WORK).read_text(encoding="utf-8-sig")) or {}
+    except (OSError, yaml.YAMLError):
+        return
+    if not (isinstance(work, dict) and work.get("mode") == "additive"):
+        return
+    try:
+        pinned = v.load_project(root)
+    except SystemExit as e:
+        raise Refusal([str(e.code)])
+    if v.rules_hold(pinned, FROM_MAIN_SINCE):
+        raise Refusal([f"neither {MAIN_LINE[0]} nor {MAIN_LINE[1]} is a commit here: in the "
+                       "additive mode the digest reads the main line, as the to-do does. Fetch "
+                       "it, then run again."])
+
+
+def folder_of(rel: str) -> str | None:
+    """The product whose folder holds a document, as the to-do reads it."""
+    parts = Path(rel).parts
+    return parts[1] if parts[:1] == ("products",) and len(parts) > 2 else None
+
+
+def read_registers(arts: list, broken: list, product: str, v,
+                   by_folder: bool = False) -> Registers:
     dirs = v.product_dirs(arts)
     manifest = next((a for a in arts if a.type == "product-manifest"
                      and product in v.as_list(a.meta.get("products"))), None)
     entries: dict[str, Entry] = {}
     duplicated = []
+    mentions = []
+    # The changes this product's roadmap lists in its `changes:`: a declaration of the project,
+    # which keeps a change of another folder that names this product an item here.
+    listed = {str(c) for a in arts if a.type == "roadmap"
+              and product in v.as_list(a.meta.get("products"))
+              for row in v.as_map(a.meta.get("increments")).values() if isinstance(row, dict)
+              for c in v.as_list(row.get("changes"))}
 
     def add(e: Entry):
         if e.id in entries:
@@ -383,11 +487,18 @@ def read_registers(arts: list, broken: list, product: str, v) -> Registers:
                     add(Entry(str(key), str(key).split("-")[0], a.type, row.get("status"),
                               titles.get(key), a.rel, closed_by=row.get("closed_by")))
         elif a.type in ("decision-record", "change-contract", "evaluation-report") and a.id:
-            if not (mine or (a.type == "decision-record"
-                             and "all" in v.as_list(a.meta.get("products")))):
-                continue
             title = next((m.group(2) for line in a.body.splitlines()
                           if line.startswith("# ") and (m := HEADING_ID.match(line))), None)
+            if a.type == "change-contract" and by_folder:
+                home = folder_of(a.rel)
+                if not ((home == product) if home else mine) and not (mine and a.id in listed):
+                    if mine:
+                        mentions.append({"id": a.id, "product": home,
+                                         "status": a.meta.get("status"), "title": title})
+                    continue
+            elif not (mine or (a.type == "decision-record"
+                               and "all" in v.as_list(a.meta.get("products")))):
+                continue
             add(Entry(a.id, a.id.split("-")[0], a.type, a.meta.get("status"), title, a.rel,
                       derives_from=[bare(r) for r in v.as_list(a.meta.get("derives_from"))],
                       withdrawn_by=[bare(r) for r in v.as_list(a.meta.get("withdrawn_by"))]))
@@ -397,22 +508,23 @@ def read_registers(arts: list, broken: list, product: str, v) -> Registers:
                     add(Entry(key, "INC", a.type, None, title, a.rel))
     # The increments a change takes the place of are the ones it carries, not the ones it
     # names: written back into `derives_from` here, every reading below -- the item an `INC`
-    # becomes, the stage it is counted in -- follows. One product, so every change is its own.
-    # The chain of withdrawals follows the folder of each change, as the to-do reads it. Which
-    # changes are this product's is read here from `products:` and there from the folder: the
-    # two differ for a change of several products, a difference older than `withdrawn` that
-    # this does not settle.
+    # becomes, the stage it is counted in -- follows. The chain of withdrawals follows the
+    # folder of each change, as the to-do reads it. Which changes are this product's is read
+    # from the folder where `by_folder` holds, as the to-do reads it, and from `products:`
+    # below that version; the increments a change of another folder carries are that folder's,
+    # numbered there, and none of this product's.
     chgs = {k: e for k, e in entries.items() if e.kind == "CHG"}
-    folder = {k: (Path(e.file).parts[1] if Path(e.file).parts[:1] == ("products",)
-                  and len(Path(e.file).parts) > 2 else None) for k, e in chgs.items()}
+    folder = {k: folder_of(e.file) for k, e in chgs.items()}
     carried = v.carried_increments({k: {"status": e.status, "derives_from": e.derives_from,
                                         "withdrawn_by": e.withdrawn_by, "product": folder[k]}
                                     for k, e in chgs.items()})
     for k, e in chgs.items():
+        foreign = by_folder and folder[k] not in (None, product)
         e.derives_from = ([x for x in e.derives_from if not x.startswith("INC-")]
-                          + sorted(carried.get(k, set())))
+                          + ([] if foreign else sorted(carried.get(k, set()))))
     name = str(manifest.meta.get("name") or product) if manifest else product
-    return Registers(entries, broken, duplicated, manifest, arts, name)
+    return Registers(entries, broken, duplicated, manifest, arts, name,
+                     sorted(mentions, key=lambda m: sort_id(m["id"])))
 
 
 def build_voci(reg: Registers, known: set[str]) -> tuple[dict[str, Voce], dict[str, str], list, list]:
@@ -654,24 +766,46 @@ class Context:
     days: dict = field(default_factory=dict)
     now: datetime | None = None
     roadmap: dict | None = None          # the plan of the roadmap's stages, when it has them
-    roadmap_file: Path | None = None
+    roadmap_frozen: dict | None = None   # its path and the hash of its bytes, for the snapshot
     staging: "Staging | None" = None
+    base: str | None = None              # the main line the registers were read from
+    who: str | None = None               # the person, for the threads they hold
+    prefix: str = "work/"                # the main line's `branch_prefix`, where `base` is set
+    people: set = field(default_factory=set)   # the main line's `people`, where it names any
+    refreshed: dict | None = None        # whether the store was brought up to date, and why not
 
 
-def prepare(root: Path, product: str | None, when: date, baseline: bool) -> Context:
+def prepare(root: Path, product: str | None, when: date, baseline: bool,
+            who: str | None = None) -> Context:
     v = load_validator()
     root = root.resolve()
-    arts, broken = discover(root, v)
+    # In the additive mode, read as the to-do reads it, the version the main line pins decides
+    # the rules; elsewhere the checkout's.
+    line = main_line(root, v)
+    if line is None:
+        refuse_without_main_line(root, v)
+    additive = line is not None and line[1].get("mode") == "additive"
+    try:
+        pinned = line[2] if additive else v.load_project(root)
+    except SystemExit as e:
+        raise Refusal([str(e.code)])
+    from_main = additive and v.rules_hold(pinned, FROM_MAIN_SINCE)
+    arts, broken = discover(root, v, line[0] if from_main else None)
     products = sorted({p for p, _ in v.product_dirs(arts).values()})
     if product is None:
         if len(products) != 1:
             raise Refusal([f"say which product with --product: {', '.join(products) or 'none'}"])
         product = products[0]
     elif product not in products:
-        raise Refusal([f"{product!r} has no products/<p>/product.yaml here; "
+        raise Refusal([f"{product!r} has no products/<p>/product.yaml "
+                       f"{'on ' + line[0] if from_main else 'here'}; "
                        f"the products are {', '.join(products) or 'none'}"])
-    reg = read_registers(arts, broken, product, v)
+    reg = read_registers(arts, broken, product, v, v.rules_hold(pinned, BY_FOLDER_SINCE))
     store = root / STORE
+    # From the version that reads a change by its folder, the state file of another product
+    # says whether a mention of it is printed here, and it may have been written in another
+    # clone of the store: bring it up to date before reading any.
+    refreshed = refresh_store(store) if v.rules_hold(pinned, BY_FOLDER_SINCE) else None
     state, err = read_state(store, product)
     snaps = snapshots(store)
     prev = previous_of(snaps, product, when)
@@ -681,6 +815,15 @@ def prepare(root: Path, product: str | None, when: date, baseline: bool) -> Cont
     voci, alias, unknown, disagree = build_voci(reg, known)
     ctx = Context(root, product, when, reg.product_name, reg, voci, alias, state, snaps, prev,
                   baseline, notes=disagree)
+    ctx.refreshed = refreshed
+    if from_main:
+        ctx.base = line[0]
+        ctx.people = v._branches.names(line[1].get("people"))
+        ctx.prefix = str(line[1].get("branch_prefix") or "work/")
+    ctx.who = (who or "").strip() or None
+    if ctx.who and ctx.people and ctx.who not in ctx.people:
+        raise Refusal([f"`--who {ctx.who}` is not among the people .framework/work.yaml names "
+                       f"on {ctx.base}: {', '.join(sorted(ctx.people))}"])
     # The roadmap of the product, when it orders its increments in stages. The one beside the
     # product first, which is where the registry puts it.
     roadmaps = sorted((a for a in arts if a.type == "roadmap"
@@ -688,7 +831,11 @@ def prepare(root: Path, product: str | None, when: date, baseline: bool) -> Cont
                       key=lambda a: (a.path.parent.name != product, a.rel))
     if roadmaps and roadmaps[0].meta.get("delivery_stages"):
         ctx.roadmap = v.roadmap_plan(roadmaps[0].meta)
-        ctx.roadmap_file = roadmaps[0].path
+        rel = Path(roadmaps[0].rel).as_posix()
+        # Read where the registers were: the snapshot's files are gone once it is taken.
+        data = (v._branches.git(root, "show", f"{ctx.base}:{v._branches.prefix(root)}{rel}",
+                                binary=True) if ctx.base else roadmaps[0].path.read_bytes())
+        ctx.roadmap_frozen = {"file": rel, "sha256": hashlib.sha256(data).hexdigest()}
     ctx.problems += [f"front matter that does not parse, so its entries cannot be read: {b}"
                      for b in reg.broken]
     ctx.problems += reg.duplicated
@@ -883,11 +1030,28 @@ def check(ctx: Context) -> list[str]:
         if before.get("state") in ("closed", "gone", "replaced"):
             items[i] = _item(i, before.get("kind", i.split("-")[0]), before["state"], row,
                              before.get("closer"), before.get("children") or [], [])
+        elif excludes_a_mention(ctx, i, row):
+            continue                    # a mention kept out of the workbook, not an item here
+        elif i in {m["id"] for m in ctx.reg.mentions} and i not in prev_voci:
+            # Never an item here, so it cannot leave: `gone` is refused like any other key.
+            P.append(f"{i} is a mention here, an item of another product's digest: its row in "
+                     "this state file takes `excluded` alone, with the reason, or none")
         elif row.get("gone"):
             items[i] = _item(i, i.split("-")[0], "gone", row, None, [], [])
         else:
             P.append(f"{i} is in the state file and no longer in the registers, and nothing says "
                      "it was closed: write `gone` with the reason, or restore the entry")
+    for m in ctx.reg.mentions:
+        # Its own product's state file says whether a mention is printed. A missing one is a
+        # digest not run there yet, which keeps the mention out and says so (`unprinted`); one
+        # that does not read is an error in the store, refused rather than read as that.
+        path = ctx.root / STORE / f"state-{m['product']}.yaml"
+        home, why = read_state(ctx.root / STORE, m["product"])
+        if home is not None and not isinstance(home.get("items") or {}, dict):
+            why = f"{path}: `items` is not a mapping"
+        if path.exists() and why:
+            P.append(f"{m['id']} is a mention here, and whether its own product excludes it "
+                     f"cannot be read: {why}")
     for i, before in prev_voci.items():
         if i not in items and i not in rows and before.get("state") not in (
                 "closed", "gone", "replaced"):
@@ -1293,6 +1457,7 @@ class Model:
     stage_leads: dict = field(default_factory=dict)   # stage id -> who answers for its milestone
     release_owner: str | None = None                  # who answers for the agreed delivery
     blockers: dict = field(default_factory=dict)      # item id -> what it waits for, from whom
+    mentions: list = field(default_factory=list)      # changes of another folder naming it
 
 
 def period_label(a: date, b: date) -> str:
@@ -1487,7 +1652,74 @@ def build_model(ctx: Context) -> Model:
                  todo, done, out, status, waits, prev_closed, this_closed, prev_open, table,
                  milestones, sorted(changes), ctx.staging, stage_dates,
                  dict(state.get("gantt") or {}), stage_leads,
-                 state["release"].get("owner"), blockers)
+                 state["release"].get("owner"), blockers, shown_mentions(ctx))
+
+
+def mention_rows(ctx: Context, m: dict) -> tuple[dict, dict]:
+    """The rows a mention has in this product's state file and in that of the product whose
+    digest has it as an item, `{}` where there is none or the file does not read, which `check`
+    refuses."""
+    def row(state) -> dict:
+        rows = (state or {}).get("items")
+        r = rows.get(m["id"]) if isinstance(rows, dict) else None
+        return r if isinstance(r, dict) else {}
+    home, _ = read_state(ctx.root / STORE, m["product"])
+    return row(ctx.state), row(home)
+
+
+def excludes_a_mention(ctx: Context, i: str, row) -> bool:
+    """A row of the state file that keeps a mention out of the workbook: `excluded` alone, with
+    the reason, on a change of another folder that names this product and was never an item of
+    this digest -- one that was leaves it with `gone`, as any item does."""
+    prev = (ctx.prev.frozen.get("voci") or {}) if ctx.prev else {}
+    return (isinstance(row, dict) and set(row) == {"excluded"} and bool(row["excluded"])
+            and i in {m["id"] for m in ctx.reg.mentions} and i not in prev)
+
+
+def unprinted(ctx: Context, m: dict) -> str | None:
+    """Why the workbook does not list a mention, or None where it does. Its own product's state
+    file has the last word: a mention is printed only once that product's digest has classified
+    it without excluding it, so that a change it keeps from whoever receives a workbook never
+    reaches another's -- nor one whose state file is missing here, which says nothing either
+    way -- and this product's state file can keep it out too. Where there is no row to read,
+    the reason is the one that holds: no row yet, a row that is not one, or a state file that
+    does not read, which `check` refuses."""
+    mine, home = mention_rows(ctx, m)
+    if mine.get("excluded"):
+        return "excluded by this product's state file"
+    if home.get("excluded"):
+        return f"excluded by the state file of {m['product']}"
+    if home:
+        return None
+    rel = (STORE / f"state-{m['product']}.yaml").as_posix()
+    state, why = read_state(ctx.root / STORE, m["product"])
+    rows = (state or {}).get("items") or {}
+    if state is None and (ctx.root / rel).exists():
+        return f"the state file of {m['product']} does not read: {why}"
+    if not isinstance(rows, dict):
+        return f"`items` in {rel} is not a mapping"
+    if m["id"] in rows:
+        return f"its row in {rel} is empty or not a mapping"
+    return f"the digest of {m['product']} has not classified it: no row for it in {rel} here"
+
+
+def shown_mentions(ctx: Context) -> list[dict]:
+    """The changes of another folder that name this product, as the workbook lists them, in a
+    list of their own and without hours: an item of their folder's digest, a mention here, once
+    its own product's digest has classified it and neither state file excludes it (`unprinted`).
+    Where its own product's state file confirmed a title for it -- `seen` is the register's
+    title of today, and the title one its own check accepts --, that is the title printed, the
+    register's otherwise."""
+    out = []
+    for m in ctx.reg.mentions:
+        if unprinted(ctx, m):
+            continue
+        home = mention_rows(ctx, m)[1]
+        title = str(home.get("title") or "")
+        confirmed = (title and str(home.get("seen") or "").strip() == (m["title"] or "").strip()
+                     and not DASHES.search(title) and not title.rstrip().endswith("."))
+        out.append({**m, **({"title": title} if confirmed else {})})
+    return out
 
 
 def figures(m: Model) -> dict:
@@ -1877,6 +2109,36 @@ def private(url: str) -> tuple[bool, str]:
     return True, "private"
 
 
+def refresh_store(store: Path) -> dict:
+    """Brings the store up to date from the remote branch it follows, fast-forward only, before
+    it is read: whatever other clones pushed, another product's state file and this product's
+    own state file and snapshots alike. It makes no merge commit and never rebases or stashes;
+    git's own prompt for credentials is off -- one of ssh, for a passphrase or an unknown host,
+    is not git's --, and a step that has not ended within a minute is stopped. A remote that
+    holds nothing yet, the empty repository the store starts from, has nothing to bring. What
+    does not fast-forward -- no network, a store and a remote that have each moved on, a local
+    change the update would overwrite, a branch that follows none of the remote's -- is said,
+    and the run goes on with the store as it is."""
+    if not (store / ".git").exists():
+        return {"updated": False, "why": "the store is not a repository"}
+    env = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
+    for args in (("fetch", "-q"), ("merge", "--ff-only", "-q", "@{u}")):
+        if args[0] == "merge" and git("rev-parse", "--verify", "-q", "@{u}^{commit}",
+                                      cwd=store).returncode:
+            if not git("for-each-ref", "--count=1", "refs/remotes", cwd=store).stdout.strip():
+                return {"updated": True}             # the remote holds nothing yet
+            return {"updated": False, "why": "the store's branch follows no branch of its remote"}
+        try:
+            r = subprocess.run(["git", *args], cwd=store, capture_output=True, text=True,
+                               env=env, timeout=60)
+        except subprocess.TimeoutExpired:
+            return {"updated": False, "why": f"git {args[0]}: no answer within a minute"}
+        if r.returncode:
+            said = (r.stderr.strip() or r.stdout.strip() or f"exit {r.returncode}")
+            return {"updated": False, "why": f"git {args[0]}: {said.splitlines()[0]}"}
+    return {"updated": True}
+
+
 def store_status(root: Path) -> dict:
     store = root / STORE
     out = {"path": str(STORE), "exists": store.is_dir(), "git": False, "origin": None,
@@ -1923,12 +2185,15 @@ def freeze(ctx: Context, m: Model | None, path: Path, number: int) -> None:
         for d in (as_date(ctx.state["release"]["start"]) + timedelta(days=k)
                   for k in range((ctx.when - as_date(ctx.state["release"]["start"])).days))]
     frozen["table"] = [[r[0].isoformat()] + [plain(x) for x in r[1:]] for r in table]
-    if ctx.roadmap_file is not None:
-        frozen["roadmap"] = {
-            "file": ctx.roadmap_file.relative_to(ctx.root).as_posix(),
-            "sha256": hashlib.sha256(ctx.roadmap_file.read_bytes()).hexdigest()}
+    if ctx.roadmap_frozen is not None:
+        frozen["roadmap"] = dict(ctx.roadmap_frozen)
     if m is not None:
         frozen["order"] = [it.id for it in m.todo]
+    mentioned = m.mentions if m is not None else shown_mentions(ctx)
+    if mentioned:
+        # What the workbook lists of other products, recorded with the rest it was computed
+        # from.
+        frozen["mentioned"] = mentioned
     frozen["sources_disagree"] = ctx.notes
     if ctx.corrected:
         frozen["corrected"] = [d.isoformat() for d in ctx.corrected]
@@ -2118,12 +2383,59 @@ def changed_text(repo: Path, sha: str, diff: str, skip: set[str]) -> str:
     return "\n".join(out)
 
 
-def worked(ctx: Context, since: str) -> tuple[dict, list, list]:
+def held_threads(ctx: Context) -> list[tuple[str, list[str], int, bool]]:
+    """The branches `ctx.who` holds, read from the claim tags this clone has -- never from git's
+    configuration --, each with the references that hold it here (the local branch, where this
+    machine has one, and the remote's), the moment the person took it, and whether it is the
+    join's. A parking branch, which no claim names, is not read.
+
+    The moment is the claim's own date, the earliest of the person's claims on that branch, as
+    a Unix time: a thread taken again after it was abandoned goes on on its branch with the
+    earlier holder's commits, and a claim points at the main line as it was when it was taken,
+    which holds none of them, so its target cannot tell them apart and its date can."""
+    B = load_validator()._branches
+    listed = git("for-each-ref", "--format=%(refname)%00%(taggerdate:unix)%00%(contents)%00%00",
+                 B.CLAIM_REF.rstrip("/"), cwd=ctx.root).stdout
+    taken: dict[str, int] = {}
+    for record in listed.split("\x00\x00"):
+        _, _, rest = record.strip("\n").partition("\x00")
+        when, _, body = rest.partition("\x00")
+        f = B.message_fields(body)
+        if f.get("who") == ctx.who and f.get("branch"):
+            t = int(when) if when.strip().isdigit() else 0
+            taken[f["branch"]] = min(taken.get(f["branch"], t), t)
+    remote = ctx.base.split("/", 1)[0] if ctx.base and "/" in ctx.base else None
+    out = []
+    for b in sorted(taken):
+        refs = [r for r in (f"refs/heads/{b}", f"refs/remotes/{remote}/{b}" if remote else None)
+                if r and git("rev-parse", "--verify", "-q", f"{r}^{{commit}}",
+                             cwd=ctx.root).returncode == 0]
+        if refs:
+            # The join's branch is named as the to-do knows it, by what follows the prefix.
+            join = b.startswith(ctx.prefix) and b[len(ctx.prefix):].startswith(B.JOIN)
+            out.append((b, refs, taken[b], join))
+    return out
+
+
+def worked(ctx: Context, since: str) -> tuple[dict, list, list, dict, dict]:
     """Which items the commits since the last digest name, day by day: a proposal only.
 
     In the documents, the identifiers on the lines a commit changed; in the code, the ones its
     message cites. P-07 binds a change to the text of a pull request, not to a commit, so
     nothing here is certain, and the person writes the hours.
+
+    Returns the work proposed for hours, the code's commits that cite no item, the
+    repositories, the items that landed on the main line by the day they landed, and what was
+    read of the threads.
+
+    Where the registers are the main line's (`ctx.base`), the work proposed in the documents is
+    the person's alone: on each thread they hold, what it has that the main line has not, from
+    the moment they took it, on the day each commit was written; on the join's branch, where
+    they hold the join's claim, its own commits, never those of the threads it merged. The main
+    line's history is nobody's work: read on its first parents, each with what it brought --
+    the join's merge, with the messages of the commits it lands --, it gives the day an item
+    landed, which is the day it closed. Elsewhere every reference, as before, and the day an
+    item closed is the day of the commit that names it.
     """
     rx = ids_regex()
     registry = yaml.safe_load((FRAMEWORK / "schemas" / "artifact-types.yaml")
@@ -2131,32 +2443,76 @@ def worked(ctx: Context, since: str) -> tuple[dict, list, list]:
     skip = set(registry["scan"]["skip_files"])
     mine = set(ctx.voci) | set(ctx.alias)
     found: dict[str, dict[str, list]] = {}
+    landed: dict[str, dict[str, list]] = {}
     loose, repos = [], repositories(ctx)
+    threads = held_threads(ctx) if ctx.base and ctx.who else []
+    joins = [b for b, _, _, join in threads if join]
+    read = ({"read": False, "why": "the registers are the working tree's: every reference is read"}
+            if not ctx.base else
+            {"read": False, "why": "no `--who`: the skill asks the name, never git's, and no "
+                                   "work in the documents is proposed for hours"}
+            if not ctx.who else
+            {"read": True, "main_line": ctx.base, "who": ctx.who,
+             "branches": [b for b, _, _, join in threads if not join],
+             **({"join": joins[0]} if joins else {})})
     for repo in repos:
         if not repo.get("read"):
             continue
         docs = repo["pathspec"] is not None
-        cmd = ["log", "--all", f"--since={since}", "--format=%x1e%h%x1f%as%x1f%s%x1f%b%x1f"]
-        if docs:
-            cmd += ["-p", "-U0", "--no-ext-diff", "--no-color", "--", repo["pathspec"]]
+        # (into, branch, refs, taken, landing): where the hits go, the branch named beside
+        # them, what is read, the moment before which a commit is not the person's, and
+        # whether the day is the one a commit landed on the main line.
+        if docs and ctx.base:
+            runs = [(landed, None, ["--first-parent", "--diff-merges=first-parent", ctx.base],
+                     0, True)]
+            runs += [(found, b, (["--first-parent", "--no-merges"] if join else [])
+                      + [f"^{ctx.base}", *refs], t, False) for b, refs, t, join in threads]
+        else:
+            runs = [(found, None, ["--all"], 0, False)]
         where = Path(repo["path"])
-        r = git(*cmd, cwd=where)
-        for record in r.stdout.split("\x1e")[1:]:
-            parts = record.split("\x1f")
-            sha, day, subject, body = parts[0], parts[1], parts[2], parts[3]
-            text = subject + "\n" + body
-            if docs and len(parts) > 4:
-                text += "\n" + changed_text(where, sha, parts[4], skip)
-            hits = {ctx.alias.get(i, i) for i in rx.findall(text) if i in mine}
-            for i in hits:
-                found.setdefault(day, {}).setdefault(i, []).append(
-                    f"{repo['name']} {sha} {subject}")
-            if not hits and not docs:
-                loose.append(f"{repo['name']} {day} {sha} {subject}")
-    return found, loose, repos
+        for into, branch, refs, taken, landing in runs:
+            cmd = ["log", f"--since={since}",
+                   "--format=%x1e%H%x1f%h%x1f%as%x1f%cs%x1f%at%x1f%P%x1f%s%x1f%b%x1f"]
+            if docs:
+                cmd += ["-p", "-U0", "--no-ext-diff", "--no-color"]
+            cmd += refs + (["--", repo["pathspec"]] if docs else [])
+            r = git(*cmd, cwd=where)
+            if r.returncode and docs and ctx.base:
+                # A git that does not know `--diff-merges`, or a reference gone since it was
+                # listed: what could not be read is said, never left as an empty list. The
+                # other runs, as before.
+                said = (r.stderr.strip().splitlines() or [f"exit {r.returncode}"])[0]
+                repo["read"] = False
+                repo.setdefault("why", f"git log {' '.join(refs)}: {said}")
+                continue
+            for record in r.stdout.split("\x1e")[1:]:
+                parts = record.split("\x1f")
+                full, sha, authored, committed, at, parents, subject, body = parts[:8]
+                if taken and at.strip().isdigit() and int(at) < taken:
+                    continue                  # before the person took the thread: not theirs
+                text = subject + "\n" + body
+                if landing and len(parents.split()) > 1:
+                    # A merge's own message names no item: the commits it lands do.
+                    text += "\n" + git("log", "--format=%s%n%b", f"{full}^1..{full}",
+                                       cwd=where).stdout
+                if docs and len(parts) > 8:
+                    text += "\n" + changed_text(where, sha, parts[8], skip)
+                hits = {ctx.alias.get(i, i) for i in rx.findall(text) if i in mine}
+                day = committed if landing else authored
+                for i in hits:
+                    into.setdefault(day, {}).setdefault(i, []).append(
+                        f"{repo['name']} {branch + ' ' if branch else ''}{sha} {subject}")
+                if not hits and not docs:
+                    loose.append(f"{repo['name']} {day} {sha} {subject}")
+    return found, loose, repos, landed, read
 
 
 def inventory(ctx: Context) -> dict:
+    if ctx.base and ctx.reg.broken:
+        # Its entries would be listed as vanished, and `gone` proposed for each: nothing is
+        # listed until the main line reads, which the validator on the checkout does not say.
+        raise Refusal([f"front matter that does not parse, so its entries cannot be read: {b}"
+                       for b in ctx.reg.broken])
     state = ctx.state or {}
     rows = state.get("items") or {}
     prev_v = (ctx.prev.frozen.get("voci") or {}) if ctx.prev else {}
@@ -2186,24 +2542,41 @@ def inventory(ctx: Context) -> dict:
                      and (prev_v.get(i) or {}).get("state") not in (None, "closed")),
                     key=sort_id)
     out["new_since"] = sorted((i for i in ctx.voci if ctx.prev and i not in prev_v), key=sort_id)
+    # A mention that was never an item here is not vanished: its row is `excluded` alone, or
+    # `check` refuses it, `gone` included.
+    never = {m["id"] for m in ctx.reg.mentions} - set(prev_v)
     out["vanished"] = sorted((i for i in rows if i not in ctx.voci and i not in ctx.alias
                               and (prev_v.get(i) or {}).get("state") not in
                               ("closed", "gone", "replaced")
-                              and not (rows[i] or {}).get("gone")), key=sort_id)
+                              and not (rows[i] or {}).get("gone")
+                              and i not in never), key=sort_id)
     out["replaced"] = {i: vo.children for i, vo in ctx.voci.items() if vo.state == "replaced"
                        and (prev_v.get(i) or {}).get("state") != "replaced"}
     out["aliases"] = {a: od for a, od in sorted(ctx.alias.items())}
+    if ctx.reg.mentions:
+        # Changes of another folder that name this product: an item of their folder's digest,
+        # a mention here, without hours; with the title the workbook prints, or why it does
+        # not print it.
+        shown = {m["id"]: m for m in shown_mentions(ctx)}
+        out["mentioned"] = [shown.get(m["id"]) or {**m, "not_printed": unprinted(ctx, m)}
+                            for m in ctx.reg.mentions]
     out["sources_disagree"] = ctx.notes
     proposed_close = {}
     if ctx.prev:
         since = ctx.prev.frozen.get("at") or ctx.prev.date.isoformat()
-        found, loose, repos = worked(ctx, str(since))
+        found, loose, repos, landed, read = worked(ctx, str(since))
         out["worked_by_day"] = {
             d: {i: ev for i, ev in sorted(x.items(), key=lambda y: sort_id(y[0]))}
             for d, x in sorted(found.items())}
+        if ctx.base:
+            # The threads the hours are proposed from: said in the conversation, never a
+            # closing, since an item is closed when it lands.
+            out["threads"] = read
         out["commits_without_an_item"] = loose
         out["repositories"] = repos
-        for d, x in sorted(found.items()):
+        # The day an item closed: on the main line, the day it landed there; elsewhere the
+        # day of the last commit that names it.
+        for d, x in sorted((landed if ctx.base else found).items()):
             for i in x:
                 proposed_close[i] = d
     out["closed_since"] = [{"id": i, "proposed_closed_on": proposed_close.get(i)}
@@ -2230,6 +2603,8 @@ def inventory(ctx: Context) -> dict:
                 (i for i, it in ctx.items.items() if it.kind == "CHG" and it.state == "open"
                  and it.scope == rel and i not in st.owner), key=sort_id)
     out["store"] = store_status(ctx.root)
+    if ctx.refreshed is not None:
+        out["store"]["brought_up_to_date"] = ctx.refreshed
     return out
 
 
@@ -2361,6 +2736,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--now", help="the instant recorded in the snapshot, ISO 8601; default "
                                   "now. For fixtures, whose history is dated")
     ap.add_argument("--copy-to", type=Path, help="also copy the workbook into this directory")
+    ap.add_argument("--who", help="in the additive mode, the person the digest is for: the "
+                                  "threads they hold are read for the work proposed, the name "
+                                  "asked, never read from git's configuration")
     mode = ap.add_mutually_exclusive_group()
     mode.add_argument("--check", action="store_true", help="list every reason not to write")
     mode.add_argument("--inventory", action="store_true",
@@ -2382,8 +2760,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"--date {a.date!r} is YYYY-MM-DD", file=sys.stderr)
         return 2
     try:
-        ctx = prepare(a.root, a.product, when, a.baseline)
+        ctx = prepare(a.root, a.product, when, a.baseline, a.who)
         ctx.now = datetime.fromisoformat(a.now) if a.now else None
+        if not a.inventory and ctx.refreshed and not ctx.refreshed.get("updated"):
+            # Said at every run, as the inventory says it, and the run goes on.
+            print(f"{STORE.as_posix()} not brought up to date from its remote, read as it is: "
+                  f"{ctx.refreshed.get('why')}", file=sys.stderr)
         if a.inventory:
             print(yaml.safe_dump(inventory(ctx), allow_unicode=True, sort_keys=False), end="")
             return 0

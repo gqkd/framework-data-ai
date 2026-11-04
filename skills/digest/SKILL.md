@@ -195,8 +195,8 @@ junior). The hours of an excluded item count as out of the perimeter, without it
    `.gitignore`. Say that it did. Add one line to `_meta/README.md`, if the project has one:
    `digest/` holds what the person declared for the digest, kept in its own private
    repository.
-2. **The inventory.** Run the script with `--inventory`. With no state file every item of
-   the product is unclassified.
+2. **The inventory.** Run the script with `--inventory`, in the additive mode after the fetch
+   and with `--who`, as in §2. With no state file every item of the product is unclassified.
 3. **The classification**, as in §3. Items closed outside the release, which is most of the
    history, need `scope: out` and nothing else: propose that for all of them in one line and
    write it on one yes. Every item closed inside the release needs its size, its closing date
@@ -218,13 +218,44 @@ junior). The hours of an excluded item count as out of the perimeter, without it
 
 1. **The validator**, as in `references/preamble.md`. An error in a file the digest reads (a
    register, a `DEC`, a `CHG`, the `RMP`, a release of the product) stops the run: the
-   workbook would repeat it. Report any other error and go on.
+   workbook would repeat it. Report any other error and go on. The validator reads the
+   checkout. Where the registers are the main line's (step 2) the script checks them itself:
+   `--inventory` refuses, naming the file and the main line, when a front matter there does
+   not parse, and the script refuses where the checkout declares the additive mode and pins
+   4.12.0 or later, or no version that reads, and has no main line to read. Say why, and stop.
 2. **The inventory.** `--inventory` prints what the skill needs and nothing it should guess:
    the period and its working days still without hours, the items new, changed, closed or
    vanished since the last digest with the closing day its commit proposes, the `DEC` that are
    another name for an entry they decided, the items the commits cite day by day with the
    commits beside them, the repositories it could not read, the open waits with their status,
-   whether the milestones were ever declared, and whether the store is set up.
+   whether the milestones were ever declared, and whether the store is set up -- where the
+   project pins 4.12.0 or later, or no version that reads, also whether it was brought up to
+   date from its remote, fast-forward only, and why not: say it when it was not. Every run
+   brings it up to date first, with whatever other clones pushed -- another product's state
+   file, and this product's own and its snapshots --, and `--check` and the runs that write say
+   it on stderr where they could not. In the additive mode, where the main line pins 4.12.0 or
+   later, or no version that reads, the registers are the main line's: fetch first, as
+   `contribute` does, with
+   `python3 "${CLAUDE_PLUGIN_ROOT}/skills/audit/scripts/work.py" --root <project> list`, and pass
+   `--who "<name>"`, the person's name asked as `contribute` asks it, never read from git. The
+   work proposed for hours in the documents, in `worked_by_day`, is that person's alone: the
+   commits of the threads they hold, from when they took them, and, while they hold the join's
+   claim, the join branch's own commits, never those of the threads it merged. The code
+   repositories are read whole, every branch and everybody's commits. `threads` says which it
+   read, or why none; without `--who` nothing is proposed from the documents, and a parking
+   branch, which no claim names, is not read. The main line's history is nobody's work: it
+   gives the day an item landed, the closing day proposed. Say the threads' work in the
+   conversation, with its hours on the items the thread holds, and close nothing before the
+   join that lands it -- the workbook is what is true on the main line. A thread or a join that
+   landed since the last digest is read no more, nor a thread released or a join abandoned:
+   ask in the conversation for the hours worked on them after the last digest. A change in
+   `mentioned` is an item of the digest of its folder's product: name it, without hours; the
+   workbook lists it apart, under «Di altri prodotti», with the title its own product's state
+   file confirmed for it, once that product's digest has classified it without excluding it;
+   where it says `not_printed`, say why -- excluded by either state file, not classified yet
+   by its own product's digest, which is where it is classified, or that product's state file
+   not reading, which `--check` refuses. Where it was an item here and is among the vanished,
+   it is `gone` here, with that reason.
 3. **Propose, then write.** One compact table: each new or changed item with the theme, scope,
    size, title and description proposed, each item closed with its proposed closing date,
    where each new item goes in its list (at the end, unless the person says otherwise; with
@@ -265,8 +296,9 @@ and reused unchanged until the person changes it.
   person's choice. An `XL` is flagged to be split; when it is split, `split_into` names the
   items that replace it.
 - **Closing date** (`closed_on`), for every item closed in the perimeter: proposed from the
-  commit that closed it in the register, confirmed by the person. A commit that came late
-  gives a late date, which is why it is confirmed.
+  commit that closed it in the register, and, where the registers are the main line's (§2,
+  step 2), from the day it landed there, the join's merge that brought it; confirmed by the
+  person. A commit that came late gives a late date, which is why it is confirmed.
 - **Title**: the item in a few plain words, lowercase.
 - **What it is** (`what`), the column "Che cos'è" wherever the item appears:
   1. one sentence, two at most;
@@ -282,6 +314,11 @@ and reused unchanged until the person changes it.
   title changes, the script stops until the classification is confirmed again.
 - **Exclusion**: `excluded` with the reason, for an item that must not reach whoever the
   workbook is sent to, a security issue for one. It is neither printed nor counted by name.
+  It holds for the mention too: a change excluded in its own product's digest is not listed
+  under «Di altri prodotti» in another's, nor one that digest has not classified yet, and its
+  own product's state file that does not read stops the run. A mention that was never an item
+  here takes a row of `excluded` alone, with the reason, to be kept out of this one; any other
+  row on it, `gone` included, is refused.
 - **`gone`**, with the reason, for an item that left the registers without being closed, an
   increment moved out of the roadmap for one. Without it the script refuses.
 
@@ -381,12 +418,17 @@ and section 5 of the summary.
    do whose days on the Gantt touch the five working days after the digest's, from Monday to
    Friday after a Friday's digest, in the order of the Gantt: started and blocked items
    included. An item in the declared plan says what the plan says of it, on each day planned;
-   any other says its first and last day and its hours, «dal 15/10 al 19/10, 12 ore».
+   any other says its first and last day and its hours, «dal 15/10 al 19/10, 12 ore». Where a
+   change of another product names this one, its own product's digest has classified it and
+   no state file excludes it, a fifth list, «5. Di altri prodotti», follows: identifier,
+   title, the product whose digest has it and its status in the register, with no hours and
+   in no total; with none, the sheet holds the four lists alone.
 4. **Ore lavorate**: the hours by period, as shares, outside the product by category, and day
    by day from the start, folded by month and by week, a week across two months split in two:
    the months and the weeks in view when the file opens, with their totals. Every other number
    follows from the days of the last table.
-5. **Come leggerlo**: the dates every formula starts from, in yellow, and the legend.
+5. **Come leggerlo**: the dates every formula starts from, in yellow, and the legend, with a
+   line on «Di altri prodotti» where that list is there.
 
 Every derived cell is a formula, written with the value the script computed for it, so the
 file reads the same in a preview and in a spreadsheet. The sheets are protected without a

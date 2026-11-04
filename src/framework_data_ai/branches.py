@@ -181,7 +181,8 @@ def shared(root: Path, a: str, b: str, registry: dict, scan: dict) -> set[tuple[
     return declared_by(base_views(root, a, b, registry, scan)[1])
 
 
-def snapshot(root: Path, ref: str, registry: dict, scan: dict) -> list[Artifact]:
+def snapshot(root: Path, ref: str, registry: dict, scan: dict,
+             report=None) -> list[Artifact]:
     """The artifacts of the documentation as `ref` holds it, with paths relative to the root.
 
     Read from the tree and its blobs, not with `git archive`, which honours `export-ignore`:
@@ -189,7 +190,8 @@ def snapshot(root: Path, ref: str, registry: dict, scan: dict) -> list[Artifact]
     created on the other. Links and submodules are not followed. `rel` is what the working
     tree's artifacts carry, so the two sides compare by `rel`. The `path` of each points into a
     temporary directory that is gone when this returns: product directories are compared as
-    paths and never opened again.
+    paths and never opened again. What discovery finds wrong goes to `report` where one is
+    given, as the digest asks to say a front matter that does not parse, and nowhere otherwise.
     """
     where = prefix(root)
     listing = git(root, "ls-tree", "-r", "-z", "--full-tree", ref, *([where] if where else []),
@@ -220,7 +222,8 @@ def snapshot(root: Path, ref: str, registry: dict, scan: dict) -> list[Artifact]
         top = Path(tmp) / where if where else Path(tmp)
         if not top.is_dir():
             return []
-        return discover(top, scan, registry, _Sink(), gitignore=False)
+        return discover(top, scan, registry, report if report is not None else _Sink(),
+                        gitignore=False)
 
 
 @dataclass(frozen=True)
