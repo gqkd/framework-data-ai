@@ -25,14 +25,22 @@ from .artifacts import FindingSink, as_map
 
 INCOMING, INTEGRATED, SESSIONS = "in-arrivo", "integrati", "sessioni"
 BRIEF, RESOURCES, MARK = "brief.md", "risorse.md", "INTEGRATO"
+# Since 4.13.0, beside the brief: the questions a launched code session asks its person, one
+# entry each with its day, so that none is lost if the documentation session is closed; and the
+# launch file, which `exchange.py code` writes and only it reads -- the session, the worktree,
+# the runs of the code session and where each stopped. Known at every version pinned, as every
+# fixed name here: the exchange is one per machine, and the worktrees that read it may pin
+# different versions.
+QUESTIONS, LAUNCH = "domande.md", "sessione-codice.json"
 # What a code session delivers, by name. Each one is a part that `INTEGRATO` says the fate of.
 DELIVERED = {"verifica.md": "file", "mr.md": "file", "mr-link.txt": "file",
              "evidenze": "dir", "contribution-policy.json": "file",
-             # In the additive mode: what the documentation should say, as the code session
-             # learned it, which the thread turns into effects.
+             # What the documentation should say, as the code session learned it: in the
+             # additive mode the thread turns it into effects; outside it, since 4.13.0, the
+             # documentation session writes it into the documents (R-4).
              "documentazione.md": "file"}
 # Written by the sessions about the work rather than delivered as its result: no part, no age.
-OWN = {BRIEF: "file", RESOURCES: "file", SESSIONS: "dir"}
+OWN = {BRIEF: "file", RESOURCES: "file", SESSIONS: "dir", QUESTIONS: "file", LAUNCH: "file"}
 
 RESOURCE_TYPES = ("worktree", "ramo locale", "stack isolato", "volume", "immagine",
                   "copia di credenziali", "altro")

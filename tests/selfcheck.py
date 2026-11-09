@@ -27,9 +27,11 @@ import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
+import time
 import types
 import zipfile
 from datetime import date, datetime, timedelta
@@ -8109,6 +8111,12 @@ def _ci_assets_fetch_history():
 
 
 EXCHANGE = ROOT / "skills" / "audit" / "scripts" / "exchange.py"
+# The version that brought the launched code session, read from the command, and one below it:
+# the rules of `integrate` follow the version a project pins.
+_CODE_SINCE = re.search(r'^CODE_SINCE = "([0-9.]+)"$', EXCHANGE.read_text(encoding="utf-8"),
+                        re.M).group(1)
+_MAJOR, _MINOR = (int(n) for n in _CODE_SINCE.split(".")[:2])
+_BELOW_CODE = f"{_MAJOR}.{_MINOR - 1}.0" if _MINOR else f"{_MAJOR - 1}.99.0"
 
 _EXCHANGE_SECTIONS = ("<!-- section: what-changes -->\n## A\n"
                       "<!-- section: what-must-not-change -->\n## B\n"
@@ -8305,6 +8313,10 @@ def _exchange_integrate():
 
     with tempfile.TemporaryDirectory() as tmp:
         repo, ex, _ = _exchange_docs(Path(tmp))
+        # The rules before the launched code session, which a project pinned below it keeps: a
+        # second integration by hand, `documentazione.md` only from a thread's delivery folder.
+        # `_integrate_since_4_13` reads the rules from it on.
+        repo.write("framework.yaml", f"framework_version: {_BELOW_CODE}\n")
         repo.write("_filoni/t/consegne/CHG-002/documentazione.md", "what the docs should say\n")
         # CHG-002 as the template leaves it, its verification section holding the template's
         # sentence alone; CHG-003 with no section at all.
@@ -8400,8 +8412,8 @@ def _exchange_integrate():
         for ident, said, written in (
                 ("OD-002", ["verifica.md: not placed"], ["parts: {}"]),
                 ("CHG-005", ["contribution-policy.json: not placed"], ["parts: {}"]),
-                ("CHG-004", [], ["verifica.md: dropped: CHG-004 was withdrawn",
-                                 "evidenze/: dropped: CHG-004 was withdrawn"])):
+                ("CHG-004", [], ['verifica.md: "dropped: CHG-004 was withdrawn"',
+                                 'evidenze/: "dropped: CHG-004 was withdrawn"'])):
             r = run(repo, ident)
             mark = ex / "integrati" / ident / "INTEGRATO"
             text = mark.read_text(encoding="utf-8") if mark.is_file() else ""
@@ -8409,6 +8421,10 @@ def _exchange_integrate():
                     or any(x not in text for x in written):
                 problems.append(f"integrate {ident}: exit {r.returncode}, said {r.stdout[-160:]!r},"
                                 f" wrote {text!r}")
+        # Written so that it reads: a place with `: ` in it is quoted.
+        if any("CHG-004" in f["path"] for f in repo.findings("EXC003")):
+            problems.append(f"the INTEGRATO of a change withdrawn does not read: "
+                            f"{[f['message'][:80] for f in repo.findings('EXC003')]}")
         # A policy delivered, where the mode is read: a `work.yaml` that does not read is a
         # refusal, exit 2, and the folder stays.
         _put(ex, {"in-arrivo/CHG-001/contribution-policy.json": "{}"})
@@ -8419,6 +8435,879 @@ def _exchange_integrate():
             problems.append(f"a policy delivered with a work.yaml that does not read: exit "
                             f"{r.returncode}, expected 2 and the folder left: "
                             f"{r.stderr.strip()[:160]}")
+    return problems
+
+
+_FAKE_CLAUDE = '''
+"""The fake `claude` of the checks of `exchange.py code`: records the call, then plays a scene.
+
+FINTO_SCENA names a JSON file: what to write into the delivery folder, what to deny with what
+text, the answer, whether it is an error, the credential source, how long to sleep, or a file
+to wait for, a minute at most."""
+import json, os, sys, time
+from pathlib import Path
+
+argv = sys.argv[1:]
+record = Path(os.environ["FINTO_REGISTRO"])
+calls = json.loads(record.read_text()) if record.exists() else []
+calls.append({"argv": argv, "cwd": os.getcwd(),
+              "env": {k: os.environ.get(k) for k in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN",
+                                                      "CLAUDECODE", "CLAUDE_PROJECT_DIR")}})
+record.write_text(json.dumps(calls))
+scene = json.loads(Path(os.environ["FINTO_SCENA"]).read_text())
+sid = argv[argv.index("--session-id") + 1] if "--session-id" in argv else argv[argv.index("--resume") + 1]
+def emit(e):
+    print(json.dumps(e), flush=True)
+emit({"type": "system", "subtype": "init", "session_id": sid,
+      "apiKeySource": scene.get("source", "none")})
+time.sleep(float(scene.get("sleep", 0)))
+for _ in range(600 if scene.get("until") else 0):
+    if Path(scene["until"]).exists():
+        break
+    time.sleep(0.1)
+folder = Path(argv[argv.index("--add-dir") + 1])
+for rel, text in (scene.get("write") or {}).items():
+    p = folder / rel
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(text)
+denials = []
+for n, d in enumerate(scene.get("deny") or [], 1):
+    emit({"type": "assistant", "message": {"content": [
+        {"type": "tool_use", "id": f"t{n}", "name": d["tool"], "input": d["input"]}]}})
+    emit({"type": "user", "message": {"content": [
+        {"type": "tool_result", "tool_use_id": f"t{n}", "is_error": True,
+         "content": d.get("text", "Permission to use Bash has been denied because Claude Code "
+                                  "is running in don't ask mode.")}]}})
+    denials.append({"tool_name": d["tool"], "tool_use_id": f"t{n}", "tool_input": d["input"]})
+emit({"type": "result", "subtype": "success", "is_error": bool(scene.get("error")),
+      "session_id": sid, "result": scene.get("answer", "done"), "permission_denials": denials})
+'''
+
+_CODE_BRIEF = ("Mandate            CHG-002 §what-changes\n"
+               "Commands           test: `./test.sh`\n"
+               "                   prepare: `python3 prepara.py`\n"
+               "                   generated: `lock.txt`, by `python3 genera.py`\n"
+               "                   link: `.env`\n")
+
+
+def _git_in(cwd: Path, *args: str, env: dict | None = None) -> subprocess.CompletedProcess:
+    e = dict(os.environ, GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@example.com",
+             GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@example.com",
+             GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_NOSYSTEM="1", GIT_TERMINAL_PROMPT="0")
+    e.update(env or {})
+    return subprocess.run(["git", "-C", str(cwd), *args], capture_output=True, text=True, env=e)
+
+
+class _CodeWorld:
+    """A documentation pinned at 4.13.0 beside its exchange, a code repository beside both with a
+    bare remote, and a fake `claude` that records each call and plays the scene it is given."""
+
+    def __init__(self, tmp: Path, additive: bool = False):
+        self.tmp = tmp
+        self.docs, self.exchange, _ = _exchange_docs(tmp)
+        self.docs.write("framework.yaml", f"framework_version: {_CODE_SINCE}\n")
+        if additive:
+            self.docs.write(".framework/work.yaml", "mode: additive\npeople: [anna]\n"
+                            "admins: [anna]\n")
+        self.docs.commit("pinned 4.13.0", "2026-10-02T09:00:00+02:00")
+        self.folder = self.exchange / "in-arrivo" / "CHG-002"
+        _put(self.folder, {"brief.md": _CODE_BRIEF})
+        self.remote = tmp / "app.git"
+        _git_in(tmp, "init", "-q", "--bare", "-b", "main", str(self.remote))
+        self.code = tmp / "app"
+        self.code.mkdir()
+        _git_in(self.code, "init", "-q", "-b", "main")
+        _put(self.code, {"README.md": "app\n", ".gitignore": ".env\n", "test.sh": "echo ok\n",
+                         ".env": "K=v\n"})
+        _git_in(self.code, "add", "-A")
+        _git_in(self.code, "commit", "-qm", "start")
+        _git_in(self.code, "remote", "add", "origin", str(self.remote))
+        _git_in(self.code, "push", "-q", "-u", "origin", "main")
+        _git_in(self.code, "remote", "set-head", "origin", "main")
+        self.tree = tmp / "app-chg-002"
+        self.fake = tmp / "claude-finto"
+        self.fake.write_text(f"#!{sys.executable}\n" + _FAKE_CLAUDE)
+        self.fake.chmod(0o755)
+        self.record = tmp / "chiamate.json"
+        self.config = tmp / "config-claude"
+
+    def calls(self) -> list[dict]:
+        return json.loads(self.record.read_text()) if self.record.exists() else []
+
+    def launch_file(self) -> dict:
+        return json.loads((self.folder / "sessione-codice.json").read_text())
+
+    def run(self, *args: str, ident: str = "CHG-002", scene: dict | None = None,
+            root: Path | None = None, env: dict | None = None) -> subprocess.CompletedProcess:
+        scene_file = self.tmp / "scena.json"
+        scene_file.write_text(json.dumps(scene or {}))
+        e = dict(os.environ, FRAMEWORK_DATA_AI_CLAUDE=str(self.fake),
+                 FINTO_REGISTRO=str(self.record), FINTO_SCENA=str(scene_file),
+                 XDG_STATE_HOME=str(self.tmp / "state"), GIT_CONFIG_GLOBAL=os.devnull,
+                 GIT_CONFIG_NOSYSTEM="1", GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@example.com",
+                 GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@example.com",
+                 ANTHROPIC_API_KEY="sk-not-to-pass", ANTHROPIC_AUTH_TOKEN="not-to-pass",
+                 CLAUDECODE="1", CLAUDE_PROJECT_DIR=str(self.docs.path),
+                 # The person's settings of whoever runs the checks are not read: a provider
+                 # there would refuse every launch here. The organisation's file, at its fixed
+                 # path, is read, as wherever `code` runs: a provider there refuses here too.
+                 CLAUDE_CONFIG_DIR=str(self.config))
+        e.update(env or {})
+        return subprocess.run([sys.executable, str(EXCHANGE), "--root",
+                               str(root or self.docs.path), "code", ident, *args],
+                              capture_output=True, text=True, env=e)
+
+
+@check("exchange.py code prepares, launches and resumes the code session: the worktree, the links and risorse.md, the options passed, each stop said and written, a fetch proposed by its domain, the rule approved for one run and no other, the answer, values withheld, the output removed")
+def _code_launch_and_stops():
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        w = _CodeWorld(Path(tmp).resolve())
+        r = w.run("--repo", str(w.code))
+        if r.returncode or not w.tree.is_dir() or "--launch" not in r.stdout \
+                or f"push -u origin chg-002" not in r.stdout or "prepara.py" not in r.stdout:
+            return [f"the first call: exit {r.returncode}, said {r.stdout[-300:]!r} "
+                    f"{r.stderr[-300:]!r}"]
+        if _git_in(w.tree, "rev-parse", "--abbrev-ref", "HEAD").stdout.strip() != "chg-002":
+            problems.append("the worktree is not on the branch chg-002")
+        env_link = w.tree / ".env"
+        if not env_link.is_symlink() or Path(os.readlink(env_link)) != w.code / ".env":
+            problems.append("the .env the brief names is not linked from the main checkout")
+        rows = (w.folder / "risorse.md").read_text()
+        if f"worktree remove {w.tree}" not in rows or "branch -D chg-002" not in rows:
+            problems.append(f"risorse.md does not hold the worktree and its branch: {rows!r}")
+        if w.calls():
+            problems.append("the first call ran claude: it prepares and stops (R-13a)")
+        _git_in(w.tree, "push", "-q", "-u", "origin", "chg-002")
+        denied = 'git commit -m "DB_PASSWORD=hunter2 the change"'
+        r = w.run("--launch", scene={"deny": [
+            {"tool": "Bash", "input": {"command": denied}},
+            {"tool": "Write", "input": {"file_path": str(w.docs.path / "x.md")},
+             "text": "PreToolUse:Write hook error: [python3 guard.py]: The framework's write "
+                     "guard stops this write"},
+            {"tool": "Write", "input": {"file_path": str(w.tmp / "y.md")},
+             "text": "PreToolUse:Write hook error: Confinamento attivo"},
+            {"tool": "Bash", "input": {"command": "git push origin chg-002"}},
+            {"tool": "WebFetch", "input": {"url": "https://docs.example.org/api?x=1",
+                                           "prompt": "the limits"}}],
+            "answer": "I need the commit."})
+        call = w.calls()[-1]
+        argv = call["argv"]
+        granted = argv[argv.index("--allowedTools") + 1:]
+        want = {"--permission-mode": "dontAsk", "--plugin-dir": str(ROOT),
+                "--add-dir": str(w.folder)}
+        for flag, value in want.items():
+            if flag not in argv or argv[argv.index(flag) + 1] != value:
+                problems.append(f"the launch does not pass {flag} {value}: {argv[:12]}")
+        settings = json.loads(argv[argv.index("--settings") + 1]) if "--settings" in argv else {}
+        if (settings.get("sandbox") or {}).get("autoAllowBashIfSandboxed") is not False:
+            problems.append(f"the launch lets a sandbox approve a command by itself: {settings}")
+        if "--session-id" not in argv or "stream-json" not in argv:
+            problems.append("the launch chooses no session id, or reads no first event")
+        if any("commit" in g or "push" in g for g in granted) or "Bash(./test.sh)" not in granted \
+                or "Bash(git add *)" not in granted or "Agent" not in granted:
+            problems.append(f"the rules granted are not the list: {granted}")
+        if any(call["env"].values()):
+            problems.append(f"the code session got from the environment {call['env']}: a key, "
+                            "a token, CLAUDECODE or the documentation's project dir")
+        if Path(call["cwd"]).resolve() != w.tree:
+            problems.append(f"the code session ran in {call['cwd']}, not its worktree")
+        out = r.stdout
+        if r.returncode or "stopped on `negata`" not in out or f"Bash({denied})" not in out \
+                or "framework's write guard" not in out or "hook of the person's" not in out \
+                or "not the code session's" not in out:
+            problems.append(f"the stop `negata` is not said as it should: {out[-900:]!r}")
+        data = w.launch_file()
+        run = data["lanci"][-1]["tranche"][-1]
+        if run.get("fermata") != "negata" or "hunter2" in json.dumps(data) \
+                or "<trattenuto>" not in json.dumps(data):
+            problems.append(f"the launch file: {json.dumps(run)[:400]}")
+        if list((w.tmp / "state" / "framework-data-ai" / "uscite").glob("*")):
+            problems.append("the output of a run is left after its stop was written")
+        if "rule: WebFetch(domain:docs.example.org)" not in out:
+            problems.append(f"a fetch denied is not proposed with its domain alone: {out[-600:]!r}")
+        # A yes grants what the stop proposed, and nothing else (S-5).
+        stranger = w.tmp / "regola-mai-proposta.txt"
+        stranger.write_text("Bash(rm -rf build)\n")
+        before = len(w.calls())
+        r = w.run("--resume", "--allow", str(stranger))
+        if r.returncode != 2 or "not a rule the last stop proposed" not in r.stderr \
+                or len(w.calls()) != before:
+            problems.append(f"--allow with a rule never proposed: exit {r.returncode}, "
+                            f"{r.stderr[-200:]!r}")
+        rule = w.tmp / "regola.txt"
+        rule.write_text(f"Bash({denied})\n")
+        r = w.run("--resume", "--allow", str(rule), scene={"answer": "committed"})
+        argv = w.calls()[-1]["argv"]
+        if "--resume" not in argv or f"Bash({denied})" not in argv \
+                or argv[argv.index("--resume") + 1] != data["lanci"][-1]["sessione"]:
+            problems.append(f"the resume does not carry the session and the rule: {argv[:6]}")
+        r = w.run("--resume", scene={"answer": "next"})
+        if f"Bash({denied})" in w.calls()[-1]["argv"]:
+            problems.append("a rule approved once is granted again at the next resume (S-5)")
+        if "rebase" in w.calls()[-1]["argv"][1]:
+            problems.append("a resume with nothing approved or answered, and no rebase, tells "
+                            "the code session of a rebase")
+        r = w.run("--resume", scene={"write": {"domande.md": "## 2026-11-09\nWhich threshold?\n"},
+                                     "answer": "a question"})
+        if "stopped on `domanda`" not in r.stdout or "Which threshold?" not in r.stdout:
+            problems.append(f"the stop `domanda`: {r.stdout[-400:]!r}")
+        answer = w.tmp / "risposta.txt"
+        answer.write_text("Five, as products/p/PRD.md says.")
+        r = w.run("--resume", "--reply", str(answer), scene={
+            "write": {"verifica.md": "v", "documentazione.md": "d"}, "answer": "delivered"})
+        if "Five, as products/p/PRD.md says." not in w.calls()[-1]["argv"][1]:
+            problems.append("the answer does not reach the code session")
+        if "stopped on `consegna`" not in r.stdout or "verifica.md" not in r.stdout:
+            problems.append(f"the stop `consegna`: {r.stdout[-400:]!r}")
+        r = w.run("--resume", scene={"error": True, "answer": "You've hit your limit"})
+        if "stopped on `account`" not in r.stdout or "hit your limit" not in r.stdout:
+            problems.append(f"the stop `account` on an error: {r.stdout[-400:]!r}")
+        r = w.run("--resume", scene={"source": "apiKeyHelper", "sleep": 20})
+        if "stopped on `account`" not in r.stdout or "apiKeyHelper" not in r.stdout:
+            problems.append(f"a code session off the subscription is not stopped: "
+                            f"{r.stdout[-400:]!r}")
+        r = w.run("--status")
+        if r.returncode or "last stop: `account`" not in r.stdout:
+            problems.append(f"--status: {r.stdout[-300:]!r}")
+        if len(w.launch_file()["lanci"][-1]["tranche"]) != 7:
+            problems.append("the launch file does not hold one run per launch and resume")
+        r = subprocess.run([sys.executable, str(EXCHANGE), "--root", str(w.docs.path)],
+                           capture_output=True, text=True)
+        if "stopped on account" not in r.stdout:
+            problems.append(f"the listing does not say where the launch stands: {r.stdout[-400:]!r}")
+        # Closed, as `integrate` leaves it (`_integrate_since_4_13`), the launch is history: a
+        # resume is refused, and a change asked for after is a new launch on the same branch,
+        # which the first call prepares with the history of the closed one (R-2).
+        closed = w.exchange / "integrati" / "CHG-002"
+        closed.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(w.folder), str(closed))
+        state = json.loads((closed / "sessione-codice.json").read_text())
+        state["stato"] = "chiuso"
+        (closed / "sessione-codice.json").write_text(json.dumps(state))
+        r = w.run("--resume")
+        if r.returncode != 2 or "closed" not in r.stderr:
+            problems.append(f"a resume on a closed launch: exit {r.returncode}, "
+                            f"{r.stderr[-200:]!r}")
+        _put(w.folder, {"brief.md": _CODE_BRIEF + "\nAfter the review: rename the option.\n"})
+        r = w.run("--repo", str(w.code))
+        again = w.launch_file() if (w.folder / "sessione-codice.json").is_file() else {}
+        if r.returncode or len(again.get("lanci") or []) != len(state["lanci"]) + 1 \
+                or again.get("stato") != "preparato" or again.get("ramo") != "chg-002":
+            problems.append(f"a new launch after the closed one: exit {r.returncode}, "
+                            f"{r.stderr[-300:]!r}")
+        listed = w.folder / "risorse.md"
+        if f"rm {w.tree / '.env'}" not in (listed.read_text() if listed.is_file() else ""):
+            problems.append("the link the brief names is not in risorse.md (R-9)")
+        # A hotfix whose change is not written yet, outside the additive mode: its own branch,
+        # and its delivery waits for the change (R-14).
+        _put(w.exchange / "in-arrivo" / "CHG-009", {"brief.md": _CODE_BRIEF})
+        r = w.run("--repo", str(w.code), "--no-chg", "hotfix INC-9", ident="CHG-009")
+        if r.returncode or "waits for the change to be written" not in r.stdout \
+                or not (w.tmp / "app-chg-009").is_dir():
+            problems.append(f"a hotfix without its change, outside the mode: exit "
+                            f"{r.returncode}, {r.stderr[-300:]!r}")
+    return problems
+
+
+@check("exchange.py code refuses, with exit 2 and nothing launched, what it must: below 4.13.0, no brief, a change not approved, a repository not beside the documentation or the documentation itself, or another than the launch's, claude missing, a launch running, and integrate meanwhile, a branch or a folder that is not the launch's, a worktree off its branch, a resume before a launch")
+def _code_refuses():
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        w = _CodeWorld(Path(tmp).resolve())
+        elsewhere = w.tmp / "lontano" / "app2"
+        elsewhere.mkdir(parents=True)
+        _git_in(elsewhere, "init", "-q", "-b", "main")
+        # A `PATH` with git alone: the folder git lives in may hold a `claude` too.
+        lone = w.tmp / "solo-git"
+        lone.mkdir()
+        (lone / "git").symlink_to(shutil.which("git") or "/usr/bin/git")
+        cases = [
+            ("a resume before a launch", ("--resume",), {}, "CHG-002", "no launch"),
+            ("no brief", ("--repo", str(w.code)), {}, "CHG-003", "no brief"),
+            ("a repository not beside", ("--repo", str(elsewhere)), {}, "CHG-002",
+             "not beside the documentation"),
+            ("the documentation itself", ("--repo", str(w.docs.path)), {}, "CHG-002",
+             "the documentation"),
+            ("claude missing", ("--repo", str(w.code)),
+             {"FRAMEWORK_DATA_AI_CLAUDE": "", "PATH": str(lone)}, "CHG-002", "claude"),
+            ("--no-chg on a change written", ("--repo", str(w.code), "--no-chg", "hotfix INC-1"),
+             {}, "CHG-002", "written already"),
+        ]
+        _put(w.exchange / "in-arrivo" / "CHG-001", {"brief.md": "b"})
+        cases.append(("a change implemented", ("--repo", str(w.code)), {}, "CHG-001",
+                      "implemented"))
+        for what, args, env, ident, want in cases:
+            r = w.run(*args, ident=ident, env=env)
+            if r.returncode != 2 or (want and want not in r.stderr):
+                problems.append(f"{what}: exit {r.returncode}, said {r.stderr[-300:]!r}")
+        if w.tree.exists() or w.calls():
+            problems.append("a refusal created the worktree or ran claude")
+        # Below the version that brought it pinned: the launch is not that version's.
+        w.docs.write("framework.yaml", f"framework_version: {_BELOW_CODE}\n")
+        w.docs.commit("pinned below", "2026-10-03T09:00:00+02:00")
+        r = w.run("--repo", str(w.code))
+        if r.returncode != 2 or _CODE_SINCE not in r.stderr:
+            problems.append(f"below {_CODE_SINCE}: exit {r.returncode}, {r.stderr[-200:]!r}")
+        w.docs.write("framework.yaml", f"framework_version: {_CODE_SINCE}\n")
+        w.docs.commit("pinned again", "2026-10-04T09:00:00+02:00")
+        # A branch of that name no launch made; a folder in the way.
+        _git_in(w.code, "branch", "chg-002")
+        r = w.run("--repo", str(w.code))
+        if r.returncode != 2 or "no launch of CHG-002 made" not in r.stderr:
+            problems.append(f"a branch no launch made: exit {r.returncode}, {r.stderr[-200:]!r}")
+        _git_in(w.code, "branch", "-D", "chg-002")
+        w.tree.mkdir()
+        r = w.run("--repo", str(w.code))
+        if r.returncode != 2 or "is not the worktree" not in r.stderr:
+            problems.append(f"a folder in the way: exit {r.returncode}, {r.stderr[-200:]!r}")
+        w.tree.rmdir()
+        # A launch running: the fake waits until the calls below are made, a second launch, a
+        # resume and an integration are refused.
+        w.run("--repo", str(w.code))
+        scene = w.tmp / "lunga.json"
+        release = w.tmp / "finisci"
+        scene.write_text(json.dumps({"until": str(release)}))
+        env = dict(os.environ, FRAMEWORK_DATA_AI_CLAUDE=str(w.fake),
+                   FINTO_REGISTRO=str(w.record), FINTO_SCENA=str(scene),
+                   XDG_STATE_HOME=str(w.tmp / "state"), CLAUDE_CONFIG_DIR=str(w.config))
+        slow = subprocess.Popen([sys.executable, str(EXCHANGE), "--root", str(w.docs.path),
+                                 "code", "CHG-002", "--launch"], stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE, text=True, env=env)
+        def started() -> bool:
+            try:
+                runs = w.launch_file()["lanci"][-1].get("tranche") or []
+            except (OSError, ValueError, KeyError, IndexError, AttributeError):
+                return False
+            return bool(w.calls() and runs and runs[-1].get("processo")
+                        and not runs[-1].get("fine"))
+
+        for _ in range(600):
+            if started():
+                break
+            time.sleep(0.1)
+        else:
+            # Not started in a minute: the calls below would find no run, and `integrate` would
+            # move the folder.
+            release.touch()
+            slow.communicate(timeout=90)
+            return problems + ["the slow launch did not start within a minute"]
+        for args in (("--repo", str(w.code)), ("--resume",)):
+            r = w.run(*args)
+            if r.returncode != 2 or "running" not in r.stderr:
+                problems.append(f"{args[0]} while a code session runs: exit {r.returncode}, "
+                                f"{r.stderr[-200:]!r}")
+        r = subprocess.run([sys.executable, str(EXCHANGE), "--root", str(w.docs.path),
+                            "integrate", "CHG-002"], capture_output=True, text=True)
+        if r.returncode != 2 or "is running" not in r.stderr or not w.folder.is_dir():
+            problems.append(f"integrate while a code session runs: exit {r.returncode}, "
+                            f"{r.stderr[-200:]!r}")
+        release.touch()
+        slow.communicate(timeout=90)
+        # Another repository than the launch's (R-8), and a worktree moved off its branch.
+        second = w.tmp / "app2"
+        second.mkdir()
+        _git_in(second, "init", "-q", "-b", "main")
+        r = w.run("--repo", str(second))
+        if r.returncode != 2 or "R-8" not in r.stderr or (w.tmp / "app2-chg-002").exists():
+            problems.append(f"another repository than the launch's: exit {r.returncode}, "
+                            f"{r.stderr[-200:]!r}")
+        _git_in(w.tree, "switch", "-q", "-c", "altro")
+        r = w.run("--resume")
+        if r.returncode != 2 or "not on chg-002" not in r.stderr:
+            problems.append(f"a worktree off its branch: exit {r.returncode}, "
+                            f"{r.stderr[-200:]!r}")
+        _git_in(w.tree, "switch", "-q", "chg-002")
+        # Anyone can write the launch file: another worktree, or an output outside the outputs
+        # folder, is refused, and nothing is read or deleted on its word.
+        data = w.launch_file()
+        (w.folder / "sessione-codice.json").write_text(
+            json.dumps(dict(data, worktree=str(w.tmp / "altrove"))))
+        r = w.run("--status")
+        if r.returncode != 2 or "is not the worktree" not in r.stderr:
+            problems.append(f"a launch file naming another worktree: exit {r.returncode}, "
+                            f"{r.stderr[-200:]!r}")
+        victim = w.tmp / "da-non-cancellare.jsonl"
+        victim.write_text("x\n")
+        data["lanci"][-1]["tranche"].append({"inizio": "2026-11-09T09:00:00+00:00",
+                                             "fine": None, "uscita": str(victim)})
+        (w.folder / "sessione-codice.json").write_text(json.dumps(data))
+        r = w.run("--status")
+        if r.returncode != 2 or not victim.is_file():
+            problems.append(f"a launch file naming an output elsewhere: exit {r.returncode}, "
+                            f"{r.stderr[-200:]!r}")
+        # A session or a commit that is no id, but an option `claude` or `git log` would take.
+        data["lanci"][-1]["tranche"].pop()
+        written = w.tmp / "scritto-da-git.txt"
+        # And whatever is not of the shape this command writes: refused whole, never a traceback.
+        outputs = w.tmp / "state" / "framework-data-ai" / "uscite"
+        run = {"inizio": "2026-11-09T09:00:00+00:00", "fine": "2026-11-09T09:01:00+00:00",
+               "uscita": str(outputs / "CHG-002-3f2a0000-1.jsonl")}
+        gone = object()
+        for where, field, value in (
+                ("launch", "sessione", "--settings=/x"), ("launch", "sessione", 5),
+                ("launch", "estranei", [f"--output={written}"]),
+                ("launch", "divergente", {"remoto_sha": 5}),
+                ("launch", "tranche", [dict(run, onto=["a"])]), ("launch", "tranche", [5]),
+                ("launch", "tranche", "x"), ("launch", "tranche", None),
+                ("launch", "tranche", {}), ("launch", "tranche", [dict(run, proposte=[[1]])]),
+                ("launch", "tranche", [dict(run, inizio="2026-11-09T09:00:00")]),
+                # An output elsewhere, for the run not ended, whose output is read.
+                ("launch", "tranche", [dict(run, fine=None,
+                                            uscita=str(w.tmp / "CHG-002-3f2a0000-1.jsonl"))]),
+                ("launch", "collegati", [1]), ("launch", "concessi", gone),
+                ("launch", "approvate", None), ("lanci", -1, None), ("top", "ramo", ""),
+                ("top", "repository", f"{w.code}\0x")):
+            bad = json.loads(json.dumps(data))
+            target = bad if where == "top" else bad["lanci"] if where == "lanci" \
+                else bad["lanci"][-1]
+            if value is gone:
+                del target[field]
+            else:
+                target[field] = value
+            (w.folder / "sessione-codice.json").write_text(json.dumps(bad))
+            for args in (("--status",), ("--resume",)):
+                r = w.run(*args)
+                if r.returncode != 2 or "not a launch file as this command writes it" \
+                        not in r.stderr or written.exists():
+                    problems.append(f"a launch file whose {field} is {value!r}, at {args[0]}: "
+                                    f"exit {r.returncode}, {r.stderr[-200:]!r}")
+        listed = subprocess.run([sys.executable, str(EXCHANGE), "--root", str(w.docs.path)],
+                                capture_output=True, text=True)
+        if listed.returncode or "not as `code` writes it" not in listed.stdout:
+            problems.append(f"the listing with a launch file not of its shape: exit "
+                            f"{listed.returncode}, {listed.stderr[-200:]!r}")
+        # A broken file whose last run has not ended: while its process may be the code
+        # session, the first call prepares nothing.
+        session = data["lanci"][-1]["sessione"]
+        spawn = ("import subprocess, sys; print(subprocess.Popen([sys.executable, '-c', "
+                 f"'import time; time.sleep(30)', {session!r}], stdout=subprocess.DEVNULL, "
+                 "stderr=subprocess.DEVNULL, start_new_session=True).pid)")
+        live = int(subprocess.run([sys.executable, "-c", spawn], capture_output=True,
+                                  text=True).stdout.strip())
+        bad = json.loads(json.dumps(data))
+        bad["lanci"][-1]["collegati"] = [1]
+        bad["lanci"][-1]["tranche"].append(dict(run, fine=None, processo=live))
+        (w.folder / "sessione-codice.json").write_text(json.dumps(bad))
+        try:
+            r = w.run("--repo", str(w.code))
+        finally:
+            os.kill(live, signal.SIGTERM)
+        if r.returncode != 2 or "may be running" not in r.stderr:
+            problems.append(f"the first call over a broken file whose run may be going: exit "
+                            f"{r.returncode}, {r.stderr[-200:]!r}")
+        # The way out the refusals say: the first call writes a new launch file in its place,
+        # without the history; the branch an earlier launch made is still its own, its
+        # worktree made again; the output of a run ended without its stop read is removed.
+        ended = subprocess.Popen([sys.executable, "-c", "pass"])
+        ended.wait()
+        bad["lanci"][-1]["tranche"][-1]["processo"] = ended.pid
+        unread = Path(run["uscita"])
+        unread.parent.mkdir(parents=True, exist_ok=True)
+        unread.write_text('{"type": "result"}\n')
+        (w.folder / "sessione-codice.json").write_text(json.dumps(bad))
+        _git_in(w.code, "worktree", "remove", "--force", str(w.tree))
+        r = w.run("--repo", str(w.code))
+        s = w.run("--status")
+        again = w.launch_file()
+        if r.returncode or "takes its place" not in r.stdout or s.returncode \
+                or not w.tree.is_dir() or written.exists() or len(again["lanci"]) != 1 \
+                or again["lanci"][0]["estranei"]:
+            problems.append(f"the first call after a launch file not of its shape: exit "
+                            f"{r.returncode} then {s.returncode}, "
+                            f"{(r.stderr + s.stderr)[-300:]!r}")
+        if unread.exists() or "without its stop read" not in r.stdout:
+            problems.append(f"the output of a run whose stop was never read is left, or not "
+                            f"said: {r.stdout[-300:]!r}")
+        # An `onto` the rebase did not say is written empty, and read.
+        again["lanci"][0]["tranche"] = [dict(run, onto="", fermata="fine")]
+        (w.folder / "sessione-codice.json").write_text(json.dumps(again))
+        s = w.run("--status")
+        if s.returncode:
+            problems.append(f"a launch file with an empty `onto`, as this command writes it: "
+                            f"exit {s.returncode}, {s.stderr[-200:]!r}")
+        # Its ended runs' outputs were under another outputs folder: deleted with their stops,
+        # nothing reads where they were.
+        s = w.run("--status", env={"XDG_STATE_HOME": str(w.tmp / "altro-stato")})
+        if s.returncode:
+            problems.append(f"a launch file read under another XDG_STATE_HOME than its ended "
+                            f"runs: exit {s.returncode}, {s.stderr[-200:]!r}")
+    return problems
+
+
+@check("exchange.py code compares the branch with the remote's: level, ahead brought forward with its commits said, created from the remote with them, diverged said with both sides and refused at --launch until a choice; a rebase in progress goes first to the code session, a resume after the documentation session's continue says where it stands, and a new launch after a push refused counts only what it delivers (R-19, R-22, R-26..R-28)")
+def _code_remote_branch():
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        w = _CodeWorld(Path(tmp).resolve())
+        other = w.tmp / "altro"
+        _git_in(w.tmp, "clone", "-q", str(w.remote), str(other))
+
+        def theirs(name: str, files: dict) -> None:
+            _git_in(other, "fetch", "-q", "origin")
+            _git_in(other, "checkout", "-q", "-B", "chg-002", "origin/chg-002")
+            _put(other, files)
+            _git_in(other, "add", "-A")
+            _git_in(other, "commit", "-qm", name)
+            _git_in(other, "push", "-q", "origin", "chg-002")
+
+        w.run("--repo", str(w.code))
+        _git_in(w.tree, "push", "-q", "-u", "origin", "chg-002")
+        r = w.run("--repo", str(w.code))                       # level: nothing to push
+        if r.returncode or "push -u" in r.stdout:
+            problems.append(f"level with the remote: {r.stdout[-300:]!r}")
+        # Behind: a commit here not pushed yet, a new launch on the same branch, and the push of
+        # the documentation session a fast-forward.
+        _put(w.tree, {"b0.txt": "b0\n"})
+        _git_in(w.tree, "add", "b0.txt")
+        _git_in(w.tree, "commit", "-qm", "B: b0")
+        r = w.run("--repo", str(w.code))
+        if r.returncode or "push -u origin chg-002" not in r.stdout or "DIVERGED" in r.stdout:
+            problems.append(f"the remote behind: {r.stdout[-300:]!r}")
+        _git_in(w.tree, "push", "-q", "origin", "chg-002")
+        theirs("reviewer: a", {"a.txt": "a\n"})
+        r = w.run("--repo", str(w.code))
+        if "was ahead" not in r.stdout or not (w.tree / "a.txt").exists():
+            problems.append(f"the remote ahead is not brought forward: {r.stdout[-300:]!r}")
+        w.run("--launch", scene={"answer": "ok"})
+        if "reviewer: a" not in w.calls()[-1]["argv"][1]:
+            problems.append("the launch does not tell the code session the commits not its own")
+        # Diverged: one local commit not pushed, one more on the remote, both on deps.txt.
+        _put(w.tree, {"deps.txt": "alfa\nbeta\n"})
+        _git_in(w.tree, "add", "deps.txt")
+        _git_in(w.tree, "commit", "-qm", "B: beta")
+        theirs("reviewer: gamma", {"deps.txt": "alfa\ngamma\n"})
+        r = w.run("--repo", str(w.code))
+        # The join without the person's `rerere`, which would bring back a resolution of
+        # another rebase.
+        if "DIVERGED" not in r.stdout or "B: beta" not in r.stdout \
+                or "reviewer: gamma" not in r.stdout \
+                or " -c rerere.enabled=false rebase " not in r.stdout \
+                or "reset --keep" not in r.stdout:
+            problems.append(f"diverged is not said with both sides and the two commands: "
+                            f"{r.stdout[-600:]!r}")
+        r = w.run("--launch")
+        if r.returncode != 2 or "diverge" not in r.stderr:
+            problems.append(f"--launch with the branches diverged: exit {r.returncode}")
+        remote_sha = _git_in(w.code, "rev-parse", "origin/chg-002").stdout.strip()
+        _git_in(w.tree, "rebase", remote_sha)                  # join: stops on the conflict
+        # The first call again, as a new launch would make it: the worktree's `HEAD` is
+        # detached, and the rebase is said, not applied again (R-22).
+        r = w.run("--repo", str(w.code))
+        if r.returncode or "rebase is in progress" not in r.stdout:
+            problems.append(f"the first call with a rebase in progress: exit {r.returncode}, "
+                            f"{r.stdout[-300:]!r} {r.stderr[-300:]!r}")
+        r = w.run("--launch", scene={"deny": [
+            {"tool": "Bash", "input": {"command": "git rebase --continue"}},
+            {"tool": "Bash", "input": {"command": 'git commit -m "resolved"'}}],
+            "answer": "resolved"})
+        prompt = w.calls()[-1]["argv"][1]
+        if "step 1 of 1" not in prompt or "deps.txt" not in prompt or "lock.txt" not in prompt:
+            problems.append(f"the launch does not give the stopped step first: {prompt[-500:]!r}")
+        if "stopped on `negata`" not in r.stdout or "rebase is in progress" not in r.stdout:
+            problems.append(f"the stop with a rebase in progress: {r.stdout[-400:]!r}")
+        # The commit of the step is the documentation session's, asked as `--continue` or as a
+        # commit: no rule for either (R-27).
+        if "rule: Bash(git" in r.stdout \
+                or "-c rerere.enabled=false rebase --continue" not in r.stdout:
+            problems.append(f"the commit of a step proposed as a rule, or its --continue not "
+                            f"printed without rerere: {r.stdout[-600:]!r}")
+        _put(w.tree, {"deps.txt": "alfa\nbeta\ngamma\n"})
+        _git_in(w.tree, "add", "deps.txt")
+        _git_in(w.tree, "rebase", "--continue", env={"GIT_EDITOR": "true"})
+        r = w.run("--resume", scene={"write": {"verifica.md": "v"}, "answer": "delivered"})
+        argv = w.calls()[-1]["argv"]
+        if "rebase is over" not in argv[1] or "which of your commits" not in argv[1] \
+                or any(a.startswith("Bash(git rebase") for a in argv):
+            problems.append(f"the resume after the continue: {argv[1][:200]!r}")
+        if "stopped on `consegna`" not in r.stdout:
+            problems.append(f"the delivery after the rebase: {r.stdout[-300:]!r}")
+        # A push refused at the delivery: a new launch, which counts only what it delivers.
+        theirs("reviewer: c", {"c.txt": "c\n"})
+        if _git_in(w.tree, "push", "origin", "chg-002").returncode == 0:
+            problems.append("the push after the remote moved was not refused: the case is not set")
+        w.run("--repo", str(w.code))
+        _git_in(w.tree, "rebase", _git_in(w.code, "rev-parse", "origin/chg-002").stdout.strip())
+        os.utime(w.folder / "verifica.md", (1, 1))
+        r = w.run("--launch", scene={"answer": "nothing new"})
+        if "stopped on `consegna`" in r.stdout:
+            problems.append("a new launch takes the delivery of the one before for its own")
+        if len(w.launch_file()["lanci"]) != 3:
+            problems.append("the new launches are not one entry each in the launch file")
+        # Without a local branch: created from the remote, its commits not the session's own.
+        _git_in(w.code, "worktree", "remove", "--force", str(w.tree))
+        _git_in(w.code, "branch", "-D", "chg-002")
+        r = w.run("--repo", str(w.code))
+        if "created on origin/chg-002" not in r.stdout or "did not make" not in r.stdout:
+            problems.append(f"without a local branch: {r.stdout[-300:]!r}")
+    return problems
+
+
+@check("exchange.py code in the additive mode launches the change the thread of --root holds, on the thread's branch, and a hotfix only from its parking branch")
+def _code_additive():
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        w = _CodeWorld(Path(tmp).resolve(), additive=True)
+        change = w.docs.path / "products/p/changes/CHG-003.md"
+        w.docs.write("products/p/changes/CHG-003.md",
+                     change.read_text().replace("created: 2026-10-01",
+                                                "created: 2026-10-01\nhotfix: true"))
+        w.docs.commit("a hotfix", "2026-10-03T09:00:00+02:00")
+        w.docs.git("checkout", "-q", "-b", "work/p-chg-002")
+        r = w.run("--repo", str(w.code))
+        if r.returncode != 2 or "not held by the thread" not in r.stderr:
+            problems.append(f"a change the thread does not hold: exit {r.returncode}, "
+                            f"{r.stderr[-200:]!r}")
+        w.docs.git("tag", "-a", "claim/CHG-002", "-m",
+                   "claim CHG-002\n\nwho: anna\nbranch: work/p-chg-002\nwhen: 2026-10-02\n")
+        r = w.run("--repo", str(w.code))
+        branch = _git_in(w.tree, "rev-parse", "--abbrev-ref", "HEAD").stdout.strip()
+        if r.returncode or branch != "work/p-chg-002":
+            problems.append(f"the thread's change: exit {r.returncode}, branch {branch!r}")
+        _put(w.exchange / "in-arrivo" / "CHG-003", {"brief.md": "b"})
+        r = w.run("--repo", str(w.code), ident="CHG-003")
+        if r.returncode != 2 or "parcheggio-hotfix-p-chg-003" not in r.stderr:
+            problems.append(f"a hotfix from a thread: exit {r.returncode}, {r.stderr[-200:]!r}")
+        w.docs.git("checkout", "-q", "-b", "work/parcheggio-hotfix-p-chg-003", "main")
+        r = w.run("--repo", str(w.code), ident="CHG-003")
+        if r.returncode or "parcheggio-hotfix-p-chg-003" not in r.stdout:
+            problems.append(f"a hotfix from its parking branch: exit {r.returncode}, "
+                            f"{r.stderr[-200:]!r}")
+        _put(w.exchange / "in-arrivo" / "CHG-009", {"brief.md": "b"})
+        w.docs.git("checkout", "-q", "-b", "work/parcheggio-hotfix-inc-77", "main")
+        r = w.run("--repo", str(w.code), "--no-chg", "hotfix INC-77", ident="CHG-009")
+        if r.returncode:
+            problems.append(f"a hotfix without its change, from its parking branch: exit "
+                            f"{r.returncode}, {r.stderr[-200:]!r}")
+    return problems
+
+
+@check("exchange.py code runs the code session on the person's subscription alone and only where it can watch it: Claude Code's settings that set a provider, an address, a key, a token or an apiKeyHelper refused at --launch and --resume with file and line and never the value, said ahead by the first call; Windows outside WSL refused, no process asked; a number another process took is not the run")
+def _code_subscription_and_platform():
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        w = _CodeWorld(Path(tmp).resolve())
+        w.config.mkdir()
+        person = w.config / "settings.json"
+        # Line 3 sets a provider; a provider turned off is none.
+        person.write_text(json.dumps({"env": {"CLAUDE_CODE_USE_BEDROCK": "1",
+                                              "CLAUDE_CODE_USE_VERTEX": "0", "OTHER": "x"}},
+                                     indent=2))
+        r = w.run("--repo", str(w.code))
+        if r.returncode or "will refuse" not in r.stdout \
+                or "env.CLAUDE_CODE_USE_BEDROCK" not in r.stdout:
+            problems.append(f"the first call does not say ahead what --launch will refuse: "
+                            f"exit {r.returncode}, {r.stdout[-400:]!r}")
+        r = w.run("--launch")
+        if r.returncode != 2 or f"{person}, line 3: env.CLAUDE_CODE_USE_BEDROCK" not in r.stderr \
+                or "USE_VERTEX" in r.stderr or w.calls():
+            problems.append(f"a provider in the person's settings: exit {r.returncode}, "
+                            f"{r.stderr[-300:]!r}, {len(w.calls())} call(s)")
+        person.unlink()
+        local = w.tree / ".claude" / "settings.local.json"
+        local.parent.mkdir()
+        local.write_text(json.dumps({"env": {"ANTHROPIC_BASE_URL": "https://gw.example.net"}}))
+        r = w.run("--launch")
+        if r.returncode != 2 or "settings.local.json, line 1: env.ANTHROPIC_BASE_URL" \
+                not in r.stderr or "gw.example.net" in r.stderr or w.calls():
+            problems.append(f"an address in the worktree's local settings: exit "
+                            f"{r.returncode}, {r.stderr[-300:]!r}")
+        local.unlink()
+        project = w.tree / ".claude" / "settings.json"
+        project.write_text(json.dumps({"env": {"ANTHROPIC_AUTH_TOKEN": "tok-not-to-say"}}))
+        r = w.run("--launch")
+        if r.returncode != 2 or f"{project}, line 1: env.ANTHROPIC_AUTH_TOKEN" not in r.stderr \
+                or "tok-not-to-say" in r.stderr or w.calls():
+            problems.append(f"a token in the worktree's project settings: exit {r.returncode}, "
+                            f"{r.stderr[-300:]!r}")
+        project.unlink()
+        # A settings file the person cannot open is skipped: the code session, the person's
+        # process, cannot open it either. A folder in its place, as no root reads it either.
+        local.mkdir()
+        r = w.run("--launch", scene={"answer": "ok"})
+        if r.returncode or len(w.calls()) != 1:
+            problems.append(f"a launch with no provider in the settings: exit {r.returncode}, "
+                            f"{r.stderr[-300:]!r}")
+        for text, want in (('{"apiKeyHelper": "~/bin/key.sh"}', "apiKeyHelper"),
+                           ("{", "does not read as JSON")):
+            person.write_text(text)
+            r = w.run("--resume")
+            if r.returncode != 2 or want not in r.stderr or "key.sh" in r.stderr \
+                    or len(w.calls()) != 1:
+                problems.append(f"{want} in the person's settings at a resume: exit "
+                                f"{r.returncode}, {r.stderr[-300:]!r}")
+        person.unlink()
+        # The process: asked by its session; never asked on Windows outside WSL, where `code`
+        # is refused.
+        ex = _load(EXCHANGE, "exchange_code_check")
+        me = os.getpid()
+        # Not a child of this process, as a run is not of the command that reads it later.
+        # Its standard output is a run's output file, as the launch opens one.
+        written = w.tmp / "uscita-altro.jsonl"
+        spawn = ("import subprocess, sys; print(subprocess.Popen([sys.executable, '-c', "
+                 "'import time; time.sleep(30)', 'sessione-1234'], "
+                 f"stdout=open({str(written)!r}, 'w'), "
+                 "stderr=subprocess.DEVNULL, start_new_session=True).pid)")
+        other = int(subprocess.run([sys.executable, "-c", spawn], capture_output=True,
+                                   text=True).stdout.strip())
+        try:
+            # A session that is no string, as anyone can write the launch file: the number alone.
+            told = (ex._alive(me), ex._alive(other, "sessione-1234"),
+                    ex._alive(other, "a-session-nobody-runs"), ex._alive(other, 5),
+                    ex._alive(other, "a-session-nobody-runs", str(w.tmp / "un-altro.jsonl")))
+            # A command line that does not show the session, where `/proc` or `lsof` tells what
+            # the process writes to: its output is the run's.
+            rewritten = ex._alive(other, "a-session-nobody-runs", str(written)) \
+                if Path("/proc/self/fd").is_dir() or shutil.which("lsof") else True
+            # Numbers no process has, and an output git or the system cannot take.
+            odd = (ex._alive(2 ** 40, "s"), ex._alive(True, "s"),
+                   ex._alive(other, "a-session-nobody-runs", "/tmp/a\0b"))
+        finally:
+            os.kill(other, signal.SIGTERM)
+        if told != (True, True, False, True, False) or rewritten is not True \
+                or odd != (False, False, False):
+            problems.append(f"a run is not told from a process that took its number, by its "
+                            f"session on the command line or by its output: {told}, "
+                            f"{rewritten}, {odd}")
+        folder = w.tmp / "lancio-windows"
+        folder.mkdir()
+        when = "2026-11-09T09:00:00+00:00"
+        shape = {"elemento": "CHG-002", "repository": str(w.code), "worktree": str(w.tree),
+                 "ramo": "chg-002", "lanci": [{
+                     "inizio": when, "sessione": 5, "estranei": [], "collegati": [],
+                     "concessi": [], "approvate": [],
+                     "tranche": [{"inizio": when, "fine": None, "processo": me,
+                                  "uscita": str(w.tmp / "CHG-002-3f2a0000-1.jsonl")}]}]}
+        (folder / "sessione-codice.json").write_text(json.dumps(shape))
+        said = ex.launch_state(folder, date.today())
+        if "not as `code` writes it" not in (said or ""):
+            problems.append(f"the listing on a launch file whose session is no id: {said!r}")
+        # A session as this command writes it, and a process that does not carry it.
+        shape["lanci"][0]["sessione"] = "3f2a0000-0000-4000-8000-000000000000"
+        (folder / "sessione-codice.json").write_text(json.dumps(shape))
+        # `integrate` on Windows outside WSL, with a run not ended: refused, sent to `--status`
+        # where `code` runs.
+        launched = w.folder / "sessione-codice.json"
+        kept = launched.read_text()
+        state = json.loads(kept)
+        state["lanci"][-1]["tranche"].append({"inizio": "x", "fine": None, "processo": me})
+        launched.write_text(json.dumps(state))
+        asked: list = []
+        kill, argv = os.kill, sys.argv
+        err, err_integrate = io.StringIO(), io.StringIO()
+        try:
+            ex.WINDOWS = True
+            os.kill = lambda *a: asked.append(a)
+            said = ex.launch_state(folder, date.today())
+            sys.argv = ["exchange.py", "--root", str(w.docs.path), "code", "CHG-002", "--status"]
+            with contextlib.redirect_stderr(err):
+                try:
+                    ex.main()
+                    code = 0
+                except SystemExit as e:
+                    code = e.code
+            sys.argv = ["exchange.py", "--root", str(w.docs.path), "integrate", "CHG-002"]
+            with contextlib.redirect_stderr(err_integrate):
+                try:
+                    ex.main()
+                    integrated = 0
+                except SystemExit as e:
+                    integrated = e.code
+        finally:
+            os.kill, sys.argv, ex.WINDOWS = kill, argv, False
+            if launched.parent.is_dir():
+                launched.write_text(kept)
+        if asked or ex.WINDOWS or "not told" not in (said or ""):
+            problems.append(f"on Windows the listing asks the process, or says it: {said!r}")
+        if code != 2 or "WSL" not in err.getvalue():
+            problems.append(f"code on Windows outside WSL: exit {code}, {err.getvalue()[-200:]!r}")
+        if integrated != 2 or "under WSL, Linux or macOS" not in err_integrate.getvalue() \
+                or not w.folder.is_dir():
+            problems.append(f"integrate on Windows outside WSL with a run not ended: exit "
+                            f"{integrated}, {err_integrate.getvalue()[-200:]!r}")
+    return problems
+
+
+@check("exchange.py integrate since 4.13.0: a second integration joins the first, one block more and evidenze/ numbered; documentazione.md outside the additive mode; on the parking branch of a hotfix the verification kept in its delivery folder; the launch file closed; EXC006 knows domande.md and sessione-codice.json at every version")
+def _integrate_since_4_13():
+    problems = []
+
+    def integrate(repo: _Repo, ident: str):
+        return subprocess.run([sys.executable, str(EXCHANGE), "--root", str(repo.path),
+                               "integrate", ident], capture_output=True, text=True)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        repo, ex, _ = _exchange_docs(Path(tmp))
+        repo.write("framework.yaml", f"framework_version: {_CODE_SINCE}\n")
+        change = repo.path / "products/p/changes/CHG-002.md"
+        repo.write("products/p/changes/CHG-002.md", change.read_text()
+                   + "\n## Verification\n\nThe tests pass, `verifica.md`.\n")
+        repo.commit("the verification", "2026-10-02T08:00:00+02:00")
+        _put(ex, {"in-arrivo/CHG-002/verifica.md": "v", "in-arrivo/CHG-002/documentazione.md": "d",
+                  "in-arrivo/CHG-002/evidenze/log.txt": "l", "in-arrivo/CHG-002/domande.md": "q",
+                  "in-arrivo/CHG-002/risorse.md": "| Tipo | Percorso o nome | Comando che la "
+                                                  "toglie |\n|---|---|---|\n| altro | a | rm a |\n",
+                  "in-arrivo/CHG-002/sessione-codice.json":
+                      json.dumps({"elemento": "CHG-002", "stato": "fermo", "lanci": [{}]})})
+        r = integrate(repo, "CHG-002")
+        mark = ex / "integrati/CHG-002/INTEGRATO"
+        if r.returncode or "written into the documents" not in mark.read_text():
+            problems.append(f"documentazione.md outside the additive mode: exit {r.returncode}, "
+                            f"{r.stderr[-300:]!r}")
+        state = json.loads((ex / "integrati/CHG-002/sessione-codice.json").read_text())
+        if state.get("stato") != "chiuso":
+            problems.append("integrate does not close the launch")
+        _put(ex, {"in-arrivo/CHG-002/verifica.md": "v2", "in-arrivo/CHG-002/evidenze/log.txt": "l2"})
+        r = integrate(repo, "CHG-002")
+        blocks = yaml.safe_load(mark.read_text())
+        if r.returncode or not isinstance(blocks, list) or len(blocks) != 2 \
+                or (ex / "integrati/CHG-002/verifica.md").read_text() != "v2" \
+                or not (ex / "integrati/CHG-002/evidenze/log.2.txt").is_file() \
+                or (ex / "in-arrivo/CHG-002").exists():
+            problems.append(f"a second integration: exit {r.returncode}, {r.stderr[-300:]!r}, "
+                            f"INTEGRATO {mark.read_text()[:300]!r}")
+        if repo.findings("EXC003") or repo.findings("EXC006"):
+            problems.append(f"after two integrations: {repo.findings('EXC003')} "
+                            f"{repo.findings('EXC006')}")
+        # A new launch closed without a delivery: a block with no part; what the sessions wrote
+        # about the work adds up, the rows of `risorse.md` and the entries of `domande.md`.
+        _put(ex, {"in-arrivo/CHG-002/brief.md": "b2", "in-arrivo/CHG-002/domande.md": "q2",
+                  "in-arrivo/CHG-002/risorse.md": "| Tipo | Percorso o nome | Comando che la "
+                                                  "toglie |\n|---|---|---|\n| altro | x | rm x |\n"})
+        r = integrate(repo, "CHG-002")
+        blocks = yaml.safe_load(mark.read_text())
+        asked = (ex / "integrati/CHG-002/domande.md").read_text()
+        listed = (ex / "integrati/CHG-002/risorse.md").read_text()
+        if r.returncode or not isinstance(blocks, list) or len(blocks) != 3 \
+                or blocks[-1].get("parts") != {} or not asked.startswith("q\n") \
+                or not asked.rstrip().endswith("q2") or "| altro | a | rm a |" not in listed \
+                or "| altro | x | rm x |" not in listed or listed.count("| Tipo |") != 1:
+            problems.append(f"an integration with nothing delivered: exit {r.returncode}, "
+                            f"{r.stderr[-300:]!r}, domande.md {asked!r}, risorse.md {listed!r}")
+        # The names of a launch, below 4.13.0 pinned: known as every fixed name (S-3).
+        repo.write("framework.yaml", f"framework_version: {_BELOW_CODE}\n")
+        _put(ex, {"in-arrivo/CHG-003/brief.md": "b", "in-arrivo/CHG-003/domande.md": "q",
+                  "in-arrivo/CHG-003/sessione-codice.json": "{}"})
+        if repo.findings("EXC006"):
+            problems.append(f"EXC006 on the names of a launch: {repo.findings('EXC006')}")
+    with tempfile.TemporaryDirectory() as tmp:
+        repo, ex, _ = _exchange_docs(Path(tmp))
+        repo.write(".framework/work.yaml", "mode: additive\npeople: [anna]\nadmins: [anna]\n")
+        repo.write("framework.yaml", f"framework_version: {_CODE_SINCE}\n")
+        repo.commit("additive", "2026-10-02T08:00:00+02:00")
+        repo.git("checkout", "-q", "-b", "work/parcheggio-hotfix-p-chg-004")
+        kept = "_filoni/hotfix-p-chg-004/consegne/CHG-004/"
+        for rel in ("verifica.md", "mr-link.txt", "documentazione.md", "evidenze/log.txt"):
+            repo.write(kept + rel, "x\n")
+        repo.commit("the hotfix's delivery", "2026-10-03T08:00:00+02:00")
+        _put(ex, {"in-arrivo/CHG-004/verifica.md": "x\n", "in-arrivo/CHG-004/mr-link.txt": "x\n",
+                  "in-arrivo/CHG-004/documentazione.md": "x\n",
+                  "in-arrivo/CHG-004/evidenze/log.txt": "x\n"})
+        r = integrate(repo, "CHG-004")
+        text = (ex / "integrati/CHG-004/INTEGRATO").read_text() if r.returncode == 0 else ""
+        if r.returncode or text.count(kept) != 4:
+            problems.append(f"the parking branch of a hotfix: exit {r.returncode}, "
+                            f"{r.stderr[-300:]!r} {text!r}")
     return problems
 
 
