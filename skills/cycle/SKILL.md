@@ -186,7 +186,8 @@ approval, and the brief written right after it in the same join, with the rules 
 pass too -- the exception to the round after, since a hotfix cannot wait a round and has no thread
 --; the next join with the whole review reads the `CHG` again, and its delivery when it comes,
 and the brief keeps its one pass, its work done once the code is written and its rules the
-`CHG`'s. Outside the mode it is approved as any
+`CHG`'s -- but for the one more on its *Commands*, where the person changes them at the launch
+proposed (Step 6, *The commands*). Outside the mode it is approved as any
 change, and its brief written at once. `hotfix: true` is written by whoever decides -- in the
 additive mode on a join's branch, written or taken off on a thread or a parking line being a
 `BR006` --. An objection
@@ -388,9 +389,22 @@ regenerates it: the code session never writes it, and the documentation session 
 at a step of a rebase, or a merge of the base, that has it in conflict; `link:` a file git
 ignores that the tests read, such as `.env`, linked from the main checkout of the code
 repository and never copied. Propose them from `CHG §how-we-know-it-worked` and the
-instructions of the code repository; the person confirms them when the brief is written, and
-its review reads them. The launch grants the tests the brief names, as written: show them, do
-not change them, and change one only by changing the brief, with its review.
+instructions of the code repository; the brief's review reads them, and the person confirms
+them after it, shown with the launch proposed: changing one is changing the brief, reviewed
+again -- the reviser relaunched with what the brief's review was given, its log file included,
+and each line changed, as it was and as it is, with its line -- in one pass on the commands
+changed and what they grant alone, whatever passes the brief had, a hotfix's included. That pass
+fixes nothing and hands back what it finds: show the commands again before "lancio?", and a
+second change has a pass of its own. The launch grants the tests the brief names, as written:
+show them, do not change them, and change one only by changing the brief, with that pass. After
+the launch a command changed is a new launch's: `--resume` holds the brief to its *Commands* as
+they were at `--launch`, all four kinds, by a print the launch file keeps, and refuses a brief
+whose *Commands* changed since, a `prepare:`, `generated:` or `link:` line as a `test:` one,
+which the code session, writing in the delivery folder, could otherwise change for itself. No
+copy of the brief as launched is kept: the way out of that refusal is a new launch, the first
+call again, its brief reviewed whole. The lines a stop prints for you to run -- `generated:` at
+a step in conflict, `prepare:` -- are read from the brief as it is: show each before it runs,
+and run it only on the person's yes.
 
 **Where the brief goes.** When `.framework/sessions.yaml` declares `exchange:`, write the
 brief to `<exchange>/in-arrivo/CHG-NNN/brief.md`, creating the folder, and tell the person
@@ -477,11 +491,12 @@ repositories and asked at the first launch of each change -- later calls read it
 file --; the code session's worktree, `<repository>-<id>` beside it, on its branch -- the
 thread's in the additive mode, the hotfix's parking branch, `<id>` outside the mode --, from the
 remote's default branch, or another start the person names, such as a hotfix's production branch,
-the project's process (`--base`); and the tests it grants, the brief's. Then ask "lancio?": the
-person's yes is the gesture. `references/contributions.md`, *The exchange between sessions*, says
-the rest; in short, with `F="${CLAUDE_PLUGIN_ROOT:?}/skills/audit/scripts"` and `--root` on the
-documentation's checkout, or, in the additive mode, the worktree of the thread or of the hotfix's
-parking branch:
+the project's process (`--base`); and the brief's *Commands* -- the tests the launch grants, the
+preparation, the files generated and those linked --, for the person to confirm, as *The commands*
+says. Then ask "lancio?": the person's yes is the gesture. `references/contributions.md`,
+*The exchange between sessions*, says the rest; in short, with
+`F="${CLAUDE_PLUGIN_ROOT:?}/skills/audit/scripts"` and `--root` on the documentation's checkout,
+or, in the additive mode, the worktree of the thread or of the hotfix's parking branch:
 
 1. `python3 "$F/exchange.py" --root <documentation> code <CHG> --repo <code repository>`
    creates the worktree, its branch and the linked files, and stops. It says how the branch

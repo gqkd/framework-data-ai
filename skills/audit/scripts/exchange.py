@@ -111,7 +111,16 @@ repository. Four forms, each one call:
               this run only (`--allow`, a file), or the answer to its question (`--reply`), or
               neither: after the documentation session ran `git rebase --continue`, or the
               commit that concludes the merge of the base, or after a stop with nothing to
-              approve or answer.
+              approve or answer. It refuses a brief whose *Commands* -- the four kinds -- no
+              longer match the print `--launch` kept in the launch file, and a launch entry
+              with no print: the `test:` lines it grants are the launch's, and a command
+              changed after the launch is a new launch's, its brief reviewed whole, since no
+              copy of the brief as launched is kept to tell what changed (W-9, W-10). The code
+              session can write its brief, which sits in the delivery folder: a line it adds
+              there is not granted, unless it rewrites the print in the launch file too, a
+              known limit; and the lines the stops print for the documentation session --
+              `generated:`, `prepare:` -- are read from the brief as it is, shown before they
+              run and run on the person's yes.
     --status  whether it runs, and where it stopped; a run whose end was never written, its
               process gone, is read from its output.
 
@@ -148,7 +157,8 @@ after a commit that did not conclude the merge of
 the base, or after the merge was aborted and the branch does not hold the base, `--join-base`
 with a rebase or a merge in progress or a branch diverged from its remote, a join of the base
 that fails short of a conflict (aborted, nothing else changed), at the first call and at
-`--launch` a merge in progress that no `--join-base` made, `claude` not found, at
+`--launch` a merge in progress that no `--join-base` made, `claude` not found, at `--resume`
+a brief whose *Commands* no longer match the print of its launch, or a launch with no print, at
 `--launch` and `--resume` a settings file of Claude Code's -- the organisation's, the person's,
 the worktree's -- whose `env` sets a provider, an address, a key or a token, or that sets an
 `apiKeyHelper`, or that opens and does not read (each said with its file and line, and by the
@@ -169,6 +179,7 @@ Requires the same environment as `validate.py`, whose helpers it uses.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -607,6 +618,12 @@ def _word(value) -> bool:
     return isinstance(value, str) and bool(value) and "\0" not in value
 
 
+def commands_print(commands: dict) -> str:
+    """The print of a brief's *Commands*, which `--launch` keeps in the launch file and
+    `--resume` compares: a sha-256, which holds no value of theirs."""
+    return hashlib.sha256(json.dumps(commands, sort_keys=True).encode("utf-8")).hexdigest()
+
+
 def _launch_shape(data, outputs: Path | None = None) -> str | None:
     """What, in a launch file, is not as this command writes it, or `None`. Anyone can write
     the file -- the code session too --, and its values reach `claude` and git as arguments:
@@ -667,6 +684,10 @@ def _launch_shape(data, outputs: Path | None = None) -> str | None:
             return f"{where}, `lease`"
         if launch.get("modo") not in (None, "merge", "rebase"):
             return f"{where}, `modo`"
+        if launch.get("comandi") is not None and not (
+                isinstance(launch.get("comandi"), str)
+                and re.fullmatch(r"[0-9a-f]{64}", launch["comandi"])):
+            return f"{where}, `comandi`"
         for m, run in enumerate(launch["tranche"], 1):
             at = f"{where}, run {m}"
             if not isinstance(run, dict):
@@ -1690,6 +1711,7 @@ class Code:
         rules = granted(v.FRAMEWORK, commands)
         # History, and withheld as every value: a test the brief names may carry one.
         launch["concessi"] = [_withhold(r) for r in rules]
+        launch["comandi"] = commands_print(commands)
         return self.run(self.first_prompt(commands, rebase), rules, resume=False)
 
     def resume(self, allow: list[Path], reply: Path | None) -> int:
@@ -1737,6 +1759,18 @@ class Code:
             except OSError as e:
                 v.refuse(f"--reply {reply}: {e}")
         commands = brief_commands((self.folder / X.BRIEF).read_text(encoding="utf-8"))
+        # The *Commands* are held to the launch's: the brief sits in the delivery folder, which
+        # the code session writes, and a command changed since is a new launch's (W-9).
+        if launch.get("comandi") is None:
+            v.refuse(f"the launch file of {self.ident} keeps no print of the *Commands* the "
+                     "brief had at its launch -- a launch made before this check, or a file rewritten --: "
+                     "a new launch, the first call again, its brief reviewed whole. Nothing is "
+                     "resumed.")
+        if commands_print(commands) != launch["comandi"]:
+            v.refuse(f"the *Commands* of the brief of {self.ident} are not the ones it had at "
+                     "its launch: a command changed after the launch is a new launch's -- the "
+                     "first call again --, its brief reviewed whole, since no copy of the brief "
+                     "as launched is kept to tell what changed. Nothing is resumed.")
         base = granted(v.FRAMEWORK, commands)
         # What comes after, with a rebase in progress, is its step, not the brief.
         rebase = rebase_in(self.tree)
@@ -2218,7 +2252,8 @@ class Code:
                                              "HEAD...MERGE_HEAD").splitlines())
         held = [(f, how) for f, how in commands["generated"] if f in touched]
         if held:
-            print("  Before the question, in view, the generated files of the merge:")
+            print("  Before the question, each shown and run on the person's yes, the generated "
+                  "files of the merge, as the brief names them now:")
             for f, how in held:
                 print(f"    (in {t}) {how or '<the command the brief names for it>'}, then "
                       f"git -C {t} add {f}")
@@ -2266,7 +2301,8 @@ class Code:
                                                     "REBASE_HEAD").splitlines())
         held = [(f, how) for f, how in commands["generated"] if f in touched]
         if held:
-            print("  Before the question, in view, the generated files of the step:")
+            print("  Before the question, each shown and run on the person's yes, the generated "
+                  "files of the step, as the brief names them now:")
             for f, how in held:
                 print(f"    (in {t}) {how or '<the command the brief names for it>'}, then "
                       f"git -C {t} add {f}")

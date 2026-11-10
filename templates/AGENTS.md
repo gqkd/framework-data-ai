@@ -199,12 +199,17 @@ keeps up to three passes: it reaches no join. A hotfix's brief, written in its l
 has one, and keeps it -- where this project pins 4.13.0 or later, or no version that reads, also
 one written again on another machine that launches an approved hotfix, and one with `no-chg`,
 whose change is written later --: the next join with the whole review reads the `CHG` again, and its
-delivery when it comes (the framework's `cycle`, *A hotfix*).
+delivery when it comes (the framework's `cycle`, *A hotfix*). Where this project pins 4.13.0 or
+later, or no version that reads, a brief whose *Commands* the person changes at the launch
+proposed has one pass more, on the commands changed and what they grant alone, whatever passes it
+had, a hotfix's included, which fixes nothing and hands back every objection, a second change with
+a pass of its own.
 
 If the reviser is not available, or cannot launch the critic, run the critic yourself, with
 the absolute path of `FRAMEWORK_PATH`, or a general-purpose agent told to follow
 `FRAMEWORK_PATH/agents/critic.md` with read-only tools, and say so; fix the objections on the
-proposal, show the others, and ask again on your corrections and on the points it left out
+proposal -- none in the pass on a brief's changed *Commands*, whose objections go to the
+person --, show the others, and ask again on your corrections and on the points it left out
 only when `FRAMEWORK_PATH/agents/reviser.md` would, with the passes it would have. If you
 cannot run a subagent at all, say that the review did not run. A review that did not run is
 said, never skipped in silence.

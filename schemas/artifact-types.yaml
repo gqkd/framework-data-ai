@@ -2693,7 +2693,418 @@
 # the fixture `audit/clean-repo`, whose `ICG-001` calls `DEC-001` the warehouse choice while it
 # decides only the landing zone, left as the runs of 4.12.0 read it; and the memory workspace, which
 # still selects the files git ignores and is reached only from code that nothing calls.
-version: "4.12.0"
+#
+# 4.12.0 -> 4.13.0. Every code session starts from a documentation session, which launches it on the
+# brief of an approved change, answers it at each stop and brings its delivery in, on the person's
+# subscription and with nothing carried by hand; in the additive mode the thread of a mandate is
+# ready with the line of its merge request, and the join merges the code on the forge before the
+# documentation lands; an approved hotfix is launched by anybody from its parking branch, which is
+# its claim and carries its delivery; and what 4.12.0 sent on is answered, item by item.
+#
+# A RULE FOLLOWS THE VERSION PINNED, AND FOUR THINGS DO NOT. What this version changes in what a
+# command does, a check reports, a skill does or the to-do computes holds where the project pins
+# 4.13.0 or later, or no version that reads, by a constant read through `rules_hold`, as in 4.12.0:
+# `CODE_SINCE` in `exchange.py`, for `code`, which refuses below, and for what `integrate` does
+# anew -- a second integration joined to the first, `documentazione.md` outside the additive mode,
+# the delivery of a hotfix on its parking branch --; `LINK_SINCE` in `todo.py`, which `work.py`
+# reads too, for the thread of a mandate ready with its line, a hotfix listed with its parking
+# branch, all that `join` does with the code, and what `doctor` says of the code session;
+# `JOINED_SINCE` in `validate.py`, for `EXC003` on an `INTEGRATO` of several blocks. The skills, the
+# references, the agents and the template of `AGENTS.md` say each new rule beside the one before.
+# Below, everything stays as it was, the code session opened by hand included, whatever plugin a
+# person has. Four exceptions hold at every pin. `work.py doctor` runs in a project with no
+# `.framework/work.yaml`, without the lines of the branches, the claims and the workflows: it
+# describes the machine, and the requirements to implement hold outside the additive mode too.
+# `domande.md` and `sessione-codice.json` are fixed names of the exchange at every pin, as every
+# name there is: the exchange is one per machine, and the worktrees that read it may pin different
+# versions. The description of `cycle`, which Claude Code reads whatever a project pins, takes the
+# request to implement an approved change in a documentation session, «implementa il CHG-021»: below
+# 4.13.0 pinned the skill takes it to the change's brief, as before, for the person to hand over.
+# And the validator reads `merge_method` as it reads every key of `work.yaml`, whatever the pin: a
+# value it does not know is `WK001`, the key outside the additive mode `WK002`.
+#
+# EVERY CODE SESSION STARTS FROM A DOCUMENTATION SESSION. These are the owner's rules, which this
+# version carries. Nobody opens Claude in the code repository: the documentation session proposes
+# the launch wherever the brief of an approved change is born -- on a thread, at the end of a
+# lightning join, in `cycle` -- and wherever the person asks for it, in both modes. Nothing is
+# carried by hand, no brief to another machine and no delivery back: whoever implements launches
+# from their own documentation session, on their machine, and in the additive mode holds the thread
+# of the change. The documentation session answers the code session where the documentation answers,
+# naming the file and the section, passes to the person only what is not written or is a decision,
+# and approves nothing by itself: every approval is the person's yes. The code session runs on the
+# person's subscription alone, never on an API key or another provider. In the additive mode
+# everything goes through the threads, the documentation the code changes included: the code session
+# proposes it in `documentazione.md` and never writes it, and the thread, or the parking branch of a
+# hotfix, writes it as effects; outside the mode the documentation session writes it into the
+# documents when it brings the delivery in. To implement, a machine needs the exchange declared,
+# `claude` -- the command line of Claude Code; the desktop app or an editor's extension alone does
+# not bring it -- on the `PATH`, and Linux, macOS or WSL; whoever runs a join in the additive mode
+# where the code is on GitHub needs `gh` too, logged in. Nothing stops or flags a session opened by
+# hand in a code repository: it is the flow of the skills that never asks for one.
+#
+# THE LAUNCH, `exchange.py code <ID>`, four calls, each one command. The first, `--repo`, with
+# `--base` and, for a hotfix whose change is not written yet, `--no-chg "hotfix <reference>"`, reads
+# the mandate -- the pin, the brief, the change approved and, in the additive mode, the thread of
+# `--root` that holds it or the parking branch of the hotfix --, fetches, and creates beside the
+# code repository the code session's worktree, `<repository>-<id>`, on the thread's branch, on the
+# hotfix's parking branch or, outside the mode, on `<id>`; it links from the main checkout the files
+# git ignores that the brief names, `.env` for one, never copying them, writes the worktree, its
+# branch and the links in `risorse.md`, writes the launch file, and stops: the push of the branch
+# and the preparation the brief names are the documentation session's commands, run in view.
+# `--launch` runs `claude -p` in the worktree, under `dontAsk`, with the plugin the command runs
+# from, its guard included, and the delivery folder: without asking, the code session reads,
+# writes -- the guard is the limit --, uses the reviser, and runs the git commands that read,
+# `git add`, the validator and the tests the brief names; anything else is denied, and a denial is a
+# stop. A change launched changes one code repository: a change in another, the release's for one,
+# is a change of its own, with its own launch. `--resume` resumes the same session with one of three
+# things: a rule the last stop proposed and the person approved now, written whole, for that run
+# only; the answer to its question; or nothing, after the documentation session ran a
+# `git rebase --continue` or the commit that concludes a merge of the base, or after a stop with
+# nothing to approve or answer. `--status` says whether it runs and where it stopped, from any
+# documentation session of the machine, and a code session goes on to its stop when the one that
+# launched it is closed. Nothing limits what it spends but the subscription. The brief names, in a
+# new block, *Commands*, the tests the launch grants, the preparation of the worktree, the files it
+# generates with the command that regenerates them, and the files to link: the brief's review reads
+# them, and the person confirms them after it, shown with the launch proposed; one the person
+# changes is reviewed again in one pass on the commands changed and what they grant alone, whatever
+# passes the brief had, a hotfix's included, which it does not reopen; that pass fixes nothing, the
+# commands are shown again before «lancio?», and a second change has a pass of its own. After the
+# launch a changed command is a new launch's: `--launch` keeps in the launch file the print of the
+# brief's *Commands*, all four kinds, and `--resume` refuses a brief whose *Commands* no longer
+# match it, a changed `prepare:`, `generated:` or `link:` line as a `test:` one -- the brief sits in
+# the delivery folder, which the code session writes, and a `test:` line it added there would
+# otherwise be granted at the next resume. No copy of the brief as launched is kept, so the way out
+# of that refusal is a new launch, its brief reviewed whole.
+#
+# THE STOPS, AND THE DELIVERY. Each run ends on a stop, said in a few lines and written in the
+# launch file, `sessione-codice.json`, which holds no value -- one beside a name is
+# withheld --: `negata`, each action denied with the rule that would grant it, which the
+# documentation session asks the person about -- for a commit, with what it would hold --, a block
+# of the framework's guard, or of a hook of the person's, said apart and granted by no rule;
+# `account`, a limit or a credential of the account; `domanda`, the last entry of `domande.md`,
+# where the code session writes each question it asks, so that none is lost; `consegna`, the fixed
+# names delivered since the launch began; `fine`, its last answer. The output of a run waits in the
+# person's outputs folder, `~/.local/state/framework-data-ai/uscite/`, until its stop is written.
+# The push and the merge request are never the code session's: on the delivery the documentation
+# session pushes the code session's commits and opens the merge request with the text of `mr.md`, on
+# the person's yes, with `gh pr create` on GitHub -- on another forge the person opens it and gives
+# the link --, writes the link in `mr-link.txt`, and brings the delivery in, with the line
+# `Merge request: <link> @ <commit>` in the change's §Verification, the commit the code's branch is
+# at then; `integrate` closes the launch. A push refused because the remote moved closes nothing: a
+# new launch makes the delivery again, verified on the branch brought up to date. A change asked
+# after, what the review of the merge request asks for one, is a new launch on the same branch, the
+# brief back in `in-arrivo/` with what to change at its end, which the review reads, and `integrate`
+# joins its delivery to the first, one block more in `INTEGRATO`.
+#
+# THE SUBSCRIPTION ALONE. The launch takes out of the code session's environment
+# `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_BASE_URL` and the
+# `CLAUDE_CODE_USE_BEDROCK`, `_VERTEX` and `_FOUNDRY` that choose a cloud, and stops it at its
+# start, on `account`, when its first event says its credential comes from elsewhere. Claude Code
+# reads the same variables from the `env` block of its settings, where the first event names none of
+# them but the key: where the organisation's, the person's or the worktree's settings set a
+# provider, an address, a key, a token or an `apiKeyHelper`, `--launch` and `--resume` refuse,
+# saying the file, the line and the name, never the value, and the first call says so ahead; managed
+# settings that set one leave that machine without the launch. On Windows outside WSL `code`
+# refuses, since there asking whether a process runs ends it.
+#
+# THE CODE BRANCH, ITS REMOTE AND ITS BASE. The first call compares the code's branch with its
+# remote: behind or level, it is a new launch on the same branch; ahead, the branch is brought
+# forward, and the commits it did not have are said to the code session as not its own; diverged,
+# the two sides are said with two commands, join them -- a rebase of the local commits on the
+# remote's, never a merge commit nor a forced push -- or keep the remote, and `--launch` refuses
+# until the person chooses. A rebase stopped on a conflict goes to the code session first, which
+# resolves the step with what it is granted; each `git rebase --continue` the documentation session
+# runs on the person's yes, regenerating at that step the generated files the brief names that are
+# in conflict, and running the preparation again once the rebase ends. The first call says too how
+# far the branch is behind its base; with `--join-base`, on the person's yes, the documentation
+# session merges the base into the branch, the code session resolving its conflicts and the
+# documentation session making the commit that concludes it, pushed at once -- refused there, the
+# remote is kept and the base joined again, never the two joined by a rebase, which would undo the
+# merge. Where the code is merged by a rebase -- `merge_method: rebase`, or
+# `--join-base rebase` --, the branch is re-applied on the base instead, and its push is forced with
+# lease, on the person's yes: the one forced push the framework makes, on a code session's branch.
+# These commands are given with the person's `rerere` off, so that no resolution of another rebase
+# or merge comes back by itself.
+#
+# THE THREAD OF A MANDATE IS READY WITH THE LINE OF ITS MERGE REQUEST. It no longer waits for its
+# code to be merged, writes no `implemented` and closes none of the known issues its change
+# repairs -- but for a change with no code to merge, written `implemented` as before --: it is ready
+# once the change's `## Verification` on its branch carries `Merge request: <link> @ <commit>`, the
+# link and the forty characters of the commit its delivery was verified at, the last such line where
+# there are several, pushed at once. The to-do reads the line off the branch and asks nothing of the
+# forge. A change written `implemented` on its thread's branch with no line -- a thread taken before
+# the adoption, a change with no code, a habit -- makes the thread ready as before, and the join
+# asks whoever decides whether its code is merged. Beside each hotfix the to-do prints the name of
+# its parking branch, `open --branch hotfix-<home>-<change>`, and whether it is open.
+#
+# THE JOIN BRINGS THE CODE IN. At its first step, for each thread with a change and each parking
+# branch of a hotfix, `join` asks the forge with `gh`, on GitHub: a merge request of the branch with
+# the thread's name, at the delivery's commit, that the forge lets merge now, in the way
+# `merge_method` says where its repository admits it -- else the one way it admits, else the one
+# whoever decides names once with `--merge-method`. Merged there already at that commit, it counts
+# as merged. Merged at another head, it comes in, and `join` says the commits that came after the
+# delivery and writes their diff in `--out`, outside the repository, for the review of the join,
+# which reads them with the documentation the branch brings: what they do that the documentation
+# does not say is substance, corrected on the join's branch -- on an approved hotfix, by a new
+# change deriving from it. On a forge `join` does not call, whoever decides merges it there, having
+# read it, when `join` asks, and answers `--merged`, or `--merged-elsewhere`, and then `join` says
+# that nobody has read the commits after the delivery. What waits -- no `gh`, no access, a head
+# moved, a merge request behind its base, closed, or one the forge does not let merge, a hotfix's
+# code not merged, the second of a code repository, since a join merges one per repository -- is
+# said with its way out, and nothing is opened, merged, released or deleted by itself: `join` again
+# without it, as for a number in conflict. At step 5 the acts of decision mark `implemented` each
+# change that came in with its code, from a thread or a parking branch, closing the known issues it
+# alone repairs: each such merge carries a `merge-request:` line, and `--finish` and `--merge`
+# refuse while a change those lines name is not `implemented` on the join's branch. At step 6 the
+# one yes is for both: `join --merge` merges each code on the forge, `gh pr merge` with
+# `--match-head-commit`, before the documentation lands, so that no `implemented` reaches the main
+# line before its code; refused there, or left by the forge for later in a merge queue, the
+# documentation does not land, and what was merged stays merged and is said.
+#
+# THE HOTFIX, FROM ITS PARKING BRANCH. An approved hotfix anybody may launch, a contributor too,
+# from the worktree of its parking branch, opened first from the main line with the name the to-do
+# prints and pushed empty: it is the hotfix's claim, and a second `open` of that name is refused.
+# The lightning join proposes the launch as its last step, after `join --merge`. On a machine whose
+# exchange has no brief for it, the brief is written again there with one pass of review, as the
+# lightning join's, and whoever decides closes the one that join left with `integrate`, a folder
+# with nothing delivered, `parts: {}`. A hotfix with `no-chg` is launched too, from a parking branch
+# opened as `hotfix-<reference>`, the number of its change reserved from there and named by a brief
+# with no change, reviewed in one pass: `code <CHG> --no-chg "hotfix <reference>"`. The delivery
+# goes on the parking branch, in `_filoni/<slug>/consegne/<CHG>/` -- `documentazione.md` with the
+# effects drawn from it, `verifica.md`, `mr-link.txt` with the line, `evidenze/` --, and `integrate`
+# closes the launch there. `evidenze/` enters the history of the documentation: before it comes onto
+# the branch the documentation session reads its text files, and one carrying the value of a
+# credential is said to the person, who deletes or cleans it in the exchange. The branch lands at
+# the first join after its code is merged, whoever runs it -- the code goes to production by the
+# project's way, never by a join --, its code merged at another head read as a thread's; there
+# whoever decides carries the verification and the link into the change and writes it `implemented`,
+# and, for a `no-chg`, writes first the `SIG`, the `ICG` and the `CHG` with the number reserved and
+# `hotfix: true`. A parking branch named `hotfix-...` is read as a hotfix's, and lands only with its
+# line.
+#
+# OUTSIDE THE ADDITIVE MODE the launch is the same, on a branch `<id>`. The documentation session
+# writes what `documentazione.md` proposes into the documents, by the rules of `requirement`, and
+# `verifica.md` into the change's §Verification with the line; `integrate` accepts
+# `documentazione.md` there, `INTEGRATO` saying it written into the documents by the commit it
+# names. The change of a `no-chg` takes the first number free when its brief is written -- two
+# elements can take the same one, and the validator sees the duplicate as any --, and its delivery
+# waits for it, then is integrated as before. With no join, the merge of the code stays the forge's.
+#
+# UNDER THE SANDBOX the code session, the child of a command in it, would stay in it and could not
+# write its own worktree beside the code repository: a third entry of the recommended
+# `sandbox.excludedCommands`, `python3 *exchange.py* code *`, lets every call of `code` out, with
+# the person's whole access and the permission asked as for any command; the rule of an `--allow`
+# and the answer of a `--reply` are files, so that the call stays the command alone. What the
+# documentation session runs around it stays inside and is the person's to run, given as lines: the
+# push of the code's branch, the preparation, joining the branch with its remote or keeping the
+# remote, each `git rebase --continue` and the commit that concludes a merge of the base, the
+# regeneration of the generated files. The code session's own sandbox approves no command by itself:
+# the launch passes it `sandbox.autoAllowBashIfSandboxed: false`, so that a command outside what it
+# grants is denied, and is a stop; a step of network that sandbox stops is a command that fails,
+# which the code session says and the documentation session gives the person, without retrying it
+# outside. The sandbox stays recommended, not required.
+#
+# THE EXCHANGE AND `doctor`. Beside `brief.md` there are two fixed names, `domande.md`, the code
+# session's questions, and `sessione-codice.json`, the launch file, which `code` alone writes:
+# neither is a part delivered, and `integrate` moves them with the folder. The listing of
+# `exchange.py` says where each element's launch stands, running, or stopped on what and since when.
+# `INTEGRATO` may hold, beside the others, a block `parts: {}`, a launch closed with no delivery,
+# and `EXC003` then reads what each name became across all the blocks. `merge_method` -- `merge`,
+# `squash` or `rebase` -- is a new optional key of `.framework/work.yaml`, read in the additive mode
+# alone and written by an admin, as every line of that file. `doctor` says, where the project pins
+# 4.13.0 or later, or no version that reads: `claude` on the `PATH`, a `todo` where it is missing;
+# the exchange declared, a requirement to implement, a `todo` outside the mode and, in it, for
+# whoever may run the join that declares it; `gh` and the access its files declare, read without the
+# network, a `todo` in the mode for whoever decides; the `merge_method` declared, a note; and
+# whether the third entry lets the launch out of the sandbox.
+#
+# THE TEXTS. `cycle` takes the request to implement an approved change, writes its brief where there
+# is none and launches it: *The launch*, at its Step 6. The brief gains four guardrails -- an action
+# denied is a stop, said with why it is needed; the push and the merge request are not the code
+# session's; a question is written in `domande.md` too; the linked files are read and never
+# written -- and the block *Commands*. `contribute` and `references/additive.md` carry the thread
+# ready with its line, the join that merges the code and the hotfix on its parking branch;
+# `references/contributions.md`, *The code session, launched*, and `references/workstation.md`, *The
+# code session*, the launch, the stops, the sandbox and the requirements; `references/preamble.md`,
+# the reviser and the critic, the one pass of the two new briefs of a hotfix, the pass more on a
+# brief's *Commands* the person changed, and the commits after a delivery read at a join; the
+# template of `AGENTS.md`, the same rules in the projects;
+# `PROCESSES.md` and the `README.md`, the launch.
+#
+# WHAT THE TRIAL OF 9/11 FOUND. Before the code was written, a code session was launched with
+# `claude -p` on Claude Code 2.1.319, on Linux under WSL2, under a person's settings -- a
+# `defaultMode`, the plugin installed for the person, hooks of the person's own --, and two things
+# came out otherwise than the plan had them. Where an `allow` rule of the person's covered
+# `git commit`, or under the code session's own sandbox, whose default runs a command in it without
+# asking, the code session committed with no stop -- under that sandbox every Bash command passed,
+# `git rebase --continue` included --: hence `autoAllowBashIfSandboxed: false`, above, while an
+# `allow` rule of the person's stays theirs -- there the code session commits without the question,
+# and the documentation session shows every commit before it pushes. And credentials other than the
+# key took the session off the subscription, a token or an `apiKeyHelper`, while in the `env` block
+# of the settings a cloud, an address or a token still read as the subscription in the first event:
+# hence the variables taken out and the settings refused, above. One consequence came with no
+# choice: the copy of the plugin `--plugin-dir` loads wins, once, with its guard, as
+# `framework-data-ai@inline`, and does not receive the `allowed_dirs` given to the plugin installed,
+# which the launch passes again. Confirmed: `dontAsk` wins over the person's default mode; a command
+# not granted, and a block of the guard, come back as denials, the guard's told by its text; a rule
+# written whole passes a compound command and a commit message in a heredoc; the reviser runs under
+# `-p`; the code session goes straight to the brief, without calling `cycle`; a write on the linked
+# `.env` Claude Code refuses, while the file it points to stays writable, so the brief's rule is
+# needed; the documentation session is told when its command in the background ends, and the code
+# session goes on to its stop when the documentation session is closed, tried with one under `-p`;
+# under the documentation session's sandbox a write in the worktree fails as a read-only file system
+# and the network as a command naming its host, and the third entry lets `code` out; a rebase
+# stopped on a conflict, a lockfile regenerated at its step, a push refused because the remote
+# moved; and `gh` says all that the join's first step reads -- the ways a repository admits, a merge
+# request's state, mergeability, head and merge commit, the commits and the diff of one merged at
+# another head after a squash with its branch deleted --, refuses `--match-head-commit` at an old
+# head, exits 0 on one already merged, and tells a missing access from a merge request that cannot
+# merge. Not tried: a limit of the subscription, which cannot be provoked, and the close of an
+# interactive documentation session. With 2.1.321 the code session's process is told by its session,
+# which its command line keeps for the whole run.
+#
+# THE CASES. The self check tries the launch, its stops and refusals, the join with the code and
+# `doctor` with a fake `claude` and a fake `gh`, which record every call and answer from the scene
+# of each case. The trigger case «il CHG-012 e' approvato, implementalo», which expected no
+# skill -- implementing an approved change was coding --, expects `cycle` from this version, marked
+# `unmeasured`, with a new key, `measured_as: none`: the self check counts it in the denominator of
+# `none`, where the tables that measured it put it, until a run scores it for `cycle` and removes
+# both (`evals/README.md`). The description of `cycle` is widened to that request, in a
+# documentation session, with two triggers more, under 1,024 characters still; the measured
+# negatives that ask for code are at risk from it, and no mark protects them. A behaviour case of
+# `contribute`, `code-launch`, on a variant of its fixture, `contribute/launch/team`, with nothing
+# in the exchange for the change and a code repository beside it, measures whether the skill,
+# taking the thread, writes the brief on it, has it reviewed and stops at the first question to
+# the person -- the substance the review handed back, or the launch proposed with the brief's
+# commands to confirm and «lancio?» -- with nothing of the launch run, the runner pointing
+# `FRAMEWORK_DATA_AI_CLAUDE`, which `exchange.py code` launches in
+# place of the `claude` on the `PATH`, at a fake `claude` that records a launch the skill should
+# not make before the person's yes. Its run of 2026-11-10 took the thread, wrote and reviewed the
+# brief, launched nothing, and stopped on three questions the review handed back, which the
+# fixture's change, one line to each of its sections, does not answer, with the brief's test to
+# confirm: it passes up to that first question; «lancio?» itself is not measured. The seven cases
+# of `contribute` stay the measurement of 4.12.0; their fixture now pins 4.13.0, under which a
+# delivery comes from a launch, and a later version writes them again and runs them.
+#
+# THE LIMITS, KNOWN. A code session that writes both its brief and the launch file, the print
+# rewritten to match, gets its own command granted at the next resume: both sit in the exchange,
+# which its guard opens to it, and the print checks a brief changed, not a launch file forged. The
+# lines a stop prints for the documentation session to run -- `generated:` at a step in conflict,
+# `prepare:` -- are read from the brief as it is, which the code session may have changed: they are
+# shown before they run and run on the person's yes alone. And with no copy of the brief as
+# launched, a refused resume cannot say which lines changed. A copy out of the code session's
+# reach, read by `--resume`, the stops and `--status`, is for 4.13.1. Until then, too: the print is
+# taken at `--launch`, from the brief as it is then, not as it was reviewed; a stop nobody read,
+# recovered by `--resume` or `--status`, prints the lines of the brief as it is before the print is
+# compared; the print holds the *Commands* alone, the rest of the brief not; a brief reviewed whole
+# after a refusal has a brief's passes, one for a hotfix's, with no word that it may hold lines the
+# code session wrote; and the print, a sha-256 over the commands as written, lets a short value in
+# a `test:` line be guessed, so that it holds no value only literally.
+# Where a rule of the forge forbids forced pushes on the code branch, every push
+# of a branch re-applied on its base is refused, and keeping the remote and re-applying goes round
+# in circles. With `merge_method: rebase` on a repository that does not admit a rebase, the join
+# merges another way, but `--join-base` still re-applies and forces the push: the way out is
+# `--join-base merge`. A merge the person makes in the code session's worktree, a `git pull` for
+# one, reads as a join of the base. On a forge `join` does not call, a thread's code is merged by
+# whoever decides at the join's first step, so it lands before the join's review, where on GitHub it
+# lands after. No check reads the `evidenze/` of a hotfix for credentials before it enters the
+# history of the documentation on its parking branch -- the documentation session reads its text
+# files, by the skill's word alone --, and nothing reads an image: what a screenshot shows enters as
+# it is. From 4.13.0 no join writes the `SIG`, the `ICG` and the `CHG` of a `no-chg` hotfix fixed by
+# hand outside any launch, which below 4.13.0 the first join did: by the rules of this version it
+# does not happen, every code session starting from a documentation session. Not tried on GitHub:
+# merging a merge request merged at another head, a merge queue, `DRAFT`, `BEHIND` and `UNKNOWN`,
+# and the push with lease under a ruleset. macOS is not tried; on Windows outside WSL `code`
+# refuses.
+#
+# THE LIST 4.12.0 SENT ON, ITEM BY ITEM. The code session that the thread's documentation session
+# starts on the same machine: done, and wider -- every code session, from every documentation
+# session, in both modes, above --, and the other machine is no road of its own any more. The trial
+# of the Bash sandbox on a machine, before the sandbox is required: tried in part, on 9/11, on
+# Claude Code 2.1.319 on Linux under WSL2 with `bubblewrap` and `socat` -- a write of the session's
+# Bash in the code session's worktree fails as a read-only file system, the network fails as a
+# command naming its host, and the third entry lets `code` out with the network and its
+# writes --; the two commands of 4.12.0 let out, a commit in a thread's worktree, `check` and
+# `meetings` are still what Claude Code's documentation says, untried, and requiring the sandbox is
+# for a later version.
+#
+# MINOR, ARGUED. Something arrives -- a command, `exchange.py code`, with its four calls and
+# `--join-base`; options of `join`, `--merge-method`, `--merged`, `--merged-elsewhere` and `--out`;
+# two fixed names of the exchange; an optional key, `merge_method`; a line in a change's
+# verification, `Merge request: <link> @ <commit>`, and one in a join's merge, `merge-request:`; a
+# third entry in the recommended sandbox; the requirements of a machine to implement, the exchange
+# declared and `claude`, and `gh` for a join on GitHub, which `doctor` and the refusals of `code`
+# say and no check of a document --, and one thing moves: `implemented` on the change of a mandate's
+# thread, from whoever holds the thread to the join that merges its code. No document stops
+# validating under the version it pins, and no check fails where it passed, but in one case: an
+# annotation on the `EXC003` of an `INTEGRATO` whose only cause was a block that says nothing
+# delivered beside others -- a second integration joined by hand -- matches nothing once the rules
+# of 4.13.0 read it, and is then an `AN001`, an error, on every machine that holds that exchange;
+# it is removed. Outside the additive mode `migrate.py` lists it under NEW, and `--adopt` refuses
+# while it is there. In the mode the comparison reads the join's commit in a folder of its own,
+# with no exchange beside it, and reads no annotation on the exchange's checks: `--adopt` does not
+# refuse, and whoever adopts removes it on the join's branch, or it is an `AN001` once the join
+# lands. A validator older than 4.13.0 reads `merge_method` as `WK001`, a warning, as `work.yaml`
+# was made for.
+#
+# ADOPTION: each person updates the plugin first, which brings the skills, the agents, the preamble
+# and `exchange.py code`; whoever still has 4.12.0 is told by its hook, at every session, that the
+# plugin is older than the pin. Every machine that implements needs `claude` on the `PATH`, and
+# whoever runs a join in the additive mode where the code is on GitHub `gh`, logged in; once the
+# project pins 4.13.0, `work.py doctor --who "<name>"` says what a machine lacks of it, with or
+# without a `work.yaml`. The recommended sandbox gains its third entry,
+# `python3 *exchange.py* code *` (`references/workstation.md`). Two lines come before `--adopt`,
+# which writes neither, and the audit skill writes them where they are missing
+# (`skills/audit/SKILL.md`): `exchange: ../_scambio` in `.framework/sessions.yaml`, unless the
+# project keeps another place, and, in the additive mode, `merge_method` in `.framework/work.yaml`,
+# the admin's values, asked and not read off a forge -- in that mode both committed on the branch of
+# the join that brings 4.13.0, outside it the exchange on the person's yes. Then
+# `migrate.py --root <project>` and `--adopt`, in the additive mode on the branch of a join; it
+# brings the sections of `AGENTS.md` this version changed where they are still the template's text:
+# `exchange`, which now says the launch; `additive`, the thread that does not write `implemented`
+# and the `hotfix-...` branch; `review`, the two new briefs of one pass and the pass more on the
+# *Commands* the person changes at the launch proposed. In the additive mode
+# whoever writes only code enters `people` before implementing, since they hold the change's thread;
+# a thread taken before the adoption whose change is written `implemented` on its branch lands when
+# whoever decides says, at the join, that its code is merged; and a parking branch opened as
+# `hotfix-...` before the adoption is read as a hotfix's from then, landing only with the line of a
+# merge request: its work goes on a parking branch named otherwise. A join that brings code is
+# finished with the plugin of 4.13.0: `--merge` refuses a signature of an older `--finish`, and
+# `--finish` again signs it. Copies of `ci/branches.yml`, `ci/refs.yml` and `ci/pull-request.yml`
+# move `ref:` to `v4.13.0`, a copy of `ci/contribution.yml` its sha to the commit `v4.13.0` names;
+# no workflow changed in this version. The project's levers stay its own, the protection of the
+# code's branches on the forge among them.
+#
+# WHAT IS NOT HERE. Not done, by choice: a launch on another machine -- there that machine's
+# documentation session launches, and nothing travels between the two --; a stop or a flag on a
+# session opened by hand in a code repository; anything of the framework's own that keeps the code
+# session from a commit or a push -- the boundary on the code is the forge's protection of its
+# branches, the project's lever --; the merge of a hotfix's code, which a join only checks. For
+# later, from 4.12.0 and still open: the rest of the trial of the Bash sandbox on a machine -- the
+# two commands of 4.12.0 let out, a commit in a thread's worktree, `check` and `meetings` --, and
+# requiring the sandbox, decided after it; a thread holding only known issues, whose work is an
+# effect describing them, which is never ready, since a contributor closes a `KI` only by
+# repairing it; a baseline arm that turns off the framework's plugin alone, keeping the login; the
+# store's remote in the recommended sandbox, so that the digest brings it up to date under it; the
+# message of `RMP003`; in the additive mode with `--thread`, a `decide_with` naming no entry still
+# gets "closed, parked, or a known issue an approved mandate repairs", a message moved and not
+# rewritten; the fixture `audit/clean-repo`, whose `ICG-001` calls `DEC-001` the warehouse choice
+# while it decides only the landing zone; and the memory workspace, which still selects the files
+# git ignores and is reached only from code that nothing calls. For later, from this version: a copy
+# of the brief as launched out of the code session's reach, read by `--resume`, the stops and
+# `--status`, so that a refused resume says the lines that changed and a stop prints the commands
+# as reviewed; the
+# seven behaviour cases of `contribute`, the measurement of 4.12.0, written again for 4.13.0 and
+# run; «lancio?» measured by a run, which `code-launch` did not reach; and two inconsistencies of
+# `contribute/launch/team` that its run found, kept as the runs of 4.13.0 read them: `ARC.md`, from
+# `audit/clean-repo`, declares verified a commit, `9f2ab41`, that the code repository
+# `additive_launch.py` writes beside it does not hold, and `CHG-001` affects `ARC.md#target`, as
+# `additive.py` writes it, while `ICG-001`, from `audit/clean-repo`, places the impact on
+# `#current`. And the review of a brief whose substance, handed back by its review, the person
+# settles outside a join: the pass more on a person's corrections is the join's, and no text says
+# whether a brief the answers rewrite, as the three questions of `code-launch` would, is reviewed
+# again whole, as any brief before it is shown, or on the answers alone.
+version: "4.13.0"
 
 # ON EVERY CLOSED VOCABULARY IN THIS FILE, AND THE VALUE THAT KEEPS GETTING LEFT OUT.
 # Three enums were extended on the same day, and the omissions were not random: every one of

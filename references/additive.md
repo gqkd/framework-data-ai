@@ -283,7 +283,8 @@ three passes wherever it is written (`references/preamble.md`, the review) -- bu
 from 4.12.0 pinned, which has one, written in its lightning join, and from 4.13.0 pinned, or no
 version that reads, one too where it is rewritten in the exchange of another machine that
 launches the hotfix, and for the brief of a hotfix with `no-chg`, whose change is written later
-(`contribute`, *The hotfix*).
+(`contribute`, *The hotfix*); and, from 4.13.0, every brief one pass more on the *Commands* the
+person changed at the launch proposed, on them alone (`cycle`, Step 6).
 
 ## The rereading
 

@@ -395,8 +395,11 @@ session's.
 now, written whole in a file, for that run only (`--allow`, and only a rule the last stop
 proposed); the answer to its question (`--reply`, a file); or neither, after the documentation
 session ran `git rebase --continue` or the commit that concludes a merge of the base, or after
-a stop with nothing to approve or answer. **`--status`** says whether it runs and where it
-stopped. A resume or a new launch is made from any documentation session of the machine.
+a stop with nothing to approve or answer. It refuses a brief whose *Commands* no longer match
+the print `--launch` kept: the brief sits in the delivery folder, which the code session writes,
+and a command changed after the launch is a new launch's, its brief reviewed whole, since no copy
+of the brief as launched is kept (`cycle`, Step 6). **`--status`** says whether it runs and where
+it stopped. A resume or a new launch is made from any documentation session of the machine.
 
 **The stops.** Each run ends on one, said in a few lines and written in the launch file, exit 0:
 
@@ -493,8 +496,9 @@ base (below), in progress, and only there, a preparation that fails on the confl
 stop the launch. The generated files the brief names beside the preparation -- a lockfile,
 with the command that regenerates it -- the code session never writes: at the stop on the
 `--continue` of a step that holds one in conflict, or whose commit changes one, the
-documentation session regenerates it and adds it, in view, before the question; once the rebase
-is over it runs the preparation again on the final tree, before the code session goes on.
+documentation session shows the command, read from the brief as it is, and on the person's yes
+regenerates it and adds it, in view, before the question on the step; once the rebase is over
+it runs the preparation again on the final tree, before the code session goes on.
 
 **The person's `rerere` off.** The joins `--join-base` makes, and the commands printed for
 joining, for each `--continue` and for the commit that concludes a merge of the base, carry
@@ -526,8 +530,8 @@ integrated again, the line naming the new commit.
   person's `rerere` off, its commits said to the code session as not its own. A merge stopped
   on conflicts goes to the code session first, which resolves them and stops on the commit that
   concludes the merge: that commit is the documentation session's, on the person's yes, as the
-  step of a rebase, the generated files regenerated before the question and the preparation run
-  after it. It is pushed at once, before the code session goes on; refused, the remote having
+  step of a rebase, the generated files regenerated on a yes before the question and the preparation
+  run after it. It is pushed at once, before the code session goes on; refused, the remote having
   moved meanwhile, the remote is kept, `git reset --keep origin/<branch>`, and the base joined
   again, the code session resolving its conflicts again. So too where the branch holds a join
   of the base not pushed and the remote has moved: the first call does not propose to join
@@ -564,7 +568,8 @@ element whose last run has not ended: `--status`, under WSL, Linux or macOS, say
 
 **The launch file**, `sessione-codice.json`, holds the launch and its runs -- the session, the
 repository, the worktree, the branch and its start, the rules granted and approved as history,
-each run's stop and the code session's answer -- and no value: one beside a name is withheld.
+the print of the brief's *Commands* at the launch, each run's stop and the code session's answer
+-- and no value: one beside a name is withheld.
 Anybody can write it, the code session too, so each reading takes it whole or not at all: one
 not as the command writes it is refused at `--launch`, `--resume` and `--status`, and the first
 call writes a new one in its place, without its history, once no code session it names can

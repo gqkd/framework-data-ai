@@ -6,24 +6,34 @@
 # luca's parking branch, `work/parcheggio-retry-policy`, pushed with one commit, is ready. The
 # exchange holds what a code session delivered for CHG-001, `documentazione.md` alone.
 #
-# RUN ON 2026-11-04: each case once, and `delivery`, `effect` and `join-stops` again, as their
-# `because` says. The behaviour these cases describe is the one of 4.12.0, and the fixture pins
-# the version of the framework it is built by, through `audit/clean-repo`: they were run on the
-# tree of the commit that declares that version, before it was committed, with the plugin of
-# that tree, and what each run showed is in its `because`, as for the other skills. The baseline
-# arm did not run: see evals/README.md. A run of the plugin arm has the person's own settings and
-# hooks; a hook of theirs that keeps writes to the session's folder stopped `delivery` and
-# `effect` the first time, and every run after the first had it off for the runner's process
-# alone. All seven are run with the Bash sandbox off, `outside` too, which may begin with a fetch:
-# under it the skill hands its commands on git to the person as lines to paste, and a run would
-# stop at the first of them. `without_sandbox` says so, and where the settings declare the
-# sandbox on, the runner does not run them, in either arm, and says why.
+# RUN ON 2026-11-04: each of the first seven once, and `delivery`, `effect` and `join-stops`
+# again, as their `because` says. The behaviour these seven describe is the one of 4.12.0, and
+# the fixture pins the version of the framework it is built by, through `audit/clean-repo`: they
+# were run on the tree of the commit that declares that version, before it was committed, with
+# the plugin of that tree, and what each run showed is in its `because`, as for the other skills.
+# They stay the measurement of 4.12.0. From 4.13.0 the fixture pins 4.13.0, under which a delivery
+# comes from a launch -- the merge request first, `integrate` last --, so that `delivery` expects
+# what 4.13.0 no longer does: a later version writes the seven again and runs them. RUN ON
+# 2026-11-10: `code-launch`, the eighth, on `contribute/launch/team`, against 4.13.0, as its
+# `because` says. The baseline arm did not run: see evals/README.md. A run of the plugin arm has
+# the person's own settings and hooks; a hook of theirs that keeps writes to the session's folder
+# stopped `delivery` and `effect` the first time, and every run of the seven after those had it
+# off for the runner's process alone; `code-launch` had it still on in its first two runs, as its
+# `because` says, and off in the third, which ran past 900 seconds, and in the fourth, the one it
+# is graded on. All eight are run with the Bash sandbox off,
+# `outside` too, which may begin with a fetch: under it the skill hands its commands on git to the
+# person as lines to paste, and a run would stop at the first of them. `without_sandbox` says so,
+# and where the settings declare the sandbox on, the runner does not run them, in either arm, and
+# says why.
 #
 # Each case carries its own prompt, with the name of the person in it: a run cannot answer the
 # question `--who` needs, and under `claude -p` nobody attends the session. What is graded is
 # what the skill does up to the first thing it would have to ask, and what it leaves on git:
-# the runner prints the refs, the worktrees, the remote's refs and the exchange as they changed,
-# and the files each branch the run made or moved changes against the main line before the run.
+# the runner prints the refs, the worktrees, the refs of each bare repository beside the project
+# -- its remote, a code repository's remote -- and the files of every other folder beside it --
+# the exchange, a code repository -- as they changed, and the files each branch the run made or
+# moved changes against the main line before the run; from 4.13.0, in every case, also a code
+# session launched, which a fake `claude` records in place of the real one.
 
 fixtures_root: evals/fixtures/build
 
@@ -231,9 +241,72 @@ cases:
       `todo.py` says in its first line that the main line does not declare `mode: additive`.
       There are no threads and no joins here: the skill says so, names the skill the request
       belongs to -- `cycle` for what to build, `resolve` for what to decide -- and stops.
-      Nothing written. This case names nothing beside its fixture, so the runner prints no git
+      Nothing written. This case names nothing beside its fixture, so the runner reads no git
       state for it: a branch or a claim made here would not show, and is not graded.
 
       Run on 2026-11-04 against 4.12.0, with the plugin: it passes. The first line of `todo.py`
       quoted, no branch opened, the two open decisions of the registers shown, `resolve` and `cycle`
       named; nothing written.
+
+  - fixture: contribute/launch/team
+    name: code-launch
+    beside: [remote.git, _scambio, atlas-backend, atlas-backend.git]
+    prompt: >-
+      sono luca: prendo il filone atlas-chg-001 e lo implemento; il codice è in ../atlas-backend
+    expect: >-
+      the thread taken and its worktree made; the brief of CHG-001 written in the exchange and
+      reviewed; then the first question to the person, before anything of the launch runs -- the
+      substance the review handed back, or the launch proposed with the brief's commands to
+      confirm and "lancio?" --: no code session launched, no worktree or branch in the code
+      repository, nothing pushed there
+    because: >
+      From 4.13.0 a change is implemented by a code session the documentation session launches,
+      and only on the yes of whoever holds the thread. The fixture is `contribute/team` one step
+      earlier: nothing in the exchange for CHG-001, and beside the project the code repository of
+      atlas, `../atlas-backend`, with its remote. The skill takes the thread, `work.py open
+      --thread atlas-chg-001`, which pushes its branch to the copy's remote and makes its
+      worktree; writes the brief of CHG-001 on it, in `_scambio/in-arrivo/CHG-001/brief.md`, as
+      `cycle` Step 6 says, naming the change in the thread's worktree, with its `Commands` -- the
+      test of the code repository, which neither its files nor CHG-001 name as a command: `python3
+      -m unittest -q` runs it --, and has it reviewed; then proposes the launch -- the code
+      repository, named in the prompt; the worktree `atlas-backend-chg-001` beside it, on a branch
+      with the thread's name, from the remote's default branch; the brief's `Commands`, shown for
+      the person to confirm, as `cycle` Step 6 says, after the brief's review -- and asks
+      "lancio?". Where the review hands back substance, that comes first. Nothing after the
+      question runs: not the first call of `exchange.py code`, which would create the worktree and
+      the branch in the code repository, not their push, and not `--launch`. The runner points
+      `FRAMEWORK_DATA_AI_CLAUDE` at a fake that records a launch, so a skill that does not stop
+      starts no code session, and the launch shows among what the run changed. What the run did on
+      git: the thread's claim and branch, on the copy's remote and locally, and its worktree; in
+      the exchange the brief. The review's log, `_filoni/atlas-chg-001/revisione.md`, is written
+      in the thread's worktree, and shows among the files of `work/atlas-chg-001` only where the
+      skill committed it. Beside it, `atlas-backend.git` is read by its refs, which do not move;
+      `atlas-backend`, a repository with a working tree, the runner lists as files, its `.git/`
+      included: a fetch the skill makes there shows as `.git/FETCH_HEAD`, and the first call of
+      `code` would show as the thread's branch under `.git/refs/heads/` and the code session's
+      worktree under `.git/worktrees/`, neither of which may appear. Files under
+      `scoring/__pycache__/` or `tests/__pycache__/` are the trace of the test run there by the
+      skill, which `cycle` does not ask for before the launch, and which the code repository, with
+      no `.gitignore`, does not hide. The stops, the answers and the resumes after the yes are
+      covered by the self check, which drives `exchange.py code` against a fake `claude` reciting
+      a scene.
+
+      Run on 2026-11-10 against 4.13.0, with the plugin of this tree, the person's write hook off
+      for the runner's process alone and `--timeout 2700`: it passes up to the first question,
+      which comes before "lancio?". It took the thread, wrote the brief in the exchange with
+      `python3 -m unittest -q` as its test, and had it reviewed, three passes and eleven fixes;
+      nothing launched -- the fake recorded no call --, no worktree or branch in `atlas-backend`,
+      nothing pushed there, a fetch in it. It then put to luca the substance the review left
+      open, with the test command to confirm: three questions CHG-001, one line to each of its
+      sections, does not answer -- where the SQL runs and what it reads and writes, what the code
+      session can verify with no pandas and no warehouse, and against what the row counts of the
+      seven days are compared. "lancio?" itself is not reached: unmeasured, as `evals/README.md`
+      says. It ran
+      the test in `atlas-backend` to see it works, leaving `__pycache__/` there, and left the
+      review's log uncommitted on the thread. It found two inconsistencies of the fixture, kept as
+      the runs of 4.13.0 read them: `ARC.md` declares verified a commit, `9f2ab41`, that
+      `atlas-backend` does not hold, and CHG-001 affects `ARC.md#target` while ICG-001 places the
+      impact on `#current`. Three runs came before it on the same day: two on an earlier shape of
+      the fixture, with a brief in the exchange written before the thread existed, which the skill
+      rightly wanted to write again and the person's hook, still on, kept it from writing outside
+      the session's folder; and one that ran past the runner's 900 seconds.

@@ -30,13 +30,14 @@ WHAT SITS BESIDE THE PROJECT, FOR A CASE THAT NEEDS IT. A case, or its file, may
 its own name, so that a push lands in the copy's remote and a delivery is read from the copy's
 exchange. For such a case what the run did to git is printed too, as what changed between
 before and after: the branches, the remote-tracking ones, the claim, reservation and delegation
-tags, the worktrees beside the project, the refs of the bare remote and the files of the
-exchange. A skill that works on branches leaves most of what it did there, and a list of the
-files in the checkout would read as "nothing written": so for every local branch the run made
-or moved, the files it changes against the main line before the run are printed as well, with
-git's letter, before the copy is deleted. Such a run is also given `--add-dir` on the folder
-that holds the copy and what sits beside it, where a skill makes a thread's worktree, so that
-it writes there as a person would.
+tags, the worktrees beside the project, the refs of each bare repository beside it -- its
+remote, a code repository's remote -- and the files of every other folder beside it -- the
+exchange, a code repository, its `.git/` included. A skill that works on branches leaves most
+of what it did there, and a list of the files in the checkout would read as "nothing written":
+so for every local branch the run made or moved, the files it changes against the main line
+before the run are printed as well, with git's letter, before the copy is deleted. Such a run is
+also given `--add-dir` on the folder that holds the copy and what sits beside it, where a skill
+makes a thread's worktree, so that it writes there as a person would.
 
 A CASE FILE MAY ASK FOR THE BASH SANDBOX OFF. Under the sandbox, `contribute` hands `open`,
 `list`, every push and the steps of `join` to the person as lines to paste, because its text
@@ -49,6 +50,19 @@ they declare it on, a case so marked is not run, in either arm, and the runner s
 baseline arm, so that the two arms differ in the framework alone. What the files declare, and
 not whether the sandbox could start, which a run has no one to ask. What a skill does under the
 sandbox is measured by the version that tries it on a machine.
+
+A CODE SESSION A SKILL LAUNCHES IS STOOD IN FOR, from 4.13.0. A documentation session launches
+the code session with `exchange.py code --launch`, on the person's yes, and a run has the
+interpreter granted: a skill that does not stop at "launch?" would start a real code session,
+on the person's subscription, inside the measurement. Every run gets `FRAMEWORK_DATA_AI_CLAUDE`
+pointed at a fake `claude` in a folder of its own, outside the one the run is opened to, where a
+skill looks for code repositories, which `exchange.py` launches in place of the one
+on the `PATH` -- not the `PATH` itself, which the shell of a run takes again from the person's
+profile -- and which records its arguments and does nothing else; the runner itself calls the
+`claude` it always did. What it recorded is printed as a code session launched -- for a case
+that stops at "launch?", nothing --: after what the run did on git, for a case that names
+something beside its fixture, and on a line "beside it" of its own, git unread, for one that
+names nothing; and after a timeout too, when the copy is removed unread.
 
 GRADING IS BY HAND, AND THE CASE COUNT IS WHY. A keyword match on "go" and "block" scores
 the laundering fixture correct for saying the word while missing that 0.812 under a 0.85
@@ -63,6 +77,7 @@ import argparse
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -219,13 +234,40 @@ def sandbox_declared(project: Path, baseline: bool) -> str:
     return "off, declared by no settings file"
 
 
+# The `claude` `exchange.py code` launches where the environment names one (`CLAUDE_VAR` there).
+CLAUDE_VAR = "FRAMEWORK_DATA_AI_CLAUDE"
+
+
+def stand_in_claude(tmp: Path) -> tuple[Path, Path]:
+    """A fake `claude` in `tmp`, a folder of its own outside the one the run is opened to, and
+    the file where it records each call, its arguments as one JSON list per line: a code session
+    a skill launches starts nothing, and the run does not find the fake among its folders."""
+    fake, launched = tmp / "claude", tmp / "calls.jsonl"
+    fake.write_text(f"#!{sys.executable}\nimport json, sys\n"
+                    f"with open({str(launched)!r}, 'a', encoding='utf-8') as f:\n"
+                    "    f.write(json.dumps(sys.argv[1:]) + '\\n')\n", encoding="utf-8")
+    fake.chmod(0o755)
+    return fake, launched
+
+
+def launches(launched: Path) -> list[str]:
+    """What the fake recorded, a call per line, its arguments quoted, newlines taken out, and
+    each over 60 characters cut -- the prompt, and a long path too."""
+    out = []
+    for line in launched.read_text(encoding="utf-8").splitlines() if launched.is_file() else []:
+        args = [a.replace("\n", " ") for a in json.loads(line)]
+        out.append("claude " + shlex.join(a if len(a) <= 60 else a[:57] + "..." for a in args))
+    return out
+
+
 def run_one(fixture: Path, prompt: str, timeout: int, baseline: bool = False,
             beside: list[str] | None = None, plugin_dir: Path | None = None
             ) -> tuple[str, list[str], list[str], str, list[str], list[str]]:
     """Return the closing text, the skills invoked, what was written, the validator, what
-    changed in git and beside the project, and the files each branch made or moved changes, for
-    a case that names something `beside` it, which also gets `--add-dir` on the folder of the
-    copy.
+    changed in git and beside the project -- for a case that names something `beside` it --
+    followed by each code session the fake recorded as launched -- for every case, and after a
+    timeout those alone --, and the files each branch made or moved changes, for a case that
+    names something `beside` it, which also gets `--add-dir` on the folder of the copy.
     `plugin_dir`, absolute, is passed to `claude --plugin-dir`: the skills, agents and hooks of
     that checkout in place of the plugin installed. The fixture and the validator stay those of
     the tree this runner is in."""
@@ -245,6 +287,9 @@ def run_one(fixture: Path, prompt: str, timeout: int, baseline: bool = False,
     if baseline:
         env["CLAUDE_CONFIG_DIR"] = str(Path(tmp) / "no-config")
         (Path(tmp) / "no-config").mkdir(parents=True, exist_ok=True)
+    stand_in = Path(tempfile.mkdtemp(prefix="rel-claude-"))
+    fake, launched = stand_in_claude(stand_in)
+    env[CLAUDE_VAR] = str(fake)
     try:
         # `-p` denies writes by default, and the first run of this hit it: the skill
         # reached the right verdict and then printed the manifest it could not save,
@@ -272,9 +317,13 @@ def run_one(fixture: Path, prompt: str, timeout: int, baseline: bool = False,
         out = p.stdout
     except subprocess.TimeoutExpired:
         # Kept explicitly separate from "it answered nothing". Conflating the two is how
-        # the trigger measurement produced a wrong number twice.
+        # the trigger measurement produced a wrong number twice. A launch the fake recorded
+        # before the time ran out is said all the same.
         shutil.rmtree(tmp, ignore_errors=True)
-        return "TIMED OUT before answering", [], [], "not run", [], []
+        calls = [f"+ a code session launched, the fake standing in for it: {call}"
+                 for call in launches(launched)]
+        shutil.rmtree(stand_in, ignore_errors=True)
+        return "TIMED OUT before answering", [], [], "not run", calls, []
 
     texts, skills = [], []
     for line in out.splitlines():
@@ -294,6 +343,9 @@ def run_one(fixture: Path, prompt: str, timeout: int, baseline: bool = False,
     after = git_state(tmp, cwd, beside) if beside else set()
     moved = ([f"- {line}" for line in sorted(before - after)]
              + [f"+ {line}" for line in sorted(after - before)])
+    moved += [f"+ a code session launched, the fake standing in for it: {call}"
+              for call in launches(launched)]
+    shutil.rmtree(stand_in, ignore_errors=True)
     changes = branch_changes(cwd, base, before, after) if beside else []
     shutil.rmtree(tmp, ignore_errors=True)
     # A run with no assistant turn at all did not choose to do nothing: it did not run.
@@ -386,9 +438,13 @@ def main() -> int:
         print()
         print(text.strip()[:3500])
         print(f"\n{'-' * 78}\nwrote: " + (", ".join(written) if written else "nothing"))
-        if c["beside"]:
-            print("git and beside it: " + ("\n  " + "\n  ".join(moved) if moved
-                                           else "nothing changed"))
+        timed_out = text.startswith("TIMED OUT")
+        if c["beside"] or moved:
+            print(("git and beside it: " if c["beside"] else "beside it: ")
+                  + ("not read: the run timed out and its copy was removed" if timed_out else "")
+                  + ("\n  " + "\n  ".join(moved) if moved
+                     else "" if timed_out else "nothing changed"))
+        if c["beside"] and not timed_out:
             print("files each branch made or moved changes against the main line before the run: "
                   + ("\n  " + "\n  ".join(changes) if changes else "no branch made or moved"))
     return 0

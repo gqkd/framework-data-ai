@@ -45,6 +45,8 @@ GENERATED = {
     "digest": ("digest.py", "digest"),       # writes two: atlas and atlas-asks
     "digest-stages": ("digest_stages.py", "digest-stages"),   # writes borea
     "contribute": ("additive.py", "contribute/team"),
+    # The same project before its code session, with the code repository beside it: a launch.
+    "contribute-launch": ("additive_launch.py", "contribute/launch/team"),
 }
 STATIC = {
     "resolve/ordering-a": "ordering-a",

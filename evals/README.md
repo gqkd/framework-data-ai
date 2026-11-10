@@ -333,35 +333,46 @@ python evals/behaviour/run.py release  # or audit, cycle, requirement, resolve, 
 
 Seven of them have a run, and every one of those found something; in five cases the defect was in
 this repository rather than in the skill: a gate rule that blocked on metrics the plan declares
-non-blocking, a fixture claiming a coverage it did not have, a measurement that could not reach the
-validator the skill is told to run first, a truncated transcript read as a result, and, for
+non-blocking, a fixture claiming a coverage it did not have, a measurement that could not reach
+the validator the skill is told to run first, a truncated transcript read as a result, and, for
 `contribute`, a case that called a line of a delivery plain when it settles an open decision and a
 fixture whose `ICG-001` calls `DEC-001`, the landing zone, the warehouse choice, not fixed yet.
-`digest` has a case and no run yet. The seven of `contribute`, written for the behaviour of 4.12.0,
-ran on 2026-11-04 on the tree of the commit that declares it, since the fixture pins the version it
-is built by, with the plugin of that tree: four pass as written; `delivery` and `effect` pass on a
-second run, the first stopped by a write hook of the person's own that keeps writes to the
-session's folder, run again with it off for the runner's process alone; `join-stops` carries the
-join through the whole review and stops on an objection of it that is the admin's, before the acts
-of decision, `--finish` and «procedo?»: it does not reach its end. The run of `effect` found that a
-thread holding only known issues, whose work is an effect describing them, is never ready: a point
-for a later version. Each `because` says what its run showed. A case may name in `beside` what the
-build put next to its fixture -- `contribute/team` has its remote at `../remote.git` and the
-exchange at `../_scambio` --, copied next to the copy; for such a case the runner also prints what
-the run changed on git and beside the project: the branches, the claim, reservation and delegation
-tags, the worktrees, the remote's refs and the files of the exchange, and, before the copy is
-deleted, the files each branch the run made or moved changes against the main line before the run,
-since the work of a thread is on its branch and not in the copy. Such a run gets `--add-dir` on the
-folder of the copy, where a thread's worktree goes, so that it writes there as a person would. The
-cases of `contribute` are measured with the Bash sandbox off, and their file says so,
-`without_sandbox`: under it the skill hands its commands on git and beside the project to the
-person as lines to paste, as its text says, and a run would stop at the first of them. The header
-of every case says what the settings `claude -p` reads declare of the sandbox, and where they
-declare it on, a case so marked is not run, in either arm, and the runner says why; what the skill
-does under the sandbox is measured by the version that tries it. `--plugin-dir <checkout>` loads
-the skills, agents and hooks of that checkout in every run, in place of the plugin installed, and
-the case's header names it; the fixtures and the validator stay those of the tree the runner is in,
-so a version not yet released is run from its own tree, with `--plugin-dir` on that tree.
+`digest` has a case and no run yet. The seven of `contribute`, written for the behaviour of
+4.12.0, ran on 2026-11-04 on the tree of the commit that declares it, since the fixture pins the
+version it is built by, with the plugin of that tree: four pass as written; `delivery` and
+`effect` pass on a second run, the first stopped by a write hook of the person's own that keeps
+writes to the session's folder, run again with it off for the runner's process alone; `join-stops`
+carries the join through the whole review and stops on an objection of it that is the admin's,
+before the acts of decision, `--finish` and «procedo?»: it does not reach its end. The run of
+`effect` found that a thread holding only known issues, whose work is an effect describing them,
+is never ready: a point for a later version. Each `because` says what its run showed. Those seven
+stay the measurement of 4.12.0: from 4.13.0 the fixture pins 4.13.0, under which a delivery comes
+from a launch, and a later version writes them again and runs them. The eighth, `code-launch`,
+came with 4.13.0, on `contribute/launch/team`, the same project before its code session with the
+code repository beside it, and ran on 2026-11-10 with the person's write hook off for the runner's
+process: the thread taken, the brief written and reviewed, nothing launched, and a stop on the
+substance the review left open, with the brief's test to confirm, before «lancio?». From 4.13.0
+every run gets `FRAMEWORK_DATA_AI_CLAUDE` pointed at a fake `claude`, outside the folder the run
+is opened to, which `exchange.py code` launches in place of the real one: it records its arguments
+and starts nothing, and a launch it recorded is printed with what the run changed. A case may name
+in `beside` what the build put next to its fixture -- `contribute/team` has its remote at
+`../remote.git` and the exchange at `../_scambio` --, copied next to the copy; for such a case the
+runner also prints what the run changed on git and beside the project: the branches, the claim,
+reservation and delegation tags, the worktrees, the refs of each bare repository beside the
+project -- its remote, a code repository's remote -- and the files of every other folder beside it
+-- the exchange, a code repository --, and, before the copy is deleted, the files each branch the
+run made or moved changes against the main line before the run, since the work of a thread is on
+its branch and not in the copy. Such a run gets `--add-dir` on the folder of the copy, where a
+thread's worktree goes, so that it writes there as a person would. The cases of `contribute` are
+measured with the Bash sandbox off, and their file says so, `without_sandbox`: under it the skill
+hands its commands on git and beside the project to the person as lines to paste, as its text
+says, and a run would stop at the first of them. The header of every case says what the settings
+`claude -p` reads declare of the sandbox, and where they declare it on, a case so marked is not
+run, in either arm, and the runner says why; what the skill does under the sandbox is measured by
+the version that tries it. `--plugin-dir <checkout>` loads the skills, agents and hooks of that
+checkout in every run, in place of the plugin installed, and the case's header names it; the
+fixtures and the validator stay those of the tree the runner is in, so a version not yet released
+is run from its own tree, with `--plugin-dir` on that tree.
 
 `audit` and `resolve` were re-run twice on **2026-08-18**: once against 1.1.0 and the
 register split one per product, and again after 2.0.0 replaced `deadline` with `trigger`
@@ -389,6 +400,12 @@ no skill load; but where the login is a subscription's, it is kept in that folde
 measurement, which both runners now say. The trigger runner has no such arm. `claude plugin eval`
 runs it by itself and is in early access; short of it, a baseline that turns off the framework's
 plugin alone, through `--settings`, is for a later version, tried first.
+
+**«lancio?», by a run.** The one case written for the launch of a code session, `code-launch`,
+stopped on 2026-11-10 before it, on three questions the review of the brief handed back, which
+its `CHG-001`, one line to each of its sections, does not answer: «lancio?» is not measured, nor
+whether a skill that reaches it stops there and launches nothing before the yes, since the run
+never came to the point where it could launch without asking.
 
 **The end of a join, by a run.** No run of `contribute` has reached `join --finish --review
 full`, the `Revisione: completa` line it writes, the `BR` findings read back and «procedo?»:

@@ -25,8 +25,10 @@ One of three things, and the request says which:
   its file and line, with the plan or the diff and the `CHG` the first
   pass had. Read the corrections in the files, and review only them, whether they answer the
   objection they claim to answer, and what they could have broken: the rest has already been
-  reviewed. When the earlier pass left points out, the request names them: review those as in
-  a first pass, leaving out the objections it already gave on them.
+  reviewed. A brief's *Commands* the person changed after its review answer no objection: review
+  each changed line, as it was and as it is, for what it runs or grants. When the earlier pass
+  left points out, the request names them: review those as in a first pass, leaving out the
+  objections it already gave on them.
 
 If the request cites a `CHG`, or the diff or the plan does, read that change contract: its
 `what-must-not-change` section is the boundary the work has to stay inside.

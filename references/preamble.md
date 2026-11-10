@@ -239,17 +239,23 @@ it to the letter. A hotfix is the one exception the other way, and `cycle` says 
 lightning join, before anybody decides, and one on its brief, written in that join -- from
 4.13.0 pinned, or no version that reads, also on the brief of an approved hotfix written again
 on another machine, whose exchange does not hold it, for the launch from its parking branch
-there, and on the brief of a hotfix with `no-chg`, whose change is written later. The next join with
-the whole review reads its `CHG` again, and its delivery when it
-comes; the brief keeps its one pass, its work done once the code is written and its rules the
-`CHG`'s. Where the project pins less, every review is up to three passes, as before.
+there, and on the brief of a hotfix with `no-chg`, whose change is written later. The next join
+with the whole review reads its `CHG` again, and its delivery when it comes; the brief keeps its
+one pass, its work done once the code is written and its rules the `CHG`'s. From 4.13.0 pinned,
+or no version that reads, a brief whose *Commands* the person changes at the launch proposed has
+one pass more, on the commands changed and what they grant alone, whatever passes it had, a
+hotfix's included, which fixes nothing and hands back every objection, a second change with a
+pass of its own (`cycle`, Step 6). Where the project pins less, every review is up to three
+passes, as before.
 
 If the reviser is not in this session, or says it could not launch the critic, run the
-critic yourself, with this framework's path: fix the objections on the proposal, run the
+critic yourself, with this framework's path: fix the objections on the proposal -- none in the
+pass on a brief's changed *Commands*, whose objections go to the person --, run the
 validator again, show the others, and ask it again on your corrections and on the points it
 left out only when `agents/reviser.md` would, with the passes it would have -- three at most,
-one where the paragraph above asks for one, and on the corrections of whoever decides one more
-once the three are spent. If the critic is
+one where the paragraph above asks for one, on the corrections of whoever decides one more
+once the three are spent, and on a brief's *Commands* the person changed one more, on them
+alone. If the critic is
 not in this session either -- the plugin was installed or updated after the session started,
 or the framework is read from a checkout with no plugin enabled -- run a general-purpose
 agent told to read `agents/critic.md` in the framework directory this file sits in, the

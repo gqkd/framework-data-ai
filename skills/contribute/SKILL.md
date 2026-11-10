@@ -117,10 +117,12 @@ propose the launch: the code repository, among the folders beside the documentat
 git repositories -- asked at the first launch of each `CHG`, read back from the launch file
 after --; the worktree the code session works in, `<repository>-<chg>` beside it, on a branch
 with the thread's name, and the branch it starts from, the remote's default or one the person
-names (`--base`); the commands the brief grants, shown and not changed -- to change one is to
-change the brief, with its review. Then ask "lancio?": the yes of whoever holds the thread is
-the gesture, and each step after it is a command of yours, in view, `code` run as
-`python3 <F>/exchange.py --root <thread worktree> code <CHG> ...`, with `<F>` the absolute path
+names (`--base`); the brief's *Commands*, shown for the person to confirm and not changed by
+you -- to change one is to change the brief, reviewed again in one pass on the commands changed
+and what they grant alone, which fixes nothing, and shown again, a second change with a pass of
+its own; after the launch, a new launch (`cycle`, Step 6). Then ask "lancio?": the yes of whoever
+holds the thread is the gesture, and each step after it is a command of yours, in view, `code` run
+as `python3 <F>/exchange.py --root <thread worktree> code <CHG> ...`, with `<F>` the absolute path
 `$F` holds written out and the call alone, as the sandbox's settings let it out:
 
 1. `open` pushed the thread's branch in the documentation (*Taking a thread*), and nobody else
@@ -596,8 +598,9 @@ says "facciamo una hotfix", and you carry the lightning join, with the commands 
    session started in it is closed, since the guard reads its folder from there.
 
 The next join with the whole review reads its `CHG` again, and its delivery when it comes; the
-brief keeps its one pass. `join` lists the `CHG`, from the `Revisione:` line `--finish` writes,
-until a join signed `Revisione: completa` lands. After the lightning join a
+brief keeps its one pass, but for the one more on its *Commands* where the person changes them at
+the launch proposed (`cycle`, Step 6). `join` lists the `CHG`, from the `Revisione:` line
+`--finish` writes, until a join signed `Revisione: completa` lands. After the lightning join a
 hotfix is no thread to take: the to-do lists it apart, `open` refuses it -- from 4.13.0 naming
 its parking branch, the claim of whoever launches its code --, a mandate on the same
 code prefixes waits for it, and whoever decides writes it `implemented` at the first join after its
