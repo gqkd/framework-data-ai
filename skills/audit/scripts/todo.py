@@ -64,15 +64,17 @@ it is no node of its own -- nobody takes it apart from them, even where another 
 it -- and is listed with every mandate to do that repairs it; while every change that repairs
 it waits, the issue is a node, so that nothing a change waits for can wait on it in turn. The
 thread of the change closes it on its branch, `closed_by` the change, when the to-do lists that
-mandate alone for it -- of several listed together, none while another is still listed --; one
+mandate alone for it -- of several listed together, none while another is still listed; from
+`LINK_SINCE` the join that brings the mandate's code in closes it, `THE CODE OF A THREAD` --; one
 its mandates land without closing is a node again. A mandate's thread does not claim it, and
 its own `depends_on` and `decide_with` are not followed while it is in their hands. One a
 thread claimed before -- while its change waited, before the change was approved, or before
 the adoption -- is said with that thread, which releases its claim: the mandate's thread then
-closes it, `closed_by` the change, once the code is merged, and two branches never write its
-row. The other edges stay: the
+closes it, `closed_by` the change, once the code is merged -- from `LINK_SINCE` the join does --,
+and two branches never write its row. The other edges stay: the
 decisions and the changes a change derives from, and the entries its increments require. So a
-mandate whose code is merged and whose closing is pushed is ready, and the next join opened on
+mandate whose code is merged and whose closing is pushed is ready -- from `LINK_SINCE`, one whose
+verification carries the line of its merge request --, and the next join opened on
 the ready threads lands it, whatever else is open. The other nodes meet only nodes of their
 own kind, decisions with decisions and work -- entries that are not decisions, increments to
 decompose -- with work, and an entry with no `affects` is out of the threads, listed to be
@@ -84,10 +86,28 @@ brought and nobody has read since, with the day of that join; `LC009` reminds of
 
 A THREAD OPEN IS FIXED until the join that lands it: the nodes that would fall into its component
 wait for it, "after thread X". It is ready when its elements are done on its remote branch --
-an entry closed, a change `implemented`, an increment decomposed (a change carrying it, or an
+an entry closed, a change `implemented` (or, from `LINK_SINCE`, with the line of its merge
+request), an increment decomposed (a change carrying it, or an
 effect on its anchor); in a thread with a decision and a change, all but its changes, which go
 back to the main line for the next round -- and the branch carries a commit of its own past the
 main line.
+
+THE CODE OF A THREAD, where the main line pins 4.13.0 or later, or no version that reads
+(`LINK_SINCE`). A mandate's thread no longer waits for its code to be merged: the join merges it,
+and writes the change `implemented`, closing the known issues it repairs, which the thread no
+longer closes. Its change is done on the branch when its `## Verification`
+carries the line of its merge request, `Merge request: <link> @ <commit>` -- the link, and the
+commit of the code's branch the delivery was verified at, forty characters --, the last such
+line where there are several. A change written `implemented` on the branch -- before the
+adoption, or one with no code to merge --, or closed there otherwise, is done as before, and the
+join asks whoever decides whether its code is merged before it lets it in, naming the state
+written; the page and the summary say so.
+The to-do reads the line and asks nothing of the forge; `work.py join` asks it, at its first
+step. A hotfix is no thread, and is listed with the name of its parking branch, where whoever
+launches its code delivers it, and which is its claim: `open --branch hotfix-<home>-<change>`.
+A parking branch named so, `parcheggio-hotfix-...`, is ready once a `consegne/<CHG>/mr-link.txt`
+of its delivery carries the same line, the last of the file, and not before -- its own commit is
+not enough --; the join brings it in only once that code is merged.
 
 Read only, and no network: the main line and the remote branches as this clone has them, after
 whatever fetch was last made. Exit 0, or 2 when the repository does not allow it.
@@ -117,11 +137,21 @@ CLOSED_CHANGE = {"implemented", "verified", "rolled-back", "withdrawn"}
 APART_SINCE = "4.11.0"
 # The first version whose to-do keeps a hotfix out of the threads: an approved change with
 # `hotfix: true` has its brief from the lightning join that approved it and its code under way, so
-# nobody takes it; whoever decides writes it `implemented` at the first join after its code is
+# nobody takes it as a thread -- from `LINK_SINCE` whoever launches its code takes it with its
+# parking branch --; whoever decides writes it `implemented` at the first join after its code is
 # merged, and until then it holds the mandates that share its code prefixes, as a mandate a thread
 # holds does. One whose code will not reach production whoever decides withdraws, at a join: it is
 # then no node, and holds nothing.
 HOTFIX_SINCE = "4.12.0"
+# The first version whose mandate's thread is ready with the line of its merge request in the
+# change's `## Verification` (`THE CODE OF A THREAD`, above), and whose hotfix is listed with its
+# parking branch: from it whoever launches a hotfix's code opens that branch, which is its claim,
+# rather than nobody taking it.
+LINK_SINCE = "4.13.0"
+# The line: a link and a whole commit, as `exchange.py integrate`'s verification is written by
+# the thread from what the code session delivered. A list's dash may open it.
+MR_LINE = re.compile(r"^[ \t]*(?:[-*][ \t]+)?Merge request:[ \t]+(https?://\S+)[ \t]+@[ \t]+"
+                     r"([0-9a-f]{40})[ \t]*$", re.M)
 # A line of front matter that writes a change `approved`: the last commit of the main line whose
 # diff adds or removes one, on a hotfix still approved, is the one that approved it. Read by
 # `git log -G`, whose regular expression is POSIX: nothing here that reads otherwise in the basic
@@ -138,6 +168,40 @@ def git(root: Path, *args: str) -> str:
 def bare(ident: str) -> str:
     """`INC-001` out of `c/INC-001`."""
     return ident.rsplit("/", 1)[-1]
+
+
+def merge_request(text: str) -> tuple[str, str] | None:
+    """The link and the commit of the last `Merge request: <link> @ <commit>` line of `text`."""
+    found = MR_LINE.findall(text or "")
+    return (found[-1][0], found[-1][1]) if found else None
+
+
+def verification(body: str) -> str:
+    """A change's `## Verification` section, as the validator locates it; empty where none."""
+    lines = (body or "").splitlines()
+    span = next((s for s in v.locate_sections(body or "")
+                 if s.level == 2 and s.title == "Verification"), None)
+    return "" if span is None else "\n".join(lines[span.heading_line:span.end_line])
+
+
+def hotfix_branch(n: "Node") -> str:
+    """The name after the prefix of a hotfix's parking branch, as `exchange.py code` computes
+    it: `open --branch hotfix-<home>-<change>` opens it as `parcheggio-hotfix-...`."""
+    return "hotfix-" + slug(f"{n.home}-{bare(n.key)}")
+
+
+def delivered_links(root: Path, ref: str) -> dict[str, tuple[str, str]]:
+    """The merge request of each delivery a hotfix's parking branch holds, by change: the line
+    of its `<threads>/<slug>/consegne/<CHG>/mr-link.txt`, read on `ref` as `work.py join` reads
+    it, with no network."""
+    found = {}
+    for path in git(root, "ls-tree", "-r", "--name-only", "--full-tree", ref, "--",
+                    f"{B.prefix(root)}{E.THREADS}").splitlines():
+        m = re.search(r"/consegne/([^/]+)/mr-link\.txt$", path)
+        line = merge_request(git(root, "show", f"{ref}:{path}")) if m else None
+        if line:
+            found[m.group(1)] = line
+    return found
 
 
 def order(ident: str) -> tuple:
@@ -625,6 +689,7 @@ def compute(root: Path, remote: str, main: str) -> dict:
         pinned = {}
     apart = v.rules_hold(pinned if isinstance(pinned, dict) else {}, APART_SINCE)
     hotfix_on = v.rules_hold(pinned if isinstance(pinned, dict) else {}, HOTFIX_SINCE)
+    link_on = v.rules_hold(pinned if isinstance(pinned, dict) else {}, LINK_SINCE)
     nodes, drafts = nodes_of(main_tree, policy, apart)
 
     # Threads open: a work branch with claims, or a parking branch. The others are abandoned,
@@ -666,14 +731,36 @@ def compute(root: Path, remote: str, main: str) -> dict:
         mixed = any(i.startswith("OD-") for i in ids) and any(i.startswith("CHG-") for i in ids)
         pending = [i for i in ids if not i.startswith("CHG-")] if mixed else ids
 
+        # The merge request of each change claimed, where its verification on the branch has
+        # the line (`LINK_SINCE`): what makes the change done, and what the join checks.
+        t["links"] = {}
+        for i in ids:
+            change = tree.changes.get(i) if tree is not None and link_on else None
+            line = merge_request(verification(change.body)) if change is not None else None
+            if line:
+                t["links"][i] = line
+        # The changes claimed written `implemented` -- or closed otherwise -- on the branch with
+        # no line, each with the state written: done, and the join asks whoever decides whether
+        # their code is merged, naming that state.
+        t["implemented"] = {i: tree.changes[i].meta.get("status") for i in ids
+                            if link_on and bare(i).startswith("CHG-") and tree is not None
+                            and tree.closed(i) and i not in t["links"]}
+        # A hotfix's parking branch, by its name: ready with the line of its delivery's
+        # `mr-link.txt`, which `join` checks on the forge, and not from its first commit.
+        t["hotfix"] = link_on and t["parking"] and name[len(prefix):].startswith(
+            f"{B.PARKING}hotfix-")
+        if t["hotfix"]:
+            t["links"] = delivered_links(root, t["ref"])
+
         def done(i: str) -> bool:
             if tree is None:
                 return False
             if bare(i).startswith("INC-"):
                 decomposing = any(i in tree.derives(a)[1] for a in tree.changes.values())
                 return decomposing or f"{main_tree.roadmap.get(i, '')}#{bare(i)}" in anchored
-            return tree.closed(i)
-        t["ready"] = own > 0 and all(done(i) for i in pending)
+            return tree.closed(i) or i in t["links"]
+        t["ready"] = own > 0 and all(done(i) for i in pending) \
+            and (not t["hotfix"] or bool(t["links"]))
         t["effects"] = len(found)
         stamp = git(root, "log", "-1", "--format=%cI", t["ref"]).strip()
         t["age_days"] = (now - datetime.fromisoformat(stamp)).days if stamp else 0
@@ -766,7 +853,7 @@ def compute(root: Path, remote: str, main: str) -> dict:
             "threads": free, "open": open_threads, "after_thread": after_thread,
             "after_join": after_join, "waiting": waiting, "drafts": drafts,
             "unanchored": unanchored, "abandoned": abandoned, "effects": effects,
-            "hotfixes": hotfixes, "hotfix_days": hotfix_days,
+            "hotfixes": hotfixes, "hotfix_days": hotfix_days, "link_on": link_on,
             "ready": ready, "join": join, "unread": unread, "tree": main_tree,
             "repaired": repaired_by(nodes),
             # A repaired issue a thread claimed before -- while its change waited, before the
@@ -808,6 +895,16 @@ def _approved_ago(days: int | None, lead: str = " --") -> str:
     return "" if days is None else f"{lead} approved {days} day{'' if days == 1 else 's'} ago"
 
 
+def _parking(r: dict, n: Node) -> str:
+    """The parking branch of a hotfix, from `LINK_SINCE`: open, and so taken, or its name."""
+    if not r.get("link_on"):
+        return ""
+    name = f"{r.get('prefix', 'work/')}{B.PARKING}{hotfix_branch(n)}"
+    if name in r.get("open", {}):
+        return f" -- parking branch {name}, open: taken"
+    return f" -- parking branch {name}, `open --branch {hotfix_branch(n)}`"
+
+
 def describe(n: Node, tree: Tree) -> str:
     titles = "; ".join(f"{bare(i)} {tree.titles[i]}" if tree.titles.get(i) else
                        (f"{bare(i)} ({i.split('/')[0]})" if "/" in i else i) for i in n.ids)
@@ -831,8 +928,22 @@ def markdown(r: dict) -> str:
         for name, t in sorted(r["open"].items()):
             who = sorted({w for _, w in t["claims"]})
             what = "parking" if t["parking"] else ", ".join(i for i, _ in t["claims"])
+            line = ("" if not t.get("hotfix") else
+                    " -- a hotfix's: `join` brings it in once its code is merged on the forge, "
+                    "which only `join` asks, and until then it waits there"
+                    if t["ready"] else
+                    " -- a hotfix's, by its name: ready once a `consegne/<CHG>/mr-link.txt` of "
+                    "its delivery carries `Merge request: <link> @ <commit>`; a parking branch "
+                    "that is no hotfix's goes on one opened with another name"
+                    if not t.get("links") else "")
+            closed = t.get("implemented") or {}
+            if t["ready"] and closed:
+                line += (" -- " + ", ".join(f"{i} `{s}`" for i, s in sorted(closed.items()))
+                         + " on its branch with no line of its merge request: `join` asks "
+                         "whoever decides whether its code is merged")
             out.append(f"- {name}: {what}; in the hands of {', '.join(who) or '-'}; "
-                       f"{'ready' if t['ready'] else 'not ready'}; effects waiting: {t['effects']}")
+                       f"{'ready' if t['ready'] else 'not ready'}{line}; effects waiting: "
+                       f"{t['effects']}")
         out.append("")
     out.append("## Threads to take")
     if not r["threads"]:
@@ -857,10 +968,13 @@ def markdown(r: dict) -> str:
         out.append("")
     if r.get("hotfixes"):
         out.append("## Hotfixes: no thread to take; `implemented` at the first join after the "
-                   "merge of their code, by whoever decides")
+                   "merge of their code, by whoever decides"
+                   + ("; whoever launches the code of one opens its parking branch, its claim, "
+                      "where the delivery goes" if r.get("link_on") else ""))
         days = r.get("hotfix_days", {})
         for n in r["hotfixes"]:
             out.append(f"- {describe(n, tree)}" + _approved_ago(days.get(n.key))
+                       + _parking(r, n)
                        + ("" if n.declared else " -- no code paths in the contribution policy: "
                           "nothing says which files it changes, and nothing waits for it"))
         out.append("  One whose code will not reach production whoever decides withdraws at a "
@@ -874,11 +988,16 @@ def markdown(r: dict) -> str:
         out.append("")
     if r.get("repaired"):
         out.append("## Known issues an approved mandate to do repairs: closed, `closed_by` the "
-                   "change, by the thread of a mandate listed alone for one -- for a hotfix, by "
-                   "whoever decides at the join that writes it `implemented`")
+                   + ("change, by whoever decides at the join that writes it `implemented` -- "
+                      "the one that brings in the code of a mandate listed alone for one, or "
+                      "after a hotfix's code is merged" if r.get("link_on") else
+                      "change, by the thread of a mandate listed alone for one -- for a hotfix, "
+                      "by whoever decides at the join that writes it `implemented`"))
         held = r.get("repaired_held", {})
         out += [f"- {k}: {', '.join(cs)}" + (f" -- claimed by {held[k]}, which releases it: "
-                                             "its mandate closes it" if k in held else "")
+                                             + ("the join of its mandate closes it"
+                                                if r.get("link_on") else "its mandate closes it")
+                                             if k in held else "")
                 for k, cs in r["repaired"].items()]
         out.append("")
     if r["drafts"]:
@@ -923,7 +1042,12 @@ def summary(r: dict) -> str:
              + (f" To anchor at the next join: {len(r['unanchored'])}." if r["unanchored"] else "")]
     for name, t in sorted(r["open"].items()):
         who = sorted({w for _, w in t["claims"]}) or ["-"]
-        lines.append(f"- open: {name} ({', '.join(who)}){' ready' if t['ready'] else ''}")
+        lines.append(f"- open: {name} ({', '.join(who)}){' ready' if t['ready'] else ''}"
+                     + (", a hotfix's: `join` brings it in once its code is merged on the forge"
+                        if t["ready"] and t.get("hotfix") else "")
+                     + (", with a change closed on its branch with no line of its merge request: "
+                        "`join` asks whoever decides whether its code is merged"
+                        if t["ready"] and t.get("implemented") else ""))
     for t in r["threads"][:10]:
         lines.append(f"- to take: {t['name']} ({', '.join(i for n in t['nodes'] for i in n.ids)})")
     if len(r["threads"]) > 10:
@@ -932,7 +1056,8 @@ def summary(r: dict) -> str:
         ago = _approved_ago(r.get("hotfix_days", {}).get(n.key), ",")
         lines.append(f"- hotfix: {bare(n.key)}{ago}, `implemented` at the first join after its "
                      "code is merged"
-                     + (f"; repairs {', '.join(n.repairs)}" if n.repairs else ""))
+                     + (f"; repairs {', '.join(n.repairs)}" if n.repairs else "")
+                     + _parking(r, n).replace(" -- ", "; ", 1))
     for path, targets in sorted(r["effects"].items()):
         lines.append(f"- effects waiting on {path}: {len(targets)}")
     if r["unread"] is None:
@@ -954,12 +1079,16 @@ def as_json(r: dict) -> dict:
                          "mixed": t["mixed"], "nodes": [n.as_dict(tree) for n in t["nodes"]]}
                         for t in r["threads"]],
             "open": {k: {"claims": [i for i, _ in t["claims"]], "who": sorted({w for _, w in t["claims"]}),
-                         "parking": t["parking"], "ready": t["ready"], "effects": t["effects"]}
+                         "parking": t["parking"], "ready": t["ready"], "effects": t["effects"],
+                         "merge_requests": {c: {"link": link, "commit": sha}
+                                            for c, (link, sha) in t.get("links", {}).items()}}
                      for k, t in r["open"].items()},
             "after_thread": [{"ids": i["node"].ids, "threads": i["threads"]} for i in r["after_thread"]],
             "after_join": [n.ids for n in r["after_join"]], "waiting": r["waiting"],
             "drafts": r["drafts"], "unanchored": [n.ids for n in r["unanchored"]],
-            "hotfixes": [{**n.as_dict(tree), "days": r.get("hotfix_days", {}).get(n.key)}
+            "hotfixes": [{**n.as_dict(tree), "days": r.get("hotfix_days", {}).get(n.key),
+                          **({"branch": f"{r['prefix']}{B.PARKING}{hotfix_branch(n)}"}
+                             if r.get("link_on") else {})}
                          for n in r.get("hotfixes", [])],
             "repaired": r.get("repaired", {}), "repaired_held": r.get("repaired_held", {}),
             "abandoned": r["abandoned"], "effects": r["effects"],

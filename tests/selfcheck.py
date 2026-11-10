@@ -9043,6 +9043,346 @@ def _code_remote_branch():
     return problems
 
 
+@check("exchange.py code joins the base into the code branch on the person's yes, --join-base (V-5): the first call says how far the branch is behind it; joined, the base's commits are told to the code session as not its own and the verification asked again; a merge stopped on conflicts goes to the code session first, its concluding commit -- `git commit` or `git merge --continue` -- is the documentation session's, and the resume after it asks for the verification again; a merge aborted is not taken for one concluded, nor carried as joined into a launch prepared again, and a merge the person made is not taken for the join; the merge pushed at once, and over one not pushed the remote kept and the base joined again (V-6); where the code is merged by a rebase, the branch re-applied on the base and pushed with lease (V-7), over one not pushed whose forced push is refused the remote kept and the branch re-applied again, and once pushed the two joined as R-26 says")
+def _code_joins_the_base():
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp:
+        w = _CodeWorld(Path(tmp).resolve())
+        other = w.tmp / "altro"
+        _git_in(w.tmp, "clone", "-q", str(w.remote), str(other))
+
+        def base(name: str, files: dict) -> None:
+            _git_in(other, "fetch", "-q", "origin")
+            _git_in(other, "checkout", "-q", "-B", "main", "origin/main")
+            _put(other, files)
+            _git_in(other, "add", "-A")
+            _git_in(other, "commit", "-qm", name)
+            _git_in(other, "push", "-q", "origin", "main")
+
+        w.run("--repo", str(w.code))
+        _put(w.tree, {"deps.txt": "alfa\nbeta\n"})
+        _git_in(w.tree, "add", "deps.txt")
+        _git_in(w.tree, "commit", "-qm", "B: beta")
+        _git_in(w.tree, "push", "-q", "-u", "origin", "chg-002")
+        r = w.run("--repo", str(w.code), "--join-base")
+        if r.returncode or "holds origin/main already" not in r.stdout or "behind" in r.stdout:
+            problems.append(f"--join-base with nothing to join: {r.stdout[-300:]!r}")
+        # The base moves: said, and not joined without the yes.
+        base("base: x", {"x.txt": "x\n"})
+        r = w.run("--repo", str(w.code))
+        if "is 1 commit(s) behind origin/main" not in r.stdout or "--join-base" not in r.stdout \
+                or (w.tree / "x.txt").exists():
+            problems.append(f"the branch behind its base: {r.stdout[-400:]!r}")
+        # A merge in progress that no `--join-base` made is the person's: nothing is prepared.
+        _git_in(w.tree, "merge", "--no-ff", "--no-commit", "origin/main")
+        r = w.run("--repo", str(w.code))
+        if r.returncode != 2 or "that no `--join-base` made" not in r.stderr:
+            problems.append(f"a merge the person made: exit {r.returncode}, {r.stderr[-300:]!r}")
+        _git_in(w.tree, "merge", "--abort")
+        # Joined with no conflict: the push printed, the base's commit told to the code session,
+        # and the verification asked again.
+        r = w.run("--repo", str(w.code), "--join-base")
+        if r.returncode or "origin/main joined into chg-002" not in r.stdout \
+                or not (w.tree / "x.txt").exists() or "push -u origin chg-002" not in r.stdout:
+            problems.append(f"--join-base: exit {r.returncode}, {r.stdout[-400:]!r} "
+                            f"{r.stderr[-300:]!r}")
+        _git_in(w.tree, "push", "-q", "origin", "chg-002")
+        w.run("--launch", scene={"answer": "verified"})
+        prompt = w.calls()[-1]["argv"][1]
+        if "joined origin/main into your branch" not in prompt or "base: x" not in prompt \
+                or "verify again" not in prompt:
+            problems.append(f"the launch after the base joined: {prompt[:600]!r}")
+        # In conflict: the merge goes to the code session first, and its commit is the
+        # documentation session's, never a rule.
+        base("base: gamma", {"deps.txt": "alfa\ngamma\n"})
+        r = w.run("--repo", str(w.code), "--join-base")
+        if r.returncode or "stopped on conflicts in deps.txt" not in r.stdout \
+                or "push -u" in r.stdout:
+            problems.append(f"--join-base in conflict: exit {r.returncode}, {r.stdout[-400:]!r}")
+        r = w.run("--repo", str(w.code), "--join-base")
+        if r.returncode != 2 or "a merge in progress" not in r.stderr:
+            problems.append(f"--join-base with a merge in progress: exit {r.returncode}, "
+                            f"{r.stderr[-300:]!r}")
+        # Aborted before any launch, and prepared again: the base is not told as joined.
+        _git_in(w.tree, "merge", "--abort")
+        r = w.run("--repo", str(w.code))
+        kept = w.launch_file()["lanci"][-1].get("base")
+        if r.returncode or kept or "is 1 commit(s) behind origin/main" not in r.stdout:
+            problems.append(f"prepared again after the merge aborted: exit {r.returncode}, base "
+                            f"{kept!r}, {r.stdout[-300:]!r}")
+        # Joined again, and the code session asks for `git merge --continue`: the commit that
+        # concludes the merge is no rule of its own, as `git commit` is not.
+        w.run("--repo", str(w.code), "--join-base")
+        r = w.run("--launch", scene={"deny": [
+            {"tool": "Bash", "input": {"command": "git merge --continue"}}], "answer": "resolved"})
+        if "rule: Bash(git" in r.stdout or "denied: Bash `git merge --continue`, the commit " \
+                "that concludes the merge of the base" not in r.stdout:
+            problems.append(f"`git merge --continue` with the merge in progress: "
+                            f"{r.stdout[-700:]!r}")
+        # Aborted instead of concluded: the resume refuses, and a new launch joins it again.
+        _git_in(w.tree, "merge", "--abort")
+        r = w.run("--resume")
+        if r.returncode != 2 or "was aborted" not in r.stderr:
+            problems.append(f"the resume after the merge aborted: exit {r.returncode}, "
+                            f"{r.stderr[-300:]!r}")
+        r = w.run("--repo", str(w.code), "--join-base")
+        if r.returncode or "stopped on conflicts in deps.txt" not in r.stdout:
+            problems.append(f"--join-base after the merge aborted: exit {r.returncode}, "
+                            f"{r.stdout[-300:]!r}")
+        r = w.run("--launch", scene={"deny": [
+            {"tool": "Bash", "input": {"command": 'git commit -m "merge"'}}], "answer": "resolved"})
+        prompt = w.calls()[-1]["argv"][1]
+        if "the merge stopped on conflicts in deps.txt" not in prompt or "lock.txt" not in prompt:
+            problems.append(f"the launch with the merge in progress: {prompt[:600]!r}")
+        if "stopped on `negata`" not in r.stdout or "rule: Bash(git" in r.stdout \
+                or "-c rerere.enabled=false commit --no-edit" not in r.stdout \
+                or "a merge of the base is in progress" not in r.stdout \
+                or "the push of the merge, at once" not in r.stdout:
+            problems.append(f"the stop on the commit of the merge: {r.stdout[-700:]!r}")
+        # Resolved and committed by the documentation session: the resume asks for the
+        # verification again, and the delivery is a delivery.
+        _put(w.tree, {"deps.txt": "alfa\nbeta\ngamma\n"})
+        _git_in(w.tree, "add", "deps.txt")
+        _git_in(w.tree, "commit", "--no-edit", env={"GIT_EDITOR": "true"})
+        r = w.run("--resume", scene={"write": {"verifica.md": "v"}, "answer": "delivered"})
+        argv = w.calls()[-1]["argv"]
+        if "concluded the merge of origin/main" not in argv[1] \
+                or "deliver the verification again" not in argv[1]:
+            problems.append(f"the resume after the merge's commit: {argv[1][:400]!r}")
+        if "stopped on `consegna`" not in r.stdout:
+            problems.append(f"the delivery after the merge: {r.stdout[-300:]!r}")
+        # The merge not pushed, and a commit on the merge request meanwhile: the two are never
+        # joined by a rebase, which would undo the merge (V-6).
+        _git_in(other, "fetch", "-q", "origin")
+        _git_in(other, "checkout", "-q", "-B", "chg-002", "origin/chg-002")
+        _put(other, {"s.txt": "s\n"})
+        _git_in(other, "add", "s.txt")
+        _git_in(other, "commit", "-qm", "reviewer: s")
+        _git_in(other, "push", "-q", "origin", "chg-002")
+        r = w.run("--repo", str(w.code))
+        if "DIVERGED" not in r.stdout or "Here the base was joined, and not pushed" not in r.stdout \
+                or "reset --keep" not in r.stdout or "rerere.enabled=false rebase " in r.stdout \
+                or "with `--join-base merge`" not in r.stdout:
+            problems.append(f"diverged over a merge of the base not pushed: {r.stdout[-700:]!r}")
+
+    # Where the code is merged by a rebase, the branch is re-applied on the base, and its push
+    # is forced, with lease (V-7).
+    with tempfile.TemporaryDirectory() as tmp:
+        w = _CodeWorld(Path(tmp).resolve())
+        other = w.tmp / "altro"
+        _git_in(w.tmp, "clone", "-q", str(w.remote), str(other))
+
+        def base(name: str, files: dict) -> None:
+            _git_in(other, "fetch", "-q", "origin")
+            _git_in(other, "checkout", "-q", "-B", "main", "origin/main")
+            _put(other, files)
+            _git_in(other, "add", "-A")
+            _git_in(other, "commit", "-qm", name)
+            _git_in(other, "push", "-q", "origin", "main")
+
+        w.run("--repo", str(w.code))
+        _put(w.tree, {"deps.txt": "alfa\nbeta\n"})
+        _git_in(w.tree, "add", "deps.txt")
+        _git_in(w.tree, "commit", "-qm", "B: beta")
+        _git_in(w.tree, "push", "-q", "-u", "origin", "chg-002")
+        old = _git_in(w.code, "rev-parse", "origin/chg-002").stdout.strip()
+        base("base: x", {"x.txt": "x\n"})
+        r = w.run("--repo", str(w.code), "--join-base", "rebase")
+        lease = f"--force-with-lease=refs/heads/chg-002:{old} origin chg-002"
+        if r.returncode or "re-applied on origin/main" not in r.stdout or lease not in r.stdout \
+                or not (w.tree / "x.txt").exists():
+            problems.append(f"--join-base rebase: exit {r.returncode}, {r.stdout[-500:]!r} "
+                            f"{r.stderr[-300:]!r}")
+        r = w.run("--repo", str(w.code))
+        if "DIVERGED" in r.stdout or "was re-applied on origin/main and not pushed" not in r.stdout \
+                or lease not in r.stdout:
+            problems.append(f"the first call again before the forced push: {r.stdout[-500:]!r}")
+        pushed = _git_in(w.tree, "push", "-q", f"--force-with-lease=refs/heads/chg-002:{old}",
+                         "origin", "chg-002")
+        if pushed.returncode:
+            problems.append(f"the forced push with lease: {pushed.stderr[-300:]!r}")
+        # Pushed, then a commit here and one on the merge request: the join was pushed, and the
+        # lease of the forced push made is not read as a join not pushed -- the two are joined
+        # as R-26 says, and nothing made here is dropped (V-6).
+        pushed_at = _git_in(w.tree, "rev-parse", "HEAD").stdout.strip()
+        # Prepared again after the forced push, never launched: the join was pushed, and its
+        # lease is no longer kept; how it was joined is.
+        r = w.run("--repo", str(w.code))
+        entry = w.launch_file()["lanci"][-1]
+        if entry.get("lease") or entry.get("modo") != "rebase" or "force-with-lease" in r.stdout:
+            problems.append(f"prepared again after the forced push: lease {entry.get('lease')!r}, "
+                            f"modo {entry.get('modo')!r}, {r.stdout[-400:]!r}")
+        # A launch in between: the first call after it appends an entry of its own.
+        r = w.run("--launch", scene={"answer": "verified"})
+        if r.returncode or not w.launch_file()["lanci"][-1].get("tranche"):
+            problems.append(f"the launch after the forced push: exit {r.returncode}, "
+                            f"{r.stderr[-300:]!r}")
+        _put(w.tree, {"c.txt": "c1\n"})
+        _git_in(w.tree, "add", "c.txt")
+        _git_in(w.tree, "commit", "-qm", "B: c1")
+        _git_in(other, "fetch", "-q", "origin")
+        _git_in(other, "checkout", "-q", "-B", "chg-002", "origin/chg-002")
+        _put(other, {"c.txt": "s\n"})
+        _git_in(other, "add", "c.txt")
+        _git_in(other, "commit", "-qm", "reviewer: s")
+        _git_in(other, "push", "-q", "origin", "chg-002")
+        for n in (1, 2):                     # the first call, then again in the same state
+            r = w.run("--repo", str(w.code))
+            if "DIVERGED" not in r.stdout or "Here the base was joined" in r.stdout \
+                    or "rerere.enabled=false rebase " not in r.stdout:
+                problems.append(f"diverged after the forced push was made, call {n}: "
+                                f"{r.stdout[-700:]!r}")
+        # R-26's join, stopped on its conflict, after a launch: the first call in its middle
+        # takes the latest join from the history, and does not read it as the rebase on the
+        # base. The entry the launch left has no base, so the launch and the resume below do not
+        # reach `_rebased()`: the world further down, with a join entry never launched, does.
+        s_sha = _git_in(w.code, "rev-parse", "origin/chg-002").stdout.strip()
+        _git_in(w.tree, "-c", "rerere.enabled=false", "rebase", s_sha)
+        r = w.run("--repo", str(w.code))
+        if "A rebase is in progress" not in r.stdout or "force-with-lease" in r.stdout \
+                or w.launch_file()["lanci"][-1].get("base"):
+            problems.append(f"R-26's rebase in progress after a join of the base: "
+                            f"{r.stdout[-500:]!r}, base {w.launch_file()['lanci'][-1].get('base')!r}")
+        r = w.run("--launch", scene={"deny": [
+            {"tool": "Bash", "input": {"command": "git rebase --continue"}}], "answer": "resolved"})
+        prompt = w.calls()[-1]["argv"][1]
+        if "re-applied on the remote's" not in prompt or "on the base" in prompt \
+                or "force-with-lease" in r.stdout:
+            problems.append(f"the launch with R-26's rebase in progress: {prompt[:500]!r}, "
+                            f"{r.stdout[-400:]!r}")
+        _put(w.tree, {"c.txt": "s\nc1\n"})
+        _git_in(w.tree, "add", "c.txt")
+        _git_in(w.tree, "rebase", "--continue", env={"GIT_EDITOR": "true"})
+        r = w.run("--resume", scene={"answer": "ok"})
+        if "The rebase is over" not in w.calls()[-1]["argv"][1] \
+                or "finished re-applying" in w.calls()[-1]["argv"][1]:
+            problems.append(f"the resume after R-26's rebase: {w.calls()[-1]['argv'][1][:400]!r}")
+        # Back as it was before the two commits, for what follows.
+        _git_in(other, "push", "-q", "-f", "origin", f"{pushed_at}:refs/heads/chg-002")
+        _git_in(w.tree, "reset", "-q", "--keep", pushed_at)
+        # In conflict: the steps of the rebase go to the code session, the --continue and the
+        # forced push are the documentation session's.
+        base("base: gamma", {"deps.txt": "alfa\ngamma\n"})
+        r = w.run("--repo", str(w.code), "--join-base", "rebase")
+        if r.returncode or "the rebase stopped at step 1 of 1" not in r.stdout:
+            problems.append(f"--join-base rebase in conflict: exit {r.returncode}, "
+                            f"{r.stdout[-500:]!r}")
+        r = w.run("--launch", scene={"deny": [
+            {"tool": "Bash", "input": {"command": "git rebase --continue"}}], "answer": "resolved"})
+        prompt = w.calls()[-1]["argv"][1]
+        if "re-applied on the base, origin/main" not in prompt:
+            problems.append(f"the launch with the rebase on the base: {prompt[:600]!r}")
+        if "rule: Bash(git" in r.stdout or "the push, forced with lease" not in r.stdout:
+            problems.append(f"the stop on a step of the rebase on the base: {r.stdout[-700:]!r}")
+        _put(w.tree, {"deps.txt": "alfa\nbeta\ngamma\n"})
+        _git_in(w.tree, "add", "deps.txt")
+        _git_in(w.tree, "rebase", "--continue", env={"GIT_EDITOR": "true"})
+        r = w.run("--resume", scene={"write": {"verifica.md": "v"}, "answer": "delivered"})
+        argv = w.calls()[-1]["argv"]
+        if "finished re-applying your commits on origin/main" not in argv[1] \
+                or "deliver the verification again" not in argv[1]:
+            problems.append(f"the resume after the rebase on the base: {argv[1][:400]!r}")
+        if "stopped on `consegna`" not in r.stdout:
+            problems.append(f"the delivery after the rebase on the base: {r.stdout[-300:]!r}")
+        # Re-applied and not pushed, and a commit on the merge request meanwhile: the forced
+        # push is refused, and the first call keeps the remote and re-applies the branch again,
+        # the same way, never the two joined (V-6).
+        at = w.launch_file()["lanci"][-1].get("lease")
+        _git_in(other, "fetch", "-q", "origin")
+        _git_in(other, "checkout", "-q", "-B", "chg-002", "origin/chg-002")
+        _put(other, {"t.txt": "t\n"})
+        _git_in(other, "add", "t.txt")
+        _git_in(other, "commit", "-qm", "reviewer: t")
+        _git_in(other, "push", "-q", "origin", "chg-002")
+        refused = _git_in(w.tree, "push", "-q", f"--force-with-lease=refs/heads/chg-002:{at}",
+                          "origin", "chg-002")
+        for n in (1, 2):                     # the first call, then again in the same state
+            r = w.run("--repo", str(w.code))
+            if not at or not refused.returncode or "DIVERGED" not in r.stdout \
+                    or "Here the base was joined, and not pushed" not in r.stdout \
+                    or "with `--join-base rebase`" not in r.stdout \
+                    or "rerere.enabled=false rebase " in r.stdout:
+                problems.append(f"diverged over a rebase on the base not pushed, call {n}: lease "
+                                f"{at!r}, push exit {refused.returncode}, {r.stdout[-700:]!r}")
+
+    # A join of the base pushed, prepared again and never launched, then a commit here and one
+    # on the merge request that conflict, and R-26's join stopped on them: the entry keeps the
+    # base it joined, and the rebase is R-26's all the same, at the launch and at its end, and in
+    # a first call made in its middle.
+    with tempfile.TemporaryDirectory() as tmp:
+        w = _CodeWorld(Path(tmp).resolve())
+        other = w.tmp / "altro"
+        _git_in(w.tmp, "clone", "-q", str(w.remote), str(other))
+
+        def base(name: str, files: dict) -> None:
+            _git_in(other, "fetch", "-q", "origin")
+            _git_in(other, "checkout", "-q", "-B", "main", "origin/main")
+            _put(other, files)
+            _git_in(other, "add", "-A")
+            _git_in(other, "commit", "-qm", name)
+            _git_in(other, "push", "-q", "origin", "main")
+
+        w.run("--repo", str(w.code))
+        _put(w.tree, {"b.txt": "b\n"})
+        _git_in(w.tree, "add", "b.txt")
+        _git_in(w.tree, "commit", "-qm", "B: b")
+        _git_in(w.tree, "push", "-q", "-u", "origin", "chg-002")
+
+        def r26_stopped(tag: str) -> None:
+            base(f"base: {tag}", {f"base-{tag}.txt": tag + "\n"})
+            w.run("--repo", str(w.code), "--join-base", "rebase")
+            held = _git_in(w.code, "rev-parse", "origin/chg-002").stdout.strip()
+            _git_in(w.tree, "push", "-q", f"--force-with-lease=refs/heads/chg-002:{held}",
+                    "origin", "chg-002")
+            w.run("--repo", str(w.code))
+            _put(w.tree, {f"k-{tag}.txt": "here\n"})
+            _git_in(w.tree, "add", f"k-{tag}.txt")
+            _git_in(w.tree, "commit", "-qm", f"B: k-{tag}")
+            _git_in(other, "fetch", "-q", "origin")
+            _git_in(other, "checkout", "-q", "-B", "chg-002", "origin/chg-002")
+            _put(other, {f"k-{tag}.txt": "there\n"})
+            _git_in(other, "add", f"k-{tag}.txt")
+            _git_in(other, "commit", "-qm", f"reviewer: k-{tag}")
+            _git_in(other, "push", "-q", "origin", "chg-002")
+            w.run("--repo", str(w.code))
+            _git_in(w.tree, "-c", "rerere.enabled=false", "rebase",
+                    _git_in(w.code, "rev-parse", "origin/chg-002").stdout.strip())
+
+        def rebase_in_tree(tree: Path):
+            for name in ("rebase-merge", "rebase-apply"):
+                place = _git_in(tree, "rev-parse", "--path-format=absolute", "--git-path",
+                                name).stdout.strip()
+                if place and Path(place).is_dir():
+                    return place
+            return None
+
+        r26_stopped("y")
+        if not w.launch_file()["lanci"][-1].get("base") or rebase_in_tree(w.tree) is None:
+            problems.append("the state of R-26's rebase over a join entry is not set")
+        r = w.run("--launch", scene={"deny": [
+            {"tool": "Bash", "input": {"command": "git rebase --continue"}}], "answer": "resolved"})
+        prompt = w.calls()[-1]["argv"][1]
+        if "re-applied on the remote's" not in prompt or "force-with-lease" in r.stdout:
+            problems.append(f"R-26's rebase launched over a join entry: {prompt[:400]!r}, "
+                            f"{r.stdout[-300:]!r}")
+        _put(w.tree, {"k-y.txt": "there\nhere\n"})
+        _git_in(w.tree, "add", "k-y.txt")
+        _git_in(w.tree, "rebase", "--continue", env={"GIT_EDITOR": "true"})
+        w.run("--resume", scene={"answer": "ok"})
+        said = w.calls()[-1]["argv"][1]
+        if "The rebase is over" not in said or "finished re-applying" in said \
+                or "Re-applied on the base" in said:
+            problems.append(f"the resume at the end of R-26's rebase over a join entry: "
+                            f"{said[:400]!r}")
+        _git_in(w.tree, "push", "-q", "origin", "chg-002")
+        r26_stopped("z")
+        r = w.run("--repo", str(w.code))
+        if w.launch_file()["lanci"][-1].get("base") or "force-with-lease" in r.stdout:
+            problems.append(f"a first call in the middle of R-26's rebase over a join entry: base "
+                            f"{w.launch_file()['lanci'][-1].get('base')!r}, {r.stdout[-400:]!r}")
+    return problems
+
+
 @check("exchange.py code in the additive mode launches the change the thread of --root holds, on the thread's branch, and a hotfix only from its parking branch")
 def _code_additive():
     problems = []
@@ -14210,6 +14550,552 @@ def _join_lands_threads():
     return problems
 
 
+# A fake `gh`: it records each call and answers from the scene of the case, a JSON file it
+# rewrites -- a merge request merged by `gh pr merge` is merged at the next `gh pr view`.
+_FAKE_GH = '''
+import json, os, sys
+path = os.environ["FINTO_GH"]
+scene = json.load(open(path))
+args = sys.argv[1:]
+scene.setdefault("log", []).append(args)
+
+
+def done(out="", err="", rc=0):
+    json.dump(scene, open(path, "w"))
+    sys.stdout.write(out)
+    sys.stderr.write(err)
+    sys.exit(rc)
+
+
+if scene.get("offline"):
+    done(err="HTTP 401: Bad credentials (https://api.github.com/graphql)\\n", rc=1)
+if args[:2] == ["pr", "view"]:
+    pr = scene["prs"].get(args[2])
+    done(json.dumps(pr) if pr else "", "" if pr else "no pull requests found\\n", 0 if pr else 1)
+if args[:2] == ["repo", "view"]:
+    done(json.dumps(scene["repos"][args[2]]))
+if args[:1] == ["api"]:
+    done(scene["diff"] if "-H" in args else json.dumps(scene["compare"]))
+if args[:2] == ["pr", "merge"]:
+    refused = scene.get("refuse", {}).get(args[2])
+    if refused:
+        done(err=refused + "\\n", rc=1)
+    if scene.get("queue", {}).get(args[2]):
+        done("! The merge strategy for main is set by the merge queue\\n")
+    scene["prs"][args[2]]["state"] = "MERGED"
+    done("Merged\\n")
+done(err="unknown command\\n", rc=2)
+'''
+
+
+def _fake_gh(where: Path) -> Path:
+    where.mkdir(parents=True, exist_ok=True)
+    (where / "gh").write_text(f"#!{sys.executable}\n" + _FAKE_GH)
+    (where / "gh").chmod(0o755)
+    return where / "gh"
+
+
+def _only_git(where: Path) -> Path:
+    """A folder for a `PATH` with git and nothing else: no `gh`, wherever the machine has one."""
+    where.mkdir(parents=True, exist_ok=True)
+    (where / "git").symlink_to(shutil.which("git"))
+    return where
+
+
+@check("from 4.13.0 a thread with a change is ready with the line of its merge request, and join brings its code in: asked of the forge with gh at step 1 -- a head moved, a merge request the forge does not let merge, merged already, merged at another head with its diff written, the way to merge -- a hotfix's parking branch only once its code is merged, another forge by whoever decides, no gh or no access said and waiting; --finish signs what it found, and --merge merges the code before the documentation, a refusal of the forge landing nothing")
+def _join_brings_code_in():
+    problems = []
+    since = re.search(r'^LINK_SINCE = "([0-9.]+)"$', TODO.read_text(encoding="utf-8"),
+                      re.M).group(1)
+    s = {n: c * 40 for n, c in ((1, "a"), (2, "b"), (3, "d"), (4, "e"), (44, "f"))}
+    pr = {n: f"https://github.com/acme/app/pull/{n}" for n in (1, 3, 4)}
+    lab = "https://gitlab.example.com/acme/app/-/merge_requests/2"
+
+    def chg(i, hotfix=False):
+        meta = dict(schema="framework/change-contract/v1", artifact_type="change-contract",
+                    lifecycle="immutable", status="approved", id=i, products="[q]",
+                    owners="[o]", created="2026-06-01", approvers="[Owner]")
+        if hotfix:
+            meta["hotfix"] = "true"
+        return _fm(**meta) + f"# {i} title\n\n## Verification\n\n*Filled in at closure.*\n"
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        origin = tmp / "origin.git"
+        subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(origin)], check=True,
+                       env={**os.environ, **_WORK_ENV})
+        seed = _Repo(tmp / "seed")
+        seed.write("framework.yaml", f"framework_version: {since}\n")
+        seed.write(".framework/work.yaml", "mode: additive\npeople: [Owner, Junior]\n"
+                   "admins: [Owner]\nmerge_method: squash\n")
+        seed.write(".framework/sessions.yaml", "exchange: ../_scambio\n")
+        api = "repository:product:q:api"
+        seed.write(".framework/contribution-policy.json", json.dumps({"mandates": {
+            f"products/q/changes/CHG-00{n}-x.md": {"paths": {api: [f"src/m{n}"]}}
+            for n in (1, 2, 3, 4, 5)}}))
+        for n in (1, 2, 3, 4, 5):
+            seed.write(f"products/q/changes/CHG-00{n}-x.md", chg(f"CHG-00{n}", hotfix=n == 4))
+        seed.commit("base", "2026-06-01T09:00:00+02:00")
+        seed.git("remote", "add", "origin", str(origin))
+        seed.git("push", "-q", "origin", "main")
+        a = tmp / "projects" / "docs"
+        a.parent.mkdir()
+        (a.parent / "_scambio").mkdir()
+        subprocess.run(["git", "clone", "-q", str(origin), str(a)], check=True,
+                       env={**os.environ, **_WORK_ENV})
+        bin_ = tmp / "bin"
+        _fake_gh(bin_)
+        scene = tmp / "scena-gh.json"
+        # As `join` says it: resolved, where the temporary folder sits behind a link (macOS).
+        out = tmp.resolve() / "scratchpad"
+        with_gh = {"PATH": f"{bin_}{os.pathsep}{os.environ.get('PATH', '')}",
+                   "FINTO_GH": str(scene)}
+        no_gh = {"PATH": str(_only_git(tmp / "solo-git"))}
+
+        def todo() -> dict:
+            r = subprocess.run([sys.executable, str(TODO), "--root", str(a), "--json"],
+                               capture_output=True, text=True, env={**os.environ, **_WORK_ENV})
+            try:
+                return json.loads(r.stdout)
+            except ValueError:
+                problems.append(f"todo.py gave no JSON (exit {r.returncode}): {r.stderr[-300:]}")
+                return {}
+
+        def play(prs: dict, repos: list[str], **more) -> None:
+            scene.write_text(json.dumps({
+                "prs": prs, "repos": {"github.com/acme/app": {
+                    "mergeCommitAllowed": "merge" in repos, "squashMergeAllowed": "squash" in repos,
+                    "rebaseMergeAllowed": "rebase" in repos}},
+                "compare": {"status": "ahead", "commits": [
+                    {"sha": "c" * 40, "commit": {"message": "fix more\n\nwhy"}}]},
+                "diff": "diff --git a/src/h.py b/src/h.py\n+more\n", **more}))
+
+        def view(n, state="OPEN", head=None, mergeable="MERGEABLE", status="CLEAN", branch=None):
+            return {"state": state, "isDraft": False, "mergeable": mergeable,
+                    "mergeStateStatus": status, "headRefOid": head or s[n],
+                    "headRefName": branch or f"work/q-chg-00{n}"}
+
+        def edit(thread: str, rel: str, change, msg: str) -> None:
+            tree = a.parent / f"docs--{thread}"
+            path = tree / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(change(path.read_text() if path.exists() else ""))
+            _commit_all(tree, msg)
+            _g(tree, "push", "-q", "origin", "HEAD")
+
+        def line(link, sha):
+            return lambda text: text + f"- Merge request: {link} @ {sha}\n"
+
+        # The threads: a line on GitHub, a line on another forge, merged already, and one
+        # written implemented the way of the versions before; the hotfix's parking branch.
+        for n in (1, 2, 3, 5):
+            rc, said = _work(a, "open", "--who", "Junior", "--thread", f"q-chg-00{n}")
+            if rc:
+                return problems + [f"open q-chg-00{n}: exit {rc}, {said[-300:]!r}"]
+        rc, said = _work(a, "open", "--who", "Owner", "--thread", "q-chg-004")
+        if rc != 2 or "`open --branch hotfix-q-chg-004`, which is its claim" not in said:
+            problems.append(f"open of a hotfix from {since}: exit {rc}, {said[-300:]!r}")
+        got = todo()
+        hotfix = (got.get("hotfixes") or [{}])[0]
+        if hotfix.get("branch") != "work/parcheggio-hotfix-q-chg-004":
+            problems.append(f"the hotfix without its parking branch: {hotfix}")
+        page = subprocess.run([sys.executable, str(TODO), "--root", str(a)], capture_output=True,
+                              text=True, env={**os.environ, **_WORK_ENV}).stdout
+        if "parking branch work/parcheggio-hotfix-q-chg-004, `open --branch " \
+                "hotfix-q-chg-004`" not in page:
+            problems.append(f"the to-do's page, the hotfix's branch: {page[-700:]!r}")
+        rc, said = _work(a, "open", "--who", "Owner", "--branch", "hotfix-q-chg-004")
+        if rc:
+            return problems + [f"open of the hotfix's parking branch: exit {rc}, {said[-300:]!r}"]
+        page = subprocess.run([sys.executable, str(TODO), "--root", str(a)], capture_output=True,
+                              text=True, env={**os.environ, **_WORK_ENV}).stdout
+        if "parking branch work/parcheggio-hotfix-q-chg-004, open: taken" not in page:
+            problems.append(f"the to-do's page, the hotfix's branch taken: {page[-700:]!r}")
+        hot = "parcheggio-hotfix-q-chg-004"
+        edit(hot, f"_filoni/{hot}/consegne/CHG-004/verifica.md", lambda _: "ok\n", "delivery")
+
+        # Ready with the line, not before; the version before reads `implemented` alone.
+        edit("q-chg-001", "products/q/changes/CHG-001-x.md", lambda x: x + "Verified.\n", "x")
+        if got := todo():
+            if got["open"]["work/q-chg-001"]["ready"]:
+                problems.append("a thread with a change and no line of its merge request is ready")
+        edit("q-chg-001", "products/q/changes/CHG-001-x.md", line(pr[1], s[1]), "the line")
+        edit("q-chg-002", "products/q/changes/CHG-002-x.md", line(lab, s[2]), "the line")
+        edit("q-chg-003", "products/q/changes/CHG-003-x.md", line(pr[3], s[3]), "the line")
+        edit("q-chg-005", "products/q/changes/CHG-005-x.md",
+             lambda x: x.replace("status: approved", "status: implemented"), "implemented")
+        got = todo()
+        ready = sorted(got.get("ready", []))
+        # The hotfix's parking branch has a delivery and no `mr-link.txt` yet: not ready.
+        want = sorted(["work/q-chg-001", "work/q-chg-002", "work/q-chg-003", "work/q-chg-005"])
+        if ready != want or got["open"]["work/q-chg-001"].get("merge_requests") != {
+                "CHG-001": {"link": pr[1], "commit": s[1]}}:
+            problems.append(f"ready from {since}: {ready}, {got.get('open', {}).get('work/q-chg-001')}")
+        page = subprocess.run([sys.executable, str(TODO), "--root", str(a)], capture_output=True,
+                              text=True, env={**os.environ, **_WORK_ENV}).stdout
+        if f"work/{hot}: parking; in the hands of" not in page \
+                or "not ready -- a hotfix's, by its name: ready once a " \
+                   "`consegne/<CHG>/mr-link.txt`" not in page:
+            problems.append(f"the to-do's page, the hotfix's branch with no line: {page[-900:]!r}")
+        five = [x for x in page.splitlines() if x.startswith("- work/q-chg-005:")]
+        if not five or "ready -- CHG-005 `implemented` on its branch with no line of its merge " \
+                "request: `join` asks whoever decides whether its code is merged" not in five[0]:
+            problems.append(f"the to-do's page, a change implemented with no line: "
+                            f"{five or page[-900:]!r}")
+        before = _load(TODO, "todo_before_the_line")
+        before.LINK_SINCE = "99.0.0"
+        if "work/q-chg-001" in before.compute(a, "origin", "main")["ready"]:
+            problems.append("below the version, the line of a merge request makes a thread ready")
+
+        def join(*extra, env=with_gh, want=1, says=(), not_says=()) -> str:
+            rc, said = _work(a, "join", "--who", "Owner", *extra, env=env)
+            missing = [x for x in says if x not in said]
+            if rc != want or missing or any(x in said for x in not_says):
+                problems.append(f"join {' '.join(extra)}: exit {rc} ({want} expected), missing "
+                                f"{missing}: {said[-1500:]!r}")
+            return said
+
+        def opened() -> bool:
+            return "ricongiungimento" in _g(a, "ls-remote", "origin").stdout
+
+        # No `gh`: what is on GitHub waits, the rest does not; another forge is asked.
+        join(env=no_gh, says=(
+            "`gh`, GitHub's command line, is not on the PATH", "work/q-chg-001 waits",
+            "work/q-chg-003 waits", f"For whoever decides -- work/q-chg-002: {lab} is on a forge",
+            "--merged q-chg-002", "For whoever decides -- work/q-chg-005: CHG-005 is written "
+            "`implemented` on its branch with no line of its merge request",
+            "Nothing was opened or merged. To go on without what waits: `join --who \"Owner\" "
+            "q-chg-002 q-chg-005`, with the answers."), not_says=(f"work/{hot}",))
+        # `gh` without an access.
+        play({}, ["squash"], offline=True)
+        join("--merged", "q-chg-002", "--merged", "q-chg-005", says=("`gh` could not read " + pr[1], "Bad credentials",
+                                           f"{lab}: merged at the delivery's commit"))
+        # A head moved; merged already at the delivery's commit. The answers given go on in the
+        # command that goes on without what waits.
+        play({pr[1]: view(1, head="9" * 40), pr[3]: view(3, state="MERGED")}, ["merge"])
+        join("--merged", "q-chg-002", "--merged", "q-chg-005", says=(
+            f"{pr[1]} is at 999999999999, not at the delivery's commit aaaaaaaaaaaa",
+            f"{pr[3]}: merged on the forge at the delivery's commit dddddddddddd already",
+            "CHG-005: written `implemented` on its branch with no line of its merge request, its "
+            "code merged or none, as whoever decides says",
+            "`join --who \"Owner\" q-chg-002 q-chg-003 q-chg-005 --merged q-chg-002 --merged "
+            "q-chg-005`."))
+        edit(hot, f"_filoni/{hot}/consegne/CHG-004/mr-link.txt",
+             lambda _: f"Merge request: {pr[4]} @ {s[4]}\n", "the merge request")
+        if f"work/{hot}" not in todo().get("ready", []):
+            problems.append("the hotfix's parking branch is not ready with the line of its delivery")
+        page = subprocess.run([sys.executable, str(TODO), "--root", str(a)], capture_output=True,
+                              text=True, env={**os.environ, **_WORK_ENV}).stdout
+        mine = [x for x in page.splitlines() if x.startswith(f"- work/{hot}: parking;")]
+        if not mine or "; ready -- a hotfix's: `join` brings it in once its code is merged on " \
+                "the forge" not in mine[0]:
+            problems.append(f"the to-do's page, the hotfix's branch ready: {mine or page[-900:]!r}")
+        # A merge request the forge does not let merge; a hotfix's not merged yet.
+        play({pr[1]: view(1, mergeable="CONFLICTING", status="DIRTY"),
+              pr[3]: view(3, state="MERGED"), pr[4]: view(4, branch=f"work/{hot}")}, ["merge"])
+        join("--merged", "q-chg-002", "--merged", "q-chg-005", says=(
+            f"the forge does not let {pr[1]} merge now (CONFLICTING, DIRTY)",
+            f"{pr[4]} is not merged yet: the parking branch of a hotfix lands once"))
+        # Mergeable, the one way the repository admits; the hotfix's merged at another head,
+        # its diff written; another forge with no answer stops it.
+        merged_elsewhere = view(4, state="MERGED", head=s[44], branch=f"work/{hot}")
+        play({pr[1]: view(1), pr[3]: view(3, state="MERGED"), pr[4]: merged_elsewhere}, ["merge"])
+        join("--out", str(out), says=(
+            "acme/app admits only merge, not the `merge_method: squash` of .framework/work.yaml",
+            f"{pr[4]}: merged on the forge at ffffffffffff, not at the delivery's commit "
+            "eeeeeeeeeeee: 1 commit(s) after the delivery -- cccccccccccc fix more",
+            f"their diff is in {out / f'work--{hot}.diff'}", "--merged-elsewhere q-chg-002",
+            "Nothing was opened or merged: `join` again with the answers."))
+        # Two ways admitted and none of them the project's: asked once.
+        play({pr[1]: view(1), pr[3]: view(3, state="MERGED"), pr[4]: merged_elsewhere},
+             ["merge", "rebase"])
+        join("--merged-elsewhere", "q-chg-002", "--merged", "q-chg-005", "--out", str(out), says=(
+            f"how to merge {pr[1]}: .framework/work.yaml says `merge_method: squash`, which "
+            "acme/app does not admit; acme/app admits merge, rebase",))
+        # Two merge requests to merge in one code repository: one per join (V-4).
+        play({pr[1]: view(1), pr[3]: view(3), pr[4]: merged_elsewhere}, ["merge", "rebase"])
+        join("--merged-elsewhere", "q-chg-002", "--merged", "q-chg-005", "--merge-method",
+             "rebase", "--out", str(out), says=(
+                 "work/q-chg-003 waits for a later join", "CHG-003: a join merges one merge "
+                 "request per code repository, and acme/app's in this one is work/q-chg-001's",
+                 "--merge-method rebase"))
+        play({pr[1]: view(1), pr[3]: view(3, state="MERGED"), pr[4]: merged_elsewhere},
+             ["merge", "rebase"])
+        if opened():
+            return problems + ["a join was opened while a thread waited or a question stood"]
+        diff = out / f"work--{hot}.diff"
+        if not diff.is_file() or "+more" not in diff.read_text() \
+                or "# cccccccccccc fix more" not in diff.read_text():
+            problems.append(f"the diff after the delivery: {diff.read_text() if diff.is_file() else 'none'}")
+
+        # Everything answered: the join opens, merges the five, and each merge says its code.
+        said = join("--merged-elsewhere", "q-chg-002", "--merged", "q-chg-005", "--merge-method",
+                    "rebase", "--out", str(out), want=0, says=(
+                        f"{lab}: merged at another head than the delivery's commit "
+                        "bbbbbbbbbbbb, as whoever decides says", "were read by nobody",
+                        "written `implemented`", "merges the code on the forge before"))
+        tree = a.parent / "docs--ricongiungimento-1"
+        messages = _g(a, "log", "--merges", "--format=%B", "origin/main..work/ricongiungimento-1"
+                      ).stdout if tree.is_dir() else ""
+        lines = sorted(x for x in messages.splitlines() if x.startswith("merge-request: "))
+        expected = sorted([f"merge-request: work/q-chg-001 CHG-001 {pr[1]} {s[1]} rebase",
+                           f"merge-request: work/q-chg-002 CHG-002 {lab} {s[2]} merged-elsewhere",
+                           f"merge-request: work/q-chg-003 CHG-003 {pr[3]} {s[3]} merged",
+                           f"merge-request: work/{hot} CHG-004 {pr[4]} {s[4]} merged-elsewhere "
+                           f"{s[44]}"])
+        if lines != expected:
+            return problems + [f"the merge messages say {lines}, {expected} expected"]
+        # Not signed while a change brought in with its code is not `implemented` (V-2).
+        rc, said = _work(a, "join", "--who", "Owner", "--finish", "--review", "full",
+                         env=with_gh)
+        if rc != 2 or "not `implemented` on work/ricongiungimento-1, and brought in with their " \
+                "code: CHG-001 (approved), of work/q-chg-001; CHG-002 (approved)" not in said:
+            problems.append(f"--finish with the changes still approved: exit {rc}, {said[-500:]!r}")
+        for n in (1, 2, 3, 4):
+            rel = tree / "products" / "q" / "changes" / f"CHG-00{n}-x.md"
+            rel.write_text(rel.read_text().replace("status: approved", "status: implemented", 1))
+        _commit_all(tree, "the acts of decision")
+        rc, said = _work(a, "join", "--who", "Owner", "--finish", "--review", "full",
+                         env=with_gh)
+        signed = _g(a, "log", "-1", "--format=%B", "origin/work/ricongiungimento-1").stdout
+        if rc or sorted(x for x in signed.splitlines() if x.startswith("merge-request: ")) \
+                != expected:
+            return problems + [f"--finish: exit {rc}, {said[-400:]!r}, signed {signed!r}"]
+
+        # A signature that names a change the tip does not hold `implemented`: `--merge` refuses
+        # it too (V-2), whatever signed it.
+        _g(tree, "commit", "-q", "--allow-empty", "-m", "Join work/ricongiungimento-1 finished\n\n"
+           + "\n".join(expected) + f"\nmerge-request: work/q-chg-009 CHG-009 {pr[1]} {s[1]} "
+           "rebase\n\nRicongiungimento-di: Owner\nRevisione: completa\n")
+        _g(tree, "push", "-q", "origin", "HEAD")
+        rc, said = _work(a, "join", "--who", "Owner", "--merge", env=with_gh)
+        if rc != 2 or "not `implemented` on work/ricongiungimento-1, and brought in with their " \
+                "code: CHG-009 (not written), of work/q-chg-009. Write each" not in said:
+            problems.append(f"--merge on a signature naming a change not implemented: exit {rc}, "
+                            f"{said[-500:]!r}")
+        # Signed by a plugin older than 4.13.0, without the `merge-request:` lines its merges
+        # carry: `--merge` refuses, and `--finish` with this plugin signs it again, with the
+        # review the last signature said.
+        _g(tree, "commit", "-q", "--allow-empty", "-m", "Join work/ricongiungimento-1 finished\n\n"
+           "Ricongiungimento-di: Owner\nRevisione: completa\n")
+        _g(tree, "push", "-q", "origin", "HEAD")
+        rc, said = _work(a, "join", "--who", "Owner", "--merge", env=with_gh)
+        if rc != 2 or "was finished by a plugin that does not know the code a join brings: its " \
+                "signature lacks 4 `merge-request:` line(s) its merges carry" not in said:
+            problems.append(f"--merge on an older plugin's signature: exit {rc}, {said[-500:]!r}")
+        rc, said = _work(a, "join", "--who", "Owner", "--finish", env=with_gh)
+        signed = _g(a, "log", "-1", "--format=%B", "origin/work/ricongiungimento-1").stdout
+        if rc or sorted(x for x in signed.splitlines() if x.startswith("merge-request: ")) \
+                != expected or "Revisione: completa" not in signed:
+            return problems + [f"--finish after an older plugin's: exit {rc}, {said[-400:]!r}, "
+                               f"signed {signed!r}"]
+
+        # Step 6: the forge refuses, and nothing lands; then it merges, and the documentation
+        # lands after it. Only what the join merges is merged; the rest counts as merged.
+        main_before = _g(a, "ls-remote", "origin", "refs/heads/main").stdout
+        state = json.loads(scene.read_text())
+        state["refuse"] = {pr[1]: "Head branch was modified. Review and try the merge again."}
+        scene.write_text(json.dumps(state))
+        rc, said = _work(a, "join", "--who", "Owner", "--merge", env=with_gh)
+        if rc != 2 or f"the forge refused to merge {pr[1]}" not in said \
+                or "The documentation did not land" not in said \
+                or _g(a, "ls-remote", "origin", "refs/heads/main").stdout != main_before:
+            problems.append(f"--merge refused by the forge: exit {rc}, {said[-500:]!r}")
+        state = json.loads(scene.read_text())
+        state["refuse"] = {}
+        scene.write_text(json.dumps(state))
+        rc, said = _work(a, "join", "--who", "Owner", "--merge", env=with_gh)
+        merges = [c for c in json.loads(scene.read_text())["log"] if c[:2] == ["pr", "merge"]]
+        if rc or merges[-1:] != [["pr", "merge", pr[1], "--rebase", "--match-head-commit", s[1]]] \
+                or any(c[2] != pr[1] for c in merges) \
+                or _g(a, "ls-remote", "origin", "refs/heads/main").stdout == main_before:
+            problems.append(f"--merge: exit {rc}, merges {merges}, {said[-500:]!r}")
+    return problems
+
+
+@check("from 4.13.0 join asks GitHub of a thread's merge request: merged at another head it comes in, with that head and the diff of the commits after the delivery; closed, a draft, or not said yet by the forge it waits; and --merge lands nothing where since step 1 the forge merged it at another head or closed it, or did not merge it on the call -- a merge queue")
+def _join_code_on_github():
+    # `_code_check` and `_merge_code` called in this process, on a fake `gh`: the cases of a
+    # thread the whole join of `_join_brings_code_in` does not reach.
+    problems = []
+    work = _load(WORK, "work_for_the_forge")
+    link, name = "https://github.com/acme/app/pull/7", "work/q-chg-007"
+    sha, other = "a" * 40, "f" * 40
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        bin_ = tmp / "bin"
+        _fake_gh(bin_)
+        scene = tmp / "scena-gh.json"
+        out = tmp / "scratchpad"
+        p = types.SimpleNamespace(prefix="work/", remote="origin")
+        args = types.SimpleNamespace(merged=set(), merged_elsewhere=set(), merge_method=None)
+        roles = {"merge_method": "squash"}
+
+        def play(state="OPEN", head=sha, mergeable="MERGEABLE", status="CLEAN", branch=name,
+                 **more) -> None:
+            scene.write_text(json.dumps({
+                "prs": {link: {"state": state, "mergeable": mergeable, "mergeStateStatus": status,
+                               "headRefName": branch, "headRefOid": head}},
+                "repos": {"github.com/acme/app": {"mergeCommitAllowed": False,
+                                                  "squashMergeAllowed": True,
+                                                  "rebaseMergeAllowed": False}},
+                "compare": {"status": "ahead", "commits": [
+                    {"sha": "c" * 40, "commit": {"message": "after the delivery"}}]},
+                "diff": "diff --git a/src/m7.py b/src/m7.py\n+after\n", **more}))
+
+        def merge() -> tuple[int, str]:
+            err, said = io.StringIO(), io.StringIO()
+            with contextlib.redirect_stderr(err), contextlib.redirect_stdout(said):
+                try:
+                    work._merge_code(p, "Owner", "unused")
+                except SystemExit as e:
+                    return e.code, err.getvalue() + said.getvalue()
+            return 0, err.getvalue() + said.getvalue()
+
+        saved = {k: os.environ.get(k) for k in ("PATH", "FINTO_GH")}
+        os.environ["PATH"] = f"{bin_}{os.pathsep}{saved['PATH'] or ''}"
+        os.environ["FINTO_GH"] = str(scene)
+        try:
+            # Step 1: merged at another head (R-17), for a thread and not a hotfix's branch.
+            play(state="MERGED", head=other)
+            got = work._code_check(p, roles, args, name, link, sha, [out])
+            diff = out / "work--q-chg-007.diff"
+            if got.get("how") != "merged-elsewhere" or got.get("head") != other \
+                    or not diff.is_file() or "+after" not in diff.read_text():
+                problems.append(f"a thread's merge request merged at another head: {got}")
+            for given, says in (
+                    ({"state": "CLOSED"}, "is closed without being merged. The thread waits for a "
+                                          "new delivery"),
+                    ({"state": "CLOSED"}, "whoever holds it releases it, `work.py release <CHG> "
+                                          "--who <name>`, and its mandate is withdrawn at a join"),
+                    ({"status": "BEHIND"}, "is behind its base, which wants it up to date"),
+                    ({"status": "DRAFT"}, "is a draft"),
+                    ({"mergeable": "UNKNOWN", "status": "UNKNOWN"}, "has not said yet")):
+                play(**given)
+                got = work._code_check(p, roles, args, name, link, sha, [out])
+                if says not in got.get("wait", ""):
+                    problems.append(f"step 1, {given}: {got}")
+            play()
+            got = work._code_check(p, roles, args, name, link, sha, [out])
+            if got.get("how") != "squash":
+                problems.append(f"step 1, a merge request the forge lets merge: {got}")
+            # A hotfix's merge request closed: its way out, nothing by itself (V-3).
+            hot = "work/parcheggio-hotfix-q-chg-007"
+            play(state="CLOSED", branch=hot)
+            got = work._code_check(p, roles, args, hot, link, sha, [out])
+            if "whoever decides withdraws the hotfix at a join, `withdrawn_by` the `DEC` that " \
+                    f"says so, and its parking branch is deleted: `git push origin --delete {hot}`" \
+                    not in got.get("wait", ""):
+                problems.append(f"step 1, a hotfix's merge request closed: {got}")
+
+            # Step 1 whole, one merge request per code repository (V-4): a thread kept out by
+            # the turn of one repository takes the turn of none of the others; a merge request
+            # the join merged before it was resumed holds its repository's; a question on the
+            # way to merge takes its turn, so that the command said holds once answered.
+            app, lib = "https://github.com/acme/app/pull/", "https://github.com/acme/lib/pull/"
+            heads = {f"{app}1": "work/q-a", f"{app}2": "work/q-b", f"{lib}3": "work/q-b",
+                     f"{lib}4": "work/q-c"}
+            asked = types.SimpleNamespace(merged=set(), merged_elsewhere=set(), merge_method=None,
+                                          out=None)
+
+            def gate(links: dict, ways: tuple, already=(), opened=False) -> str:
+                scene.write_text(json.dumps({
+                    "prs": {k: {"state": "OPEN", "mergeable": "MERGEABLE",
+                                "mergeStateStatus": "CLEAN", "headRefName": n, "headRefOid": sha}
+                            for k, n in heads.items()},
+                    "repos": {f"github.com/acme/{x}": {
+                        "mergeCommitAllowed": "merge" in ways,
+                        "squashMergeAllowed": "squash" in ways,
+                        "rebaseMergeAllowed": "rebase" in ways} for x in ("app", "lib")}}))
+                r = {"link_on": True, "open": {n: {"links": {c: (l, sha) for c, l in cs.items()}}
+                                               for n, cs in links.items()}}
+                threads = sorted(links)
+                said = io.StringIO()
+                with contextlib.redirect_stdout(said), contextlib.redirect_stderr(said):
+                    got = work._code_gate(p, r, roles, "Owner", asked, threads, threads, opened,
+                                          list(already))
+                return ("" if got is None else f"lines {got}\n") + said.getvalue()
+
+            said = gate({"work/q-a": {"CHG-011": f"{app}1"},
+                         "work/q-b": {"CHG-012": f"{app}2", "CHG-013": f"{lib}3"},
+                         "work/q-c": {"CHG-014": f"{lib}4"}}, ("squash",))
+            if "CHG-012: a join merges one merge request per code repository, and acme/app's in " \
+                    "this one is work/q-a's" not in said or "is work/q-b's" in said \
+                    or "`join --who \"Owner\" q-a q-c`." not in said \
+                    or f"{app}2: at the delivery's commit, mergeable" in said \
+                    or f"{app}1: at the delivery's commit, mergeable" not in said:
+                problems.append(f"step 1, a thread kept out by one repository: {said[-1500:]!r}")
+            said = gate({"work/q-a": {"CHG-011": f"{app}1"}}, ("squash",), opened=True,
+                        already=[("work/q-d", "CHG-019", f"{app}9", sha, "squash")])
+            if "CHG-011: a join merges one merge request per code repository, and acme/app's in " \
+                    "this one is work/q-d's" not in said:
+                problems.append(f"step 1, a join resumed: {said[-1500:]!r}")
+            said = gate({"work/q-a": {"CHG-011": f"{app}1"}, "work/q-b": {"CHG-012": f"{app}2"}},
+                        ("merge", "rebase"))
+            if "CHG-012: a join merges one merge request per code repository, and acme/app's in " \
+                    "this one is work/q-a's" not in said \
+                    or "`join --who \"Owner\" q-a`, with the answers." not in said:
+                problems.append(f"step 1, a question on the way to merge: {said[-1500:]!r}")
+
+            # Step 6, on the line the signature carries.
+            work._merge_requests = lambda *_, **__: [(name, "CHG-007", link, sha, "squash")]
+            for given, says in (
+                    ({"state": "MERGED", "head": other}, "since the join checked it, not at the "
+                                                         "delivery's commit"),
+                    ({"state": "CLOSED"}, "was closed since the join checked it"),
+                    ({"queue": {link: True}}, f"the forge did not merge {link}")):
+                play(**given)
+                rc, said = merge()
+                if rc != 2 or says not in said or "The documentation did not land" not in said:
+                    problems.append(f"--merge, {given}: exit {rc}, {said[-400:]!r}")
+            play()
+            rc, said = merge()
+            if rc or f"{link}: merged on the forge with squash" not in said:
+                problems.append(f"--merge, the forge merges: exit {rc}, {said[-400:]!r}")
+        finally:
+            for k, value in saved.items():
+                if value is None:
+                    os.environ.pop(k, None)
+                else:
+                    os.environ[k] = value
+    return problems
+
+
+@check("from 4.13.0 work.yaml may say merge_method, among the three ways a forge merges, read in the additive mode only; and INTEGRATO may hold a block that says nothing delivered beside the others")
+def _merge_method_and_empty_block():
+    problems = []
+    validate = VALIDATE.read_text(encoding="utf-8")
+    since = re.search(r'^JOINED_SINCE = "([0-9.]+)"$', validate, re.M).group(1)
+    before = _previous_version(since)
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = _Repo(Path(tmp) / "docs")
+        team = "people: [Owner]\nadmins: [Owner]\n"
+        for text, code, says in (
+                ("mode: additive\n" + team + "merge_method: fast\n", "WK001",
+                 "`merge_method: fast` is not a value this version reads"),
+                ("mode: additive\n" + team + "merge_method: squash\n", "WK001", None),
+                (team + "merge_method: squash\n", "WK002", "`merge_method` without `mode: additive`")):
+            repo.write(".framework/work.yaml", text)
+            got = [f["message"] for f in repo.findings(code)]
+            if (says is None and any("merge_method" in m for m in got)) \
+                    or (says is not None and not any(says in m for m in got)):
+                problems.append(f"{text!r}: {code} {got}")
+    with tempfile.TemporaryDirectory() as tmp:
+        repo, ex, sha = _exchange_docs(Path(tmp))
+        _put(ex, {"integrati/CHG-001/verifica.md": "v",
+                  "integrati/CHG-001/INTEGRATO":
+                      f"- commit: {sha[:12]}\n  date: 2026-10-14\n  parts:\n"
+                      "    verifica.md: CHG-001 §Verification\n"
+                      f"- commit: {sha[:12]}\n  date: 2026-10-20\n  parts: {{}}\n"})
+        for pin, want in ((since, []), (before, ["integrati/CHG-001/INTEGRATO"])):
+            repo.write("framework.yaml", f"framework_version: {pin}\n")
+            got = _exc(repo, "EXC003")
+            if got != want:
+                problems.append(f"pinned {pin}, a block with nothing delivered beside another: "
+                                f"EXC003 at {got}, {want} expected")
+    return problems
+
+
 @check("join leaves out a thread whose new number has no reservation of its own, and a merged thread's number is never renumbered at the join")
 def _join_unreserved_thread():
     # `join` refuses before merging, as it refuses a number both created, a thread that
@@ -14815,8 +15701,14 @@ def _doctor_reads_a_machine():
             else:
                 where.write_text(json.dumps(data))
 
+        # From the version of the code session `doctor` asks for `gh` and its access too: a fake
+        # one and its file here, so that what the machine running the checks has does not count.
+        _fake_gh(bin_)
+        (config / "gh").mkdir()
+        (config / "gh" / "hosts.yml").write_text("github.com:\n    user: owner\n")
+        code_on = work.v.rules_hold({"framework_version": pin}, work.T.LINK_SINCE)
         env = {"PATH": f"{bin_}{os.pathsep}{os.environ.get('PATH', '')}",
-               "CLAUDE_CONFIG_DIR": str(config)}
+               "CLAUDE_CONFIG_DIR": str(config), "GH_CONFIG_DIR": str(config / "gh")}
         good = {"sandbox": {"enabled": True, "allowUnsandboxedCommands": False,
                             "failIfUnavailable": True,
                             "excludedCommands": list(work.SANDBOX_EXCLUDED)},
@@ -14874,13 +15766,15 @@ def _doctor_reads_a_machine():
              lambda: (repo.write(".framework/sessions.yaml", "exchange: ../_scambio\n"),
                       (tmp / "projects" / "_scambio").mkdir()), 1,
              "note  `_scambio` is not beside the repositories on this machine"),
-            # Outside the mode it is optional, for an admin too.
+            # Outside the mode it is optional, for an admin too -- below the version of the code
+            # session, from which it is a requirement to implement.
             ("no exchange declared, outside the mode",
              lambda: (repo.write(".framework/work.yaml", team),
                       repo.write(".framework/sessions.yaml", "{}\n")),
              lambda: (repo.write(".framework/work.yaml", "mode: additive\n" + team),
-                      repo.write(".framework/sessions.yaml", "exchange: ../_scambio\n")), 0,
-             "Declaring it is optional."),
+                      repo.write(".framework/sessions.yaml", "exchange: ../_scambio\n")),
+             1 if code_on else 0,
+             "Declare it, `exchange: ../_scambio`." if code_on else "Declaring it is optional."),
             ("a name not among the people", None, None, 1, "`Nobody` is not among the people"),
             ("another project beside", lambda: _Repo(tmp / "projects" / "another").write(
                 ".framework/work.yaml", "people: [X]\n"),
@@ -14945,6 +15839,105 @@ def _doctor_reads_a_machine():
         if f"ok    the plugin installed is {pin}, and the project pins {pin} on origin/main" \
                 not in out:
             problems.append(f"the pin of a checkout behind its main line: {out[-500:]!r}")
+    return problems
+
+
+@check("from 4.13.0 work.py doctor runs without work.yaml too, and says the command line of Claude Code, gh and the access its files declare for whoever runs a join, the launch of the code session out of the sandbox, and the exchange a requirement to implement")
+def _doctor_from_the_code_session():
+    problems = []
+    work = _load(WORK, "work_for_doctor_code")
+    since = work.T.LINK_SINCE
+    before = _previous_version(since)
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        projects = tmp / "projects"
+        (projects / "_scambio").mkdir(parents=True)
+        tools, gh_config, config = tmp / "strumenti", tmp / "gh-config", tmp / "config"
+        _fake_gh(tools)
+        gh_config.mkdir()
+        (gh_config / "hosts.yml").write_text("github.com:\n    user: owner\n")
+        config.mkdir()
+        claude_dir = tmp / "claude-bin"
+        claude_dir.mkdir()
+
+        def claude(pin: str) -> None:
+            (claude_dir / "claude").write_text(
+                f"#!/bin/sh\nprintf 'framework-data-ai {pin}\\n\\n  Hooks (2)\\n'\n")
+            (claude_dir / "claude").chmod(0o755)
+
+        def settings(excluded: list[str]) -> None:
+            (config / "settings.json").write_text(json.dumps({"sandbox": {
+                "enabled": True, "excludedCommands": excluded}}))
+        only_git = _only_git(tmp / "solo-git")
+        everything = {"PATH": os.pathsep.join(map(str, (claude_dir, tools, only_git))),
+                      "GH_CONFIG_DIR": str(gh_config), "CLAUDE_CONFIG_DIR": str(config),
+                      "GH_TOKEN": "", "GITHUB_TOKEN": "", "GH_ENTERPRISE_TOKEN": ""}
+
+        def doctor(repo: _Repo, *who: str, **env: str) -> tuple[int, str]:
+            return _work(repo.path, "doctor", *who, env={**everything, **env})
+
+        team = _Repo(projects / "docs")
+        team.write("framework.yaml", f"framework_version: {since}\n")
+        team.write(".framework/work.yaml", "mode: additive\npeople: [Owner, Junior]\n"
+                   "admins: [Owner]\n")
+        team.write(".framework/sessions.yaml", "exchange: ../_scambio\n")
+        team.commit("base", "2026-06-01T09:00:00+02:00")
+        claude(since)
+        settings([*work.SANDBOX_EXCLUDED, work.CODE_EXCLUDED])
+        cases = [
+            ("everything, for an admin", ("--who", "Owner"), {}, [
+                "ok    `claude`, the command line of Claude Code, is on the PATH",
+                "ok    `gh`, GitHub's command line, is on the PATH",
+                "ok    `gh` declares an access to github.com",
+                "ok    the launch of the code session leaves the sandbox"]),
+            ("no gh, for an admin", ("--who", "Owner"),
+             {"PATH": os.pathsep.join(map(str, (claude_dir, only_git)))},
+             ["todo  `gh`, GitHub's command line, is not on the PATH"]),
+            ("no gh, for a contributor", ("--who", "Junior"),
+             {"PATH": os.pathsep.join(map(str, (claude_dir, only_git)))},
+             ["note  `gh`, GitHub's command line, is not on the PATH"]),
+            ("no access", ("--who", "Owner"), {"GH_CONFIG_DIR": str(tmp / "nowhere")},
+             ["todo  `gh` declares no access"]),
+            ("a token", ("--who", "Owner"), {"GH_CONFIG_DIR": str(tmp / "nowhere"),
+                                             "GH_TOKEN": "x"},
+             ["ok    `gh` declares an access to a token in GH_TOKEN"]),
+            ("no claude", ("--who", "Owner"),
+             {"PATH": os.pathsep.join(map(str, (tools, only_git)))},
+             ["todo  `claude`, the command line of Claude Code, is not on the PATH"]),
+        ]
+        for name, who, env, says in cases:
+            rc, out = doctor(team, *who, **env)
+            missing = [x for x in says if x not in out]
+            if missing:
+                problems.append(f"{name}: missing {missing} in {out[-900:]!r}")
+        settings(list(work.SANDBOX_EXCLUDED))
+        rc, out = doctor(team, "--who", "Owner")
+        if "note  the launch of the code session stays in the sandbox" not in out:
+            problems.append(f"the launch not let out of the sandbox: {out[-700:]!r}")
+
+        # No work.yaml: it runs, and says only what is a machine's. The exchange is a
+        # requirement to implement from the version, optional before it.
+        (tmp / "elsewhere" / "_scambio").mkdir(parents=True)
+        alone = _Repo(tmp / "elsewhere" / "alone")
+        alone.write(".framework/sessions.yaml", "exchange: ../_scambio\n")
+        for pin, sessions, want, says, not_says in (
+                (since, "exchange: ../_scambio\n", 0,
+                 ["note  no .framework/work.yaml", "ok    `claude`, the command line"],
+                 ["branches.yml", "todo"]),
+                (since, "{}\n", 1, ["todo  the project declares no exchange", "From 4.13.0 it "
+                                    "is a requirement to implement", "Declare it, `exchange: "
+                                    "../_scambio`."], []),
+                (before, "{}\n", 0, ["Declaring it is optional."],
+                 ["`claude`, the command line", "`gh`", "the launch of the code session"])):
+            alone.write("framework.yaml", f"framework_version: {pin}\n")
+            alone.write(".framework/sessions.yaml", sessions)
+            alone.commit(f"{pin} {sessions}", "2026-06-01T09:00:00+02:00")
+            claude(pin)
+            rc, out = doctor(alone)
+            if rc != want or [x for x in says if x not in out] \
+                    or [x for x in not_says if x in out]:
+                problems.append(f"no work.yaml, pinned {pin}, sessions {sessions.strip()}: exit "
+                                f"{rc} ({want} expected), {out[-900:]!r}")
     return problems
 
 

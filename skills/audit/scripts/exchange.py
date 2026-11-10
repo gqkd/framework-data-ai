@@ -4,7 +4,7 @@
     python3 exchange.py --root path/to/documentation
     python3 exchange.py --root . --json
     python3 exchange.py --root <thread worktree> integrate CHG-021
-    python3 exchange.py --root <thread worktree> code CHG-021 --repo ../app [--base <branch>]
+    python3 exchange.py --root <thread worktree> code CHG-021 --repo ../app [--base <branch>] [--join-base [auto|merge|rebase]]
     python3 exchange.py --root <thread worktree> code CHG-021 --launch
     python3 exchange.py --root <thread worktree> code CHG-021 --resume [--allow <file>]... [--reply <file>]
     python3 exchange.py --root <thread worktree> code CHG-021 --status
@@ -74,7 +74,27 @@ repository. Four forms, each one call:
               brought forward and its commits said to the code session as not its own,
               diverged is said with both sides and the two commands -- join, a rebase of the
               local commits on the remote's, or keep the remote -- that the documentation
-              session runs on the person's choice. It stops there: the push and the
+              session runs on the person's choice. It says how far the branch is behind its
+              base -- `--base`, or else the start an earlier launch of the change recorded,
+              or else the remote's default branch --; with `--join-base`, on the person's
+              yes, it joins the base into the branch -- a merge, with the person's `rerere`
+              off --, the base's commits said to the code session as not its own, and a merge
+              stopped on conflicts given to the code session first, whose concluding commit
+              is the documentation session's, as the step of a rebase (V-5), and pushed at
+              once: refused there, the remote is kept and the base joined again, never the
+              two joined by a rebase (V-6). Where the code is merged by a rebase --
+              `merge_method: rebase` in the additive mode, or `--join-base rebase` --, the
+              branch's commits are re-applied on the base instead, with the steps of a
+              rebase, and its push is forced, with lease, on the person's yes (V-7); not
+              pushed while the remote moved, or refused, the same: the remote kept and the
+              branch re-applied again. `--join-base` alone, or `auto`, takes the way from
+              `merge_method`; `merge` or `rebase` names it, against the key too. Re-applied,
+              the commits that were on the branch before -- the code session's and others' --
+              have new ids, which the code session is told. This is for where the forge
+              wants the branch up to date with its base, or its merge request conflicts with
+              it. A launch closed by the integration is prepared again with its brief back in
+              `in-arrivo/<id>/`. A merge in progress that no `--join-base` made is the
+              person's to conclude or abort first. It stops there: the push and the
               preparation the brief names are the documentation session's commands, in view.
     --launch  runs `claude -p` in the worktree, under `dontAsk`, with the plugin this command
               runs from, the delivery folder, and what the code session may do without asking:
@@ -83,24 +103,28 @@ repository. Four forms, each one call:
               provider of the environment: it runs on the person's subscription, is refused
               where Claude Code's settings set one, and is stopped at its start when its
               first event says otherwise. Under a sandbox the sandbox does not approve a
-              command by itself. A rebase in progress is the first thing the code session is
-              given; the join, and each `--continue`, is printed with the person's `rerere`
-              off, so that no resolution of another rebase comes back by itself.
+              command by itself. A rebase in progress, or a merge of the base, is the first
+              thing the code session is given; the join, each `--continue` and the commit
+              that concludes the merge are printed with the person's `rerere` off, so that no
+              resolution of another rebase or merge comes back by itself.
     --resume  the same session, with the rule the person approved now, written whole, for
               this run only (`--allow`, a file), or the answer to its question (`--reply`), or
-              neither: after the documentation session ran `git rebase --continue`, or after
-              a stop with nothing to approve or answer.
+              neither: after the documentation session ran `git rebase --continue`, or the
+              commit that concludes the merge of the base, or after a stop with nothing to
+              approve or answer.
     --status  whether it runs, and where it stopped; a run whose end was never written, its
               process gone, is read from its output.
 
 Each run ends on a stop, said in a few lines and written into the launch file, exit 0: `negata`
 (each action denied with the rule that would grant it; a block of the framework's guard, or of a
-hook of the person's, said apart; `git rebase --continue`, which the documentation session runs
-on the person's yes and never grants, said with its command; a push or a merge request, never
-the code session's, said apart and no question, and with other commands on its line no rule),
-`account` (a limit or a credential of the account), `domanda` (the last entry of `domande.md`,
-said with any stop of its run), `consegna` (the fixed names delivered since the launch began,
-never with a rebase in progress) and `fine` (with an error of the run, if one ended it). The
+hook of the person's, said apart; `git rebase --continue`, and with a merge of the base in
+progress the commit that concludes it -- `git commit` or `git merge --continue` --, which the
+documentation session runs on the person's yes and never grants, said with its command; a push
+or a merge request, never the code session's, said apart and no question, and with other
+commands on its line no rule), `account` (a limit or a credential of the account), `domanda`
+(the last entry of `domande.md`, said with any stop of its run), `consegna` (the fixed names
+delivered since the launch began, never with a rebase or a merge of the base in progress) and
+`fine` (with an error of the run, if one ended it). The
 launch file, `sessione-codice.json`, holds no value: one beside a name is withheld. The output of
 a run waits in the person's outputs folder, the person's alone, until its stop is written.
 `--allow` takes only the rules the last stop proposed, compared as the launch file keeps them:
@@ -119,7 +143,12 @@ place, without its history; the listing says it, and `integrate` moves it as it 
 closed at `--launch`, `--resume` and `--status`, a branch that diverges from its remote at
 `--launch` with no choice made, a rule `--allow` was not proposed, a resume after a
 `--continue` that did not move the rebase, or after it was aborted and the branch holds its own
-commits again without the remote's, `claude` not found, at
+commits again without the remote's, or, re-applied on the base, without the base, a resume
+after a commit that did not conclude the merge of
+the base, or after the merge was aborted and the branch does not hold the base, `--join-base`
+with a rebase or a merge in progress or a branch diverged from its remote, a join of the base
+that fails short of a conflict (aborted, nothing else changed), at the first call and at
+`--launch` a merge in progress that no `--join-base` made, `claude` not found, at
 `--launch` and `--resume` a settings file of Claude Code's -- the organisation's, the person's,
 the worktree's -- whose `env` sets a provider, an address, a key or a token, or that sets an
 `apiKeyHelper`, or that opens and does not read (each said with its file and line, and by the
@@ -440,14 +469,16 @@ _GIT = (r"git(?:\s+-[Cc]\s+\S+|\s+--(?:git-dir|work-tree|namespace|config-env|ex
 _NOT_B = (rf"{_GIT}\s+push|gh\s+pr\s+(?:create|merge)|glab\s+mr\s+(?:create|merge)")
 NOT_B = re.compile(rf"{_LEAD}(?:{_NOT_B})\b")
 # The commit of a step of a rebase, which the documentation session runs on the person's yes and
-# never grants (R-27): its `--continue`, and with a rebase in progress a `git commit` too.
+# never grants (R-27): its `--continue`, and with a rebase in progress a `git commit` too; with
+# a merge of the base in progress, the commit that concludes it, `git commit` or `git merge
+# --continue` (V-5).
 CONTINUE = re.compile(rf"{_LEAD}{_GIT}\s+rebase\s+--continue\b")
-COMMIT = re.compile(rf"{_LEAD}{_GIT}\s+commit\b")
+COMMIT = re.compile(rf"{_LEAD}{_GIT}\s+(?:commit|merge\s+--continue)\b")
 # The same anywhere on a line -- among other commands, inside `bash -c "..."`, or only in the
 # text of a message, which nothing here tells apart --: such a line gets no rule, which would
 # grant it too, and the stop says so.
 NOT_B_ANYWHERE = re.compile(rf"(?:^|[^\w-])(?:{_NOT_B}|{_GIT}\s+rebase\s+--continue)\b")
-COMMIT_ANYWHERE = re.compile(rf"(?:^|[^\w-]){_GIT}\s+commit\b")
+COMMIT_ANYWHERE = re.compile(rf"(?:^|[^\w-]){_GIT}\s+(?:commit|merge\s+--continue)\b")
 # Where a line of the shell holds more than one command. A separator inside quotes splits a
 # message too: what is read here is only whether every command, or some, is one of the above.
 SEPARATORS = re.compile(r"&&|\|\||;|\||\n")
@@ -630,6 +661,12 @@ def _launch_shape(data, outputs: Path | None = None) -> str | None:
                 return f"{where}, `{key}`"
         if not when(launch.get("inizio"), required=True):
             return f"{where}, `inizio`"
+        if launch.get("base") is not None and not _word(launch.get("base")):
+            return f"{where}, `base`"
+        if launch.get("lease") is not None and not commit(launch.get("lease")):
+            return f"{where}, `lease`"
+        if launch.get("modo") not in (None, "merge", "rebase"):
+            return f"{where}, `modo`"
         for m, run in enumerate(launch["tranche"], 1):
             at = f"{where}, run {m}"
             if not isinstance(run, dict):
@@ -655,6 +692,10 @@ def _launch_shape(data, outputs: Path | None = None) -> str | None:
                 return f"{at}, `proposte`"
             if run.get("passo") is not None and not isinstance(run.get("passo"), list):
                 return f"{at}, `passo`"
+            if run.get("unione") is not None and not isinstance(run.get("unione"), bool):
+                return f"{at}, `unione`"
+            if run.get("sulla_base") is not None and not isinstance(run.get("sulla_base"), bool):
+                return f"{at}, `sulla_base`"
             if run.get("fermata") is not None and not isinstance(run.get("fermata"), str):
                 return f"{at}, `fermata`"
     return None
@@ -785,6 +826,14 @@ def rebase_in(tree: Path) -> Rebase | None:
             return Rebase(num("msgnum", "next"), num("end", "last"), sha[:12], subject,
                           conflicted)
     return None
+
+
+def merge_in(tree: Path) -> list[str] | None:
+    """The merge of the base stopped in the code session's worktree, if one is (V-5): the files
+    still in conflict, none where all are resolved and its commit is left."""
+    if not _out(tree, "rev-parse", "--verify", "-q", "MERGE_HEAD"):
+        return None
+    return _out(tree, "diff", "--name-only", "--diff-filter=U").splitlines()
 
 
 def _rebase_says(tree: Path, what: str) -> str:
@@ -1081,11 +1130,14 @@ class Code:
                          "change holds its thread, and launches from that worktree: `contribute` "
                          "takes it.")
             name = branch
-        return {"additive": additive, "branch": name, "hotfix": hotfix, "rel": rel}
+        # `merge_method` is read only in the additive mode, as `WK002` says of it outside.
+        return {"additive": additive, "branch": name, "hotfix": hotfix, "rel": rel,
+                "merge_method": work.get("merge_method") if additive else None}
 
     # The first call ──────────────────────────────────────────────────────────
 
-    def prepare(self, repo_arg: Path, base: str | None, no_chg: str | None) -> int:
+    def prepare(self, repo_arg: Path, base: str | None, no_chg: str | None,
+                join_base: str | None = None) -> int:
         mandate = self.check_mandate(no_chg)
         repo = self.check_repo(repo_arg)
         if claude_binary() is None:
@@ -1147,7 +1199,21 @@ class Code:
                    else "there was none")
             notes.append(f"The fetch of {repo} failed ({(fetched.stderr or '').strip()[:200]}): "
                          f"what follows is as the last fetch left it, and {age}.")
-        start = self._base(repo, base)
+        # The base of a branch an earlier launch made is the start it recorded, unless `--base`
+        # names another: the one it is said behind and joined from (V-5). The remote's default
+        # branch only for a new one, or where the recorded start is gone, said.
+        # Read from a file anyone can write: only as a ref that exists, never as an option.
+        recorded = (previous or {}).get("partenza")
+        if not base and _word(recorded) and not recorded.startswith("-") and any(
+                _out(repo, "rev-parse", "--verify", "-q", f"refs/{kind}/{recorded}")
+                for kind in ("remotes", "heads")):
+            start = recorded
+        else:
+            start = self._base(repo, base)
+            if not base and _word(recorded) and recorded != start:
+                notes.append(f"The start an earlier launch of {self.ident} recorded, {recorded}, "
+                             f"is not in {repo}: the base is {start}, the remote's default "
+                             "branch, unless `--base` names another.")
         branch = mandate["branch"]
         tree = repo.parent / f"{repo.name}-{self.ident.lower()}"
         remote = f"origin/{branch}"
@@ -1197,17 +1263,72 @@ class Code:
         strangers: list[str] = from_remote
         diverged = None
         rebase = rebase_in(tree)
+        # A merge of the base stopped in the worktree (V-5) goes to the code session first, as a
+        # rebase does: nothing is brought forward or joined in the middle of it.
+        merging = merge_in(tree) if rebase is None else None
+        joined = None
         local = _out(repo, "rev-parse", "--verify", "-q", f"refs/heads/{branch}")
         theirs = _out(repo, "rev-parse", "--verify", "-q", f"refs/remotes/{remote}")
         push = not theirs
-        if rebase is not None:
+        # The last launch's join of the base (V-5..V-7): the base it joined, and, re-applied by
+        # a rebase, the remote's commit that rebase rewrote, the lease of its forced push.
+        # The latest launch that joined it, whatever launches came after: a first call made
+        # again appends one with none. Its lease counts while the join is still to push: the
+        # remote holds the commit the rebase rewrote, and the branch here does not.
+        last = next((entry for entry in reversed((previous or {}).get("lanci") or [])
+                     if entry.get("base")), {})
+        lease = last.get("lease")
+        lease = lease if lease and theirs and local and _git_in(
+            repo, "merge-base", "--is-ancestor", lease, theirs).returncode == 0 and _git_in(
+            repo, "merge-base", "--is-ancestor", lease, local).returncode != 0 else None
+        forced = None
+        # How the base was joined, `merge` or `rebase`, kept with it: the texts of a rebase and
+        # the joins printed again read it, as `lease` is only where the branch was on a remote.
+        joined_by = None
+        # The base joined here and not pushed, where the remote moved meanwhile (V-6): how it
+        # was joined, to join it again the same way.
+        over_base = None
+        if merging is not None:
+            joined = (previous or {}).get("lanci", [{}])[-1].get("base")
+            joined_by = "merge"
+            if not joined:
+                v.refuse(f"a merge is in progress in {tree} that no `--join-base` made: it is the "
+                         f"person's to conclude or abort (`git -C {tree} merge --abort`), and "
+                         "nothing is prepared until then.")
+            notes.append(f"A merge of the base is in progress in {tree}"
+                         + (f", in conflict in {', '.join(merging)}" if merging else
+                            ", its conflicts resolved")
+                         + ": it is not made again, the launch gives the code session what is "
+                         "left of it first, and the commit that concludes it is yours, on the "
+                         "person's yes.")
+            strangers = list((previous or {}).get("lanci", [{}])[-1].get("estranei") or [])
+            if theirs and local and _git_in(repo, "merge-base", "--is-ancestor", theirs,
+                                            local).returncode != 0:
+                notes.append(f"{remote} has commits {branch} has not: the push after the merge "
+                             "will be refused (R-28), unless the merge is aborted (`git -C "
+                             f"{tree} merge --abort`, in view, on the person's yes) and the first "
+                             "call made again.")
+        elif rebase is not None:
             notes.append(f"A rebase is in progress in {tree}, stopped at step {rebase.step} of "
                          f"{rebase.of}: it is not applied again, and the launch gives the code "
                          "session the stopped step first.")
             strangers = list((previous or {}).get("lanci", [{}])[-1].get("estranei") or [])
             onto = _rebase_says(tree, "onto")
-            if theirs and onto and _git_in(repo, "merge-base", "--is-ancestor", theirs,
-                                           onto).returncode != 0:
+            if last.get("modo") == "rebase" and not (
+                    theirs and onto and _git_in(repo, "merge-base", "--is-ancestor", onto,
+                                                theirs).returncode == 0):
+                # A rebase on the base (V-7): its push is forced, at the lease, where the branch
+                # was on the remote; with none, a push.
+                # Mid-rebase the branch still points at its old commit: the lease is read whole.
+                lease = last.get("lease")
+                joined, forced, joined_by = last.get("base"), lease, "rebase"
+                if lease and theirs and theirs != lease:
+                    notes.append(f"{remote} has moved since the rebase on the base began: its "
+                                 "forced push will be refused, and then the remote is kept and "
+                                 "the base joined again, the first call with `--join-base "
+                                 "rebase` (V-6).")
+            elif theirs and onto and _git_in(repo, "merge-base", "--is-ancestor", theirs,
+                                             onto).returncode != 0:
                 notes.append(f"{remote} has moved past {onto[:12]}, the commit the rebase "
                              "re-applies on: the push after it will be refused (R-28), unless the "
                              f"rebase is aborted (`git -C {tree} rebase --abort`, in view, on the "
@@ -1223,11 +1344,99 @@ class Code:
                              "commit(s) the code session did not make.")
             elif _git_in(repo, "merge-base", "--is-ancestor", theirs, local).returncode == 0:
                 push = True
+            elif lease and theirs == lease and _git_in(repo, "merge-base", "--is-ancestor",
+                                                       lease, local).returncode != 0:
+                # Re-applied on the base and not pushed yet (V-7): not diverged, its forced
+                # push is next.
+                joined, forced, joined_by = last.get("base"), lease, "rebase"
+                strangers = list(last.get("estranei") or [])
+                notes.append(f"{branch} was re-applied on {joined} and not pushed: its push is "
+                             "forced, with lease, on the person's yes (V-7).")
             else:
                 diverged = {"locale": _out(repo, "log", "--format=%h %s", f"{theirs}..{local}"),
                             "remoto": _out(repo, "log", "--format=%h %s", f"{local}..{theirs}"),
                             "remoto_sha": theirs}
                 strangers = _out(repo, "rev-list", "--reverse", f"{local}..{theirs}").split()
+                # Re-applied on the base and not pushed: the remote still holds the commit the
+                # rebase rewrote, and the branch does not. Once its forced push was made the
+                # remote no longer holds it: the join was pushed, and R-26's way holds.
+                if lease and _git_in(repo, "merge-base", "--is-ancestor", lease,
+                                     theirs).returncode == 0 \
+                        and _git_in(repo, "merge-base", "--is-ancestor", lease,
+                                    local).returncode != 0:
+                    over_base = "rebase"
+                elif _out(repo, "rev-list", "--merges", f"{theirs}..{local}"):
+                    over_base = "merge"
+        # The base (V-5): how far the branch is behind it, said; joined on the person's yes,
+        # `--join-base`, where the forge wants the branch up to date with it or its merge
+        # request conflicts with it.
+        head = _out(tree, "rev-parse", "--verify", "-q", "HEAD")
+        behind = _out(repo, "rev-list", "--reverse", f"{head}..{start}").split() \
+            if head and rebase is None and merging is None and not diverged else []
+        brought: list[str] = []
+        if join_base:
+            if rebase is not None or merging is not None or diverged:
+                v.refuse(f"`--join-base`: {branch} has "
+                         + ("a rebase in progress" if rebase is not None else
+                            "a merge in progress" if merging is not None else
+                            "diverged from its remote")
+                         + ", which comes first. Nothing is joined; the launch file is as it "
+                         "was.")
+            # Where the code is merged by a rebase, the branch's commits are re-applied on the
+            # base (V-7): a merge of it would come undone on the forge, its conflicts with it.
+            way = (join_base if join_base in ("merge", "rebase") else
+                   "rebase" if mandate.get("merge_method") == "rebase" else "merge")
+            if not behind:
+                notes.append(f"{branch} holds {start} already: there is nothing to join.")
+            elif way == "rebase":
+                r = _git_in(tree, "-c", "rerere.enabled=false", "rebase", start)
+                rebase = rebase_in(tree)
+                if r.returncode and rebase is None:
+                    _git_in(tree, "rebase", "--abort")
+                    v.refuse(f"the rebase of {branch} on {start} failed: "
+                             f"{(r.stderr or r.stdout or '').strip()[:300]}. Nothing else is "
+                             "changed.")
+                strangers = behind + [s for s in strangers if s not in set(behind)]
+                brought = behind
+                joined, joined_by = start, "rebase"
+                forced = theirs or None
+                notes.append(f"{branch} re-applied on {start}, on the person's yes, as the code "
+                             "is merged by a rebase: "
+                             f"{len(behind)} commit(s) of the base the code session did not make"
+                             + (f"; the rebase stopped at step {rebase.step} of {rebase.of}, which "
+                                "the launch gives the code session first" if rebase is not None
+                                else "")
+                             + (". The push after it is forced, with lease, on the person's yes "
+                                "(V-7)." if theirs else "."))
+                behind = []
+            else:
+                # Without the person's `rerere`, as the join of the remote's (T-5).
+                r = _git_in(tree, "-c", "rerere.enabled=false", "merge", "--no-ff", "-m",
+                            f"Merge {start} into {branch}", start)
+                if r.returncode and not _out(tree, "ls-files", "-u"):
+                    _git_in(tree, "merge", "--abort")
+                    v.refuse(f"the join of {start} into {branch} failed: "
+                             f"{(r.stderr or r.stdout or '').strip()[:300]}. Nothing else is "
+                             "changed.")
+                # The base's first: the code session is shown the last thirty, and those made
+                # on this branch are the ones to read before all (`_strangers`).
+                strangers = behind + strangers
+                brought = behind
+                joined, joined_by = start, "merge"
+                merging = merge_in(tree)
+                push = merging is None or push
+                notes.append(f"{start} joined into {branch}, on the person's yes: "
+                             f"{len(behind)} commit(s) of the base the code session did not make"
+                             + (f"; the merge stopped on conflicts in {', '.join(merging)}, which "
+                                "the launch gives the code session first" if merging else "")
+                             + ".")
+                behind = []
+        if behind:
+            notes.append(f"{branch} is {len(behind)} commit(s) behind {start}. Where the forge "
+                         "wants the branch up to date with its base, or its merge request "
+                         "conflicts with it -- `work.py join` says so at its first step --, the "
+                         "base is joined into it on the person's yes: this call again with "
+                         "`--join-base`.")
         links = self._links(repo, tree, notes)
         blocked = off_subscription(tree)
         if blocked:
@@ -1248,7 +1457,8 @@ class Code:
                                               "remoto": _withhold(diverged["remoto"])}
         entry = {"inizio": _now(), "sessione": None, "estranei": strangers,
                  "divergente": kept, "collegati": links, "concessi": [], "approvate": [],
-                 "tranche": []}
+                 "tranche": [], "base": joined, "lease": forced,
+                 "modo": joined_by if joined else None}
         if lanci and not lanci[-1].get("tranche"):
             # Prepared again, never launched: what the call before found not the code session's
             # -- brought forward, or kept from the remote -- stays so, where the branch holds it.
@@ -1257,6 +1467,28 @@ class Code:
                                  if s not in strangers and head and
                                  _git_in(repo, "merge-base", "--is-ancestor", s,
                                          head).returncode == 0] + strangers
+            if brought:
+                # The base's first, as above.
+                entry["estranei"] = brought + [s for s in entry["estranei"]
+                                               if s not in set(brought)]
+            # And the base it joined, which the launch tells the code session (V-5), where the
+            # branch still holds commits of it: not after its merge was aborted.
+            kept_base = lanci[-1].get("base")
+            held = set(entry["estranei"])
+            if kept_base and not joined and not any(
+                    s in held and _git_in(repo, "merge-base", "--is-ancestor", s,
+                                          start).returncode == 0
+                    for s in lanci[-1].get("estranei") or []):
+                kept_base = None
+            if rebase is not None and joined_by != "rebase":
+                # R-26's rebase on the remote's, begun since: the join of the base was pushed.
+                kept_base = None
+            entry["base"] = joined or kept_base
+            if not joined and entry["base"]:
+                # Kept from the call before, with how it was joined and, re-applied, its lease
+                # while the remote still holds it: once the forced push was made, none.
+                entry["modo"] = lanci[-1].get("modo")
+                entry["lease"] = lease
             lanci[-1] = entry
         else:
             lanci.append(entry)
@@ -1290,24 +1522,48 @@ class Code:
                                                        or "none"))
             print("  on the remote, not here:\n    " + (diverged["remoto"].replace("\n", "\n    ")
                                                        or "none"))
-            print("  Ask the person: join them -- the commits here re-applied on the remote's, "
-                  "rewritten, approved again only where a step stops on a conflict -- or keep the "
-                  "remote and drop the commits here. Then, as a command of yours, in view:")
-            # Without the person's `rerere`, which would put back a resolution recorded in
-            # another rebase, one nobody chose in this one: every conflict reaches the code
-            # session with its markers (the owner's choice, 9/11). For this command only.
-            print(f"    join:        git -C {tree} -c rerere.enabled=false rebase "
-                  f"{diverged['remoto_sha'][:12]}")
-            print(f"    keep remote: git -C {tree} reset --keep {diverged['remoto_sha'][:12]}")
+            if over_base:
+                # The base joined here and not pushed (V-6): a rebase would undo its merge and
+                # copy the base's commits into the branch, or re-apply rewritten commits on their
+                # old selves. The remote is kept, and the base joined again.
+                print("  Here the base was joined, and not pushed: joining the two would undo "
+                      "that join. Keep the remote, dropping the commits here, and join the base "
+                      "again -- the code session resolves its conflicts again --, as commands of "
+                      "yours, in view, on the person's yes:")
+                print(f"    keep remote: git -C {tree} reset --keep "
+                      f"{diverged['remoto_sha'][:12]}")
+                # The same way: a branch re-applied on the base is re-applied again (V-7).
+                print(f"    then this call again with `--join-base {over_base}`")
+            else:
+                print("  Ask the person: join them -- the commits here re-applied on the "
+                      "remote's, rewritten, approved again only where a step stops on a "
+                      "conflict -- or keep the remote and drop the commits here. Then, as a "
+                      "command of yours, in view:")
+                # Without the person's `rerere`, which would put back a resolution recorded in
+                # another rebase, one nobody chose in this one: every conflict reaches the code
+                # session with its markers (the owner's choice, 9/11). For this command only.
+                print(f"    join:        git -C {tree} -c rerere.enabled=false rebase "
+                      f"{diverged['remoto_sha'][:12]}")
+                print(f"    keep remote: git -C {tree} reset --keep "
+                      f"{diverged['remoto_sha'][:12]}")
             print("  `--launch` refuses while they diverge with no rebase in progress.")
         print("\nNext, each as a command of yours, in view:")
-        if push and not diverged:
+        if forced and rebase is None and not diverged:
+            print(f"  on the person's yes, forced with lease (V-7): git -C {tree} push "
+                  f"--force-with-lease=refs/heads/{branch}:{forced} origin {branch}")
+        elif push and not diverged and merging is None and rebase is None:
             print(f"  git -C {tree} push -u origin {branch}")
+        if merging is not None:
+            print("  The merge of the base first, by the code session; its commit, yours on the "
+                  "person's yes, when the code session stops on it; then the push.")
         for c in commands["prepare"]:
             print(f"  (in {tree}) {c}")
         if rebase is not None and commands["prepare"]:
             print("  A rebase is in progress: a preparation that fails on the conflict does not "
                   "stop the launch, and runs again on the final tree.")
+        elif merging is not None and commands["prepare"]:
+            print("  A merge of the base is in progress: a preparation that fails on the conflict "
+                  "does not stop the launch, and runs again on the merged tree.")
         for f, how in commands["generated"]:
             print(f"  generated, never written by the code session: {f}"
                   + (f", by `{how}`" if how else ""))
@@ -1413,13 +1669,19 @@ class Code:
             v.refuse(f"{self.ident} was launched already, session {launch['sessione']}: resume it "
                      "with `--resume`, or prepare a new launch with the first call.")
         rebase = rebase_in(self.tree)
+        if rebase is None and merge_in(self.tree) is not None and not launch.get("base"):
+            v.refuse(f"a merge is in progress in {self.tree} that no `--join-base` made: it is "
+                     f"the person's to conclude or abort (`git -C {self.tree} merge --abort`), "
+                     "and nothing is launched until then.")
         diverged = launch.get("divergente")
         if diverged and rebase is None:
             here = _out(self.tree, "rev-parse", "HEAD")
             if _git_in(self.tree, "merge-base", "--is-ancestor", diverged["remoto_sha"],
                        here).returncode != 0 and here != diverged["remoto_sha"]:
-                v.refuse(f"{self.data['ramo']} and its remote diverge, and neither was chosen: "
-                         "the first call printed the two commands, join or keep the remote.")
+                v.refuse(f"{self.data['ramo']} and its remote diverge, and nothing was chosen: "
+                         "the first call printed the commands -- join or keep the remote, or, "
+                         "over a join of the base not pushed, keep the remote and join the base "
+                         "again (V-6).")
         if claude_binary() is None:
             v.refuse("`claude` is not on the PATH: the launch needs the command line.")
         self.check_subscription()
@@ -1478,8 +1740,10 @@ class Code:
         base = granted(v.FRAMEWORK, commands)
         # What comes after, with a rebase in progress, is its step, not the brief.
         rebase = rebase_in(self.tree)
-        then = self._rebase_lines(rebase, commands) if rebase is not None else \
-            "Go on with the brief."
+        merging = merge_in(self.tree)
+        then = (self._rebase_lines(rebase, commands) if rebase is not None else
+                self._merge_lines(merging, commands) if merging is not None else
+                "Go on with the brief.")
         if rules:
             launch.setdefault("approvate", []).append({"quando": _now(),
                                                        "regole": [_withhold(r) for r in rules]})
@@ -1499,9 +1763,13 @@ class Code:
 
     def first_prompt(self, commands: dict, rebase: Rebase | None) -> str:
         brief = self.folder / X.BRIEF
-        # With a rebase in progress its stopped step comes before everything else (R-22).
-        first = "read it first and execute it" if rebase is None else \
-            "read it, and execute it once the step of the rebase below is done"
+        merging = merge_in(self.tree)
+        # With a rebase in progress its stopped step comes before everything else (R-22), and
+        # so does a merge of the base (V-5).
+        first = ("read it, and execute it once the step of the rebase below is done"
+                 if rebase is not None else
+                 "read it, and execute it once the merge below is concluded"
+                 if merging is not None else "read it first and execute it")
         lines = [f"You are the code session of {self.ident}, launched by the documentation "
                  f"session of its project. Your brief is {brief}: {first}. "
                  f"You work in {self.tree}, on the branch {self.data['ramo']}, checked out "
@@ -1523,20 +1791,74 @@ class Code:
         lines += self._strangers()
         if rebase is not None:
             lines.insert(1, self._rebase_lines(rebase, commands))
+        elif merging is not None:
+            lines.insert(1, self._merge_lines(merging, commands))
+        elif self.launch.get("base"):
+            lines.insert(1, self._joined_lines())
         return "\n\n".join(lines)
 
-    def _strangers(self) -> list[str]:
+    def _merge_lines(self, conflicted: list[str], commands: dict) -> str:
+        generated = [f for f, _ in commands.get("generated", [])]
+        text = (f"The documentation session joined {self.launch.get('base') or 'the base'} into "
+                "your branch on your person's yes, and the merge stopped on conflicts"
+                + (f" in {', '.join(conflicted)}" if conflicted else ", resolved already")
+                + ". Before anything else: resolve them, keeping what both sides meant -- the "
+                "base's changes and yours --; add the files you resolved with git add, by "
+                "name; then try `git commit` and stop: the documentation session concludes the "
+                "merge on your person's yes.")
+        if generated:
+            text += (" Do not write the generated files (" + ", ".join(generated) + "), nor add "
+                     "them: the documentation session regenerates them.")
+        return text
+
+    def _rebased(self) -> bool:
+        """Whether this launch's join of the base re-applied the branch on it (V-7) -- and, with
+        a rebase in progress, whether that rebase is it, and not R-26's on the remote's."""
+        if not (self.launch.get("base") and self.launch.get("modo") == "rebase"):
+            return False
+        if rebase_in(self.tree) is None:
+            return True
+        onto = _rebase_says(self.tree, "onto")
+        theirs = _out(self.tree, "rev-parse", "--verify", "-q",
+                      f"refs/remotes/origin/{self.data.get('ramo')}")
+        return not (onto and theirs and _git_in(self.tree, "merge-base", "--is-ancestor", onto,
+                                                theirs).returncode == 0)
+
+    def _joined_lines(self) -> str:
+        done = (f"re-applied your branch's commits on {self.launch.get('base')}, as the code is "
+                "merged by a rebase," if self._rebased() else
+                f"joined {self.launch.get('base')} into your branch")
+        return (f"The documentation session {done} on your person's yes: the base's commits are "
+                "listed below as not yours. The brief's work may be done already: verify again "
+                "as the brief says, on the branch as it is now, and deliver the verification "
+                "again.")
+
+    def _strangers(self, on_base: bool | None = None) -> list[str]:
+        """The commits the code session did not make. `on_base`, once a rebase is over, says
+        whether it was the one on the base, which the branch no longer tells (`sulla_base`)."""
         shas = self.launch.get("estranei") or []
         if not shas:
             return []
-        shown = [_out(self.tree, "log", "-1", "--format=%h %s", s) or s[:12] for s in shas]
+        # The base joined may bring many (V-5): the last thirty, and how many more. The base's
+        # stand first in the list, so that those made on this branch are among the thirty.
+        shown = [_out(self.tree, "log", "-1", "--format=%h %s", s) or s[:12] for s in shas[-30:]]
+        more = f", and {len(shas) - 30} before them" if len(shas) > 30 else ""
+        # Re-applied on the base (V-7), those that were on the branch before have new ids.
+        moved = (" Re-applied on the base, those of them that were on this branch before have "
+                 "new ids now, with the same subjects."
+                 if (self._rebased() if on_base is None else on_base) else "")
         return ["Commits on this branch that are not yours, made elsewhere or on the forge: "
-                + "; ".join(shown) + ". Read them before you change what they touched."]
+                + "; ".join(shown) + more + "." + moved + " Read them before you change what "
+                "they touched."]
 
     def _rebase_lines(self, rebase: Rebase, commands: dict) -> str:
         generated = [f for f, _ in commands.get("generated", [])]
-        text = (f"A rebase is in progress in your worktree: your local commits are being "
-                f"re-applied on the remote's, and it stopped at step {rebase.step} of "
+        # On the base, where the code is merged by a rebase (V-7), or on the remote's (R-26).
+        on = (f"your commits are being re-applied on the base, {self.launch.get('base')}, as "
+              "the code is merged by a rebase" if self._rebased() else
+              "your local commits are being re-applied on the remote's")
+        text = (f"A rebase is in progress in your worktree: {on}, and it stopped at step "
+                f"{rebase.step} of "
                 f"{rebase.of}, re-applying {rebase.commit} \"{rebase.subject}\". Before anything "
                 f"else: resolve the conflicts of this step"
                 + (f" ({', '.join(rebase.conflicted)})" if rebase.conflicted else "")
@@ -1548,6 +1870,26 @@ class Code:
         return text
 
     def after_continue(self, commands: dict) -> str:
+        if (self.launch.get("tranche") or [{}])[-1].get("unione"):
+            # The commit that concludes the merge of the base (V-5).
+            if merge_in(self.tree) is not None:
+                v.refuse(f"the merge of the base in {self.tree} is not concluded: the commit did "
+                         "not conclude it. Read what git said, and ask the person; nothing is "
+                         "resumed.")
+            # Gone and not in the branch: aborted, which leaves the branch without the base.
+            onto = (self.launch.get("tranche") or [{}])[-1].get("onto")
+            here = _out(self.tree, "rev-parse", "HEAD")
+            if onto and _git_in(self.tree, "merge-base", "--is-ancestor", onto, here).returncode:
+                v.refuse(f"the merge of the base in {self.tree} was aborted: the branch does not "
+                         f"hold {self.launch.get('base') or 'the base'}. The first call joins it "
+                         "again with `--join-base merge`, on the person's yes, and a new launch "
+                         "gives "
+                         "the code session what stops; nothing is resumed.")
+            return " ".join([f"The documentation session concluded the merge of "
+                             f"{self.launch.get('base') or 'the base'} into your branch, on your "
+                             "person's yes.", *self._strangers(False), "Verify again as the brief "
+                             "says, on the branch as it is now, and deliver the verification "
+                             "again."])
         rebase = rebase_in(self.tree)
         stopped = (self.launch.get("tranche") or [{}])[-1].get("passo")
         if rebase is not None and stopped == [rebase.step, rebase.commit]:
@@ -1568,14 +1910,24 @@ class Code:
         # and none of the code session's. The text says what to read, not which of the two.
         onto = (self.launch.get("tranche") or [{}])[-1].get("onto")
         here = _out(self.tree, "rev-parse", "HEAD")
+        on_base = bool((self.launch.get("tranche") or [{}])[-1].get("sulla_base"))
         if onto and _git_in(self.tree, "merge-base", "--is-ancestor", onto, here).returncode:
             v.refuse(f"the rebase in {self.tree} was aborted: the branch holds its own commits "
-                     "again, without the remote's. The first call proposes again to join them "
-                     "or keep the remote (R-19); nothing is resumed.")
+                     "again, without " + ("the base. The first call re-applies them on it again "
+                                          "with `--join-base rebase`, on the person's yes (V-7)"
+                                          if on_base else
+                                          "the remote's. The first call proposes again to join "
+                                          "them or keep the remote (R-19)")
+                     + "; nothing is resumed.")
+        if on_base:
+            return " ".join([f"The documentation session finished re-applying your commits on "
+                             f"{self.launch.get('base')}, on your person's yes.",
+                             *self._strangers(True), "Verify again as the brief says, on the "
+                             "branch as it is now, and deliver the verification again."])
         return " ".join(["The rebase is over, by what the documentation session ran with your "
                          "person: finished, or given up to keep the remote's commits alone.",
-                         *self._strangers(), "Read with git log which of your commits the branch "
-                         "holds, and go on with the brief from there."])
+                         *self._strangers(False), "Read with git log which of your commits the "
+                         "branch holds, and go on with the brief from there."])
 
     def run(self, prompt: str, rules: list[str], resume: bool) -> int:
         """One run of the code session, from a launch or a resume to its stop."""
@@ -1702,6 +2054,8 @@ class Code:
         # holds it is deleted below.
         answer = str(result.get("result") or "") or "\n".join(other[-20:])
         step = bool(said.get("continue")) and said.get("rebase") is not None
+        joining = bool(said.get("continue")) and said.get("rebase") is None \
+            and said.get("merge") is not None
         run.update({"fine": _now(), "fermata": stop,
                     "negate": [_withhold(d) for d in said.get("denied_raw", [])],
                     "risposta": _withhold(answer)[:2000],
@@ -1710,9 +2064,17 @@ class Code:
                     # Whether it stopped on the commit of a step of a rebase, which step, and the
                     # commit the rebase re-applies on: the resume after says what became of it
                     # (R-27).
-                    "continua": step,
+                    "continua": step or joining,
+                    # Or on the commit that concludes the merge of the base (V-5), with the
+                    # commit it joins: the resume after tells concluded from aborted.
+                    "unione": joining,
+                    # And, a step of a rebase, whether it is the one on the base (V-7), told
+                    # while it runs: once it is over, nothing in git tells it from R-26's.
+                    "sulla_base": self._rebased() if step else None,
                     "passo": [said["rebase"].step, said["rebase"].commit] if step else None,
-                    "onto": _rebase_says(self.tree, "onto") if step else None})
+                    "onto": _rebase_says(self.tree, "onto") if step else
+                    _out(self.tree, "rev-parse", "--verify", "-q", "MERGE_HEAD") if joining
+                    else None})
         run.pop("processo", None)
         self.data["stato"] = "fermo"
         self.save()
@@ -1758,9 +2120,12 @@ class Code:
                         json.dumps(body, ensure_ascii=False)
         rebase = rebase_in(self.tree)
         said["rebase"] = rebase
+        said["merge"] = merge_in(self.tree)
         # With a rebase in progress a commit is the commit of its step, which is the
-        # documentation session's (R-27).
-        steps = (CONTINUE, COMMIT) if rebase is not None else (CONTINUE,)
+        # documentation session's (R-27); with a merge of the base in progress, the commit that
+        # concludes it (V-5).
+        stepping = rebase is not None or said["merge"] is not None
+        steps = (CONTINUE, COMMIT) if stepping else (CONTINUE,)
         for d in result.get("permission_denials") or []:
             if not isinstance(d, dict):
                 continue
@@ -1780,7 +2145,7 @@ class Code:
                     said["not_b"].append(what)
                 elif all(any(s.search(p) for s in steps) for p in parts):
                     said["continue"].append(what)
-                elif NOT_B_ANYWHERE.search(what) or (rebase is not None
+                elif NOT_B_ANYWHERE.search(what) or (stepping
                                                      and COMMIT_ANYWHERE.search(what)):
                     # A push, a merge request or the commit of a step among other commands, or
                     # inside another shell: no rule for the line, which would grant it too.
@@ -1820,7 +2185,7 @@ class Code:
             if newest is not None and (launched is None or
                                        datetime.fromtimestamp(newest).astimezone() >= launched):
                 delivered.append(name + ("/" if kind == "dir" else ""))
-        if delivered and rebase is None:
+        if delivered and not stepping:
             said["consegna"] = delivered
             return "consegna", said
         return "fine", said
@@ -1830,6 +2195,51 @@ class Code:
         text = path.read_text(encoding="utf-8", errors="replace").strip()
         blocks = re.split(r"(?m)^(?=#{1,6}\s|-\s+\d{4}-\d\d-\d\d|\d{4}-\d\d-\d\d)", text)
         return (blocks[-1] if blocks else text).strip()[:1500]
+
+    def _say_merge(self, asked: list[str], conflicted: list[str]) -> None:
+        """The commit that concludes the merge of the base, which the code session asked for and
+        the documentation session makes on the person's yes (V-5), in the order of a step of a
+        rebase: the generated files it touches regenerated, the question, the commit, the
+        preparation, the resume."""
+        try:
+            commands = brief_commands((self.folder / X.BRIEF).read_text(encoding="utf-8"))
+        except OSError:
+            commands = {k: [] for k in COMMAND_KINDS}
+        t = self.tree
+        for what in asked:
+            print(f"  denied: Bash `{what}`, the commit that concludes the merge of the base: "
+                  "never a rule of the code session's (V-5).")
+        print(f"  The merge of {self.launch.get('base') or 'the base'} into "
+              f"{self.data.get('ramo')}" + (f"; still in conflict: {', '.join(conflicted)}"
+                                           if conflicted else "") + ".")
+        # In conflict still, or changed by the base the merge joins: one already added with its
+        # markers is no longer in conflict, and would enter the merge's commit (as R-25).
+        touched = set(conflicted) | set(_out(t, "diff", "--name-only",
+                                             "HEAD...MERGE_HEAD").splitlines())
+        held = [(f, how) for f, how in commands["generated"] if f in touched]
+        if held:
+            print("  Before the question, in view, the generated files of the merge:")
+            for f, how in held:
+                print(f"    (in {t}) {how or '<the command the brief names for it>'}, then "
+                      f"git -C {t} add {f}")
+        print("  The question to the person, with what the merge would commit, read by you:")
+        print(f"    git -C {t} status --short; git -C {t} diff --cached --stat; each file "
+              f"against the branch, git -C {t} diff --cached HEAD -- <file>, and against the "
+              f"base, git -C {t} diff --cached MERGE_HEAD -- <file>")
+        print("  On the yes, in view:")
+        print(f"    GIT_EDITOR=true git -C {t} -c rerere.enabled=false commit --no-edit")
+        if commands["prepare"]:
+            print("    the preparation on the merged tree: "
+                  + "; ".join(f"(in {t}) {c}" for c in commands["prepare"]))
+        # Pushed at once, before the code session goes on (V-6): kept here until the delivery,
+        # a commit pushed meanwhile on the merge request would make the two diverge, and the
+        # merge cannot be joined to it by a rebase.
+        branch = self.data.get("ramo")
+        print(f"    the push of the merge, at once: git -C {t} push origin {branch}; refused, "
+              f"the remote moved meanwhile: keep the remote, git -C {t} reset --keep "
+              f"origin/{branch}, and join the base again the same way, the first call with "
+              "`--join-base merge` (V-6)")
+        print("    then resume with neither --allow nor --reply.")
 
     def _say_step(self, asked: list[str], rebase: Rebase | None) -> None:
         """The commit of a step of the rebase, which the code session asked for and the
@@ -1871,6 +2281,19 @@ class Code:
         if commands["prepare"]:
             print("    if that finished the rebase, the preparation on the final tree: "
                   + "; ".join(f"(in {t}) {c}" for c in commands["prepare"]))
+        lease = self.launch.get("lease") if self._rebased() else None
+        if self._rebased() and not lease:
+            print(f"    if that finished the rebase on the base, the push: git -C {t} push -u "
+                  f"origin {self.data.get('ramo')}")
+        if lease:
+            # Re-applied on the base (V-7): the branch's commits are rewritten, and the push of
+            # them is forced, at the remote's commit the rebase began from.
+            branch = self.data.get("ramo")
+            print(f"    if that finished the rebase on the base, the push, forced with lease, on "
+                  f"the person's yes: git -C {t} push --force-with-lease=refs/heads/"
+                  f"{branch}:{lease} origin {branch}; refused, the remote moved meanwhile: keep "
+                  f"the remote, git -C {t} reset --keep origin/{branch}, and join the base "
+                  "again, the first call with `--join-base rebase` (V-6)")
         print("    then resume with neither --allow nor --reply.")
 
     def say(self, stop: str, said: dict, answer: str, recovered: bool = False) -> None:
@@ -1881,7 +2304,8 @@ class Code:
         for tool, what, rule in said.get("denied", []):
             if rule is None:
                 print(f"  denied: {tool} `{what}`\n    it names a push, a merge request or, "
-                      "with a rebase in progress, the commit of its step -- among other "
+                      "with a rebase or a merge of the base in progress, the commit of its "
+                      "step -- among other "
                       "commands, inside another shell, or in the text of a message --, and no "
                       "rule is proposed for it: on the person's yes to the rest, resume with "
                       "`--reply` asking it to run what it needs without them, one command per "
@@ -1889,7 +2313,10 @@ class Code:
             else:
                 print(f"  denied: {tool} `{what}`\n    on the person's yes, resume with the "
                       f"rule: {rule}")
-        if said.get("continue"):
+        if said.get("continue") and said.get("rebase") is None \
+                and said.get("merge") is not None:
+            self._say_merge(said["continue"], said["merge"])
+        elif said.get("continue"):
             self._say_step(said["continue"], said.get("rebase"))
         for tool, what in said.get("guard", []):
             print(f"  stopped by the framework's write guard: {tool} {what}. No rule approves "
@@ -1916,6 +2343,9 @@ class Code:
             print(f"  a rebase is in progress in {self.tree}, at step {rebase.step} of "
                   f"{rebase.of} ({rebase.commit} \"{rebase.subject}\"): no delivery until it is "
                   "finished or aborted.")
+        elif said.get("merge") is not None:
+            print(f"  a merge of the base is in progress in {self.tree}: no delivery until it is "
+                  "concluded.")
         if answer:
             print("  the code session's answer:\n    " + answer[:1500].replace("\n", "\n    "))
 
@@ -1937,6 +2367,8 @@ class Code:
         rebase = rebase_in(self.tree)
         if rebase is not None:
             print(f"  a rebase is in progress, at step {rebase.step} of {rebase.of}.")
+        elif merge_in(self.tree) is not None:
+            print("  a merge of the base is in progress.")
         return 0
 
 
@@ -2061,10 +2493,20 @@ def main() -> int:
                                      "is not HEAD of --root")
     ap.add_argument("--repo", type=Path, help="with code, the first call: the code repository, "
                                               "beside the documentation")
-    ap.add_argument("--base", help="with code, the first call: the start of a new branch, when "
-                                   "it is not the remote's default branch")
+    ap.add_argument("--base", help="with code, the first call: the start of a new branch, and "
+                                   "the base it is compared with and joined from, when it is "
+                                   "not the start an earlier launch recorded or, for a new "
+                                   "branch, the remote's default branch")
     ap.add_argument("--no-chg", dest="no_chg", help='with code, the first call: "hotfix '
                     '<reference>", for a hotfix whose change is not written yet')
+    ap.add_argument("--join-base", dest="join_base", nargs="?", const="auto",
+                    choices=("auto", "merge", "rebase"),
+                    help="with code, the first call, on the person's yes: join the base into "
+                         "the branch, where the forge wants it up to date or its merge request "
+                         "conflicts with it -- a merge, or, where the code is merged by a "
+                         "rebase (`merge_method: rebase` in the additive mode, or `rebase` "
+                         "given), the branch re-applied on the base; alone, or `auto`, the way "
+                         "`merge_method` says, `merge` or `rebase` the one named")
     ap.add_argument("--launch", action="store_true", help="with code: launch the code session "
                                                           "prepared by the first call")
     ap.add_argument("--resume", action="store_true", help="with code: resume it after a stop")
@@ -2084,13 +2526,14 @@ def main() -> int:
     if args.command == "code" and sum(forms) != 1:
         ap.error("code takes one of --repo (the first call), --launch, --resume, --status")
     if args.command != "code" and (any(forms) or args.base or args.no_chg or args.allow
-                                   or args.reply):
-        ap.error("--repo, --base, --no-chg, --launch, --resume, --allow, --reply and --status "
-                 "go with code")
+                                   or args.reply or args.join_base):
+        ap.error("--repo, --base, --no-chg, --join-base, --launch, --resume, --allow, --reply "
+                 "and --status go with code")
     if args.command == "code" and (args.allow or args.reply) and not args.resume:
         ap.error("--allow and --reply go with --resume")
-    if args.command == "code" and (args.base or args.no_chg) and not args.repo:
-        ap.error("--base and --no-chg go with the first call, --repo")
+    if args.command == "code" and (args.base or args.no_chg or args.join_base) \
+            and not args.repo:
+        ap.error("--base, --no-chg and --join-base go with the first call, --repo")
     if args.allow and args.reply:
         ap.error("a resume carries the rules approved, or an answer: one of --allow, --reply")
     if args.command == "code" and WINDOWS:
@@ -2111,7 +2554,7 @@ def main() -> int:
     if args.command == "code":
         code = Code(root, path, shown, args.ident)
         if args.repo:
-            return code.prepare(args.repo, args.base, args.no_chg)
+            return code.prepare(args.repo, args.base, args.no_chg, args.join_base)
         if args.launch:
             return code.start()
         if args.resume:
@@ -2169,7 +2612,8 @@ def main() -> int:
                    for n in names)
 
     X.check(ex, references.known, states, v.projects_folder(root),
-            in_history if repo is not None and repo.has_head else None, report)
+            in_history if repo is not None and repo.has_head else None, report,
+            joined=v.rules_hold(project, v.JOINED_SINCE))
     if repo is not None:
         repo.close()
     # The same join `validate.py` makes, on the same pair, for these codes only: the rest of

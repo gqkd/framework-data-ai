@@ -38,9 +38,13 @@ WORK = ".framework/work.yaml"
 # The keys this version reads. Unlike `sessions.yaml`, an unknown key is a warning and not a
 # stop, so that the next version can add one without stopping this one. `mode: additive` is the
 # switch of the additive mode; `admins` and `deputies` say who decides in it, `rereading`
-# whether a join waits for an attested reading, `thresholds` when the to-do suggests a join.
+# whether a join waits for an attested reading, `thresholds` when the to-do suggests a join, and,
+# from 4.13.0, `merge_method` how a join merges on the forge the code of a thread it brings in.
 # Only `mode` and `admins` mean anything without the mode: the rest is read under it.
-WORK_KEYS = {"branch_prefix", "people", "mode", "admins", "deputies", "rereading", "thresholds"}
+WORK_KEYS = {"branch_prefix", "people", "mode", "admins", "deputies", "rereading", "thresholds",
+             "merge_method"}
+# The values of `merge_method`, as the forge names its three ways to merge a merge request.
+MERGE_METHODS = ("merge", "squash", "rebase")
 
 # What `thresholds:` holds, and the value where the project gives none: low, so that joins come
 # often and each touches few documents, and a thread stays small.
@@ -63,6 +67,12 @@ JOIN = "ricongiungimento-"
 JOINED = "joined: "
 # The trailer of the commit that finishes a join, read by the main-line job and by `join`.
 JOIN_TRAILER = "Ricongiungimento-di"
+# From 4.13.0, the line of a join's merge message, and of the commit that finishes it, that names
+# the thread or the parking branch of a hotfix, the change whose code it brings, the merge
+# request, the commit its delivery named, and how the join takes it: `merge`, `squash` or `rebase`, merged by
+# `join --merge` before the documentation lands; `merged`, merged on the forge at that commit
+# already; `merged-elsewhere`, merged there at another head, which follows where `gh` read it.
+MERGE_REQUEST = "merge-request: "
 
 
 def landing(subject: str) -> str | None:

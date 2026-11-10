@@ -14,6 +14,8 @@ what, release a claim, and bring a branch up to date with the main line.
     python3 work.py --root . revoke --to "Name" --who "Admin"         # or the delegate, for their own
     python3 work.py --root . open --thread beta-od-042 --who "Name"   # the additive mode
     python3 work.py --root . join --who "Admin" [THREAD ...] [--no-threads]
+                  [--merge-method squash] [--merged THREAD] [--merged-elsewhere THREAD]
+                  [--out <scratchpad>]                             # from 4.13.0: the code
     python3 work.py --root . join --finish --who "Admin" --review full    # or one-pass
     python3 work.py --root . join --merge --who "Admin"               # or --close, --abandon
     python3 work.py --root . meetings --out <scratchpad>              # at a join, offline
@@ -64,12 +66,51 @@ a person's. Before merging it refuses a main line that created an identifier thi
 too -- the main line, or the branch's own commits pushed from another clone: once both are in one
 tree, YAML folds two rows of `entries:` into one without a word.
 
+THE CODE A JOIN BRINGS IN, where the main line pins 4.13.0 or later, or no version that reads.
+A thread with a change is ready once its change's verification carries the line of its merge
+request, `Merge request: <link> @ <commit>` (`todo.py`), and the join merges that code before the
+documentation lands; the parking branch of a hotfix, once a `consegne/<CHG>/mr-link.txt` of its
+delivery carries the same line. At its first step, for each thread to merge and each parking
+branch of a hotfix, `join` asks the forge with `gh`, on GitHub: a merge request of the branch with the
+thread's name, at the delivery's commit, that the forge lets merge now, with the way of
+`merge_method` in `work.yaml` where its repository admits it -- else the one it admits, or the one
+whoever decides says once with `--merge-method`. Merged there already at that commit, it counts
+as merged. Merged at another head, it comes in, with the commits after the delivery said and
+their diff written in `--out`, for the review of the join. A hotfix's comes in only once merged:
+its code goes to production by the project's way, never by a join. On another forge whoever
+decides says, `--merged` or `--merged-elsewhere`; `--merged` too for a change written
+`implemented` -- or closed otherwise, its state said -- on its thread's branch with no line --
+before the adoption, or with no code --, which nothing else tells `join` is merged (V-1). One
+merge request per code repository is merged by a join, and a thread kept out takes the turn of
+none of its repositories: one merged first can leave the next behind a base that wants it up to
+date, whose head, brought up to date, is no longer the delivery's commit (V-4). What waits --
+no `gh`, no access, a head moved or behind its base, a merge request the forge does not let
+merge, closed, not merged for a hotfix, or the second of a repository -- is said with its way
+out, and nothing is opened or merged: `join` again without it, as for a number in conflict;
+nothing is released or deleted by itself (V-3). A code branch behind its base, or in conflict
+with it, is brought up to date by whoever holds the thread: the brief back in `in-arrivo/`, its
+launch closed at the integration, the base joined into the branch on the person's yes,
+`exchange.py code --join-base` -- or, where the code is merged by a rebase, the branch
+re-applied on the base, `--join-base rebase`, and its push forced with lease (V-7) --, a new
+launch that verifies it again, and its delivery integrated again (V-5). Each merge message
+carries a `merge-request:` line -- the thread, the change, the link, the delivery's commit,
+how, and the head it was merged at where `gh` read one merged at another --, which `--finish`
+signs only once each change it names is `implemented` on the join's branch (V-2). `--merge`,
+after every refusal of its own -- one more, a signature that
+lacks the lines its merges carry, a `--finish` made by a plugin older than 4.13.0, which a
+`--finish` with this one signs again -- and before the documentation, merges on
+the forge with `--match-head-commit`: refused there, or left by the forge for later (a merge
+queue), the documentation does not land, and what was merged stays merged and is said.
+
 WHAT IT NEVER DOES. It never pushes the main line -- but for `join --merge`, which lands a join
-on the yes of an admin, a deputy or a delegate, the gesture, given with their name --, never
+on the yes of an admin, a deputy or a delegate, the gesture, given with their name, and merges
+the code it brings on the forge --, never
 forces a push, never deletes a reservation, never decides which of two texts holds, and never
 deduces who is working from `git config`: `--who` is the person's name, as they give it.
 
-Only in a project that declares `.framework/work.yaml`. Exit 0 when done, 1 when something is
+Only in a project that declares `.framework/work.yaml`, but `doctor`, which since this script's
+4.13.0 reads a machine in either mode, whatever version the project pins. Exit 0 when done, 1
+when something is
 for the person (claimed by somebody else, a conflict left, a collision), 2 when nothing was
 done because the invocation or the repository does not allow it.
 """
@@ -85,6 +126,7 @@ import io
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -162,7 +204,7 @@ def message(who: str, branch: str, what: str) -> str:
 class Project:
     """The documentation, its remote and main line, and what it declares about branches."""
 
-    def __init__(self, args):
+    def __init__(self, args, need_work: bool = True):
         self.root = args.root.resolve()
         if not self.root.is_dir():
             v.refuse(f"{self.root}: no such directory. `--root` is the documentation.")
@@ -172,6 +214,12 @@ class Project:
             self.work = v.load_work(self.root, _Notes())
         except SystemExit as e:              # `load_work` stops the validator with exit 1
             v.refuse(str(e.code))
+        # `doctor` alone runs without it, since this script's 4.13.0 and whatever the pin: the
+        # CLI of the code session, the exchange, the sandbox and `gh` are a machine's, in
+        # either mode.
+        self.declares_work = self.work is not None
+        if self.work is None and not need_work:
+            self.work = {}
         if self.work is None:
             v.refuse(f"{self.root}: no {B.WORK}. Branches, claims and reservations are for a "
                      "project that says it works that way; write the file -- an empty "
@@ -357,6 +405,13 @@ def _computed_thread(p: Project, name: str) -> dict:
                      "the join that lands it.")
         hotfix = next((n for n in r.get("hotfixes", [])
                        if T.slug(f"{n.home}-{T.bare(n.key)}") == name), None)
+        if hotfix is not None and r.get("link_on"):
+            v.refuse(f"{name} is the hotfix {T.bare(hotfix.key)}, which is no thread to take: "
+                     "whoever launches its code opens its parking branch, `open --branch "
+                     f"{T.hotfix_branch(hotfix)}`, which is its claim and where its delivery "
+                     "goes, and launches from that worktree. Whoever decides writes it "
+                     "`implemented` at the first join after its code is merged, with the known "
+                     "issues it repairs; until then a mandate on the same code waits for it.")
         if hotfix is not None:
             v.refuse(f"{name} is the hotfix {T.bare(hotfix.key)}, which is no thread to take: its "
                      "brief was written by the lightning join that approved it, and its code is "
@@ -1408,6 +1463,39 @@ def _landed(p: Project, ref: str) -> list[tuple[str, str]]:
     return []
 
 
+def _merge_requests(p: Project, ref: str, signed: bool = False) -> list[tuple[str, ...]]:
+    """The `merge-request:` lines of the open join, from 4.13.0 -- each a thread, the change, the
+    link, the delivery's commit, how the join takes it and, merged on GitHub at another head,
+    that head --: of its merges, or, `signed`, of the commit that finishes it, which `--merge`
+    reads as `_landed` reads the threads."""
+    if signed:
+        since = _join_root(p)
+        log = git(p.root, "log", "--format=%(trailers:key=" + B.JOIN_TRAILER
+                  + ",valueonly)%x00%B%x1e", f"{since}..{ref}" if since else ref,
+                  check=False).stdout
+        body = next((parts[1] for parts in (r.strip("\n").split("\x00", 1)
+                                            for r in log.split("\x1e"))
+                     if len(parts) == 2 and parts[0].strip()), "")
+    else:
+        body = git(p.root, "log", "--merges", "--format=%B", f"{p.base}..{ref}",
+                   check=False).stdout
+    return [tuple(parts) for parts in (line[len(B.MERGE_REQUEST):].split()
+                                       for line in body.splitlines()
+                                       if line.startswith(B.MERGE_REQUEST))
+            if len(parts) in (5, 6)]
+
+
+def _not_implemented(p: Project, ref: str, signed: bool = False) -> list[str]:
+    """The changes a join brings in with their code, as its `merge-request:` lines name them,
+    that `ref` does not hold `implemented` (V-2): their code would be merged, or would have been,
+    under a mandate main would still offer, or one withdrawn."""
+    states = {a.id: a.meta.get("status") for a in p.view(ref).arts
+              if a.type == "change-contract" and isinstance(a.id, str)}
+    return sorted({f"{line[1]} ({states.get(line[1]) or 'not written'}), of {line[0]}"
+                   for line in _merge_requests(p, ref, signed)
+                   if states.get(line[1]) not in ("implemented", "verified")})
+
+
 def _signed_tip(p: Project, ref: str) -> bool:
     """Whether the last commit of the join's branch carries its trailer: what lands is signed
     whole, a `sync` or a correction after `--finish` included."""
@@ -1602,7 +1690,363 @@ def _before_merging(p: Project, r: dict, names: list[str], every: list[str]) -> 
                 say(f"  - {line}")
 
 
-def _join_start(p: Project, who: str, args) -> int:
+# ─────────────────────────────────────────────────────────────────────────────
+# The code a join brings in, where the main line pins 4.13.0 or later, or no version that reads
+# (`T.LINK_SINCE`): a thread with a change ready with the line of its merge request, and the
+# parking branch of a hotfix, which lands once its code is merged.
+
+# A merge request on GitHub, the one forge `join` calls, through `gh`: its link names the host,
+# the repository and the number. Any other link is a forge `join` does not call, where whoever
+# decides says whether the code is merged, and at which commit.
+GITHUB_PR = re.compile(r"https://([^/\s]+)/([^/\s]+)/([^/\s]+)/pull/(\d+)/?")
+# Who brings a code branch up to date with its base (V-5): the documentation session, joining
+# the base into it on the person's yes, and the code session verifying it again. The delivery
+# was integrated, and its launch closed with it: the brief goes back to `in-arrivo/` first.
+BASE_WAY = ("whoever holds the thread brings the code's branch up to date on the person's yes: "
+            "the brief back in `in-arrivo/<CHG>/` -- its launch closed at the integration --, "
+            "`exchange.py --root <thread worktree> code <CHG> --repo <repository> --join-base`, "
+            "which joins the base into the branch -- or re-applies the branch on it, where the "
+            "code is merged by a rebase: `--join-base rebase` --, a new launch that verifies it "
+            "again, and the "
+            "new delivery integrated, whose line of its merge request names the new commit")
+# What a merge request the forge lets merge now says of itself: clean, with checks that are not
+# required failing, or with hooks of its own. A draft (`DRAFT`), a conflict or a protection that
+# blocks it is the forge's to say, and the thread waits for the next join; a branch behind a
+# base that wants it up to date (`BEHIND`), or in conflict with it, for the base joined into it
+# and a new delivery (`BASE_WAY`).
+# The trial of 9/11 read `state`, `mergeable` (`CONFLICTING`), `mergeStateStatus` (`DIRTY`),
+# `headRefName` and `headRefOid`, the ways a repository admits, the compare between two commits
+# and `--match-head-commit`. What else is read here -- `MERGEABLE`, `UNKNOWN`, `CLEAN`,
+# `UNSTABLE`, `HAS_HOOKS`, `BEHIND` and `DRAFT` (which GitHub's documentation marks as going, a
+# draft then reading as blocked), `HOST/OWNER/REPO` and `api --hostname`, the diff's media type,
+# the compare's `status` -- is GitHub's and `gh`'s documentation, not tried: read otherwise, the
+# thread waits at step 1, or the forge refuses at `--merge`, and nothing lands unchecked.
+MERGEABLE = ("CLEAN", "UNSTABLE", "HAS_HOOKS")
+GH_ENV = {"GH_PROMPT_DISABLED": "1", "NO_COLOR": "1", "GH_NO_UPDATE_NOTIFIER": "1",
+          "LC_ALL": "C", "LANG": "C"}
+GH_METHODS = (("merge", "mergeCommitAllowed"), ("squash", "squashMergeAllowed"),
+              ("rebase", "rebaseMergeAllowed"))
+NO_GH = ("`gh`, GitHub's command line, is not on the PATH of this machine: install it and "
+         "`gh auth login`, and the join after that brings it in")
+# What a hotfix's change, approved, cannot be: corrected (`cycle`, *A hotfix*).
+HOTFIX_NOTE = ("; the change of a hotfix approved is not corrected: what its code does that the "
+               "change does not say is a new change deriving from it")
+
+
+def _gh(*args: str) -> subprocess.CompletedProcess | None:
+    """`gh`, which never asks anything here; None where it is not on the PATH."""
+    exe = shutil.which("gh")
+    if exe is None:
+        return None
+    try:
+        return subprocess.run([exe, *args], capture_output=True, text=True, timeout=300,
+                              env={**os.environ, **GH_ENV})
+    except (OSError, subprocess.SubprocessError) as e:
+        return subprocess.CompletedProcess([exe, *args], 1, "", str(e))
+
+
+def _gh_said(r: subprocess.CompletedProcess) -> str:
+    """The last line `gh` wrote: its reason."""
+    lines = (r.stderr or r.stdout or "").strip().splitlines()
+    return lines[-1][:300] if lines else f"exit {r.returncode}"
+
+
+def _gh_json(r: subprocess.CompletedProcess | None) -> dict | None:
+    try:
+        data = json.loads(r.stdout) if r is not None and r.returncode == 0 else None
+    except ValueError:
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _is_hotfix(p: Project, name: str) -> bool:
+    return name[len(p.prefix):].startswith(f"{B.PARKING}hotfix-")
+
+
+def _codes_of(p: Project, r: dict, name: str) -> tuple[list[tuple[str, str, str]], str | None]:
+    """What `name` brings of code: the element, the link and the commit of each merge request,
+    as the to-do read them -- a thread's from the line in its changes' verification, the parking
+    branch of a hotfix's from `mr-link.txt` in the delivery folders it holds --, or why it
+    waits. The to-do makes a hotfix's branch ready only with them; a thread, with them or with
+    its changes written `implemented`, or closed otherwise, on its branch with no line, whose
+    code step 1 asks whoever decides about (V-1)."""
+    links = r.get("open", {}).get(name, {}).get("links", {})
+    found = [(c, link, sha) for c, (link, sha) in sorted(links.items())]
+    if not found and _is_hotfix(p, name):
+        return [], ("no `Merge request: <link> @ <commit>` line in a `consegne/<CHG>/mr-link.txt` "
+                    "of its delivery: the parking branch of a hotfix lands once its code is "
+                    f"merged, and its delivery says where. A parking branch that is no hotfix's "
+                    f"has no `hotfix-` after `{B.PARKING}`: its commits go on one opened with "
+                    "another name")
+    return found, None
+
+
+def _code_check(p: Project, roles: dict, args, name: str, link: str, sha: str,
+                out: list) -> dict:
+    """Step 1 for one merge request. `{"how": ...}` where it comes in -- `merge`, `squash` or
+    `rebase`, merged by `--merge`; `merged` or `merged-elsewhere`, on the forge already --,
+    `{"wait": why}` where it waits for a later join, `{"ask": question}` where whoever decides
+    says; `"said"`, what to tell in either case, and `"merges"`, where `--merge` merges it, what
+    it will do. `out` holds the folder the diffs go to, made when the first is written."""
+    hotfix = _is_hotfix(p, name)
+    short = name[len(p.prefix):]
+    m = GITHUB_PR.fullmatch(link)
+    if m is None:
+        # Another forge (R-18, R-23): the person merges there, and whoever decides says.
+        if name in args.merged:
+            return {"how": "merged", "said": [f"{link}: merged at the delivery's commit "
+                                              f"{sha[:12]}, as whoever decides says"]}
+        if name in args.merged_elsewhere:
+            return {"how": "merged-elsewhere", "said": [
+                f"{link}: merged at another head than the delivery's commit {sha[:12]}, as "
+                "whoever decides says, on a forge `join` does not call: the commits after the "
+                "delivery were read by nobody. Whoever decides looks at them on the forge and, "
+                "where the documentation does not cover them, corrects it on the join's branch"
+                + (HOTFIX_NOTE if hotfix else "")]}
+        return {"ask": f"{name}: {link} is on a forge `join` does not call. Is its code merged, "
+                       f"and at the delivery's commit {sha[:12]}? At that commit, `--merged "
+                       f"{short}`; at another head, `--merged-elsewhere {short}`; not merged, it "
+                       "waits: name the threads to join without it"}
+    host, owner, repo, _ = m.groups()
+    r = _gh("pr", "view", link, "--json",
+            "state,mergeable,mergeStateStatus,headRefName,headRefOid")
+    if r is None:
+        return {"wait": NO_GH}
+    pr = _gh_json(r)
+    if pr is None:
+        return {"wait": f"`gh` could not read {link} ({_gh_said(r)}): without an access to its "
+                        "repository -- `gh auth login`, or a token that reaches it -- it waits "
+                        "for a join run where `gh` reads it"}
+    head, state = str(pr.get("headRefOid") or ""), pr.get("state")
+    if pr.get("headRefName") != name:
+        return {"wait": f"{link} is the merge request of {pr.get('headRefName')!r}, not of {name}: "
+                        "the code's branch has the name of the documentation's"}
+    if state == "MERGED" and head == sha:
+        return {"how": "merged", "said": [f"{link}: merged on the forge at the delivery's commit "
+                                          f"{sha[:12]} already -- counted as merged, and not "
+                                          "merged again"]}
+    if state == "MERGED":
+        return _merged_elsewhere(p, name, link, sha, head, (host, owner, repo), out)
+    if state != "OPEN":
+        # Nothing automatic (V-3): what waits is said with its way out.
+        return {"wait": f"{link} is closed without being merged. "
+                        + (f"The hotfix's branch waits for its code merged; if that code will "
+                           "not reach production, whoever decides withdraws the hotfix at a join, "
+                           "`withdrawn_by` the `DEC` that says so, and its parking branch is "
+                           f"deleted: `git push {p.remote} --delete {name}`" if hotfix else
+                           "The thread waits for a new delivery -- a new launch on its branch, its "
+                           "merge request, the line of its verification rewritten --; if its code "
+                           "will not come, whoever holds it releases it, `work.py release <CHG> "
+                           "--who <name>`, and its mandate is withdrawn at a join")}
+    if hotfix:
+        return {"wait": f"{link} is not merged yet: the parking branch of a hotfix lands once its "
+                        "code is merged, by the project's own way to production and never by a "
+                        "join"}
+    if head != sha:
+        return {"wait": f"{link} is at {head[:12]}, not at the delivery's commit {sha[:12]}: the "
+                        "thread waits for its new delivery, a new launch whose verification "
+                        "names the new commit"}
+    status, mergeable = pr.get("mergeStateStatus"), pr.get("mergeable")
+    if status == "DRAFT":
+        return {"wait": f"{link} is a draft: the forge does not merge it"}
+    if "UNKNOWN" in (status, mergeable):
+        return {"wait": f"the forge has not said yet whether {link} merges: `join` again in a "
+                        "minute"}
+    if status == "BEHIND":
+        return {"wait": f"{link} is behind its base, which wants it up to date before it merges: "
+                        f"the thread waits for a new delivery -- {BASE_WAY}"}
+    if mergeable != "MERGEABLE" or status not in MERGEABLE:
+        return {"wait": f"the forge does not let {link} merge now ({mergeable}, {status}): a "
+                        "draft, a conflict, checks failing, approvals missing, or a protection of "
+                        "its branch -- the forge's to say. The thread stays ready for the next "
+                        f"join; in conflict with its base, {BASE_WAY}"}
+    rv = _gh("repo", "view", f"{host}/{owner}/{repo}", "--json",
+             ",".join(k for _, k in GH_METHODS))
+    allowed_by = _gh_json(rv)
+    if allowed_by is None:
+        return {"wait": f"`gh` could not say how {owner}/{repo} lets a merge request merge "
+                        f"({_gh_said(rv) if rv is not None else 'no gh'})"}
+    allowed = [way for way, key in GH_METHODS if allowed_by.get(key) is True]
+    key, given = roles.get("merge_method"), args.merge_method
+    if not allowed:
+        return {"wait": f"{owner}/{repo} admits no way to merge a merge request"}
+    if key in allowed:
+        how, said = key, []
+    elif len(allowed) == 1:
+        how = allowed[0]
+        said = [f"{owner}/{repo} admits only {how}"
+                + (f", not the `merge_method: {key}` of {B.WORK}" if key else
+                   f", and {B.WORK} says no `merge_method`")]
+    elif given in allowed:
+        how, said = given, [f"{link}: to be merged with {given}, as whoever decides says"]
+    else:
+        return {"ask": f"how to merge {link}: {B.WORK} says "
+                       + (f"`merge_method: {key}`, which {owner}/{repo} does not admit"
+                          if key else "no `merge_method`")
+                       + f"; {owner}/{repo} admits {', '.join(allowed)}"
+                       + (f", not {given}" if given else "")
+                       + ". `--merge-method <one>`, said once for this run"}
+    # What `--merge` will do, said apart: step 1 drops it for a thread that waits.
+    return {"how": how, "said": said, "merges": f"{link}: at the delivery's commit, mergeable; "
+                                                f"`join --merge` merges it with {how} before the "
+                                                "documentation lands"}
+
+
+def _merged_elsewhere(p: Project, name: str, link: str, sha: str, head: str,
+                      where: tuple[str, str, str], out: list) -> dict:
+    """A merge request merged outside the join at another head than the delivery's commit (R-17,
+    R-24): it comes in, with the commits after the delivery said and their diff written for the
+    review of the join, which reads it with the documentation of `name`."""
+    host, owner, repo = where
+    path = f"repos/{owner}/{repo}/compare/{sha}...{head}"
+    compared = _gh("api", "--hostname", host, path)
+    listed = _gh_json(compared)
+    diff = _gh("api", "--hostname", host, "-H", "Accept: application/vnd.github.diff", path)
+    if listed is None or diff is None or diff.returncode:
+        failed = compared if listed is None else diff
+        return {"wait": f"{link} was merged at {head[:12]}, not at the delivery's commit "
+                        f"{sha[:12]}, and `gh` could not read the commits between "
+                        f"({_gh_said(failed) if failed is not None else 'no gh'}): it waits for "
+                        "a join where it can"}
+    commits = [(str(c.get("sha") or ""), str((c.get("commit") or {}).get("message") or "")
+                .split("\n", 1)[0]) for c in listed.get("commits") or [] if isinstance(c, dict)]
+    if not out:
+        out.append(Path(tempfile.mkdtemp(prefix="join-commits-")))
+    out[0].mkdir(parents=True, exist_ok=True)
+    file = out[0] / f"{name.replace('/', '--')}.diff"
+    file.write_text("\n".join([f"# {name}: {link}", f"# delivered at {sha}, merged at {head}",
+                               *(f"# {s[:12]} {msg}" for s, msg in commits), ""])
+                    + diff.stdout, encoding="utf-8")
+    said = [f"{link}: merged on the forge at {head[:12]}, not at the delivery's commit "
+            f"{sha[:12]}: {len(commits)} commit(s) after the delivery"
+            + (" -- " + "; ".join(f"{s[:12]} {msg}" for s, msg in commits[:10]) if commits else "")
+            + (f" and {len(commits) - 10} more" if len(commits) > 10 else "")]
+    if listed.get("status") not in ("ahead", "identical"):
+        said.append(f"the head merged does not contain the delivery's commit {sha[:12]} "
+                    f"({listed.get('status')})")
+    said.append(f"their diff is in {file}: the review of this join reads it with the "
+                f"documentation of {name}" + (HOTFIX_NOTE if _is_hotfix(p, name) else ""))
+    return {"how": "merged-elsewhere", "head": head, "said": said}
+
+
+def _answers(p: Project, args) -> str:
+    """The answers to step 1 this run was given, as a command that goes on repeats them: the
+    threads it has not merged yet are asked again."""
+    said = [f"--{flag.replace('_', '-')} {n[len(p.prefix):]}"
+            for flag in ("merged", "merged_elsewhere")
+            for n in sorted(getattr(args, flag, None) or ())]
+    if getattr(args, "merge_method", None):
+        said.append(f"--merge-method {args.merge_method}")
+    if getattr(args, "out", None):
+        said.append(f"--out \"{args.out}\"")
+    return "".join(f" {x}" for x in said)
+
+
+def _code_gate(p: Project, r: dict, roles: dict, who: str, args, pending: list[str],
+               wanted: list[str], opened: bool,
+               already: list[tuple[str, ...]] = ()) -> dict[str, list[str]] | None:
+    """Step 1, from 4.13.0: what each thread to merge brings of code, asked of the forge. The
+    `merge-request:` lines each merge message carries, by thread; None, after saying why, where
+    a thread waits or whoever decides is asked -- and then nothing is opened or merged."""
+    if not r.get("link_on"):
+        return {}
+    lines: dict[str, list[str]] = {}
+    waits: dict[str, list[str]] = {}
+    asks: list[str] = []
+    tells: dict[str, list[str]] = {}
+    merges: dict[str, list[str]] = {}
+    # What takes a turn of its code repository (V-4): a merge request `--merge` merges, and one
+    # whose way to merge whoever decides is asked, so that the command said holds once answered.
+    turns: dict[str, list[tuple[str, str]]] = {}
+    out = [args.out] if args.out else []
+    for name in pending:
+        codes, why = _codes_of(p, r, name)
+        if why:
+            waits[name] = [why]
+            continue
+        told = tells.setdefault(name, [])
+        # A change written `implemented` -- or closed otherwise, its state said -- on the branch
+        # with no line (V-1): before the adoption, or a change with no code. Nothing tells `join`
+        # its code is merged: whoever decides does.
+        short = name[len(p.prefix):]
+        closed = r.get("open", {}).get(name, {}).get("implemented", {})
+        for element, state in sorted(closed.items()):
+            if name in args.merged:
+                told.append(f"{element}: written `{state}` on its branch with no line of its "
+                            "merge request, its code merged or none, as whoever decides says")
+            else:
+                asks.append(f"{name}: {element} is written `{state}` on its branch with no "
+                            "line of its merge request -- the way before 4.13.0, or a change "
+                            "with no code --, and nothing tells `join` its code is merged. "
+                            f"Merged, or no code to merge, `--merged {short}`; otherwise it "
+                            "waits: name the threads to join without it")
+        for element, link, sha in codes:
+            got = _code_check(p, roles, args, name, link, sha, out)
+            told += got.get("said", [])
+            if "wait" in got:
+                waits.setdefault(name, []).append(f"{element}: {got['wait']}")
+            elif "ask" in got:
+                asks.append(got["ask"])
+                if GITHUB_PR.fullmatch(link):
+                    turns.setdefault(name, []).append((element, link))
+            else:
+                lines.setdefault(name, []).append(f"{B.MERGE_REQUEST}{name} {element} {link} "
+                                                  f"{sha} {got['how']}"
+                                                  + (f" {got['head']}" if got.get("head") else ""))
+                if got["how"] in B.MERGE_METHODS:
+                    turns.setdefault(name, []).append((element, link))
+                if "merges" in got:
+                    merges.setdefault(name, []).append(got["merges"])
+    # One merge request per code repository in a join (V-4): one merged first can leave the next
+    # behind a base that wants it up to date, and a head brought up to date is no longer the
+    # delivery's commit. Those merged on the forge already take no turn; a thread kept out takes
+    # the turn of none of its repositories.
+    taken = {GITHUB_PR.fullmatch(line[2]).groups()[:3]: line[0] for line in already
+             if len(line) > 4 and line[4] in B.MERGE_METHODS and GITHUB_PR.fullmatch(line[2])}
+    for name in [n for n in pending if n in turns and n not in waits]:
+        theirs = [(element, GITHUB_PR.fullmatch(link).groups()[:3])
+                  for element, link in turns[name]]
+        held = [(element, where, taken[where]) for element, where in theirs
+                if taken.get(where, name) != name]
+        for element, (_, owner, repo), first in held:
+            waits.setdefault(name, []).append(
+                f"{element}: a join merges one merge request per code repository, and "
+                f"{owner}/{repo}'s in this one is {first}'s. It waits for the next "
+                "join; where its base, moved by this one, wants it up to date, "
+                f"{BASE_WAY}")
+        if held:
+            lines.pop(name, None)
+        else:
+            for _, where in theirs:
+                taken.setdefault(where, name)
+    for name in pending:
+        told = tells.get(name, []) + ([] if name in waits else merges.get(name, []))
+        if told:
+            say(f"{name}, its code:")
+            for line in told:
+                say(f"  - {line}")
+    if not waits and not asks:
+        return lines
+    for name, why in waits.items():
+        say(f"{name} waits for a later join:")
+        for line in why:
+            say(f"  - {line}")
+    for question in asks:
+        say(f"For whoever decides -- {question}.")
+    nothing = f"Nothing was {'merged' if opened else 'opened or merged'}"
+    rest = " ".join(n[len(p.prefix):] for n in wanted if n not in waits)
+    if not waits:
+        say(f"{nothing}: `join` again with the answers.")
+    elif rest or not opened:
+        say(f"{nothing}. To go on without what waits: `join --who \"{who}\" "
+            f"{rest or '--no-threads'}{_answers(p, args)}`"
+            + (", with the answers" if asks else "") + ".")
+    else:
+        say(f"{nothing}: every thread named waits.")
+    return None
+
+
+def _join_start(p: Project, who: str, args, roles: dict) -> int:
     held = p.held(B.CLAIM_REF).get(JOIN_CLAIM)
     r = T.compute(p.root, p.remote, p.main)
     ready = r.get("ready", [])
@@ -1640,9 +2084,17 @@ def _join_start(p: Project, who: str, args) -> int:
             v.refuse(f"{branch} is open, and merged {', '.join(n for n, _ in _joined(p, remote_branch)) or 'no thread yet'}: "
                      "name the threads to merge in it, as when it was opened -- a thread ready since "
                      "is not added by itself.")
+        merged = {n for n, _ in _joined(p, branch if local else remote_branch)}
+        codes = _code_gate(p, r, roles, who, args, [x for x in wanted if x not in merged],
+                           wanted, True, _merge_requests(p, branch if local else remote_branch))
+        if codes is None:
+            return 1
         say(f"A join is open: {branch}, by {held.get('who', '?')} since {held.get('when', '?')}. "
             "It goes on from where it is.")
     else:
+        codes = _code_gate(p, r, roles, who, args, wanted, wanted, False)
+        if codes is None:
+            return 1
         # One more than the joins on the main line, and than every number a join reserved: a
         # join abandoned leaves nothing on the main line, and its number, reused, would give
         # the next join the name of a branch some clone still holds.
@@ -1703,7 +2155,7 @@ def _join_start(p: Project, who: str, args) -> int:
             say(f"  - {change}, approved by {by}")
     _before_merging(p, r, todo_now, sorted(done | set(todo_now)))
     again = (f"--who \"{who}\" " + (" ".join(n[len(p.prefix):] for n in sorted(set(wanted)))
-                                     or "--no-threads"))
+                                     or "--no-threads") + _answers(p, args))
     for name in todo_now:
         sha = git(p.root, "rev-parse", f"refs/remotes/{p.remote}/{name}").stdout.strip()
         both = _collisions(p, branch, sha)
@@ -1715,9 +2167,10 @@ def _join_start(p: Project, who: str, args) -> int:
                    "written with none, or reserved for another branch --, which `BR003` asks")
             say(f"Not merged: {why}. {name} waits for a later join: the skill of whoever holds "
                 f"it renumbers it on its branch (`work.py renumber`). To go on without it: "
-                f"`join --who \"{who}\" {rest or '--no-threads'}`.")
+                f"`join --who \"{who}\" {rest or '--no-threads'}{_answers(p, args)}`.")
             return 1
-        msg = f"Join {branch}: merge {name}\n\n{B.JOINED}{name} {sha}\n"
+        msg = (f"Join {branch}: merge {name}\n\n{B.JOINED}{name} {sha}\n"
+               + "".join(f"{line}\n" for line in codes.get(name, [])))
         r = git(tree, "-c", "merge.conflictStyle=diff3", "-c", "rerere.enabled=false", "merge",
                 "--no-ff", "--no-commit", "-m", msg, sha, check=False)
         if r.returncode and not git(tree, "ls-files", "-u").stdout.strip():
@@ -1741,6 +2194,7 @@ def _what_is_left(branch: str, tree: Path, project: dict) -> str:
     """What `join` says is left once the threads are merged, in the order the project's pin
     reads: from `REVIEW_BEFORE_DECIDING_SINCE` the review before anybody decides and the acts
     of decision after it; before, the approvals among the texts and the review after them."""
+    code = v.rules_hold(project, T.LINK_SINCE)
     if not v.rules_hold(project, REVIEW_BEFORE_DECIDING_SINCE):
         return (f"\nJoin: {branch}, in {tree}. Now rewrite the living documents from the effects "
                 f"in `{E_THREADS}/*/effetti.md`, confirm or change the choices in "
@@ -1756,11 +2210,19 @@ def _what_is_left(branch: str, tree: Path, project: dict) -> str:
             "anchor, ask whoever decides about the stages of a roadmap a branch brings a new "
             "increment or an effect to, `work.py check`, and commit. The rehearsal: the acts of "
             "decision applied without a commit, `check`, and what they and `check` wrote taken "
-            "away. The review, before anybody decides, with what the rehearsal said, its "
-            "corrections committed with its log, and an act left taken back by `git revert` of "
-            "its cascade's commit. The acts of decision -- the changes approved, "
-            "the decisions accepted -- committed with the views. `check`, then `join --finish`, "
-            "and `join --merge` on the yes of whoever decides.")
+            "away. The review, before anybody decides, with what the rehearsal said"
+            + (" and the diff of the commits a merge request brought after its delivery, where "
+               "`join` wrote one" if code else "")
+            + ", its corrections committed with its log, and an act left taken back by `git "
+            "revert` of its cascade's commit. The acts of decision -- the changes approved, "
+            "the decisions accepted"
+            + (", each change a thread or a hotfix's parking branch brought in with its code "
+               "(`merge-request:` in its merge) written `implemented`, with the known issues it "
+               "repairs closed" if code else "")
+            + " -- committed with the views. `check`, then `join --finish`, and `join --merge` "
+            "on the yes of whoever decides"
+            + (", which merges the code on the forge before the documentation lands." if code
+               else "."))
 
 
 def _join_finish(p: Project, who: str, review: str | None = None) -> int:
@@ -1777,10 +2239,20 @@ def _join_finish(p: Project, who: str, review: str | None = None) -> int:
     if git(p.root, "merge-base", "--is-ancestor", remote_branch, branch, check=False).returncode:
         v.refuse(f"{branch} here is behind or apart from {p.remote}'s, which another clone may "
                  "have finished: bring it to the remote's commit first.")
+    # Each change the join brings in with its code is written `implemented` before it is signed
+    # (V-2): its code is merged by `--merge`, or was.
+    left = _not_implemented(p, branch)
+    if left:
+        v.refuse(f"not `implemented` on {branch}, and brought in with their code: "
+                 f"{'; '.join(left)}. Write each `implemented` at the acts of decision, with the "
+                 "known issues it repairs, and commit -- or, to leave its thread out, `join "
+                 "--abandon` and a join without it. Nothing was signed.")
     # Signed again too where the review given is not the one the last signature says: what lands
-    # carries the review it had.
+    # carries the review it had; and where the last signature lacks a `merge-request:` line the
+    # join's merges carry -- made by a plugin older than 4.13.0 --, which `--merge` reads.
     mark = REVIEWS[review] if review else None
-    if not _signed_tip(p, branch) or (mark and _review_of(p, branch) != mark):
+    lost = set(_merge_requests(p, branch)) - set(_merge_requests(p, branch, signed=True))
+    if not _signed_tip(p, branch) or (mark and _review_of(p, branch) != mark) or lost:
         mark = mark or _default_review(p, branch)
         where = B.prefix(p.root)
         folder = (tree / where / E_THREADS) if where else tree / E_THREADS
@@ -1793,7 +2265,9 @@ def _join_finish(p: Project, who: str, review: str | None = None) -> int:
         joined = _joined(p, branch)
         body = (f"Join {branch} finished: {', '.join(n for n, _ in joined) or 'no thread'}\n\n"
                 + ("Rewritten from the effects:\n" + "\n".join(rewritten) + "\n\n" if rewritten else "")
-                + "".join(f"{B.JOINED}{n} {sha}\n" for n, sha in joined) + "\n"
+                + "".join(f"{B.JOINED}{n} {sha}\n" for n, sha in joined)
+                + "".join(f"{B.MERGE_REQUEST}{' '.join(c)}\n" for c in _merge_requests(p, branch))
+                + "\n"
                 + f"{B.JOIN_TRAILER}: {who}\n{REVIEW_TRAILER}: {mark}\n")
         git(tree, "commit", "-q", "--allow-empty", "-m", body)
     # What the branches' checks say of the join's own branch -- who approved, what was withdrawn
@@ -1890,6 +2364,21 @@ def _join_merge(p: Project, who: str) -> int:
         for f in errors[:10]:
             say(f"  {f['code']} {f['path']}: {f['message'][:160]}")
         v.refuse(f"the join has {len(errors)} errors: nothing was merged.")
+    # Signed by a plugin that does not know the code a join brings -- older than 4.13.0 --,
+    # `--finish` dropped the lines its merges carry, and nothing would merge that code.
+    lost = set(_merge_requests(p, remote_branch)) - set(_merge_requests(p, remote_branch, True))
+    if lost:
+        v.refuse(f"{branch} was finished by a plugin that does not know the code a join brings: "
+                 f"its signature lacks {len(lost)} `{B.MERGE_REQUEST.strip()}` line(s) its "
+                 f"merges carry. `join --finish --who \"{who}\"` again with this plugin. Nothing "
+                 "was merged.")
+    left = _not_implemented(p, remote_branch, signed=True)
+    if left:
+        v.refuse(f"not `implemented` on {branch}, and brought in with their code: "
+                 f"{'; '.join(left)}. Write each `implemented`, commit, `join --finish`, and "
+                 "`--merge` again -- or, to leave its thread out, `join --abandon` and a join "
+                 "without it. Nothing was merged.")
+    _merge_code(p, who, remote_branch)
     git(main, "merge", "--no-ff", "-q", "-m", f"Merge {branch} into {p.main}", tip)
     head = git(main, "rev-parse", "HEAD").stdout.strip()
     outcome, said = p.push([f"refs/heads/{p.main}:refs/heads/{p.main}"],
@@ -1909,6 +2398,59 @@ def _join_merge(p: Project, who: str) -> int:
                  f"({said}). Never --force: push it once the remote answers, then `join --close`.")
     say(f"{branch} landed on {p.main}, pushed.")
     return _join_close(p, who)
+
+
+def _merge_code(p: Project, who: str, ref: str) -> None:
+    """Step 6, from 4.13.0: the code of each thread the join brings in, merged on the forge
+    before the documentation lands, at the delivery's commit and the way step 1 found; a merge
+    request merged there already, at that commit, counts as merged. Refused, or not merged
+    after the call, nothing of the documentation lands, and what was merged stays merged and is
+    said."""
+    merged: list[str] = []
+
+    def stop(why: str, way_out: str = "") -> None:
+        v.refuse(f"{why}. The documentation did not land"
+                 + (f"; merged on the forge, and merged it stays: {', '.join(merged)}"
+                    if merged else "") + ". "
+                 + (way_out or f"Once the forge allows it, `join --merge --who \"{who}\"` again; "
+                    "or `join --abandon`, and at the next join what was merged counts as merged "
+                    "-- behind its base, or in conflict with it, the thread waits there until "
+                    f"{BASE_WAY}."))
+    for name, _, link, sha, how, *_ in _merge_requests(p, ref, signed=True):
+        if how not in B.MERGE_METHODS:
+            continue
+        r = _gh("pr", "view", link, "--json", "state,headRefOid")
+        if r is None:
+            stop(f"`gh` is not on the PATH: `join --merge` merges {link}, the code of {name}, on "
+                 "the forge before the documentation lands")
+        pr = _gh_json(r)
+        if pr is None:
+            stop(f"`gh` could not read {link}, the code of {name} ({_gh_said(r)})")
+        head = str(pr.get("headRefOid") or "")
+        if pr.get("state") == "MERGED" and head == sha:
+            say(f"{link}: merged on the forge already, at {sha[:12]}.")
+            continue
+        if pr.get("state") == "MERGED":
+            stop(f"{link} was merged on the forge at {head[:12]} since the join checked it, not "
+                 f"at the delivery's commit {sha[:12]}: commits nobody read would land with it",
+                 "`join --abandon`, and the next join reads them.")
+        if pr.get("state") != "OPEN":
+            stop(f"{link}, the code of {name}, was closed since the join checked it",
+                 "`join --abandon`: the thread waits for its new delivery.")
+        m = _gh("pr", "merge", link, f"--{how}", "--match-head-commit", sha)
+        if m is None or m.returncode:
+            stop(f"the forge refused to merge {link}, the code of {name}, with {how} at "
+                 f"{sha[:12]} ({_gh_said(m) if m is not None else 'no gh'})")
+        # `gh pr merge` exits 0 also where the forge only takes it for later -- a merge queue
+        # the base branch requires --: merged is what the forge says after it.
+        after = _gh_json(_gh("pr", "view", link, "--json", "state,headRefOid"))
+        if after is None or after.get("state") != "MERGED":
+            stop(f"the forge did not merge {link}, the code of {name}, now ({_gh_said(m)}): a "
+                 "merge queue, or a merge it leaves for later",
+                 f"Once the forge says it merged, at {sha[:12]}, `join --merge --who \"{who}\"` "
+                 "again, which counts it as merged; or `join --abandon`.")
+        merged.append(link)
+        say(f"{link}: merged on the forge with {how}, at {sha[:12]}.")
 
 
 def _join_close(p: Project, who: str) -> int:
@@ -2004,6 +2546,9 @@ def _join_abandon(p: Project, who: str) -> int:
 # The two commands the recommended sandbox lets out, as `references/workstation.md` writes them:
 # a reservation pushes a tag `id/<ID>` and nothing else, and `renumber` reserves first.
 SANDBOX_EXCLUDED = ("python3 *work.py* reserve *", "python3 *work.py* renumber *")
+# From 4.13.0 the third: every call of `exchange.py code`, whose first call creates the code
+# session's worktree beside the code repository and whose `--launch` starts it (trial of 9/11).
+CODE_EXCLUDED = "python3 *exchange.py* code *"
 CASCADE = "join: the cascade of "      # the subject of a cascade's commit of its own (step 2)
 
 
@@ -2091,6 +2636,23 @@ def _touched_anchors(p: Project, sha: str) -> set[str]:
     return out
 
 
+def _outside(p: Project, out: Path, what: str) -> Path:
+    """`out`, refused inside every checkout of the repository: this worktree, the main one, the
+    others, and the `.git` they share."""
+    top = Path(git(p.root, "rev-parse", "--show-toplevel").stdout.strip()).resolve()
+    common = Path(git(p.root, "rev-parse", "--path-format=absolute",
+                      "--git-common-dir").stdout.strip()).resolve()
+    trees = [Path(l[len("worktree "):]).resolve() for l in
+             git(p.root, "worktree", "list", "--porcelain").stdout.splitlines()
+             if l.startswith("worktree ")]
+    out = out.resolve()
+    inside = next((t for t in (top, common, *trees) if out == t or t in out.parents), None)
+    if inside is not None:
+        v.refuse(f"{out} is inside the repository ({inside}): {what} the session's, never "
+                 "the documentation's. Give the session's scratchpad.")
+    return out
+
+
 def cmd_meetings(p: Project, args) -> int:
     """`meetings --out <dir>`, SINCE 4.12.0: at a join, one card for each place where two of
     the threads it merged meet, for the skill to read at step 2, where two texts that differ
@@ -2111,19 +2673,7 @@ def cmd_meetings(p: Project, args) -> int:
     if not branch[len(p.prefix):].startswith(B.JOIN):
         v.refuse(f"on {branch}, not a join's branch: the meetings are those of the threads a "
                  "join merged. Run it in the join's worktree.")
-    # Outside every checkout of the repository: this worktree, the main one, the others, and
-    # the `.git` they share.
-    top = Path(git(p.root, "rev-parse", "--show-toplevel").stdout.strip()).resolve()
-    common = Path(git(p.root, "rev-parse", "--path-format=absolute",
-                      "--git-common-dir").stdout.strip()).resolve()
-    trees = [Path(l[len("worktree "):]).resolve() for l in
-             git(p.root, "worktree", "list", "--porcelain").stdout.splitlines()
-             if l.startswith("worktree ")]
-    out = args.out.resolve()
-    inside = next((t for t in (top, common, *trees) if out == t or t in out.parents), None)
-    if inside is not None:
-        v.refuse(f"{out} is inside the repository ({inside}): the cards are the session's, never "
-                 "the documentation's. Give the session's scratchpad.")
+    out = _outside(p, args.out, "the cards are")
     where = B.prefix(p.root)
     merged = _joined(p, "HEAD")
     holders = {c.get("branch"): c.get("who") for c in p.held(B.CLAIM_REF).values()}
@@ -2261,7 +2811,13 @@ def cmd_meetings(p: Project, args) -> int:
 
 
 def cmd_join(p: Project, args) -> int:
-    _, who = _joiner(p, args)
+    if getattr(args, "out", None):
+        args.out = _outside(p, args.out, "the diffs of the commits after a delivery are")
+    roles, who = _joiner(p, args)
+    # The threads the answers of step 1 name, as `join` names them: with the prefix or without.
+    for flag in ("merged", "merged_elsewhere"):
+        setattr(args, flag, {x if x.startswith(p.prefix) else p.prefix + x
+                             for x in getattr(args, flag) or []})
     review = getattr(args, "review", None)
     if review and not args.finish:
         v.refuse("`--review` says which review a join had, and only `--finish` writes it.")
@@ -2271,7 +2827,7 @@ def cmd_join(p: Project, args) -> int:
                        ("abandon", _join_abandon)):
         if getattr(args, flag):
             return step(p, who)
-    return _join_start(p, who, args)
+    return _join_start(p, who, args, roles)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -2863,6 +3419,11 @@ def cmd_doctor(p: Project, args) -> int:
             todo.append(text)
 
     pin, where = pinned(p)
+    # From 4.13.0 the code session is launched from the documentation session, and a join
+    # merges the code of a thread on GitHub with `gh`: the CLI, `gh` and the exchange are asked.
+    code_on = v.rules_hold({"framework_version": pin}, T.LINK_SINCE)
+    if not p.declares_work:
+        say(f"note  no {B.WORK}: the lines of the branches, the claims and the joins are not read")
     if not pin:
         say(f"note  the project pins no version in framework.yaml {where}: nothing to compare the "
             "plugin with")
@@ -2899,6 +3460,45 @@ def cmd_doctor(p: Project, args) -> int:
              needed=bool(want and want >= SINCE_HOOKS))
     say("      A plugin loaded with `--plugin-dir` replaces the one installed for that session "
         "alone, and is not seen here.")
+    # The roles of the main line as the last fetch left it, this checkout's where it does not
+    # read: whoever may run a join is asked what a join needs.
+    roles = main_roles(p) or p.work
+    additive = roles.get("mode") == "additive"
+    delegated = {c.get("to") for c in p.held(B.DELEGATION_REF).values() if c.get("to")}
+    who = (args.who or "").strip()
+    decides = bool(who) and who in B.deciders(roles, delegated)
+    if code_on:
+        claude = shutil.which("claude")
+        line(bool(claude), "`claude`, the command line of Claude Code, is "
+             + (f"on the PATH ({claude})" if claude else "not on the PATH")
+             + ": the code session is launched with it, from the documentation session"
+             + ("" if claude else " -- the desktop app or an editor's extension alone does not "
+                "bring it: install the command line"))
+        gh = shutil.which("gh")
+        line(bool(gh), "`gh`, GitHub's command line, is " + (f"on the PATH ({gh})" if gh else
+             "not on the PATH") + ": a join merges with it the code of a thread whose merge "
+             "request is on GitHub, and reads where the code of a hotfix was merged"
+             + ("" if additive else ", in the additive mode"),
+             needed=additive and decides)
+        config_dir = Path(os.environ.get("GH_CONFIG_DIR") or Path(
+            os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config") / "gh")
+        try:
+            hosts = v.yaml.safe_load((config_dir / "hosts.yml").read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, v.yaml.YAMLError):
+            hosts = None
+        access = sorted(map(str, hosts)) if isinstance(hosts, dict) else []
+        access += [f"a token in {k}" for k in ("GH_TOKEN", "GITHUB_TOKEN", "GH_ENTERPRISE_TOKEN")
+                   if os.environ.get(k)]
+        line(bool(access), ("`gh` declares an access to " + ", ".join(access) if access else
+                            f"`gh` declares no access ({config_dir / 'hosts.yml'}, GH_TOKEN): "
+                            "`gh auth login`")
+             + ". Whether it holds, `gh` says when the join uses it: this reads no network",
+             needed=additive and decides)
+        if additive:
+            method = roles.get("merge_method")
+            say(f"note  `merge_method: {method}` in {B.WORK}: the way a join merges the code"
+                if method else f"note  no `merge_method` in {B.WORK}: a join merges the code the "
+                "one way its repository admits, or asks whoever decides once")
 
     # The settings files: the sandbox and the bypass mode, recommended and not required.
     config = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude")
@@ -2959,6 +3559,20 @@ def cmd_doctor(p: Project, args) -> int:
                 + f": {both} in `sandbox.excludedCommands` are recommended"
                 + (f", and only `{out_of_box[0]}` is there ({held_in})" if out_of_box else ""))
     line(whole, said, needed=False)
+    if code_on:
+        if CODE_EXCLUDED in excluded:
+            held = excluded[CODE_EXCLUDED]
+            said = (f"the launch of the code session leaves the sandbox: `{CODE_EXCLUDED}` is in "
+                    f"`sandbox.excludedCommands` ({held}"
+                    + (", which a thread's worktree does not have"
+                       if held.name == "settings.local.json" else "") + ")")
+        else:
+            said = ("the launch of the code session "
+                    + ("stays in the sandbox, which does not let it write the code session's "
+                       "worktree" if found.get("sandbox", (None,))[0] is True else
+                       "runs as any command, with no sandbox declared")
+                    + f": `{CODE_EXCLUDED}` in `sandbox.excludedCommands` is recommended")
+        line(CODE_EXCLUDED in excluded, said, needed=False)
     line(found.get("bypass", (None,))[0] == "disable", "the mode that skips the permissions is "
          + ("disabled" if found.get("bypass", (None,))[0] == "disable" else "not disabled")
          + f"{where('bypass')}: `permissions.disableBypassPermissionsMode: disable` is recommended",
@@ -2984,23 +3598,21 @@ def cmd_doctor(p: Project, args) -> int:
     declared = sessions.get("exchange") if isinstance(sessions, dict) else None
     if not declared:
         # A fact of the project, committed and the same on every machine: in the additive mode
-        # a join changes it, so it is a `todo` only for whoever may run one. The roles of the
-        # main line as the last fetch left it, this checkout's where it does not read.
-        roles = main_roles(p) or p.work
-        additive = roles.get("mode") == "additive"
-        delegated = {c.get("to") for c in p.held(B.DELEGATION_REF).values() if c.get("to")}
-        who = (args.who or "").strip()
-        decides = bool(who) and who in B.deciders(roles, delegated)
+        # a join changes it, so it is a `todo` only for whoever may run one; outside it, from
+        # 4.13.0, for whoever implements.
         line(False, "the project declares no exchange in .framework/sessions.yaml: every project "
              "has `_scambio` beside the repositories, and declaring it turns on its discipline "
              "-- the brief written there, the delivery taken from there, `exchange.py`, the "
              "checks of the validator. " + (
+                 "From 4.13.0 it is a requirement to implement: the code session is launched "
+                 "on its brief there, and delivers there. " if code_on else "") + (
                  "In the additive mode it is declared at a join, `exchange: ../_scambio`, by an "
                  "admin, a deputy or a delegate" + (": yours to do" if decides else
                                                      ", not from this machine" if who else
                                                      ": `--who` says whether that is you")
-                 if additive else "Declaring it is optional."),
-             needed=additive and decides)
+                 if additive else "Declare it, `exchange: ../_scambio`." if code_on else
+                 "Declaring it is optional."),
+             needed=(additive and decides) or (not additive and code_on))
         here = parent / "_scambio"
         say(f"note  `_scambio` {'is' if here.is_dir() else 'is not'} beside the repositories on "
             f"this machine ({here})")
@@ -3044,52 +3656,54 @@ def cmd_doctor(p: Project, args) -> int:
     else:
         say(f"note  the names `--who` takes: {', '.join(sorted(people)) or 'any, no people declared'}")
 
-    # The workflow of the branches, as the pinned version has it: this checkout's copy against
-    # this checkout's pin, which a join moves together. A checkout behind its main line is
-    # brought forward with a pull, not by copying the workflow again.
-    own = str(v.load_project(p.root).get("framework_version") or "")
-    flows = top / ".github" / "workflows"
-    branches, request = flows / "branches.yml", flows / "pull-request.yml"
-    if request.is_file():
-        line(False, "pull-request.yml is in .github/workflows/" + (
-            ", beside branches.yml: copy one or the other" if branches.is_file() else
-            ", and it has no `main` job: a project with work.yaml copies ci/branches.yml in its "
-            "place"))
-    import migrate as M                  # the framework's history, read as `migrate.py` reads it
-    sha, why = M.commit_declaring(own, framework) if own else (None, "the project pins no version")
-    if not branches.is_file():
-        line(False, "no .github/workflows/branches.yml: nothing sees what reaches the main line "
-             "outside a pull request or a join")
-    else:
-        copy = branches.read_text(encoding="utf-8")
-        shown = git(framework, "show", f"{sha}:ci/branches.yml", check=False) if sha else None
-        if shown is None or shown.returncode:
-            line(False, f"branches.yml cannot be compared with the one of {own or 'the pin'}: "
-                 f"{why or 'that version has no ci/branches.yml'}", needed=False)
-        elif any(name in copy for name in PLACEHOLDERS):
-            line(False, "branches.yml still has OWNER/framework-data-ai or COMMIT_OR_TAG: fill them")
+    # Only where the project declares `work.yaml`: elsewhere a pull request lands a branch.
+    if p.declares_work:
+        # The workflow of the branches, as the pinned version has it: this checkout's copy against
+        # this checkout's pin, which a join moves together. A checkout behind its main line is
+        # brought forward with a pull, not by copying the workflow again.
+        own = str(v.load_project(p.root).get("framework_version") or "")
+        flows = top / ".github" / "workflows"
+        branches, request = flows / "branches.yml", flows / "pull-request.yml"
+        if request.is_file():
+            line(False, "pull-request.yml is in .github/workflows/" + (
+                ", beside branches.yml: copy one or the other" if branches.is_file() else
+                ", and it has no `main` job: a project with work.yaml copies ci/branches.yml in its "
+                "place"))
+        import migrate as M                  # the framework's history, read as `migrate.py` reads it
+        sha, why = M.commit_declaring(own, framework) if own else (None, "the project pins no version")
+        if not branches.is_file():
+            line(False, "no .github/workflows/branches.yml: nothing sees what reaches the main line "
+                 "outside a pull request or a join")
         else:
-            same = _filled_copy(shown.stdout, copy)
-            line(same, f"branches.yml is the one of {own}, its placeholders filled" if same else
-                 f"branches.yml differs from the one of {own}: copy ci/branches.yml again and "
-                 "fill its placeholders")
-    # The workflow of the tags and the work branches, beside it, where this checkout shows that
-    # the pinned version has one -- from 4.12.0 --, compared the same way. Where it has none, or
-    # the pin's commit cannot be read here -- which the line above says, when branches.yml is
-    # there --, nothing is said of it.
-    shipped = git(framework, "show", f"{sha}:ci/refs.yml", check=False) if sha else None
-    if shipped is not None and not shipped.returncode:
-        refs = flows / "refs.yml"
-        if not refs.is_file():
-            line(False, "no .github/workflows/refs.yml: nothing sees a reservation deleted or "
-                 "moved, a delegation moved or a work branch pushed with force")
-        elif any(name in refs.read_text(encoding="utf-8") for name in PLACEHOLDERS):
-            line(False, "refs.yml still has OWNER/framework-data-ai or COMMIT_OR_TAG: fill them")
-        else:
-            same = _filled_copy(shipped.stdout, refs.read_text(encoding="utf-8"))
-            line(same, f"refs.yml is the one of {own}, its placeholders filled" if same else
-                 f"refs.yml differs from the one of {own}: copy ci/refs.yml again and fill its "
-                 "placeholders")
+            copy = branches.read_text(encoding="utf-8")
+            shown = git(framework, "show", f"{sha}:ci/branches.yml", check=False) if sha else None
+            if shown is None or shown.returncode:
+                line(False, f"branches.yml cannot be compared with the one of {own or 'the pin'}: "
+                     f"{why or 'that version has no ci/branches.yml'}", needed=False)
+            elif any(name in copy for name in PLACEHOLDERS):
+                line(False, "branches.yml still has OWNER/framework-data-ai or COMMIT_OR_TAG: fill them")
+            else:
+                same = _filled_copy(shown.stdout, copy)
+                line(same, f"branches.yml is the one of {own}, its placeholders filled" if same else
+                     f"branches.yml differs from the one of {own}: copy ci/branches.yml again and "
+                     "fill its placeholders")
+        # The workflow of the tags and the work branches, beside it, where this checkout shows that
+        # the pinned version has one -- from 4.12.0 --, compared the same way. Where it has none, or
+        # the pin's commit cannot be read here -- which the line above says, when branches.yml is
+        # there --, nothing is said of it.
+        shipped = git(framework, "show", f"{sha}:ci/refs.yml", check=False) if sha else None
+        if shipped is not None and not shipped.returncode:
+            refs = flows / "refs.yml"
+            if not refs.is_file():
+                line(False, "no .github/workflows/refs.yml: nothing sees a reservation deleted or "
+                     "moved, a delegation moved or a work branch pushed with force")
+            elif any(name in refs.read_text(encoding="utf-8") for name in PLACEHOLDERS):
+                line(False, "refs.yml still has OWNER/framework-data-ai or COMMIT_OR_TAG: fill them")
+            else:
+                same = _filled_copy(shipped.stdout, refs.read_text(encoding="utf-8"))
+                line(same, f"refs.yml is the one of {own}, its placeholders filled" if same else
+                     f"refs.yml differs from the one of {own}: copy ci/refs.yml again and fill its "
+                     "placeholders")
     return 1 if todo else 0
 
 
@@ -3173,6 +3787,19 @@ def main() -> int:
     j.add_argument("--review", choices=tuple(REVIEWS),
                    help="with --finish: the review the join had, `full`, or `one-pass` in a "
                         "lightning join for a hotfix; written as `Revisione:` beside its signature")
+    j.add_argument("--merge-method", choices=B.MERGE_METHODS,
+                   help="from 4.13.0, the answer to step 1 where work.yaml says no merge_method "
+                        "the code's repository admits, and it admits more than one")
+    j.add_argument("--merged", action="append", default=[], metavar="THREAD",
+                   help="from 4.13.0, on a forge join does not call: the thread's code is merged "
+                        "at its delivery's commit")
+    j.add_argument("--merged-elsewhere", action="append", default=[], metavar="THREAD",
+                   help="from 4.13.0, on a forge join does not call: the thread's code is merged "
+                        "at another head")
+    j.add_argument("--out", type=Path,
+                   help="from 4.13.0, where the diff of the commits a merge request brought after "
+                        "its delivery goes, outside the repository: the session's scratchpad; a "
+                        "new temporary folder where not given")
     rv = sub.add_parser("revoke", help="take a delegation back, or give one's own up")
     rv.add_argument("--to", required=True, help="the person holding it")
     rv.add_argument("--who", required=True, help="an admin, or the delegate")
@@ -3181,7 +3808,7 @@ def main() -> int:
     d.add_argument("--who", help="the name you work under, to check it is among the people")
 
     args = ap.parse_args()
-    p = Project(args)
+    p = Project(args, need_work=args.command != "doctor")
     return {"open": cmd_open, "reserve": cmd_reserve, "renumber": cmd_renumber,
             "meetings": cmd_meetings,
             "list": cmd_list, "check": cmd_check,

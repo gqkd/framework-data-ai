@@ -188,6 +188,12 @@ HOTFIX_SINCE = "4.12.0"
 # `FW003`: a project pinning the version before may have annotated it so, and CI, validating
 # with that version, still reads the annotation as matching.
 PIN_LINE_CODE_SINCE = "4.12.0"
+# Where `exchange.py integrate` joins a second integration of an element to the first, one
+# block more in `INTEGRATO`: a block that says nothing delivered -- a launch closed without a
+# delivery -- stands beside the others, and `EXC003` reads what each name became across all of
+# them. Below, an empty block beside another is still `EXC003`, as a second integration was a
+# folder joined by hand.
+JOINED_SINCE = "4.13.0"
 # The version whose rules this run reads, in place of the one the project declares: set by
 # `--rules-version`, which `migrate.py` passes so that what the project will be told once it
 # declares the version of arrival is seen before the number is written. The rules only:
@@ -403,7 +409,8 @@ def load_work(root: Path, report: "Report") -> dict | None:
                      "read as no list at all.")
     # A value this version does not know is a warning, as a key is: the next version may add
     # one, and must not stop this one.
-    for key, known in (("mode", ("additive",)), ("rereading", ("optional", "required"))):
+    for key, known in (("mode", ("additive",)), ("rereading", ("optional", "required")),
+                       ("merge_method", _branches.MERGE_METHODS)):
         if data.get(key) is not None and data[key] not in known:
             report.add("WK001", _branches.WORK,
                        f"`{key}: {data[key]}` is not a value this version reads "
@@ -467,7 +474,8 @@ def check_roles(work: dict, root: Path, report: "Report") -> None:
                        "through the exchange, and without one nothing it learned reaches a "
                        "thread.")
     else:
-        idle = [k for k in ("deputies", "rereading", "thresholds") if work.get(k) is not None]
+        idle = [k for k in ("deputies", "rereading", "thresholds", "merge_method")
+                if work.get(k) is not None]
         if idle:
             report.add("WK002", _branches.WORK,
                        f"{', '.join(f'`{k}`' for k in idle)} without `mode: additive`: read only "
@@ -4582,7 +4590,7 @@ def check_roadmap(arts: list[Artifact], report: Report, project: dict | None = N
 
 def check_exchange(root: Path, declared: str | None, place: Path | None, arts: list[Artifact],
                    references: ReferenceIndex, repo: "Repository | None", work: dict | None,
-                   report: Report) -> str:
+                   report: Report, project: dict | None = None) -> str:
     """`EXC001`-`EXC008`, on the exchange `.framework/sessions.yaml` declares, where it is here.
 
     WHERE IT IS NOT, NOTHING RUNS AND NOTHING IS REPORTED but `EXC008`, which reads the value
@@ -4625,8 +4633,11 @@ def check_exchange(root: Path, declared: str | None, place: Path | None, arts: l
                    or (n.startswith("refs/remotes/") and n.split("/", 3)[-1].startswith(prefix))
                    for n in names)
 
+    # From 4.13.0 an element integrated twice holds a block per integration, and one of them may
+    # say nothing delivered: a launch closed without a delivery (`_exchange.check`).
     _exchange.check(ex, references.known, _exchange.standing(arts), projects_folder(root),
-                    in_history if repo is not None and repo.has_head else None, report)
+                    in_history if repo is not None and repo.has_head else None, report,
+                    joined=rules_hold(project or {}, JOINED_SINCE))
     return "read"
 
 
@@ -5725,7 +5736,8 @@ def main() -> int:
     check_cross_product(arts, report)
     check_roadmap(arts, report, project)
     work = load_work(root, report)
-    exchange = check_exchange(root, *exchange_declared, arts, references, repo, work, report)
+    exchange = check_exchange(root, *exchange_declared, arts, references, repo, work, report,
+                              project)
     if not (args.emit_index and not args.check):
         check_generated_regions(root, arts, report)  # a run that rewrites them has the answer
     check_effects(root, arts, registry, report)

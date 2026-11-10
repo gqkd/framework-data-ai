@@ -349,8 +349,10 @@ def _blocks(value) -> list | None:
 
 
 def check(ex: Exchange, known: set[str], states: dict, projects: Path, in_history,
-          report: FindingSink) -> None:
-    """EXC001-EXC005, on what `read` found. `in_history(sha)` is None when there is no history."""
+          report: FindingSink, joined: bool = False) -> None:
+    """EXC001-EXC005, on what `read` found. `in_history(sha)` is None when there is no history.
+    `joined` where the project pins 4.13.0 or later, or no version that reads: an element
+    integrated more than once may hold a block that says nothing delivered."""
     for el in ex.elements:
         rel = ex.rel(el.path)
         if el.ident not in known and el.ident not in states:   # an entry with no heading
@@ -370,7 +372,7 @@ def check(ex: Exchange, known: set[str], states: dict, projects: Path, in_histor
                        "saying where each part went; if it was not, it is waiting behind a "
                        "state that says it is done.")
         if el.stage == INTEGRATED:
-            _integrated(ex, el, in_history, report)
+            _integrated(ex, el, in_history, report, joined)
         # Retired where the project pins 4.12.0 or later, or no version that reads: the catalog's
         # `retired_in`, which `Report` follows, drops it there.
         if closed(states, el.ident):
@@ -398,7 +400,8 @@ def check(ex: Exchange, known: set[str], states: dict, projects: Path, in_histor
                            "deletes it when it closes.")
 
 
-def _integrated(ex: Exchange, el: Element, in_history, report: FindingSink) -> None:
+def _integrated(ex: Exchange, el: Element, in_history, report: FindingSink,
+                joined: bool = False) -> None:
     rel = ex.rel(el.path / MARK)
     if MARK not in el.entries:
         report.add("EXC003", ex.rel(el.path), f"moved to `{INTEGRATED}/` without an `{MARK}` "
@@ -432,8 +435,11 @@ def _integrated(ex: Exchange, el: Element, in_history, report: FindingSink) -> N
             except ValueError:
                 report.add("EXC003", rel, f"{where}`date` is not a day, `AAAA-MM-GG`.")
         parts = block.get("parts")
-        # Empty only where nothing was delivered: a brief whose work ended without a delivery.
-        if not isinstance(parts, dict) or (not parts and el.delivered):
+        # Empty only where nothing was delivered: a brief whose work ended without a delivery --
+        # or, from 4.13.0, one launch of several that closed without one, whose block says so
+        # beside the others: what each name became is then read across all the blocks, below.
+        if not isinstance(parts, dict) or (not parts and el.delivered
+                                           and not (joined and len(blocks) > 1)):
             report.add("EXC003", rel, f"{where}`parts` does not say where each part went: one "
                        "line per name in the folder, and where its content now lives.")
             continue
