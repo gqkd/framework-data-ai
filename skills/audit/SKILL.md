@@ -665,6 +665,34 @@ afterwards propose the commit of `AGENTS.md` with `framework.yaml` and the `revi
 sentence for the person who attests it. You do not run `attest.py` to attest. No check of the
 validator reports a missing or edited section: the list is where it shows.
 
+**Adopting 4.13.0 or a later version, two lines come first, and they are this skill's to
+write.** From 4.13.0 a change is implemented by a code session that a documentation session
+launches on its brief in the exchange, and in the additive mode a join merges the code of a
+thread before its documentation lands -- on a forge it does not call, whoever decides merges it
+there, at the join's first step --: the exchange declared is a requirement to implement
+(`references/contributions.md`, *The exchange between sessions*), and the way a join merges is
+the project's to say. `migrate.py --adopt` writes neither -- in this version it writes, as
+before, `framework.yaml` and the framework's sections of `AGENTS.md` --, so where the project
+moves to 4.13.0 or later, before `--adopt`, write the lines that are missing:
+
+- `exchange: ../_scambio` in `.framework/sessions.yaml`, the place every machine has beside the
+  repositories (`references/workstation.md`), unless the project keeps another;
+- in the additive mode, `merge_method:` in `.framework/work.yaml` -- `merge`, `squash` or
+  `rebase`, the way the project's code repositories merge a merge request. Outside the mode it
+  is not written: nothing reads it there, and the validator reports it (`WK002`).
+
+In the additive mode the values are the admin's, who alone adopts: ask the admin for the way of
+merging, and for the place where it is not `_scambio`, rather than reading either off a forge
+or a repository. A `merge_method` the admin leaves out is not a finding: a join then merges the
+code the one way its repository admits, or asks whoever decides once. There both lines go in
+the worktree of the join that brings the project to 4.13.0, on the admin's yes, committed on
+that branch before `--adopt`, which in that mode adopts only what a commit holds. Outside the
+mode the `exchange:` line is proposed on the person's yes, before `--adopt` too. Written first,
+the exchange makes the section of `AGENTS.md` on it one that `--adopt` writes rather than skips.
+In the additive mode tell the admin, too, that from that version whoever writes the code holds
+its thread, so a person who writes only code enters `people` before implementing (`contribute`,
+*A thread with a change, and its code*).
+
 If the tool reports that no commit ever declared the version the project pins, the checkout
 is shallow or the project pins a version that never shipped. Say which, do not guess a
 starting point: a comparison against the wrong baseline reports the whole repository as

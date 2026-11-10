@@ -221,18 +221,28 @@ choice of form is noted in `scelte.md`, not shown. The join has the review whole
 passes, before anybody decides: on everything the threads bring and the texts the join writes,
 with the logs of the threads and parking branches it lands, whose substance left open the
 critic reads again, and the outcome of its rehearsal, the acts of decision applied without a
-commit and checked; what whoever decides corrects of the substance it hands back, the reviser
-reads again, relaunched with those corrections, among the three passes or, once they are spent,
-in one more on them alone, and what that one still finds leaves the element in draft or
-proposed for a later join (`contribute`, the join). An act left has its cascade taken back
-by the revert of the commit that holds it alone, which gives back the text the review read and
-is not reviewed again; a revert that conflicts is a correction. A brief keeps up to three
-passes wherever it is written: it reaches no join, and a code session follows it to the
-letter. A hotfix is the one exception the other way, and `cycle` says it: one pass on its
-lightning join, before anybody decides, and one on its brief, written in that join. The next
-join with the whole review reads its `CHG` again, and its delivery when it comes; the brief
-keeps its one pass, its work done once the code is written and its rules the `CHG`'s. Where
-the project pins less, every review is up to three passes, as before.
+commit and checked; and, from 4.13.0 pinned, or no version that reads, with the diffs `join`
+writes in its `--out` folder, or in one it makes and names, one for each thread or parking
+branch of a hotfix whose merge request the forge merged at another head than the delivery's
+commit: the commits that came after the delivery, which the critic reads with the documentation
+that branch brings, what they do that it does not cover being substance, which whoever decides
+corrects on the join's branch -- on a hotfix approved, by a new change deriving from it. On
+another forge, which `join` does not call, nobody reads those commits but whoever decides, who
+looks at them there and corrects the same way. What whoever decides corrects of the substance
+the review hands back, the reviser reads again, relaunched with those corrections, among the
+three passes or, once they are spent, in one more on them alone, and what that one still finds
+leaves the element in draft or proposed for a later join (`contribute`, the join). An act left
+has its cascade taken back by the revert of the commit that holds it alone, which gives back the
+text the review read and is not reviewed again; a revert that conflicts is a correction. A brief
+keeps up to three passes wherever it is written: it reaches no join, and a code session follows
+it to the letter. A hotfix is the one exception the other way, and `cycle` says it: one pass on its
+lightning join, before anybody decides, and one on its brief, written in that join -- from
+4.13.0 pinned, or no version that reads, also on the brief of an approved hotfix written again
+on another machine, whose exchange does not hold it, for the launch from its parking branch
+there, and on the brief of a hotfix with `no-chg`, whose change is written later. The next join with
+the whole review reads its `CHG` again, and its delivery when it
+comes; the brief keeps its one pass, its work done once the code is written and its rules the
+`CHG`'s. Where the project pins less, every review is up to three passes, as before.
 
 If the reviser is not in this session, or says it could not launch the critic, run the
 critic yourself, with this framework's path: fix the objections on the proposal, run the

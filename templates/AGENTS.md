@@ -135,6 +135,10 @@ answer tells them what is left, with those commands. A session that leaves somet
 uncommitted, or a review that was due and did not run, closes with its declaration in
 `sessioni/`: what it committed, what it leaves uncommitted, what it leaves outside the
 repositories; with everything committed and every review that was due run, it writes none.
+Where this project pins 4.13.0 or later, or no version that reads, a change is implemented by a
+code session this session launches on its brief, `exchange.py code`, and resumes at each stop,
+on the person's subscription: nobody opens one in the code repository, and nothing is carried
+by hand (the framework's `cycle`, Step 6, *The launch*).
 
 <!-- framework-section: additive requires=additive -->
 ## Threads and joins
@@ -155,6 +159,10 @@ answer, and write it there. A parking branch is pushed only when what it carries
 from its first commit pushed, the next join lands it whole. Rule 5 for a living document, the mandatory
 updates and the Definition of Done below hold here as effects: a change is done on a thread
 when its effects are written, and `verified` is for whoever decides, at a join. Where this
+project pins 4.13.0 or later, or no version that reads, a thread does not write its change
+`implemented`, unless the change has no code to merge: it is ready once the change's
+verification carries the line of its merge request, and the join merges the code and writes
+it. A parking branch named `hotfix-...` is read as a hotfix's: open no other one so. Where this
 project pins 4.12.0 or later, or no version that reads, a choice that is placement, form or
 the classification of an `ICG` is not asked on a thread: take the default, write it, and note
 it in `_filoni/<thread>/scelte.md`, which the join shows to whoever decides; what is substance
@@ -188,7 +196,9 @@ output. On the branch of a thread or of a parking line, where this project pins 
 later, or no version that reads, ask it for one pass: the substance it hands back is yours to
 fix or to bring to the join, whose review is whole and comes before anybody decides. A brief
 keeps up to three passes: it reaches no join. A hotfix's brief, written in its lightning join,
-has one, and keeps it: the next join with the whole review reads the `CHG` again, and its
+has one, and keeps it -- where this project pins 4.13.0 or later, or no version that reads, also
+one written again on another machine that launches an approved hotfix, and one with `no-chg`,
+whose change is written later --: the next join with the whole review reads the `CHG` again, and its
 delivery when it comes (the framework's `cycle`, *A hotfix*).
 
 If the reviser is not available, or cannot launch the critic, run the critic yourself, with

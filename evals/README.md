@@ -10,10 +10,10 @@ here, and it needs a model to run, which is why it is not in CI.
 `trigger/cases.yaml` holds 143 prompts, each labelled with the one skill that should
 answer, or `none`.
 
-**Twenty of them are marked `unmeasured: true`, and the mark is the lesson of the paragraph
-below.** `presentation` arrived in 4.0.1 with four cases of its own and three traps, one each
-toward `start`, `business` and `none`; `digest` arrived in 4.1.0 with six of its own, one of
-them a trap that `requirement` must not take, and five traps toward `business`, `cycle`,
+**Twenty-one of them are marked `unmeasured: true`, and the mark is the lesson of the
+paragraph below.** `presentation` arrived in 4.0.1 with four cases of its own and three traps,
+one each toward `start`, `business` and `none`; `digest` arrived in 4.1.0 with six of its own,
+one of them a trap that `requirement` must not take, and five traps toward `business`, `cycle`,
 `release` and `none`; `contribute` arrived in 4.9.0 with five of its own and two traps, toward
 `cycle` and `resolve`, whose sentences sit closest to its own. All seven run in
 `contribute/team`, a project in the additive mode, the traps by the `fixture` they name: the
@@ -25,13 +25,30 @@ measured without, which no new run can make true again. The behaviour cases of `
 4.12.0, with the remote and the exchange the fixture carries beside the repository, which the
 behaviour runner copies with it (*Behaviour*, below). The measured cases of `cycle` and
 `resolve` that ask what to do or decide next are at risk from `contribute`, and no mark protects
-them. None of the twenty marked has been run, and the tables of 3.0.x further down were measured
+them. None of those twenty has been run, and the tables of 3.0.x further down were measured
 on 118, the set without them and the five of `contribute`: the mark keeps those twenty out of
 the denominators the self check compares, so a score is never read against a set it was not
 measured on. The run that scores them removes the mark and adds its own table. One measured case
 is at risk from the second batch and no mark protects it: *the image digest is in the CI log* is
 scored for `release`, and a skill whose description says "digest" is the first thing that could
 pull it away.
+
+**The twenty-first was relabelled in 4.13.0.** *il CHG-012 e' approvato, implementalo* expected
+`none`, "implementing an approved CHG is coding", and every table below scored it so. From
+4.13.0 the request is `cycle`'s: an approved change is implemented from the documentation
+session, which writes its brief where there is none and launches the code session. The case
+now expects `cycle`, with the mark, since no run has scored it for `cycle`, and with
+`measured_as: none`, the label the tables scored it under: the self check counts it in the
+denominator of `none`, where those tables put it, and in none of `cycle`. Like the two traps of
+`contribute`, it cannot be scored for `cycle` without entering a denominator that the tables of
+`cycle` were measured without, so the mark stays while those tables are the ones compared. The
+self check counts a case under its `measured_as` with the mark or without it, so the run that
+scores it for `cycle` removes `measured_as` together with the mark: left alone, the key keeps
+the case in the denominator of `none` against a table that scored it as `cycle`. The measured
+negatives that ask for code are at risk from the description of `cycle` that 4.13.0 widened --
+"in a documentation session, to implement an approved CHG" --, and no mark protects them:
+*scrivimi la funzione python che fa il match fra movimenti bancari e scritture contabili* already
+started `cycle` in 3.0.x (below).
 
 **Six of them have never been run, and for four days none of them could be.** `business`
 arrived in 2.8.11 with four cases of its own, one more for `audit` and one more negative,
@@ -46,7 +63,8 @@ skills overlap, and a prompt going to the wrong sibling is worse than a prompt g
 the wrong skill will confidently do something. One run scores both questions, and the
 confusion between siblings comes out as a matrix instead of as an impression.
 
-Twenty-six cases expect `none`, and about a third of those are lexical traps rather than
+Twenty-six cases are scored as negatives, one of them relabelled `cycle` in 4.13.0 (above),
+and about a third of those are lexical traps rather than
 unrelated work: *release the lock on the postgres table*, *prepare a release of our internal
 python package to the private pypi*, *ingest these csvs into bigquery*, *validate this CSV
 against DC-001*, *where do I start debugging this*. Each one carries a word one of the six
@@ -59,7 +77,7 @@ needs a repository its work makes sense in, which is what `fixtures.yaml` maps.
 
 ```bash
 python evals/trigger/run.py --skill resolve
-python evals/trigger/run.py --skill none         # the 25 negatives, shared, run once
+python evals/trigger/run.py --skill none         # every case expecting none, shared, run once
 python evals/trigger/run.py --case "risolviamo*" --runs 5      # one case, harder
 ```
 

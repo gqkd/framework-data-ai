@@ -14,7 +14,11 @@ one the to-do and the validator apply (`validate.rules_hold`).
   hook at the start of a session says where it stands. The README says how to install it and how to
   update it. The symlink into `~/.claude/skills/` the README also describes brings the skills and
   not the hooks: no guard. Tested with Claude Code 2.1.310 on Linux, the hook at the start of a
-  session with 2.1.317; the earliest version that works is not known.
+  session with 2.1.317, the launch of a code session with 2.1.319 and 2.1.321 on Linux under
+  WSL2; the earliest version that works is not known. Where the project pins 4.13.0 or later,
+  or no version that reads, its command line, `claude` on the PATH, is a requirement to
+  implement: every code session is launched with it (*The code session*, below), and the
+  desktop app or an editor's extension alone does not bring it.
 - **Python 3** with the framework's dependencies, from the framework's directory:
   `python3 -m pip install -r requirements.txt -c constraints.txt`. The write guard runs as
   `python3 -I` and needs nothing else: with no `python3` on the PATH the hook fails, and a
@@ -22,7 +26,14 @@ one the to-do and the validator apply (`validate.rules_hold`).
   scripts of the skills need PyYAML and the rest.
 - **git**, with worktrees: `work.py open` creates one beside the documentation repository
   for every work it opens.
-- **`gh`**, where the project's workflows or a skill open pull requests.
+- **`gh`**, where the project's workflows or a skill open pull requests -- from 4.13.0 the
+  documentation session opens the merge request of the code with it, on GitHub -- and, where
+  the project pins 4.13.0 or later, or no version that reads, for whoever runs a join in the
+  additive mode, an admin, a deputy or a delegate, logged in: on GitHub a join reads with it the
+  merge request of each thread with a change, and merges its code, and reads where the code of
+  a hotfix was merged. Without it, or without access, `join` says so with the remedy and opens
+  and merges nothing; run again with the line it prints, it lands the others, and those threads
+  and parking branches wait for a later join.
 
 ## The folders
 
@@ -129,6 +140,78 @@ a new session or `/reload-plugins` -- whatever version a project pins and with n
 guard follows the plugin. A session started with
 `claude --plugin-dir <checkout>` has the hooks of that checkout instead.
 
+## The code session
+
+Where the project pins 4.13.0 or later, or no version that reads, nobody opens Claude in a code
+repository: a documentation session launches every code session with `exchange.py code`, on the
+brief of an approved change, answers it and brings its delivery in
+(`references/contributions.md`, *The code session, launched*). Below 4.13.0 pinned the code
+session is opened by hand, as before. To implement, a machine needs, besides what is above:
+
+- **the exchange declared**, `exchange: ../_scambio` in `.framework/sessions.yaml`: the brief
+  waits there and the delivery comes back there. It is the project's, committed: in the additive
+  mode an admin, a deputy or a delegate writes it at a join, and outside it the documentation
+  session proposes it;
+- **`claude`, the command line of Claude Code**, on the PATH (*What to install*, above);
+- **Linux, macOS or WSL**: on Windows outside WSL `code` refuses, since it watches the code
+  session's process with POSIX calls, and there asking whether a process runs ends it. Tried on
+  Linux under WSL2; macOS not yet;
+- **the person's subscription, and no other way to the model.** The launch takes out of the code
+  session's environment `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_BASE_URL` and the
+  `CLAUDE_CODE_USE_BEDROCK`, `_VERTEX` and `_FOUNDRY` that choose a cloud, and stops it at its
+  start, on `account`, when its first event says its credential comes from elsewhere. Claude Code
+  reads the same variables from the `env` block of its settings too, where no environment
+  reaches them and the first event names none of them but the key -- tried with 2.1.319: a
+  cloud, an address or a token set there still read as the subscription --, and `apiKeyHelper`
+  from the same files. Where one of them sets a provider, an address, a key, a token or an
+  `apiKeyHelper`, `--launch` and `--resume` refuse, saying the file, the line and the name, never
+  the value, and the first call says so ahead. The files are the organisation's managed settings
+  (`/etc/claude-code/managed-settings.json`, on macOS under `/Library/Application
+  Support/ClaudeCode/`), the person's `~/.claude/settings.json` -- under `CLAUDE_CONFIG_DIR` where
+  that is set --, and the worktree's `.claude/settings.json` and `.claude/settings.local.json`,
+  which the code repository may commit. A `CLAUDE_CODE_USE_*` set to a value that turns it off is
+  no provider. Whoever uses another provider for other work keeps it out of those files on the
+  machine where they implement; managed settings that set one are above anything the launch can
+  pass, and leave that machine without the launch.
+
+Whoever runs a join in the additive mode, an admin, a deputy or a delegate, needs `gh` as well,
+logged in, where the code is on GitHub (*What to install*, above); on another forge, whoever
+decides merges a thread's code there, at the join's first step, and says that it is merged, and
+says too whether a hotfix's code, merged by the project's own way, is.
+
+`work.py doctor` checks them (*How to check a machine*, below): `claude` on the PATH, a `todo`
+when it is missing; the exchange declared, a `todo` outside the additive mode and, in it, for
+whoever `--who` names among those who may run the join that declares it; `gh` on the PATH and an
+access its files declare -- `hosts.yml` in its configuration folder, or a token in `GH_TOKEN`,
+`GITHUB_TOKEN` or `GH_ENTERPRISE_TOKEN` --, a `todo` in the additive mode for those who decide,
+read without the network, so that whether the access holds is what `gh` says when the join uses
+it; the `merge_method` declared, as a note; and whether the launch leaves the sandbox (below).
+
+What else the launch does on the machine, as the trial of 4.13.0 saw it:
+
+- the code session loads the plugin the command runs from, with `--plugin-dir`, whatever the
+  scope it is installed in, so that the write guard holds it: a copy named
+  `framework-data-ai@inline`, which does not receive the value given to `allowed_dirs` for the
+  plugin installed, and to which the launch passes again the value of the person's
+  `~/.claude/settings.json`;
+- the code session runs in a session of its own: a documentation session closed while it works
+  -- tried with one under `claude -p` --, it goes on to its stop, which is written in the launch
+  file, and any documentation session of the machine resumes it;
+- the output of each run waits in `~/.local/state/framework-data-ai/uscite/`, under
+  `XDG_STATE_HOME` where that is set, the person's alone, until its stop is written: not in
+  `$TMPDIR`, which a sandbox moves and a restart empties;
+- an `allow` rule in the person's own settings adds to what the launch grants: one that covers
+  `git commit` lets the code session commit without the question, and the documentation session
+  then shows the commits before it pushes them. A hook of the person's that stops a write of the
+  code session is said apart, at its stop.
+
+**Nothing stops the code session physically.** What it may do without asking is a list it
+follows, and a rule of Bash is no security boundary, by Claude Code's own documentation: nothing
+in the framework keeps it from a commit or a push. The boundary on the code is the code tool's
+-- the branch protection of the forge, on GitHub a rule that wants a merge request, which the
+project sets as it protects the branches of the documentation --, and the code arrives by a
+merge request. The framework adds no stop of its own, and no fallback.
+
 ## The Bash sandbox, recommended
 
 Recommended in this version and not required. No tool of the framework writes it: each person
@@ -146,7 +229,11 @@ project:
     "allowUnsandboxedCommands": false,
     "failIfUnavailable": true,
     "filesystem": { "allowWrite": ["/absolute/path/to/<parent>/_scambio"] },
-    "excludedCommands": ["python3 *work.py* reserve *", "python3 *work.py* renumber *"]
+    "excludedCommands": [
+      "python3 *work.py* reserve *",
+      "python3 *work.py* renumber *",
+      "python3 *exchange.py* code *"
+    ]
   },
   "permissions": { "disableBypassPermissionsMode": "disable" }
 }
@@ -174,6 +261,31 @@ pushes and fetches are the person's. Where the entries are missing, or the sandb
 command anyway, the skill gives the line to paste, as before. `work.py doctor` says whether the
 settings files hold both.
 
+From 4.13.0 a third, `python3 *exchange.py* code *`, lets out every call of the code session's
+launch (*The code session*, above). Its first call fetches and creates the code session's
+worktree beside the code repository, in the parent folder, where the sandbox does not let Bash
+write -- with `--join-base` it joins the base there too --; `--launch` and `--resume` start the
+code session, which as the child of a command in the sandbox would stay in it, and could not
+write its own worktree. Let out, it has the person's whole access and asks for permission as
+any other. The rule an `--allow` carries and the answer of a `--reply` are files, so that no
+quote, `$(...)` or heredoc of a commit enters the call, which has to be the command alone. What
+the documentation session runs around it stays inside, and under the sandbox is the person's to
+run, as the push and the fetch of a thread are: the push of the code session's branch, the
+preparation the brief names, joining a branch with its remote or keeping the remote, each `git
+rebase --continue` and the commit that concludes a merge of the base, the regeneration of the
+generated files -- each writes in the code session's worktree, outside the session's folder, or
+reaches the network. `work.py doctor` says whether the settings files hold it.
+
+The code session reads the person's settings and opens its own sandbox in the folder it starts
+in, its worktree: there Bash writes the worktree, the shared `.git` but for its `hooks/` and
+`config`, `$TMPDIR`, the delivery folder the launch adds and the exchange of `allowWrite`, and
+not the main checkout of the code repository, where the files the launch links are only read.
+With the default `autoAllowBashIfSandboxed`, a command in the sandbox runs without asking -- in
+the trial every Bash did, `git commit` included --: the launch passes
+`sandbox.autoAllowBashIfSandboxed: false`, so that a command outside what it grants is denied,
+and is a stop. A step of network that sandbox stops is a command that fails: the code session
+says it, and the documentation session gives the person the command, without retrying it outside.
+
 What it lets Bash write, by Claude Code's documentation: the folder the session started in and what
 is below it, `$TMPDIR`, the directories added with `--add-dir` or
 `permissions.additionalDirectories`, those in `allowWrite`, and the shared `.git` of the repository
@@ -188,9 +300,15 @@ above. `work.py check` reaches no remote: it writes in the worktree, in `$TMPDIR
 `.git`, so by the same documentation it passes, and the agent runs it. `work.py meetings` reaches no
 remote either; it writes in `$TMPDIR` while it reads the threads, and its cards in the folder
 `--out` names: given one the sandbox lets Bash write -- `$TMPDIR` or a folder below it --, it
-passes too. **None of this has been tried yet on a machine with the sandbox active**, the two
-commands let out included: it is what the documentation says, and the trial on worktrees, git and
-the network comes before the sandbox is required, in a later version.
+passes too. **Part of this was tried with 4.13.0**, on Claude Code 2.1.319 on Linux under WSL2,
+with `bubblewrap` and `socat` installed: a write of the session's Bash outside its folder, in the
+code session's worktree beside the code repository, fails with `Read-only file system` -- a file
+created, the preparation, a commit, a ref updated after a push --; the network fails as a
+command that fails, naming the host, not as a permission denied; and the entry
+`python3 *exchange.py* code *` lets that command out, with the network and writes in the
+worktree. The rest -- the two commands of 4.12.0 let out, a commit in a thread's worktree,
+`check` and `meetings` -- is still what the documentation says, and the sandbox stays
+recommended: requiring it is for a later version.
 
 ## Where an agent writes, and why
 
@@ -221,9 +339,14 @@ working in one is for the agent to know and for this rule to hold, not for the g
   versions of Python, PyYAML, jsonschema and git -- without the first three it stops at once,
   saying which is missing --, the name, and the copies of `ci/branches.yml` and, where this
   checkout shows that the pin ships one, of `ci/refs.yml`: of the second, where the pin's commit
-  cannot be read, it says nothing. A `todo` line is what the framework needs, and makes it
-  exit 1; a `note` is what it recommends, or only tells. It does not see the settings an
-  organisation manages, nor a plugin loaded with `--plugin-dir`.
+  cannot be read, it says nothing. Where the project pins 4.13.0 or later, or no version that
+  reads, it also says what the code session asks (*The code session*, above): `claude`, the
+  exchange as a requirement, `gh` and the access its files declare, the way of merging, and the
+  third entry of `excludedCommands`.
+  Since the plugin's 4.13.0 it runs in a project with no `.framework/work.yaml` too, without the
+  lines of the branches, the claims and the workflows. A `todo` line is what the framework
+  needs, and makes it exit 1; a `note` is what it recommends, or only tells. It does not see the
+  settings an organisation manages, nor a plugin loaded with `--plugin-dir`.
 - `claude plugin details framework-data-ai` shows the version installed and where it is read
   from; it should be the version the project pins or a later one. `doctor`, for the plugin, and
   the hook at the start of a session read the pin as the to-do does: in the additive mode on the

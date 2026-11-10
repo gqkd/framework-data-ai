@@ -539,10 +539,16 @@ Every project has a place outside the repositories, `_scambio` beside them. One 
 the material between the approved `CHG` and the merged change waits: the brief goes out to
 `in-arrivo/CHG-NNN/`, the verification, the merge request and the evidence come back into the same
 folder, and what the work created outside the repositories is listed beside them with the command
-that removes each piece. At `implemented` the documentation session integrates the delivery, moves
-the folder to `integrati/` with an `INTEGRATO` that says where each part went -- `exchange.py
-integrate` does both --; the removals it proposes only below 4.12.0 pinned, since from 4.12.0
-what the work created belongs to whoever created it, whose code session says what is left.
+that removes each piece. Below 4.13.0 pinned, at `implemented` the documentation session
+integrates the delivery, moves the folder to `integrati/` with an `INTEGRATO` that says where
+each part went -- `exchange.py integrate` does both --; the removals it proposes only below
+4.12.0 pinned, since from 4.12.0 what the work created belongs to whoever created it, whose code
+session says what is left. From 4.13.0 pinned, or no version that reads, the documentation
+session launches the code session on the brief, `exchange.py code`, resumes it at each stop and
+integrates its delivery when it comes back -- before the merge, but for a `no-chg` outside the
+additive mode, whose delivery waits for its change to be written --, and that integration closes
+the launch, nothing in the exchange waiting for `implemented`: nobody opens a code session by
+hand, nothing is carried by hand, and the exchange declared is a requirement to implement.
 `references/contributions.md`, *The exchange between sessions*, describes it, and
 `EXC001`-`EXC007` report what was left behind, `EXC004` below 4.12.0.
 
@@ -669,8 +675,10 @@ is `cycle`'s *A hotfix*: its own `ICG`, a `DEC` where it moves the architecture 
 the additive mode a lightning join with one pass of review -- its `CHG` read again, and its
 delivery when it comes, by the next join with the whole review --, and, written afterwards,
 `no-chg: hotfix <reference>` in the merge request of the code and the `SIG`, the `ICG` and the
-`CHG` -- in the additive mode at the first join --, saying it was authorized after. It shortens
-the papers, not the environments: the code goes through the project's road to production,
+`CHG` -- in the additive mode, below 4.13.0 pinned at the first join; from 4.13.0 pinned, or no
+version that reads, at the one that brings in its parking branch, not the first join after the
+code is merged where the branch is late --, saying it was authorized after. It shortens the
+papers, not the environments: the code goes through the project's road to production,
 pre-production included.
 
 ### Skill

@@ -132,10 +132,16 @@ cases:
 - prompt: i added three decision records this sprint, can you regenerate decisions/INDEX.md and TRACEABILITY.md
     for me
   expect: audit
+# Relabelled in 4.13.0, from `none`: scored as a negative by every table of evals/README.md,
+# which `measured_as` keeps it counted in, and marked until a run scores it for `cycle`: that
+# run removes `measured_as` with the mark, which the self check reads either way.
 - prompt: 'il CHG-012 e'' approvato, implementalo: aggiungi il campo tenant_id alla tabella movements,
     scrivi la migrazione e aggiorna il matcher'
-  expect: none
-  why: implementing an approved CHG is coding, downstream of every skill here
+  expect: cycle
+  why: 'from 4.13.0 an approved CHG is implemented from the documentation session: cycle writes
+    its brief where there is none and launches the code session, which nobody opens by hand'
+  unmeasured: true
+  measured_as: none
 - prompt: il cliente bianchi ci ha chiesto ieri in call l'export in excel della coda di riconciliazione.
     lo segno da qualche parte o lo lasciamo perdere?
   expect: requirement

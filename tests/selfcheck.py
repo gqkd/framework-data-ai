@@ -5522,8 +5522,11 @@ def _eval_cases_load():
     # whose denominator has drifted is a score being read against a set that no longer
     # exists, which is how 112 survived a set of 118.
     # A case marked `unmeasured` has not been run, so no table can have scored it: it counts
-    # in the set and in no denominator, until the run that scores it removes the mark.
-    per_skill = collections.Counter(c.get("expect") for c in cases if not c.get("unmeasured"))
+    # in the set and in no denominator, until the run that scores it removes the mark. A case
+    # relabelled after the tables were measured says the label they scored it under in
+    # `measured_as`, and counts there: its new label has no table yet, and its old one does.
+    per_skill = collections.Counter(c.get("measured_as") or c.get("expect") for c in cases
+                                    if c.get("measured_as") or not c.get("unmeasured"))
     for label, expect in [(r"`(\w+)`", None), (r"negatives", "none")]:
         for m in re.finditer(r"^\| " + label + r" \| (\d+)/(\d+) \|", readme, re.M):
             skill = expect or m.group(1)
@@ -15656,9 +15659,10 @@ def _doctor_reads_a_machine():
     # The entries `doctor` looks for are those the recommended block writes, and no others.
     block = (ROOT / "references" / "workstation.md").read_text(encoding="utf-8")
     listed = re.search(r'"excludedCommands": (\[[^\]]*\])', block)
-    if not listed or json.loads(listed.group(1)) != list(work.SANDBOX_EXCLUDED):
-        problems.append(f"work.SANDBOX_EXCLUDED is not the `excludedCommands` of the block in "
-                        f"references/workstation.md: {listed.group(1) if listed else 'none'}")
+    if not listed or json.loads(listed.group(1)) != [*work.SANDBOX_EXCLUDED, work.CODE_EXCLUDED]:
+        problems.append(f"work.SANDBOX_EXCLUDED and work.CODE_EXCLUDED are not the "
+                        f"`excludedCommands` of the block in references/workstation.md: "
+                        f"{listed.group(1) if listed else 'none'}")
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
         repo = _Repo(tmp / "projects" / "docs")

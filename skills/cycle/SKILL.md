@@ -1,17 +1,18 @@
 ---
 name: cycle
 description: >
-  Open a development cycle: take the signals and roadmap increments that are candidates,
-  classify their impact through the ICG gate, reshape the product and architecture where the
-  classification says to, write the change contracts that authorize the work, plan the cycle,
-  and produce a brief per change that a coding agent can execute. Use when deciding what to
-  build next and when authorizing work. Triggers on "cosa facciamo in questo ciclo", "cosa
-  costruiamo adesso", "apriamo un ciclo", "prossimo sprint", "devo aggiungere", "apriamo un
-  change", "pianifica il ciclo", "dammi i task per gli agenti", "vai pure e implementa",
-  "procedi con", "what do we build next", "open a change", "plan this cycle", "give me the agent
-  tasks", "go ahead and implement", "go ahead and build". Use it whenever work is about to start
-  on something that is not already an approved CHG -- including when the instruction is to go
-  ahead and build a named thing, which is the same request with the authorization step left out.
+  Open a development cycle: take the candidate signals and roadmap increments, classify their
+  impact at the ICG gate, reshape product and architecture where it says to, write the change
+  contracts that authorize the work, plan the cycle, and brief each change for a code session it
+  launches. Use to decide what to build next, to authorize work and, in a
+  documentation session, to implement an approved CHG. Triggers on "cosa facciamo in questo
+  ciclo", "cosa costruiamo adesso", "apriamo un ciclo", "prossimo sprint", "devo aggiungere",
+  "apriamo un change", "pianifica il ciclo", "dammi i task per gli agenti", "vai pure e
+  implementa", "implementa il CHG-021", "voglio implementare il CHG", "procedi con", "what do we
+  build next", "open a change", "plan this cycle", "give me the agent tasks", "go ahead and
+  implement", "go ahead and build". Use it whenever work is about to start on something not yet
+  an approved CHG, including an instruction to go ahead and build a named thing, which leaves
+  the authorization step out.
 ---
 
 # cycle
@@ -194,8 +195,59 @@ derives from it, never by a withdrawal, which would say it is never to be carrie
 `rolled-back` only where its code is taken out. One whose code will not reach production is
 withdrawn, at a join in the additive mode, `withdrawn_by` the `DEC` that says so. When
 nobody who decides can be reached, the code goes with `no-chg: hotfix <reference>` in its merge
-request, and afterwards -- in the additive mode at the first join -- whoever decides writes the
-`SIG`, the `ICG` and a `CHG` with `hotfix: true` that says it was authorized after.
+request, and afterwards -- in the additive mode, below 4.13.0 pinned at the first join; from
+4.13.0 pinned, or no version that reads, at the one that brings in its parking branch, not the
+first after the merge where the branch is late (below) -- whoever decides writes the `SIG`, the
+`ICG` and a `CHG` with `hotfix: true` that says it was authorized after.
+
+**A hotfix's code session**, from 4.13.0 pinned, or no version that reads, is launched as any
+(Step 6, *The launch*), and nothing of it is carried by hand. In the additive mode a hotfix has
+no thread, and its launch starts from its parking branch, opened first, from the main line, by
+the session that launches it: `open --branch hotfix-<home>-<change>` for an approved one, the
+name the to-do prints beside it, and `hotfix-` with the reference as a slug for one with
+`no-chg`. It becomes `parcheggio-hotfix-...`, pushed empty, and is the hotfix's claim: a second
+`open` of that name is refused, and then somebody else has the hotfix -- launch nothing, and say
+so. The code's branch takes its name, and `code` runs with `--root` on its worktree. The hotfix
+of a lightning join is launched there once `join --merge` has landed it (`contribute`, *The
+hotfix*); an approved hotfix anybody can launch the same way, and on a machine whose exchange
+does not hold its brief, the brief is written again in that exchange, naming the `CHG` in that
+worktree, by Step 6 and with one pass of review, as the lightning join's. When the code session
+delivers, open its merge request on the person's yes, as for any launch, and bring the whole
+delivery onto the branch, in `_filoni/<slug>/consegne/<CHG>/`: `documentazione.md`, from which
+you write the effects, `verifica.md`, `evidenze/` -- which enters the history of the
+documentation with it: read its text files first, and a file that carries the value of a
+credential is said to the person, who deletes or cleans it in the exchange before it comes onto
+the branch, deleting `evidenze/` too where it is left empty, which git would not keep and
+`integrate` would find missing; an image is not read -- and
+`mr-link.txt`, with the line `Merge request: <link> @ <commit>`, the commit the head of the
+code's branch is at then. Commit, close the launch with `integrate` on the branch, and push; a
+change asked after, on the merge request, is a new launch on the same branch (Step 6, *The
+launch*), whose delivery comes onto it the same way. The branch lands at the first join after
+its code is merged, by the project's own way to production, never by a join, whoever runs it
+-- `join` asks the forge, on GitHub, or, on a forge it does not call, whoever decides, and a
+branch whose code is not merged waits --, where whoever decides
+brings the verification and the link from that folder into the change's §Verification, with
+the texts of the join, which its review reads, and does the checks. Outside the additive mode
+there are no branches: an approved hotfix's delivery is integrated as any change's, and one
+with `no-chg` once its change is written.
+
+With `no-chg`, at the same versions, the documentation session writes a brief with no change:
+its *Mandate* the reference and what breaks, its *Guardrails* all but the change's line, its
+*Done when* what breaks no longer breaking and, for the review of the code's diff, no `CHG` to
+give, there being none; *Commands*, *Context* and the *Delivery* as in any brief. Its own review
+is a hotfix's brief's, one pass, with no `CHG` given either: the change is written later, and
+read whole then. `code` launches it with
+`--no-chg "hotfix <reference>"` in place of the approved change, and the merge request you open
+says `no-chg: hotfix <reference>`. The number of its change is reserved when the brief is written,
+before the launch: the brief names it, its folder in the exchange carries it, and the change
+written later takes it. In the additive mode it is reserved from the parking branch, by
+`work.py reserve`, which refuses outside a work branch, and at the join that brings that branch
+in, once its code is merged -- not the first join after the merge, where the branch is late: the
+change waits for it --, whoever decides writes the `SIG`, the `ICG` and the change with that
+number -- `BR003` takes a number reserved for a branch the join merges --, before the effects
+the branch brings, and approves it and writes it `implemented` at step 5. Outside the mode it is
+the first number free when the brief is written: two elements can take the same one, and the
+validator sees the duplicate as it sees any.
 
 **When it reaches `implemented`** -- which it does when the work is merged, without waiting for any
 cleaning --, and the project declares an exchange, its resources belong to whoever created them:
@@ -205,10 +257,15 @@ a time with the command the row gives, asking whether the row is this machine's;
 on the person's approval, and delete the row when you have; a row of a delivery carried by hand from
 another machine goes to the note above the table, with its command for whoever is on that machine,
 and is not run here (`references/contributions.md`, *What a mandate creates outside the
-repositories*). Then, once the delivery is integrated -- `verifica.md` written into the change's
-§Verification, which `integrate` refuses to call placed while that section is empty -- and
-committed, move the folder from `in-arrivo/` to `integrati/` with its `INTEGRATO`:
-`exchange.py --root <documentation> integrate <CHG>` does both. `exchange.py` lists what is left;
+repositories*). Then, below 4.13.0 pinned, once the delivery is integrated -- `verifica.md`
+written into the change's §Verification, which `integrate` refuses to call placed while that
+section is empty -- and committed, move the folder from `in-arrivo/` to `integrati/` with its
+`INTEGRATO`: `exchange.py --root <documentation> integrate <CHG>` does both. From 4.13.0 pinned,
+or no version that reads, that is done when the delivery comes -- before the merge, but for a
+`no-chg` outside the additive mode, whose delivery waits for its change (*A hotfix*) --, and is
+what closes the launch (Step 6, *The launch*): nothing in the exchange waits for `implemented`,
+and a change asked after is a new launch, whose delivery `integrate` joins to the folder in
+`integrati/`. `exchange.py` lists what is left;
 `EXC002`, and `EXC004` where it reports, are what the validator says when it is left undone,
 warnings that `require_all` does not turn into errors.
 
@@ -290,11 +347,21 @@ Guardrails         CHG-NNN §what-must-not-change
                    deleted when you close unless your person asks to keep it, and your
                    final answer says which: deleted, or kept, where, with the command
                    that removes it
+                   an action denied to you: stop, and write why you need it
+                   the push and the merge request are not yours: the session that
+                   launched you does them
+                   a question for your person: ask it, and write it also in domande.md
+                   in the Delivery folder, one entry per question with its day; then stop
+                   the linked files, such as .env, are read and never written
+Commands           test: `<command>`
+                   prepare: `<command>`
+                   generated: `<file>`, by `<command>`
+                   link: `<file>`
 Context            AGENTS.md authoritative sources, resolved for this product
                    ARC#current, the relevant DC, GLOSSARY
 Done when          CHG-NNN §how-we-know-it-worked
-                   the artifacts in AGENTS.md "mandatory updates" are updated -- in the
-                   additive mode proposed in documentazione.md (Delivery), not written
+                   the artifacts in AGENTS.md "mandatory updates" are proposed in
+                   documentazione.md (Delivery), not written
                    the validator passes with no errors
                    a new EVR, if an AI component was touched
                    the diff, new files included (git diff --no-index /dev/null <file>,
@@ -312,22 +379,54 @@ Done when          CHG-NNN §how-we-know-it-worked
                    (verifica.md, with an exchange)
 ```
 
+**The commands.** *Commands* names what the launch of the code session runs or grants, one item
+per line, each command or file between backticks: `test:` a test the code session may run
+without asking; `prepare:` what its worktree needs before the tests run -- installing the
+dependencies, a build --, which the documentation session runs, in view, before the launch;
+`generated:` a file the preparation writes, such as the lockfile, `by` the command that
+regenerates it: the code session never writes it, and the documentation session regenerates it
+at a step of a rebase, or a merge of the base, that has it in conflict; `link:` a file git
+ignores that the tests read, such as `.env`, linked from the main checkout of the code
+repository and never copied. Propose them from `CHG §how-we-know-it-worked` and the
+instructions of the code repository; the person confirms them when the brief is written, and
+its review reads them. The launch grants the tests the brief names, as written: show them, do
+not change them, and change one only by changing the brief, with its review.
+
 **Where the brief goes.** When `.framework/sessions.yaml` declares `exchange:`, write the
 brief to `<exchange>/in-arrivo/CHG-NNN/brief.md`, creating the folder, and tell the person
 its absolute path: the code session reads it from there, and delivers into the same folder,
-so the brief and the verification of one mandate end up side by side. When the code is
-written on another machine, the brief is carried there, with the absolute paths of this one,
-and the delivery is carried back into this folder (`references/contributions.md`, *A delivery
-from another machine*). A brief left in this conversation, or in a session's scratchpad, is one
-somebody copies by hand. Without the key, hand it over as before. With it, the brief carries one
-more block, written with the absolute path of the folder, because the code session starts in
-another directory:
+so the brief and the verification of one mandate end up side by side. A brief left in this
+conversation, or in a session's scratchpad, is one somebody copies by hand. Where the project
+pins 4.13.0 or later, or no version that reads, nothing is carried by hand: once the brief of an
+approved change is written and reviewed, propose its launch (*The launch*, below), on the machine
+where the code is written, whose documentation session gives the code session its answers and
+receives its questions, its actions denied and its delivery until it closes; whoever writes the
+code on another machine says "implementa il CHG-021" to the documentation session there. A
+brief written in this exchange for a change then launched from another machine stays here with
+nothing delivered, which `EXC002` reports once the change is `implemented`: close it with
+`exchange.py --root <documentation> integrate <CHG>`, a folder with nothing delivered moving
+with `parts: {}` (`references/contributions.md`, *From in-arrivo to integrati*), as `contribute`
+says of a hotfix's (*The hotfix*). The exchange declared is then a requirement for implementing,
+with the `claude` CLI: without the key,
+say that the launch wants it and how it is declared (`references/contributions.md`, *The
+place*) -- in the additive mode the `exchange:` line comes with the join that brings the project
+to 4.13.0; outside it, propose it, and write it on the person's yes. Below 4.13.0 pinned, when
+the code is written on another machine, the brief is carried there, with the absolute paths of
+this one, and the delivery is carried back into this folder (`references/contributions.md`, *A
+delivery from another machine*); without the key, hand it over as before. With it, the brief
+carries one more block, written with the absolute path of the folder, because the code session
+works in another directory -- from 4.13.0 pinned, or no version that reads, its own worktree of
+the code repository --:
 
 ```
 Delivery           <absolute path>/in-arrivo/CHG-NNN/, under the fixed names: verifica.md,
-                   mr.md, mr-link.txt, evidenze/, contribution-policy.json
-                   documentazione.md, in the additive mode: what the documentation should
-                   say after this change, which the thread turns into effects
+                   mr.md -- the text of the merge request, which the session that launched
+                   you opens and whose link it writes in mr-link.txt --, evidenze/,
+                   contribution-policy.json
+                   documentazione.md: what the documentation should say after this change,
+                   which the thread, or the parking branch of a hotfix, turns into effects,
+                   or, outside the additive mode, the session that launched you writes into
+                   the documents
                    risorse.md: one row per resource, the moment it exists -- type, path or
                    name, the command that removes it, a copy of credentials with the names
                    of its keys; you delete that copy when you close, removing the rest is
@@ -346,10 +445,115 @@ credentials among the guardrails; `risorse.md` ends at "the command that removes
 credentials only in your scratchpad, with the names of its keys and never their values", with
 nothing on who removes the resources, which the documentation session proposes (Step 4); and
 the declaration is written at every close, "sessioni/<date>-<session>.md when you close:
-committed, not committed, outside the repositories".
+committed, not committed, outside the repositories". Where it pins a version below 4.13.0, the
+brief is as it was in four more: none of the last four items of the guardrails, from "an action
+denied to you" to "the linked files"; no *Commands*;
+the mandatory updates of *Done when* "are updated -- in the additive mode proposed in
+documentazione.md (Delivery), not written"; and the *Delivery* names "verifica.md, mr.md,
+mr-link.txt, evidenze/, contribution-policy.json", with "documentazione.md, in the additive mode:
+what the documentation should say after this change, which the thread turns into effects".
 
 Write `<framework>` and the path of the `CHG` as absolute paths when you produce the brief:
-the code session works from another repository, and may not have the plugin enabled.
+the code session works from another repository -- and, below 4.13.0 pinned, may not have the
+plugin enabled; from 4.13.0, or no version that reads, the launch gives it the plugin `code` runs
+from, with its guard (`--plugin-dir`). The path of the `CHG` is where the code session reads it
+approved, and where it stays for the whole work: the documentation's checkout outside the
+additive mode; the thread's worktree on a thread; for the hotfix of a lightning join, the main
+checkout of the machine of that join, where `join --merge` brings it -- the brief is written in
+the join, before the hotfix's parking branch exists, and `code` runs with `--root` on that
+branch's worktree, opened after `--merge` from the main line, where the change is the same; its
+one pass of review runs before `--merge`, so tell the reviser that this path holds the approved
+change only once the join has landed, and is not a reference to correct --;
+for a hotfix whose brief is written outside the lightning join, the worktree of its parking
+branch, since on another machine only `--merge` moves the main checkout, and the change there may
+be missing or older.
+
+**The launch**, where the project pins 4.13.0 or later, or no version that reads. Every code
+session starts from a documentation session, which launches it, answers what is its to answer
+and never approves by itself: nobody opens Claude in the code repository. Once the brief of an
+approved change is written and reviewed, propose the launch, on the machine where the code is
+written: the code repository, proposed among the folders beside the documentation that are git
+repositories and asked at the first launch of each change -- later calls read it from the launch
+file --; the code session's worktree, `<repository>-<id>` beside it, on its branch -- the
+thread's in the additive mode, the hotfix's parking branch, `<id>` outside the mode --, from the
+remote's default branch, or another start the person names, such as a hotfix's production branch,
+the project's process (`--base`); and the tests it grants, the brief's. Then ask "lancio?": the
+person's yes is the gesture. `references/contributions.md`, *The exchange between sessions*, says
+the rest; in short, with `F="${CLAUDE_PLUGIN_ROOT:?}/skills/audit/scripts"` and `--root` on the
+documentation's checkout, or, in the additive mode, the worktree of the thread or of the hotfix's
+parking branch:
+
+1. `python3 "$F/exchange.py" --root <documentation> code <CHG> --repo <code repository>`
+   creates the worktree, its branch and the linked files, and stops. It says how the branch
+   stands against its remote -- brought forward where the remote is ahead, or diverged, with
+   both sides and the two commands, join them by a rebase or keep the remote, for the person to
+   choose -- and how far it is behind its base, which `--join-base` joins on the person's yes.
+2. Run, in view, the commands its last lines list -- the push of the branch, the preparation
+   the brief names --, each on the yes where it says so. A preparation that fails is said, and
+   stops the launch, unless a rebase or a merge of the base is in progress.
+3. `code <CHG> --launch`, in the background. The code session runs on the person's subscription
+   only: a setting of Claude Code's that gives it a key or another provider is refused, with its
+   file and line, and one its first event shows stops it on `account`.
+4. Each run ends on a stop, said in a few lines, which you tell in plain words. `negata`: "the
+   code session asks to run `<command>`, because <its why>: approve?" -- for a commit, with
+   `git -C <worktree> status --short` and `git -C <worktree> diff --cached --stat` beside --;
+   on the yes, each rule the stop proposes that the person approves, whole, in a file of your
+   scratchpad, `--resume --allow <file>`, for that run only. A `git rebase --continue`, or the
+   commit that concludes a merge of the base and its push, at once, is yours to run on the yes,
+   in view, as the stop says, and then `--resume` with nothing; a push or a merge request is
+   never the code session's, and no question; a block of the framework's guard is approved by
+   no rule.
+   `account`: a limit or a credential of the account, said; resume when it allows. `domanda`:
+   where the documentation has the answer, give it yourself, with the file and the section it
+   comes from, and tell the person what was asked and what you answered; where it is not
+   written, or is a decision, ask the person, and a new decision goes its way in the
+   documentation (`requirement`, `resolve`); the answer in a file, `--resume --reply <file>`.
+   `fine`: the code session's answer, said; a step of network its sandbox stopped is a command
+   you give the person. `--status` says whether it runs and where it stopped, from any
+   documentation session of the machine.
+5. `consegna`, the delivery: push the code session's commits and open the merge request with
+   the text of `mr.md`, on the person's yes -- `gh pr create` on GitHub; on another forge, which
+   nothing here calls, the person opens it with that text and gives you its link --, and write
+   the link in `mr-link.txt`. A push refused because the remote moved does not close the
+   launch: say it, open nothing and bring nothing in; a new launch makes the delivery again,
+   verified on the branch brought up to date. Then bring the delivery in: on a thread as
+   `contribute` says (*What a code session delivered*), on a hotfix's parking branch as *A
+   hotfix* says; outside the additive mode, what `documentazione.md` proposes written into the
+   documents by the rules of `requirement`, and `verifica.md` into the change's §Verification,
+   with the line `Merge request: <link> @ <commit>`, the link of `mr-link.txt` and the commit
+   the head of the code's branch is at then. Commit, and `integrate <CHG>`, which closes the
+   launch. A change asked after -- what the review of the merge request asks, say -- is a new
+   launch on the same branch: the brief back in `in-arrivo/<CHG>/`, with what to change and why
+   at its end, which the review reads.
+
+With the sandbox, every call of `code` leaves it where the settings let it out, by the third
+entry of `sandbox.excludedCommands`, `python3 *exchange.py* code *` (`references/workstation.md`):
+run each alone, with the absolute path `$F` holds written out, and nothing around it. The push,
+the preparation, the rebase and each step of it stay inside, and where the sandbox stops one,
+give the person the command and do not retry it outside. Below 4.13.0 pinned nothing
+is launched: the brief goes as before, and the person opens the code session. From 4.13.0, where
+it does not launch, say why, and do not propose opening it by hand: without `claude` on the
+`PATH` -- the desktop app or the extension alone --, the launch wants the CLI, and
+`work.py doctor` says what this machine has and how to add it; without an exchange declared, as
+above; a code repository outside the folder that holds the documentation and the exchange, where
+the guard would not hold the code session; Windows outside WSL, which `code` refuses.
+
+**"Implementa il CHG-021"** -- "voglio implementare il CHG", "vai pure e implementa" -- in a
+documentation session, at any version: a change not `approved` goes through its approval first
+(Step 4); an approved one goes to its launch -- below 4.13.0 pinned, to its brief, as before, for
+the person to hand over; one with no code to change has no code session, and on a thread is
+written `implemented` there as before (`contribute`, *When the thread is done*). With its brief in
+`in-arrivo/<CHG>/`, propose the launch on it;
+without, write it by this step, with its review, then propose the launch. In a session that is
+not a documentation one -- the code session itself, which loads this plugin, or one opened in
+the code repository -- launch nothing and write no brief: the code session is already there,
+and `code` wants `--root` on the documentation. In the additive mode the thread comes first:
+whoever implements a change holds its thread, and this skill does not open it -- `contribute`
+does (*Taking a thread*), where nobody holds it. Where the person holds it, start from its
+worktree. The brief is written there, with the path of the `CHG` there and its review, and the
+launch leaves from that worktree, `--root` on it. Where `open --thread` refuses -- a mandate
+that waits, a thread in somebody else's hands --, launch nothing, and say why. An approved
+hotfix has no thread: anybody launches it from its parking branch (*A hotfix*, Step 4).
 
 Two levels of evaluation exist and merging them is a costly mistake. **Task acceptance** is
 `CHG §how-we-know-it-worked` plus the validator plus the project's tests: did this change
@@ -382,7 +586,8 @@ the validator.
 
 **Then the two closing blocks the preamble describes, and they go last:** what changed in
 plain words, one line per file, and what to do next with what each option buys and costs. The
-first row is normally handing a brief to a coding agent, and it is only a row for a `CHG` the
-user has actually approved: a `draft` in that position is this skill authorizing its own work.
+first row is normally handing a brief to a coding agent -- from 4.13.0 pinned, or no version
+that reads, launching its code session --, and it is only a row for a `CHG` the user has
+actually approved: a `draft` in that position is this skill authorizing its own work.
 A candidate routed back into discovery belongs in the table too, and its cost is the honest
 one — building on a premise that was just disproved is more expensive than the re-entry.
